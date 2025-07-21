@@ -825,31 +825,39 @@
       if (!hiddenCartForms) {
         hiddenCartForms = document.createElement('div');
         hiddenCartForms.id = 'hidden-cart-forms';
-        // Statt display:none:
         hiddenCartForms.style.position = 'absolute';
         hiddenCartForms.style.left = '-9999px';
         hiddenCartForms.style.top = '0';
+        hiddenCartForms.style.visibility = 'hidden';
         document.body.appendChild(hiddenCartForms);
       }
       hiddenCartForms.innerHTML = '';
+      
       Object.entries(PRODUCT_MAP).forEach(([key, val]) => {
+        // Create a proper Webflow commerce form structure
         const form = document.createElement('form');
+        form.setAttribute('data-wf-cart-type', 'commerce');
+        form.setAttribute('data-commerce-sku-id', val.productId);
+        form.setAttribute('data-commerce-product-id', val.productId);
+        form.setAttribute('data-node-type', 'commerce-add-to-cart-form');
         form.setAttribute('data-product-id', val.productId);
-        form.setAttribute('aria-hidden', 'true');
-        form.setAttribute('tabindex', '-1');
-        // Remove action to prevent redirect
-        form.setAttribute('method', 'POST');
-        form.innerHTML = `
-          <input type="hidden" name="product-id" value="${val.productId}" />
-          <input type="hidden" name="variant-id" value="${val.variantId}" />
-          <input type="number" name="quantity" value="1" min="1" tabindex="-1" aria-hidden="true" />
-          <button type="submit" class="w-commerce-commerceaddtocartbutton" tabindex="-1" aria-hidden="true"></button>
-        `;
+        form.setAttribute('action', '/cart/add');
+        form.setAttribute('method', 'post');
+        form.setAttribute('enctype', 'application/x-www-form-urlencoded');
         
-        // Prevent form from redirecting by default
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-        });
+        form.innerHTML = `
+          <input type="hidden" name="commerce-add-to-cart-product-id" value="${val.productId}" />
+          <input type="hidden" name="commerce-add-to-cart-variant-id" value="${val.variantId}" />
+          <input type="number" name="commerce-add-to-cart-quantity" value="1" min="1" 
+                 data-wf-cart-action="set-item-quantity" 
+                 data-commerce-sku-id="${val.variantId}" />
+          <button type="submit" 
+                  class="w-commerce-commerceaddtocartbutton button" 
+                  data-node-type="commerce-add-to-cart-button"
+                  data-loading-text="Adding to cart...">
+            Add to cart
+          </button>
+        `;
         
         hiddenCartForms.appendChild(form);
       });
@@ -862,152 +870,151 @@
         return;
       }
       
-      // Try multiple methods to add to Webflow cart without redirect
-      if (this.tryWebflowCartAPI(product, quantity, productKey)) {
-        return;
-      }
+      console.log(`[SolarGrid] Versuche ${quantity}x ${productKey} zum Warenkorb hinzuzufügen...`);
       
-      if (this.tryWebflowFormSubmit(product, quantity, productKey)) {
-        return;
-      }
-      
-      // Final fallback
-      this.fallbackAddToCart(product, quantity, productKey);
-    }
-
-    tryWebflowCartAPI(product, quantity, productKey) {
-      // Method 1: Try Webflow's commerce API
-      if (window.Webflow && window.Webflow.commerce && window.Webflow.commerce.addToCart) {
-        try {
-          window.Webflow.commerce.addToCart({
-            productId: product.productId,
-            variantId: product.variantId,
-            quantity: quantity
-          });
-          console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (API).`);
-          return true;
-        } catch (error) {
-          console.warn(`[SolarGrid] Webflow API fehlgeschlagen für ${productKey}:`, error);
-        }
-      }
-      return false;
-    }
-
-    tryWebflowFormSubmit(product, quantity, productKey) {
-      // Method 2: Try to simulate Webflow's add-to-cart behavior without redirect
+      // Find the form for this product
       const form = document.querySelector(`form[data-product-id="${product.productId}"]`);
       if (!form) {
-        return false;
+        console.error(`[SolarGrid] Kein Formular für Produkt ${productKey} gefunden.`);
+        return;
       }
       
-      const qtyInput = form.querySelector('input[name="quantity"]');
-      const submitBtn = form.querySelector('button[type="submit"]');
-      
-      if (!qtyInput || !submitBtn) {
-        return false;
-      }
-      
-      try {
+      // Set the quantity
+      const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity"]');
+      if (qtyInput) {
         qtyInput.value = quantity;
+      }
+      
+      // Get the submit button
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (!submitBtn) {
+        console.error(`[SolarGrid] Kein Submit-Button für Produkt ${productKey} gefunden.`);
+        return;
+      }
+      
+      // Method 1: Try to intercept and handle the form submission
+      this.interceptFormSubmission(form, product, quantity, productKey);
+    }
+
+    interceptFormSubmission(form, product, quantity, productKey) {
+      const originalAction = form.action;
+      
+      // Create a temporary iframe to handle the form submission without page redirect
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.name = 'cart-submit-frame-' + Date.now();
+      document.body.appendChild(iframe);
+      
+      // Set form target to iframe
+      form.target = iframe.name;
+      
+      // Listen for iframe load (form submission complete)
+      iframe.onload = () => {
+        console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt.`);
         
-        // Try to use Webflow's internal cart methods
-        if (window.Webflow && window.Webflow.commerce) {
-          // Look for Webflow's cart instance
-          const commerceInstance = window.Webflow.commerce;
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          form.target = '';
           
-          // Try different possible method names
-          const addMethods = ['addProductToCart', 'addToCart', 'updateCart', 'addItem'];
+          // Reset quantity
+          const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity"]');
+          if (qtyInput) qtyInput.value = 1;
           
-          for (const methodName of addMethods) {
-            if (typeof commerceInstance[methodName] === 'function') {
-              try {
-                commerceInstance[methodName]({
-                  productId: product.productId,
-                  variantId: product.variantId,
-                  quantity: quantity
-                });
-                console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (${methodName}).`);
-                setTimeout(() => { qtyInput.value = 1; }, 100);
-                return true;
-              } catch (methodError) {
-                console.warn(`[SolarGrid] Methode ${methodName} fehlgeschlagen:`, methodError);
-                continue;
-              }
-            }
+          // Try to update Webflow's cart UI
+          this.triggerCartUpdate();
+        }, 1000);
+      };
+      
+      // Handle iframe load error
+      iframe.onerror = () => {
+        console.warn(`[SolarGrid] Fehler beim Hinzufügen von ${productKey} zum Warenkorb.`);
+        this.fallbackAddToCart(product, quantity, productKey);
+        
+        // Clean up
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
           }
-        }
-        
-        // Alternative: Try to trigger form submission with AJAX to prevent redirect
-        const formData = new FormData(form);
-        
-        // Prevent default form behavior
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }, { once: true });
-        
-        // Try AJAX submission to Webflow's cart endpoint
-        fetch('/cart/add', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        })
-        .then(response => {
-          if (response.ok) {
-            console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (AJAX).`);
-            // Update cart UI if possible
-            this.updateCartUI();
-          } else {
-            throw new Error('Cart update failed');
-          }
-        })
-        .catch(error => {
-          console.warn(`[SolarGrid] AJAX cart update fehlgeschlagen für ${productKey}:`, error);
-        });
-        
-        setTimeout(() => { qtyInput.value = 1; }, 100);
-        return true;
-        
+          form.target = '';
+        }, 1000);
+      };
+      
+      // Submit the form
+      try {
+        form.submit();
       } catch (error) {
-        console.warn(`[SolarGrid] Form-Submit fehlgeschlagen für ${productKey}:`, error);
-        return false;
+        console.error(`[SolarGrid] Form-Submit fehlgeschlagen für ${productKey}:`, error);
+        this.fallbackAddToCart(product, quantity, productKey);
+        
+        // Clean up
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+        form.target = '';
       }
     }
 
-    updateCartUI() {
-      // Try to refresh cart count and other UI elements
-      if (window.Webflow && window.Webflow.commerce && window.Webflow.commerce.refreshCart) {
-        window.Webflow.commerce.refreshCart();
+    triggerCartUpdate() {
+      // Try to trigger Webflow's cart update mechanisms
+      try {
+        // Method 1: Trigger Webflow's cart refresh if available
+        if (window.Webflow && window.Webflow.commerce) {
+          if (typeof window.Webflow.commerce.refreshCart === 'function') {
+            window.Webflow.commerce.refreshCart();
+          }
+          if (typeof window.Webflow.commerce.updateCartCount === 'function') {
+            window.Webflow.commerce.updateCartCount();
+          }
+        }
+        
+        // Method 2: Dispatch events that Webflow might listen to
+        const events = ['cartUpdated', 'wf-cart-updated', 'commerce-cart-updated'];
+        events.forEach(eventName => {
+          const event = new CustomEvent(eventName, {
+            bubbles: true,
+            detail: { source: 'solarGrid' }
+          });
+          document.dispatchEvent(event);
+          window.dispatchEvent(event);
+        });
+        
+        // Method 3: Try to find and update cart count elements
+        const cartSelectors = [
+          '[data-wf-cart-quantity]',
+          '.w-commerce-commercecartquantity',
+          '.cart-quantity',
+          '[data-cart-quantity]'
+        ];
+        
+        cartSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(el => {
+            // Trigger a re-render by temporarily hiding and showing
+            const originalDisplay = el.style.display;
+            el.style.display = 'none';
+            setTimeout(() => {
+              el.style.display = originalDisplay;
+            }, 10);
+          });
+        });
+        
+      } catch (error) {
+        console.warn('[SolarGrid] Fehler beim Aktualisieren der Cart-UI:', error);
       }
-      
-      // Dispatch custom event for cart update
-      const cartUpdateEvent = new CustomEvent('cartUpdated', {
-        bubbles: true,
-        detail: { source: 'solarGrid' }
-      });
-      document.dispatchEvent(cartUpdateEvent);
     }
 
     fallbackAddToCart(product, quantity, productKey) {
-      // Method 3: Manual cart management (fallback)
-      console.log(`[SolarGrid] Fallback: ${quantity}x ${productKey} wird verarbeitet.`);
+      console.log(`[SolarGrid] Fallback: Simuliere Hinzufügung von ${quantity}x ${productKey}`);
       
-      // Try to update cart count in UI if possible
-      const cartCountElements = document.querySelectorAll('[data-wf-cart-quantity]');
-      cartCountElements.forEach(el => {
-        const currentCount = parseInt(el.textContent) || 0;
-        el.textContent = currentCount + quantity;
-      });
+      // Store in localStorage for debugging
+      const cartKey = 'solarGrid-cart-debug';
+      let cartDebug = JSON.parse(localStorage.getItem(cartKey) || '{}');
+      cartDebug[productKey] = (cartDebug[productKey] || 0) + quantity;
+      cartDebug._lastUpdate = new Date().toISOString();
+      localStorage.setItem(cartKey, JSON.stringify(cartDebug));
       
-      // Store in localStorage as backup
-      const cartKey = 'webflow-cart-backup';
-      let cartBackup = JSON.parse(localStorage.getItem(cartKey) || '{}');
-      cartBackup[product.productId] = (cartBackup[product.productId] || 0) + quantity;
-      localStorage.setItem(cartKey, JSON.stringify(cartBackup));
-      
-      console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum lokalen Warenkorb hinzugefügt.`);
+      console.log(`[SolarGrid] Debug-Info gespeichert. Aktuelle Debug-Cart:`, cartDebug);
     }
 
     addPartsListToCart(parts) {
@@ -1016,15 +1023,29 @@
         console.info('[SolarGrid] Keine Produkte zum Hinzufügen gefunden.');
         return;
       }
+      
+      console.log('[SolarGrid] Füge folgende Teile zum Warenkorb hinzu:', parts);
+      
       entries.forEach(([key, qty], i) => {
-        setTimeout(() => this.addProductToCart(key, qty), i * 600); // 600ms Delay
+        // Calculate packs needed based on VE (Verpackungseinheit)
+        const packsNeeded = Math.ceil(qty / VE[key]);
+        console.log(`[SolarGrid] ${key}: ${qty} Stück benötigt, ${packsNeeded} Packungen à ${VE[key]} Stück`);
+        
+        setTimeout(() => this.addProductToCart(key, packsNeeded), i * 800); // 800ms Delay for better reliability
       });
     }
 
     addCurrentToCart() {
       const parts = this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked);
+      const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
+      
+      if (itemCount === 0) {
+        this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
+        return;
+      }
+      
       this.addPartsListToCart(parts);
-      this.showToast('Produkte zum Warenkorb hinzugefügt ✅', 2000);
+      this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
     }
 
     addAllToCart() {
@@ -1040,8 +1061,16 @@
           total[k] = (total[k] || 0) + v;
         });
       });
+      
+      const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
+      
+      if (totalItemCount === 0) {
+        this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
+        return;
+      }
+      
       this.addPartsListToCart(total);
-      this.showToast('Alle Konfigurationen zum Warenkorb hinzugefügt ✅', 2000);
+      this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
     }
 
     _buildPartsFor(sel, incM, mc4, holz) {
@@ -1069,5 +1098,28 @@
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
     window.solarGrid = grid;
+    
+    // Debug function to check cart forms
+    window.debugCartForms = () => {
+      const forms = document.querySelectorAll('#hidden-cart-forms form');
+      console.log(`[Debug] Gefundene Cart-Formulare: ${forms.length}`);
+      forms.forEach((form, i) => {
+        const productId = form.getAttribute('data-product-id');
+        const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity"]');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        console.log(`[Debug] Form ${i+1}: ProductID=${productId}, Quantity Input=${!!qtyInput}, Submit Button=${!!submitBtn}`);
+      });
+      return forms;
+    };
+    
+    // Debug function to test single product addition
+    window.testAddToCart = (productKey = 'Solarmodul', quantity = 1) => {
+      console.log(`[Debug] Teste Hinzufügung: ${quantity}x ${productKey}`);
+      grid.addProductToCart(productKey, quantity);
+    };
+    
+    console.log('[SolarGrid] Initialisierung abgeschlossen. Debug-Funktionen verfügbar:');
+    console.log('- window.debugCartForms() - Zeigt alle Cart-Formulare');
+    console.log('- window.testAddToCart(productKey, quantity) - Testet Hinzufügung eines Produkts');
   });
 })();
