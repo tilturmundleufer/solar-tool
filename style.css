@@ -1,0 +1,220 @@
+:root {
+  --primary-color: #ffb101;
+  --secondary-color: #072544;
+  --bg-color: #1a1a2e;
+  --accent-color: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #ffb101;
+  --cols: 0;
+  --rows: 0;
+  --cell-width: 179px;
+  --cell-height: 118px;
+}
+
+/* Grund-Layout */
+.rechner-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 1rem;
+  background: var(--bg-color);
+}
+
+.setup-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--secondary-color);
+  border-radius: 1rem;
+}
+
+.setup-container label {
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+.setup-container input[type="number"],
+.setup-container input[type="text"] {
+  width: 60px;
+  margin-left: 0.5rem;
+  border: 2px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: #000;
+  font-weight: bold;
+  padding: 4px;
+}
+
+.setup-container input[type="radio"] {
+  margin-left: 0.5rem;
+}
+
+.setup-container .btn {
+  padding: 8px 16px;
+  background: var(--primary-color);
+  color: var(--secondary-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.grid-overflow {
+  max-height: 70vh;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.grid-wrapper {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  padding: 1rem;
+  background: var(--secondary-color);
+  border-radius: 1rem;
+}
+
+/* Grid */
+#grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell-width));
+  grid-template-rows: repeat(var(--rows), var(--cell-height));
+  gap: 4px;
+  align-content: start;
+  justify-content: start;
+}
+
+.grid-cell {
+  width: var(--cell-width);
+  height: var(--cell-height);
+  background: #ccc;
+  border: 2px solid var(--primary-color);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.95);
+  animation: cell-in 400ms forwards ease-out;
+}
+
+.grid-cell.selected {
+  background: var(--secondary-color)
+    url("https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png")
+    center/cover no-repeat;
+}
+
+/* Buttons in Grid */
+.button-group-vertical,
+.button-group-horizontal {
+  position: absolute;
+  z-index: 100;
+}
+
+.button-group-vertical {
+  top: 50%;
+  right: -50px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.button-group-horizontal {
+  left: 50%;
+  bottom: -50px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.button-group-vertical.overlay-mode {
+  right: 10px;
+}
+
+.button-group-horizontal.overlay-mode {
+  bottom: 10px;
+}
+
+.grid-wrapper button {
+  width: 40px;
+  height: 40px;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  cursor: pointer;
+  color: var(--secondary-color);
+}
+
+/* Produktlisten */
+.produktliste-holder,
+#summary-list-holder,
+.produktliste-holder-2 {
+  background: var(--secondary-color);
+  padding: 1rem;
+  border-radius: 1rem;
+  color: var(--accent-color);
+}
+
+#produktliste,
+#summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.produkt-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 8px;
+  background: rgba(255,255,255,0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.produkt-item img {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+}
+
+.summary-column {
+  flex: 1;
+  min-width: 200px;
+}
+
+.summary-total {
+  width: 100%;
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--primary-color);
+  color: var(--secondary-color);
+  padding: 1rem 2rem;
+  border-radius: 4px;
+  font-weight: bold;
+  opacity: 0.95;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Animation */
+@keyframes cell-in {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}

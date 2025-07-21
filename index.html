@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solarrechner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="rechner-container">
+    <div class="setup-container">
+      <label>Spalten:<input type="number" id="cols-input" min="1" value="5"></label>
+      <label>Reihen:<input type="number" id="rows-input" min="1" value="5"></label>
+      <label>Breite (in cm):<input type="number" id="width-input" value="179"></label>
+      <label>Höhe (in cm):<input type="number" id="height-input" value="118"></label>
+      <label>Horizontal:<input type="radio" id="orient-h" name="orient" checked></label>
+      <label>Vertikal:<input type="radio" id="orient-v" name="orient"></label>
+      <button id="reset-btn" class="btn">Zurücksetzen</button>
+    </div>
+
+    <div class="grid-overflow">
+      <div class="grid-wrapper" style="position: relative;">
+        <div id="grid"></div>
+
+        <div class="button-group-vertical">
+          <button id="add-col">＋</button>
+          <button id="remove-col">−</button>
+        </div>
+
+        <div class="button-group-horizontal">
+          <button id="add-row">＋</button>
+          <button id="remove-row">−</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="produktliste-holder">
+      <div id="produktliste"></div>
+      <button id="add-to-cart-btn">In den Warenkorb</button>
+    </div>
+
+    <div id="summary-list-holder">
+      <div id="summary-list"></div>
+      <button id="summary-add-cart-btn">Gesamte Auswahl in den Warenkorb</button>
+    </div>
+
+    <div class="produktliste-holder-2">
+      <button id="save-config-btn" class="btn primary">Konfiguration speichern</button>
+      <button id="update-config-btn" class="btn primary">Aktualisieren</button>
+      <button id="delete-config-btn" class="btn primary hidden">Konfiguration löschen</button>
+      <button id="delete-all-configs-btn" class="btn primary hidden">Alle Konfigurationen löschen</button>
+      <div id="config-list"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden">Gespeichert!</div>
+
+  <script src="script.js"></script>
+</body>
+</html>
