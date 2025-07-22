@@ -201,7 +201,6 @@
     		);
   		}
 
-  		this.wrapper.style.display = 'block';
   		this.listHolder.style.display = 'block';
   		this.updateSize();
   		this.buildGrid();
