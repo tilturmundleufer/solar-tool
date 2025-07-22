@@ -882,20 +882,18 @@
     }
 
     clickWebflowButtonSafely(form, button, productKey, quantity, isLastItem) {
+      const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
+      if (qtyInput) qtyInput.value = quantity;
+      
       if (isLastItem) {
-        // Für das letzte Item: Normaler Button-Klick (zeigt Cart-Popup)
-        const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
-        if (qtyInput) qtyInput.value = quantity;
-        
-        setTimeout(() => {
-          button.click();
-        }, 50);
+        // Für das letzte Item: Normaler Button-Klick (Cart-Container ist bereits sichtbar)
+        button.click();
         return;
       }
       
-      // Für alle anderen Items: Versteckter Submit ohne Popup
+      // Für alle anderen Items: Versteckter Submit (Cart-Container ist versteckt)
       const iframe = document.createElement('iframe');
-      iframe.name = 'safe-cart-' + Date.now();
+      iframe.name = 'safe-cart-' + Date.now() + Math.random();
       iframe.style.cssText = `
         position: absolute;
         left: -10000px;
@@ -918,7 +916,6 @@
           hasLoaded = true;
           form.target = originalTarget;
           
-          const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
           if (qtyInput) qtyInput.value = 1;
           
           setTimeout(() => {
@@ -936,9 +933,7 @@
         }
       };
       
-      setTimeout(() => {
-        button.click();
-      }, 50);
+      button.click();
     }
 
     addPartsListToCart(parts) {
@@ -947,12 +942,40 @@
         return;
       }
       
-      entries.forEach(([key, qty], i) => {
+      // Verstecke Cart-Container temporär
+      this.hideCartContainer();
+      
+      // Füge alle Produkte außer dem letzten sofort hinzu (ohne Delays)
+      const allButLast = entries.slice(0, -1);
+      const lastEntry = entries[entries.length - 1];
+      
+      // Alle Produkte außer dem letzten sofort hinzufügen
+      allButLast.forEach(([key, qty]) => {
         const packsNeeded = Math.ceil(qty / VE[key]);
-        const isLastItem = i === entries.length - 1;
-        
-        setTimeout(() => this.addProductToCart(key, packsNeeded, isLastItem), i * 200);
+        this.addProductToCart(key, packsNeeded, false);
       });
+      
+      // Das letzte Produkt nach kurzer Verzögerung hinzufügen (zeigt Cart)
+      setTimeout(() => {
+        this.showCartContainer();
+        const [lastKey, lastQty] = lastEntry;
+        const packsNeeded = Math.ceil(lastQty / VE[lastKey]);
+        this.addProductToCart(lastKey, packsNeeded, true);
+      }, 500);
+    }
+
+    hideCartContainer() {
+      const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+      if (cartContainer) {
+        cartContainer.style.display = 'none';
+      }
+    }
+
+    showCartContainer() {
+      const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+      if (cartContainer) {
+        cartContainer.style.display = '';
+      }
     }
 
     addCurrentToCart() {
