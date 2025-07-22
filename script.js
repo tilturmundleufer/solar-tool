@@ -272,26 +272,29 @@
     updateSize() {
   		const gap = 2;
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
-  		const maxWidth = window.innerWidth - remPx * 4;
 
-  		const baseW = parseInt(this.wIn.value, 10);
-  		const baseH = parseInt(this.hIn.value, 10);
-  		const ratio = baseH / baseW;
-
-  		const defaultTotal = this.cols * baseW + (this.cols - 1) * gap;
-
-  		let w, h;
-  		if (
-    		window.innerWidth >= 1100 &&
-    		this.cols <= 10 &&
-    		defaultTotal > maxWidth
-  		) {
-    		w = (maxWidth - (this.cols - 1) * gap) / this.cols;
-    		h = w * ratio;
-  		} else {
-    		w = baseW;
-    		h = baseH;
-  		}
+  		// Original Zellengrößen aus Input
+  		const originalCellW = parseInt(this.wIn.value, 10) || 120;
+  		const originalCellH = parseInt(this.hIn.value, 10) || 80;
+  		
+  		// Maximale verfügbare Größe
+  		const maxWidth = window.innerWidth - remPx * 4; // 100vw - 4rem
+  		const maxHeight = window.innerHeight * 0.7; // 70vh
+  		
+  		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
+  		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
+  		const totalHeightWithGaps = this.rows * originalCellH + (this.rows - 1) * gap;
+  		
+  		// Berechne Skalierungsfaktoren
+  		const scaleX = totalWidthWithGaps > maxWidth ? maxWidth / totalWidthWithGaps : 1;
+  		const scaleY = totalHeightWithGaps > maxHeight ? maxHeight / totalHeightWithGaps : 1;
+  		
+  		// Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
+  		const scale = Math.min(scaleX, scaleY);
+  		
+  		// Berechne finale Zellgrößen
+  		const w = originalCellW * scale;
+  		const h = originalCellH * scale;
 
   		// CSS Variablen setzen
   		document.documentElement.style.setProperty('--cell-width',  w + 'px');
