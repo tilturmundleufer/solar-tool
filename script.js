@@ -859,6 +859,7 @@
           `;
         }
       });
+      console.log('[SolarGrid] Webflow Formulare versteckt');
     }
 
     addProductToCart(productKey, quantity, isLastItem = false) {
@@ -870,6 +871,7 @@
       
       const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
       if (qtyInput) {
+        console.log(`[SolarGrid] Setze Menge auf ${quantity} für ${productKey}`);
         qtyInput.value = quantity;
       }
       
@@ -938,18 +940,6 @@
         button.click();
       }, 50);
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
     addPartsListToCart(parts) {
       const entries = Object.entries(parts).filter(([_, qty]) => qty > 0);
