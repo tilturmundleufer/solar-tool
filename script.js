@@ -230,7 +230,7 @@
   		for (let row of this.selection) {
     		row.push(false);
   		}
-  		this.colsIn.value = this.cols;
+  		//this.colsIn.value = this.cols; // entfernt, da im neuen Layout kein cols-input
   		this.updateGridAfterStructureChange();
 		}
 
@@ -240,14 +240,14 @@
   		for (let row of this.selection) {
     		row.pop();
   		}
-  		this.colsIn.value = this.cols;
+  		//this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
 		addRow() {
   		this.rows += 1;
   		this.selection.push(Array(this.cols).fill(false));
-  		this.rowsIn.value = this.rows;
+  		//this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -255,7 +255,7 @@
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.pop();
-  		this.rowsIn.value = this.rows;
+  		//this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -274,8 +274,8 @@
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
   		// Original Zellengrößen aus Input
-  		const originalCellW = parseInt(this.wIn.value, 10) || 120;
-  		const originalCellH = parseInt(this.hIn.value, 10) || 80;
+  		const originalCellW = parseInt(this.wIn.value, 10) || 176;
+  		const originalCellH = parseInt(this.hIn.value, 10) || 113;
   		
   		// Maximale verfügbare Größe
   		const maxWidth = window.innerWidth - remPx * 4; // 100vw - 4rem

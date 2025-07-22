@@ -2,35 +2,79 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Solarrechner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solar-Tool</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="rechner-container">
-    <div class="setup-container">
-      <label>Spalten:<input type="number" id="cols-input" min="1" value="5"></label>
-      <label>Reihen:<input type="number" id="rows-input" min="1" value="5"></label>
-      <label>Breite (in cm):<input type="number" id="width-input" value="179"></label>
-      <label>Höhe (in cm):<input type="number" id="height-input" value="118"></label>
-      <label>Horizontal:<input type="radio" id="orient-h" name="orient" checked></label>
-      <label>Vertikal:<input type="radio" id="orient-v" name="orient"></label>
-      <button id="reset-btn" class="btn">Zurücksetzen</button>
-    </div>
-
-    <div class="grid-overflow">
-      <div class="grid-wrapper" style="position: relative;">
-        <div id="grid"></div>
-
-        <div class="button-group-vertical">
-          <button id="add-col">＋</button>
-          <button id="remove-col">−</button>
+  <div class="planner">
+    <div class="main-area">
+      <div class="header">
+        <div class="controls controls--horizontal">
+          <div class="dimension-controls">
+            <h1 class="name">Col</h1>
+            <button class="bntscale" id="add-col">+</button>
+            <button class="bntscale" id="remove-col">−</button>
+            <h1 class="name">Row</h1>
+            <button class="bntscale" id="add-row">+</button>
+            <button class="bntscale" id="remove-row">−</button>
+          </div>
+          <div class="aspect-ratio-controls">
+            <input type="number" id="width-input" class="aspect-input" value="176" min="1">
+            <span>:</span>
+            <input type="number" id="height-input" class="aspect-input" value="113" min="1" step="1">
+          </div>
         </div>
-
-        <div class="button-group-horizontal">
-          <button id="add-row">＋</button>
-          <button id="remove-row">−</button>
+      </div>
+      <div class="frame">
+        <div class="grid-container">
+          <div class="canvas">
+            <div id="grid" class="grid"></div>
+          </div>
+          <div class="expansion-controls">
+            <div class="side-controls top-controls">
+              <button class="expand-btn plus-btn" data-dir="top">+</button>
+              <button class="expand-btn minus-btn" data-dir="top">−</button>
+            </div>
+            <div class="side-controls left-controls">
+              <button class="expand-btn plus-btn" data-dir="left">+</button>
+              <button class="expand-btn minus-btn" data-dir="left">−</button>
+            </div>
+            <div class="side-controls right-controls">
+              <button class="expand-btn plus-btn" data-dir="right">+</button>
+              <button class="expand-btn minus-btn" data-dir="right">−</button>
+            </div>
+            <div class="side-controls bottom-controls">
+              <button class="expand-btn plus-btn" data-dir="bottom">+</button>
+              <button class="expand-btn minus-btn" data-dir="bottom">−</button>
+            </div>
+          </div>
         </div>
+      </div>
+      <div id="toast" class="toast hidden"></div>
+      <!-- Produktliste und Summary aus solar-tool -->
+      <div class="produktliste-holder" style="display:none">
+        <div id="produktliste"></div>
+      </div>
+      <div id="summary-list-holder" style="display:none">
+        <div id="summary-list"></div>
+      </div>
+      <div class="config-list-holder">
+        <div id="config-list"></div>
+      </div>
+      <div class="button-bar">
+        <button id="save-config-btn">Konfiguration speichern</button>
+        <button id="add-to-cart-btn">Aktuelle Konfiguration zum Warenkorb</button>
+        <button id="summary-add-cart-btn">Alle Konfigurationen zum Warenkorb</button>
+        <button id="reset-btn">Zurücksetzen</button>
+        <button id="continue-later-btn">Später weitermachen</button>
+      </div>
+      <div class="checkbox-bar">
+        <label><input type="checkbox" id="include-modules" checked> Module</label>
+        <label><input type="checkbox" id="mc4"> MC4-Stecker</label>
+        <label><input type="checkbox" id="holz"> Holzunterleger</label>
+        <label><input type="radio" name="orient" id="orient-h" checked> Horizontal</label>
+        <label><input type="radio" name="orient" id="orient-v"> Vertikal</label>
       </div>
     </div>
 
@@ -50,9 +94,6 @@
       <div id="config-list"></div>
     </div>
   </div>
-
-  <div id="toast" class="hidden">Gespeichert!</div>
-
   <script src="script.js"></script>
 </body>
 </html>
