@@ -67,6 +67,7 @@
       this.configListEl  = document.getElementById('config-list');
       this.resetBtn 		 = document.getElementById('reset-btn');
       this.deleteBtn 		 = document.getElementById('delete-config-btn');
+      this.continueLaterBtn = document.getElementById('continue-later-btn');
 
       this.selection     = [];
       this.configs       = [];
@@ -77,7 +78,6 @@
     }
 
     init() {
-    	this.loadFromLocalStorage();
   		this.attachInputListeners();
       
       const params = new URLSearchParams(window.location.search);
@@ -85,10 +85,17 @@
   		if (rawData) {
     		try {
       		const json = decodeURIComponent(atob(rawData));
-      		const cfg = JSON.parse(json);
-      		this.configs.push(cfg);
-      		this.loadConfig(this.configs.length - 1);
-      		return; // ✅ direkt abbrechen – nichts anderes mehr laden
+      		const configs = JSON.parse(json);
+      		// Lade alle Konfigurationen aus der URL
+      		if (Array.isArray(configs)) {
+      			this.configs = configs;
+      			this.loadConfig(0); // Lade die erste Konfiguration
+      		} else {
+      			// Einzelne Konfiguration (alte URL-Format)
+      			this.configs.push(configs);
+      			this.loadConfig(0);
+      		}
+      		return;
     		} catch (e) {
       		console.warn('Ungültige Konfigurationsdaten in URL:', e);
     		}
@@ -155,6 +162,7 @@
   		this.addBtn.addEventListener('click', () => this.addCurrentToCart());
   		this.summaryBtn.addEventListener('click', () => this.addAllToCart());
   		this.resetBtn.addEventListener('click', () => this.resetGridToDefault());
+  		this.continueLaterBtn.addEventListener('click', () => this.generateContinueLink());
       document.getElementById('delete-all-configs-btn').addEventListener('click', () => this.deleteAllConfigs());
 
   		window.addEventListener('resize', () => {
@@ -164,15 +172,8 @@
     		this.updateSummaryOnChange();
   		});
       
-      // 👉 Erst initiales Grid vorbereiten
-  		this.cols = this.default.cols;
-  		this.rows = this.default.rows;
-  		this.setup();
-
-  		this.loadFromLocalStorage();
-
-			if (!this.configs.length) {
-  			// 🔧 Keine gespeicherten Konfigurationen → Erstelle Default
+        		// Wenn keine Konfigurationen aus URL geladen wurden, erstelle eine Standard-Konfiguration
+  		if (this.configs.length === 0) {
   			this.cols = this.default.cols;
   			this.rows = this.default.rows;
   			this.setup();
@@ -180,16 +181,6 @@
   			const defaultConfig = this._makeConfigObject();
   			this.configs.push(defaultConfig);
   			this.loadConfig(0);
-			} else {
-  			// 🔁 Bereits gespeicherte Konfigurationen → lade passende aus URL oder letzte aktive
-  			const params = new URLSearchParams(window.location.search);
-  			const configIdx = parseInt(params.get('config'), 10);
-  			if (!isNaN(configIdx) && this.configs[configIdx]) {
-    		this.loadConfig(configIdx);
-  			} else {
-    			const fallback = this.currentConfig ?? 0;
-    			this.loadConfig(fallback);
-  			}
 			}
 		}
     
@@ -223,15 +214,17 @@
 		}
 
     updateSaveButtons() {
-  		if (this.currentConfig === null) {
-    		this.saveBtn.style.display = 'inline-block';
-    		this.updateBtn.style.display = 'none';
-    		this.deleteBtn.classList.add('hidden');
-  		} else {
-    		this.saveBtn.style.display = 'none';
-    		this.updateBtn.style.display = 'inline-block';
+  		// Immer den "Neue Konfiguration speichern" Button anzeigen
+  		this.saveBtn.style.display = 'inline-block';
+  		this.updateBtn.style.display = 'none'; // Update-Button wird nicht mehr gebraucht
+  		
+  		// Delete-Button nur anzeigen wenn eine Konfiguration ausgewählt ist
+  		if (this.currentConfig !== null) {
     		this.deleteBtn.classList.remove('hidden');
+  		} else {
+    		this.deleteBtn.classList.add('hidden');
   		}
+  		
       const deleteAllBtn = document.getElementById('delete-all-configs-btn');
 			if (deleteAllBtn) {
   			deleteAllBtn.style.display = this.configs.length > 0 ? 'inline-block' : 'none';
@@ -291,27 +284,7 @@
   		this.updateSummaryOnChange();
 		}
     
-    saveToLocalStorage() {
-  		const data = {
-    		configs: this.configs,
-    		currentConfig: this.currentConfig
-  		};
-  		localStorage.setItem('solarConfigs', JSON.stringify(data));
-		}
-    
-    loadFromLocalStorage() {
-  		const raw = localStorage.getItem('solarConfigs');
-  		if (!raw) return;
-  		try {
-    		const data = JSON.parse(raw);
-    		if (Array.isArray(data.configs)) {
-      		this.configs = data.configs;
-      		this.currentConfig = data.currentConfig ?? null;
-    		}
-  		} catch (e) {
-    		console.error('Fehler beim Laden der gespeicherten Konfiguration:', e);
-  		}
-		}
+
     
 
     updateSize() {
@@ -478,12 +451,7 @@
   		if (!confirm('Möchtest du wirklich alle Konfigurationen löschen?')) return;
 
   		this.configs = [];
-  		localStorage.removeItem('solarConfigs');
-  		this.currentConfig = null;
-
-  		this.resetToDefaultGrid();
-  		this.renderConfigList();
-  		this.updateSaveButtons();
+  		this.createNewConfig();
 		}
 
     calculateParts() {
@@ -600,24 +568,20 @@
     saveNewConfig() {
   		const cfg = this._makeConfigObject();
   		this.configs.push(cfg);
+  		
+  		// Neue Konfiguration direkt auswählen
+  		this.currentConfig = this.configs.length - 1;
+  		
   		this.renderConfigList();
   		this.updateSaveButtons();
-
-  		this.currentConfig = null;
-  		this.resetGridToDefault();
-
-  		this.showToast('Konfiguration gespeichert ✅'); // 🎉
-      this.saveToLocalStorage();
+  		this.showToast('Konfiguration gespeichert ✅');
 		}
 
     updateConfig() {
       const idx = this.currentConfig;
       this.configs[idx] = this._makeConfigObject();
-      this.currentConfig = null;
-      this.resetToDefaultGrid();
       this.renderConfigList();
       this.updateSaveButtons();
-      this.saveToLocalStorage();
     }
     
     deleteCurrentConfig() {
@@ -625,11 +589,25 @@
   		if (!confirm('Willst du die Konfiguration wirklich löschen?')) return;
 
   		this.configs.splice(this.currentConfig, 1);
-  		this.saveToLocalStorage();
+  		
+  		// Nach dem Löschen: Wähle die vorherige Konfiguration oder erstelle eine neue
+  		if (this.configs.length > 0) {
+  			// Wähle die vorherige Konfiguration oder die erste
+  			const newIndex = Math.min(this.currentConfig, this.configs.length - 1);
+  			this.loadConfig(newIndex);
+  		} else {
+  			// Keine Konfigurationen mehr - erstelle eine neue
+  			this.createNewConfig();
+  		}
 
+  		this.renderConfigList();
+  		this.updateSaveButtons();
+		}
+
+    createNewConfig() {
+  		// Erstelle eine neue Standard-Konfiguration
   		this.currentConfig = null;
   		this.resetGridToDefault();
-
   		this.renderConfigList();
   		this.updateSaveButtons();
 		}
@@ -672,14 +650,14 @@
     		nameEl.style.cursor = 'pointer';
 
     		nameEl.addEventListener('click', () => {
+  				// Auto-Save der aktuellen Konfiguration vor dem Wechsel
   				if (this.currentConfig !== null) {
-    				const saveIndex = this.currentConfig; // 👈 merke Index VOR reset
-    				this.currentConfig = saveIndex;       // 👈 explizit setzen
     				this.updateConfig();
   				}
-  				this.loadConfig(idx); // 🔁 gewünschte Konfiguration laden
-  				this.updateSaveButtons();
-  				this.showToast('Automatisch gespeichert ✅', 1500);
+  				
+  				// Lade die gewünschte Konfiguration
+  				this.loadConfig(idx);
+  				this.showToast('Konfiguration geladen', 1000);
 				});
 
     		const editBtn = document.createElement('button');
@@ -718,7 +696,7 @@
 
     		const shareBtn = document.createElement('button');
     		shareBtn.textContent = '🔗';
-    		shareBtn.title = 'Konfiguration teilen';
+    		shareBtn.title = 'Später weitermachen - Link kopieren';
     		Object.assign(shareBtn.style, {
       		background: 'none',
       		border: 'none',
@@ -727,11 +705,7 @@
     		});
     		shareBtn.addEventListener('click', (e) => {
       		e.stopPropagation();
-      		const cfgData = JSON.stringify(this.configs[idx]);
-					const base64 = btoa(encodeURIComponent(cfgData));
-					const shareUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
-      		navigator.clipboard.writeText(shareUrl);
-      		this.showToast('Link kopiert ✅', 1500);
+      		this.generateContinueLink();
     		});
 
     		nameContainer.appendChild(nameEl);
@@ -831,6 +805,21 @@
   		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
   		this.summaryList.style.display = entries.length ? 'flex' : 'none';
 		}
+
+    generateContinueLink() {
+    	// Auto-Save der aktuellen Konfiguration vor dem Link-Erstellen
+    	if (this.currentConfig !== null) {
+    		this.updateConfig();
+    	}
+    	
+    	// Erstelle Link mit allen Konfigurationen
+    	const allConfigsData = JSON.stringify(this.configs);
+			const base64 = btoa(encodeURIComponent(allConfigsData));
+			const continueUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
+			
+			navigator.clipboard.writeText(continueUrl);
+			this.showToast('Später-weitermachen Link kopiert ✅', 2000);
+    }
     
         generateHiddenCartForms() {
       const webflowForms = document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]');
