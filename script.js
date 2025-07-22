@@ -140,6 +140,7 @@
     		el.addEventListener('change', () => {
       		this.buildList();
       		this.updateSummaryOnChange();
+      		this.renderProductSummary(); // Aktualisiere auch die Summary aller Konfigurationen
     		})
   		);
       
@@ -193,16 +194,6 @@
 		}
     
     setup() {
-    	if (
-    		!Array.isArray(this.selection) ||
-    		this.selection.length !== this.rows ||
-    		this.selection[0]?.length !== this.cols
-  		) {
-    		this.selection = Array.from({ length: this.rows }, () =>
-      		Array.from({ length: this.cols }, () => false)
-    		);
-  		}
-      
   		this.cols = parseInt(this.colsIn.value, 10);
   		this.rows = parseInt(this.rowsIn.value, 10);
   		if (!this.cols || !this.rows) {
@@ -210,10 +201,17 @@
     		return;
   		}
 
-  		const oldSel = this.selection;
-  		this.selection = Array.from({ length: this.rows }, (_, y) =>
-    		Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
-  		);
+  		// Nur dann eine neue leere Auswahl erstellen, wenn noch keine existiert oder die Dimensionen nicht stimmen
+    	if (
+    		!Array.isArray(this.selection) ||
+    		this.selection.length !== this.rows ||
+    		this.selection[0]?.length !== this.cols
+  		) {
+    		const oldSel = this.selection;
+    		this.selection = Array.from({ length: this.rows }, (_, y) =>
+      		Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
+    		);
+  		}
 
   		this.wrapper.style.display = 'block';
   		this.listHolder.style.display = 'block';
@@ -575,11 +573,12 @@
   		this.mc4.checked  = cfg.mc4;
   		this.holz.checked = cfg.holz;
 
-  		// STATE Werte setzen
+  		// STATE Werte setzen - WICHTIG: Vor setup() setzen
   		this.cols = cfg.cols;
   		this.rows = cfg.rows;
   		this.selection = cfg.selection.map(r => [...r]);
 
+  		// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
   		this.setup();
 
   		this.renderConfigList();
@@ -752,13 +751,26 @@
   		const mc4Checked = this.mc4.checked;
   		const holzChecked = this.holz.checked;
 
-  		const bundles = this.configs.map(c => ({
-    		selection:   c.selection,
-    		orientation: c.orientation,
-    		incM:        c.incM,
-    		mc4:         c.mc4,
-    		holz:        c.holz
-  		}));
+  		const bundles = this.configs.map((c, idx) => {
+  			// Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
+  			if (idx === this.currentConfig) {
+  				return {
+    				selection:   this.selection,
+    				orientation: this.orV.checked ? 'vertical' : 'horizontal',
+    				incM:        incMChecked,
+    				mc4:         mc4Checked,
+    				holz:        holzChecked
+  				};
+  			} else {
+  				return {
+    				selection:   c.selection,
+    				orientation: c.orientation,
+    				incM:        c.incM,
+    				mc4:         c.mc4,
+    				holz:        c.holz
+  				};
+  			}
+  		});
 
   		if (this.currentConfig === null) {
   			bundles.push({
