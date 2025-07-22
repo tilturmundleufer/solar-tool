@@ -136,10 +136,22 @@
     		})
   		);
       
-      document.getElementById('add-col').addEventListener('click', () => this.addColumn());
-			document.getElementById('remove-col').addEventListener('click', () => this.removeColumn());
-			document.getElementById('add-row').addEventListener('click', () => this.addRow());
-			document.getElementById('remove-row').addEventListener('click', () => this.removeRow());
+      // Event-Listener für die Expansion-Controls um das Grid
+			document.querySelectorAll('.expand-btn').forEach(btn => {
+				btn.addEventListener('click', () => {
+					const direction = btn.dataset.dir;
+					const isPlus = btn.classList.contains('plus-btn');
+					
+					if (direction === 'right' && isPlus) this.addColumn();
+					else if (direction === 'right' && !isPlus) this.removeColumn();
+					else if (direction === 'left' && isPlus) this.addColumn();
+					else if (direction === 'left' && !isPlus) this.removeColumn();
+					else if (direction === 'bottom' && isPlus) this.addRow();
+					else if (direction === 'bottom' && !isPlus) this.removeRow();
+					else if (direction === 'top' && isPlus) this.addRow();
+					else if (direction === 'top' && !isPlus) this.removeRow();
+				});
+			});
 
   		this.saveBtn.addEventListener('click', () => this.saveNewConfig());
   		this.addBtn.addEventListener('click', () => this.addCurrentToCart());
@@ -219,7 +231,7 @@
   		for (let row of this.selection) {
     		row.push(false);
   		}
-  		//this.colsIn.value = this.cols; // entfernt, da im neuen Layout kein cols-input
+  		this.colsIn.value = this.cols; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
@@ -229,14 +241,14 @@
   		for (let row of this.selection) {
     		row.pop();
   		}
-  		//this.colsIn.value = this.cols;
+  		this.colsIn.value = this.cols; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
 		addRow() {
   		this.rows += 1;
   		this.selection.push(Array(this.cols).fill(false));
-  		//this.rowsIn.value = this.rows;
+  		this.rowsIn.value = this.rows; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
@@ -244,7 +256,7 @@
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.pop();
-  		//this.rowsIn.value = this.rows;
+  		this.rowsIn.value = this.rows; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
