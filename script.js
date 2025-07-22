@@ -285,11 +285,12 @@
   		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
   		const totalHeightWithGaps = this.rows * originalCellH + (this.rows - 1) * gap;
   		
-  		// Berechne Skalierungsfaktoren
+  		// Berechne Skalierungsfaktoren für beide Dimensionen
   		const scaleX = totalWidthWithGaps > maxWidth ? maxWidth / totalWidthWithGaps : 1;
   		const scaleY = totalHeightWithGaps > maxHeight ? maxHeight / totalHeightWithGaps : 1;
   		
   		// Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
+  		// Das bedeutet: Wenn Höhe das Problem ist, wird nach Höhe skaliert (und umgekehrt)
   		const scale = Math.min(scaleX, scaleY);
   		
   		// Berechne finale Zellgrößen
