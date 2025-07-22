@@ -611,19 +611,33 @@
 		}
 
     saveNewConfig() {
-  		// Temporär currentConfig auf null setzen für neue Konfiguration
-  		const originalCurrentConfig = this.currentConfig;
+  		// 1. Aktuelle Auswahl in der vorherigen Konfiguration speichern
+  		if (this.currentConfig !== null) {
+  			this.updateConfig(); // Speichere aktuelle Änderungen in vorheriger Config
+  		}
+  		
+  		// 2. Temporär currentConfig auf null setzen für neue Konfiguration
   		this.currentConfig = null;
+  		
+  		// 3. Neue Konfiguration mit leerem Grid erstellen
+  		const emptySelection = Array.from({ length: this.rows }, () =>
+  			Array.from({ length: this.cols }, () => false)
+  		);
+  		
+  		// 4. Aktuelle Auswahl temporär speichern und durch leere ersetzen
+  		const originalSelection = this.selection;
+  		this.selection = emptySelection;
   		
   		const cfg = this._makeConfigObject();
   		this.configs.push(cfg);
   		
-  		// Neue Konfiguration direkt auswählen
+  		// 5. Neue Konfiguration auswählen und Grid neu aufbauen
   		this.currentConfig = this.configs.length - 1;
+  		this.setup(); // Baut Grid mit leerer Auswahl neu auf
   		
   		this.renderConfigList();
   		this.updateSaveButtons();
-  		this.showToast(`Konfiguration "${cfg.name}" gespeichert und ausgewählt ✅`);
+  		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
 		}
 
     updateConfig() {
