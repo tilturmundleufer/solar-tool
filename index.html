@@ -77,15 +77,22 @@
         <label><input type="radio" name="orient" id="orient-v"> Vertikal</label>
       </div>
     </div>
-    <aside class="sidebar">
-      <button class="collapse">&lt;</button>
-      <div class="sidebar-content">
-        <button class="nav-btn">Dach-SEITE1</button>
-        <button class="nav-btn nav-btn--active">Dach-SEITE2</button>
-        <button class="nav-btn">+</button>
-        <div class="basket">Warenkorb</div>
-      </div>
-    </aside>
+
+    <div class="produktliste-holder">
+      <div id="produktliste"></div>
+      <button id="add-to-cart-btn">In den Warenkorb</button>
+    </div>
+
+    <div id="summary-list-holder">
+      <div id="summary-list"></div>
+      <button id="summary-add-cart-btn">Gesamte Auswahl in den Warenkorb</button>
+    </div>
+
+    <div class="produktliste-holder-2">
+      <button id="save-config-btn" class="btn primary">Konfiguration speichern</button>
+      <button id="continue-later-btn" class="btn secondary">Später weitermachen</button>
+      <div id="config-list"></div>
+    </div>
   </div>
   <script src="script.js"></script>
 </body>
