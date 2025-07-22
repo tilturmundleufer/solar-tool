@@ -118,24 +118,11 @@
 
     			if (currentOrientation === lastOrientation) return;
 
-    			// Swap Inputs
-    			const temp = this.wIn.value;
-    			this.wIn.value = this.hIn.value;
-    			this.hIn.value = temp;
-
-    			// Update Grid
+    			// KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
+    			// Nur das Grid und die Liste aktualisieren
     			this.updateSize();
     			this.buildList();
     			this.updateSummaryOnChange();
-
-    			// Synchronisiere mit CSS-Werten
-    			const computedW = getComputedStyle(document.documentElement)
-      			.getPropertyValue('--cell-width').trim().replace('px', '');
-    			const computedH = getComputedStyle(document.documentElement)
-      			.getPropertyValue('--cell-height').trim().replace('px', '');
-
-    			this.wIn.value = Math.round(parseFloat(computedW));
-    			this.hIn.value = Math.round(parseFloat(computedH));
 
     			lastOrientation = currentOrientation;
   			})
@@ -180,8 +167,11 @@
 		}
     
     setup() {
-  		this.cols = parseInt(this.colsIn.value, 10);
-  		this.rows = parseInt(this.rowsIn.value, 10);
+  		// Nur aus Input lesen wenn nicht bereits durch loadConfig gesetzt
+  		if (!this.cols || !this.rows) {
+  			this.cols = parseInt(this.colsIn.value, 10);
+  			this.rows = parseInt(this.rowsIn.value, 10);
+  		}
   		if (!this.cols || !this.rows) {
     		alert('Spalten und Zeilen > 0 sein');
     		return;
@@ -273,9 +263,14 @@
   		const gap = 2;
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
-  		// Original Zellengrößen aus Input
-  		const originalCellW = parseInt(this.wIn.value, 10) || 176;
-  		const originalCellH = parseInt(this.hIn.value, 10) || 113;
+  		// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
+  		const inputW = parseInt(this.wIn.value, 10) || 120;
+  		const inputH = parseInt(this.hIn.value, 10) || 80;
+  		
+  		// Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
+  		const isVertical = this.orV.checked;
+  		const originalCellW = isVertical ? inputH : inputW;
+  		const originalCellH = isVertical ? inputW : inputH;
   		
   		// Maximale verfügbare Größe
   		const maxWidth = window.innerWidth - remPx * 4; // 100vw - 4rem
@@ -457,9 +452,13 @@
 		}
 
     processGroup(len, p) {
-      const totalLen = len * parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue('--cell-width')
-      );
+      // Verwende die tatsächliche Zellbreite basierend auf Orientierung
+      const isVertical = this.orV.checked;
+      const cellWidth = isVertical ? 
+        parseInt(this.hIn.value, 10) || 80 : 
+        parseInt(this.wIn.value, 10) || 120;
+      
+      const totalLen = len * cellWidth;
       const floor360 = Math.floor(totalLen / 360),
             rem360   = totalLen - floor360 * 360,
             floor240 = Math.ceil(rem360 / 240),
