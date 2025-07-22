@@ -61,7 +61,6 @@
       this.summaryHolder = document.getElementById('summary-list-holder');
       this.summaryList   = document.getElementById('summary-list');
       this.saveBtn       = document.getElementById('save-config-btn');
-      this.updateBtn     = document.getElementById('update-config-btn');
       this.addBtn        = document.getElementById('add-to-cart-btn');
       this.summaryBtn    = document.getElementById('summary-add-cart-btn');
       this.configListEl  = document.getElementById('config-list');
@@ -157,7 +156,6 @@
 			document.getElementById('remove-row').addEventListener('click', () => this.removeRow());
 
   		this.saveBtn.addEventListener('click', () => this.saveNewConfig());
-  		this.updateBtn.addEventListener('click', () => this.updateConfig());
   		this.deleteBtn.addEventListener('click', () => this.deleteCurrentConfig());
   		this.addBtn.addEventListener('click', () => this.addCurrentToCart());
   		this.summaryBtn.addEventListener('click', () => this.addAllToCart());
@@ -216,7 +214,6 @@
     updateSaveButtons() {
   		// Immer den "Neue Konfiguration speichern" Button anzeigen
   		this.saveBtn.style.display = 'inline-block';
-  		this.updateBtn.style.display = 'none'; // Update-Button wird nicht mehr gebraucht
   		
   		// Delete-Button nur anzeigen wenn eine Konfiguration ausgewählt ist
   		if (this.currentConfig !== null) {
