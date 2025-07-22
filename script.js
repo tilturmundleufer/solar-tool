@@ -65,7 +65,6 @@
       this.summaryBtn    = document.getElementById('summary-add-cart-btn');
       this.configListEl  = document.getElementById('config-list');
       this.resetBtn 		 = document.getElementById('reset-btn');
-      this.deleteBtn 		 = document.getElementById('delete-config-btn');
       this.continueLaterBtn = document.getElementById('continue-later-btn');
 
       this.selection     = [];
@@ -156,12 +155,10 @@
 			document.getElementById('remove-row').addEventListener('click', () => this.removeRow());
 
   		this.saveBtn.addEventListener('click', () => this.saveNewConfig());
-  		this.deleteBtn.addEventListener('click', () => this.deleteCurrentConfig());
   		this.addBtn.addEventListener('click', () => this.addCurrentToCart());
   		this.summaryBtn.addEventListener('click', () => this.addAllToCart());
   		this.resetBtn.addEventListener('click', () => this.resetGridToDefault());
   		this.continueLaterBtn.addEventListener('click', () => this.generateContinueLink());
-      document.getElementById('delete-all-configs-btn').addEventListener('click', () => this.deleteAllConfigs());
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
@@ -214,18 +211,6 @@
     updateSaveButtons() {
   		// Immer den "Neue Konfiguration speichern" Button anzeigen
   		this.saveBtn.style.display = 'inline-block';
-  		
-  		// Delete-Button nur anzeigen wenn eine Konfiguration ausgewählt ist
-  		if (this.currentConfig !== null) {
-    		this.deleteBtn.classList.remove('hidden');
-  		} else {
-    		this.deleteBtn.classList.add('hidden');
-  		}
-  		
-      const deleteAllBtn = document.getElementById('delete-all-configs-btn');
-			if (deleteAllBtn) {
-  			deleteAllBtn.style.display = this.configs.length > 0 ? 'inline-block' : 'none';
-			}
 		}
     
     attachInputListeners() {
@@ -444,12 +429,7 @@
   		this.setup(); // jetzt stimmt alles beim Rebuild
 		}
     
-    deleteAllConfigs() {
-  		if (!confirm('Möchtest du wirklich alle Konfigurationen löschen?')) return;
 
-  		this.configs = [];
-  		this.createNewConfig();
-		}
 
     calculateParts() {
   		const p = {
@@ -581,23 +561,32 @@
       this.updateSaveButtons();
     }
     
-    deleteCurrentConfig() {
-  		if (this.currentConfig === null) return;
-  		if (!confirm('Willst du die Konfiguration wirklich löschen?')) return;
+    deleteConfig(configIndex) {
+  		const configName = this.configs[configIndex].name;
+  		if (!confirm(`Willst du "${configName}" wirklich löschen?`)) return;
 
-  		this.configs.splice(this.currentConfig, 1);
+  		this.configs.splice(configIndex, 1);
   		
-  		// Nach dem Löschen: Wähle die vorherige Konfiguration oder erstelle eine neue
+  		// Nach dem Löschen: Wähle die nächste Konfiguration oder erstelle eine neue
   		if (this.configs.length > 0) {
-  			// Wähle die vorherige Konfiguration oder die erste
-  			const newIndex = Math.min(this.currentConfig, this.configs.length - 1);
-  			this.loadConfig(newIndex);
+  			// Wenn die gelöschte Konfiguration die aktuelle war
+  			if (configIndex === this.currentConfig) {
+  				// Wähle die nächste Konfiguration (oder die vorherige wenn es die letzte war)
+  				const newIndex = Math.min(configIndex, this.configs.length - 1);
+  				this.loadConfig(newIndex);
+  			} else if (configIndex < this.currentConfig) {
+  				// Eine Konfiguration vor der aktuellen wurde gelöscht, Index anpassen
+  				this.currentConfig--;
+  				this.renderConfigList();
+  			} else {
+  				// Eine Konfiguration nach der aktuellen wurde gelöscht, nur Liste neu rendern
+  				this.renderConfigList();
+  			}
   		} else {
   			// Keine Konfigurationen mehr - erstelle eine neue
   			this.createNewConfig();
   		}
 
-  		this.renderConfigList();
   		this.updateSaveButtons();
 		}
 
@@ -705,6 +694,24 @@
       		input.focus();
     		});
 
+    		const deleteBtn = document.createElement('button');
+    		deleteBtn.innerHTML = '🗑️';
+    		deleteBtn.title = 'Konfiguration löschen';
+    		Object.assign(deleteBtn.style, {
+      		background: 'none',
+      		border: 'none',
+      		cursor: 'pointer',
+      		fontSize: '1rem',
+      		color: '#fff',
+      		padding: '0',
+      		marginLeft: '0.5rem',
+      		lineHeight: '1'
+    		});
+    		deleteBtn.addEventListener('click', (e) => {
+      		e.stopPropagation();
+      		this.deleteConfig(idx);
+    		});
+
     		const shareBtn = document.createElement('button');
     		shareBtn.textContent = '🔗';
     		shareBtn.title = 'Später weitermachen - Link kopieren';
@@ -722,6 +729,7 @@
     		nameContainer.appendChild(nameEl);
     		nameContainer.appendChild(editBtn);
     		div.appendChild(nameContainer);
+    		div.appendChild(deleteBtn);
     		div.appendChild(shareBtn);
     		this.configListEl.appendChild(div);
   		});
