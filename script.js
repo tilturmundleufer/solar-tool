@@ -220,7 +220,7 @@
   		for (let row of this.selection) {
     		row.push(false);
   		}
-  		//this.colsIn.value = this.cols; // entfernt, da im neuen Layout kein cols-input
+  		this.colsIn.value = this.cols; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
@@ -230,14 +230,14 @@
   		for (let row of this.selection) {
     		row.pop();
   		}
-  		//this.colsIn.value = this.cols;
+  		this.colsIn.value = this.cols; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
 		addRow() {
   		this.rows += 1;
   		this.selection.push(Array(this.cols).fill(false));
-  		//this.rowsIn.value = this.rows;
+  		this.rowsIn.value = this.rows; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
@@ -245,7 +245,7 @@
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.pop();
-  		//this.rowsIn.value = this.rows;
+  		this.rowsIn.value = this.rows; // Input-Feld aktualisieren
   		this.updateGridAfterStructureChange();
 		}
 
