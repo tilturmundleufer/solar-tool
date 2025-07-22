@@ -610,10 +610,22 @@
 		}
 
     _makeConfigObject() {
+      // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
+      let configName;
+      if (this.currentConfig !== null) {
+        // Bestehende Konfiguration: Behalte den Namen
+        configName = this.configs[this.currentConfig].name;
+      } else {
+        // Neue Konfiguration: Finde nächste Nummer
+        let nextNumber = 1;
+        while (this.configs.some(cfg => cfg.name === `Konfiguration ${nextNumber}`)) {
+          nextNumber++;
+        }
+        configName = `Konfiguration ${nextNumber}`;
+      }
+      
       return {
-        name:        this.currentConfig !== null
-                       ? this.configs[this.currentConfig].name
-                       : `Konfiguration ${this.configs.length+1}`,
+        name:        configName,
         selection:   this.selection.map(r => [...r]),
         orientation: this.orV.checked ? 'vertical' : 'horizontal',
         incM:        this.incM.checked,
@@ -648,13 +660,15 @@
 
     		nameEl.addEventListener('click', () => {
   				// Auto-Save der aktuellen Konfiguration vor dem Wechsel
-  				if (this.currentConfig !== null) {
+  				if (this.currentConfig !== null && this.currentConfig !== idx) {
     				this.updateConfig();
   				}
   				
-  				// Lade die gewünschte Konfiguration
-  				this.loadConfig(idx);
-  				this.showToast('Konfiguration geladen', 1000);
+  				// Nur laden wenn es eine andere Konfiguration ist
+  				if (this.currentConfig !== idx) {
+  					this.loadConfig(idx);
+  					this.showToast('Konfiguration geladen', 1000);
+  				}
 				});
 
     		const editBtn = document.createElement('button');
@@ -753,8 +767,13 @@
   			});
 			}
 
+  		// Speichere aktuelle Werte
+  		const currentOrientation = this.orV.checked;
+  		const currentSelection = this.selection.map(r => [...r]);
+  		
   		const total = {};
   		bundles.forEach(b => {
+    		// Temporär setzen für Berechnung
     		this.orV.checked = b.orientation === 'vertical';
     		this.orH.checked = !this.orV.checked;
     		this.selection = b.selection;
@@ -769,6 +788,12 @@
       		total[k] = (total[k] || 0) + v;
     		});
   		});
+  		
+  		// Stelle ursprüngliche Werte wieder her
+  		this.orV.checked = currentOrientation;
+  		this.orH.checked = !currentOrientation;
+  		this.selection = currentSelection;
+  		this.updateSize();
 
   		const entries = Object.entries(total).filter(([, v]) => v > 0);
   		const itemsPerColumn = 4;
@@ -990,12 +1015,25 @@
     }
 
     addAllToCart() {
-      const allBundles = this.configs.map(cfg =>
-        this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.holz)
-      );
-      if (this.currentConfig === null) {
+      // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
+      if (this.currentConfig !== null) {
+        this.updateConfig();
+      }
+      
+      const allBundles = this.configs.map((cfg, idx) => {
+        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+        if (idx === this.currentConfig) {
+          return this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked);
+        } else {
+          return this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.holz);
+        }
+      });
+      
+      // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
+      if (this.currentConfig === null && this.configs.length === 0) {
         allBundles.push(this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked));
       }
+      
       const total = {};
       allBundles.forEach(parts => {
         Object.entries(parts).forEach(([k, v]) => {
@@ -1015,11 +1053,19 @@
     }
 
     _buildPartsFor(sel, incM, mc4, holz) {
+      // Speichere aktuelle Auswahl
+      const originalSelection = this.selection.map(r => [...r]);
+      
+      // Temporär setzen für Berechnung
       this.selection = sel;
       let parts = this.calculateParts();
       if (!incM) delete parts.Solarmodul;
       if (mc4)   parts.MC4_Stecker   = sel.flat().filter(v => v).length;
       if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
+      
+      // Ursprüngliche Auswahl wiederherstellen
+      this.selection = originalSelection;
+      
       return parts;
     }
 
