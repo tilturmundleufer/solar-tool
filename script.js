@@ -596,6 +596,10 @@
 		}
 
     saveNewConfig() {
+  		// Temporär currentConfig auf null setzen für neue Konfiguration
+  		const originalCurrentConfig = this.currentConfig;
+  		this.currentConfig = null;
+  		
   		const cfg = this._makeConfigObject();
   		this.configs.push(cfg);
   		
@@ -604,7 +608,7 @@
   		
   		this.renderConfigList();
   		this.updateSaveButtons();
-  		this.showToast('Konfiguration gespeichert ✅');
+  		this.showToast(`Konfiguration "${cfg.name}" gespeichert und ausgewählt ✅`);
 		}
 
     updateConfig() {
