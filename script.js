@@ -230,7 +230,7 @@
   		for (let row of this.selection) {
     		row.push(false);
   		}
-  		this.colsIn.value = this.cols;
+  		//this.colsIn.value = this.cols; // entfernt, da im neuen Layout kein cols-input
   		this.updateGridAfterStructureChange();
 		}
 
@@ -240,14 +240,14 @@
   		for (let row of this.selection) {
     		row.pop();
   		}
-  		this.colsIn.value = this.cols;
+  		//this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
 		addRow() {
   		this.rows += 1;
   		this.selection.push(Array(this.cols).fill(false));
-  		this.rowsIn.value = this.rows;
+  		//this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -255,7 +255,7 @@
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.pop();
-  		this.rowsIn.value = this.rows;
+  		//this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -270,52 +270,30 @@
     
 
     updateSize() {
-  		const gap = 2;
-  		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
-  		const maxWidth = window.innerWidth - remPx * 4;
-
-  		const baseW = parseInt(this.wIn.value, 10);
-  		const baseH = parseInt(this.hIn.value, 10);
-  		const ratio = baseH / baseW;
-
-  		const defaultTotal = this.cols * baseW + (this.cols - 1) * gap;
-
-  		let w, h;
-  		if (
-    		window.innerWidth >= 1100 &&
-    		this.cols <= 10 &&
-    		defaultTotal > maxWidth
-  		) {
-    		w = (maxWidth - (this.cols - 1) * gap) / this.cols;
-    		h = w * ratio;
-  		} else {
-    		w = baseW;
-    		h = baseH;
-  		}
-
-  		// CSS Variablen setzen
-  		document.documentElement.style.setProperty('--cell-width',  w + 'px');
-  		document.documentElement.style.setProperty('--cell-height', h + 'px');
-
-  		this.overflower.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
-  		this.overflower.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
-      
-      // Detect overflow vs. maximal erlaubte Größe
-			const wrapperRect = this.wrapper.getBoundingClientRect();
-			const maxWidthBut = window.innerWidth - 32; // 2rem ≈ 32px
-
-			const vertGroup = document.querySelector('.button-group-vertical');
-
-			// Prüfe ob die wrapper-Größe die max erlaubte Breite erreicht hat
-			const overflowX = wrapperRect.width >= maxWidthBut - 1; // kleiner Spielraum
-
-			// Setze overlay-mode Klassen
-			if (overflowX) {
-  			vertGroup.classList.add('overlay-mode');
-			} else {
-  			vertGroup.classList.remove('overlay-mode');
-			}
-		}
+      // Neue Logik aus Final Fertig: Berechnung anhand Canvas und Seitenverhältnis
+      const canvas = this.gridEl.parentElement;
+      const canvasWidth = canvas.clientWidth - 32;
+      const canvasHeight = canvas.clientHeight - 32;
+      const aspectWidth = parseFloat(this.wIn.value) || 1;
+      const aspectHeight = parseFloat(this.hIn.value) || 1;
+      const aspectRatio = aspectWidth / aspectHeight;
+      const gapRatio = 0.1;
+      const minSize = 15;
+      const gapSize = Math.max(4, minSize * gapRatio);
+      const maxCellWidth = (canvasWidth - (this.cols - 1) * gapSize) / this.cols;
+      const maxCellHeight = (canvasHeight - (this.rows - 1) * gapSize) / this.rows;
+      const maxCellWidthFromHeight = maxCellHeight * aspectRatio;
+      let cellWidth = Math.min(maxCellWidth, maxCellWidthFromHeight);
+      cellWidth = Math.max(cellWidth, minSize);
+      let cellHeight = cellWidth / aspectRatio;
+      const finalGap = cellWidth * gapRatio;
+      // CSS-Variablen setzen
+      this.gridEl.style.setProperty('--cell-size', `${cellWidth}px`);
+      this.gridEl.style.setProperty('--cell-height', `${cellHeight}px`);
+      this.gridEl.style.setProperty('--cell-gap', `${finalGap}px`);
+      this.gridEl.style.setProperty('--cols', this.cols);
+      this.gridEl.style.setProperty('--rows', this.rows);
+    }
 
     buildGrid() {
   		if (!Array.isArray(this.selection)) return;
