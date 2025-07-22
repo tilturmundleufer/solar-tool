@@ -136,21 +136,21 @@
     		})
   		);
       
-      // Event-Listener für die Expansion-Controls um das Grid
-			document.querySelectorAll('.expand-btn').forEach(btn => {
-				btn.addEventListener('click', () => {
-					const direction = btn.dataset.dir;
-					const isPlus = btn.classList.contains('plus-btn');
-					
-					if (direction === 'right' && isPlus) this.addColumn();
-					else if (direction === 'right' && !isPlus) this.removeColumn();
-					else if (direction === 'left' && isPlus) this.addColumn();
-					else if (direction === 'left' && !isPlus) this.removeColumn();
-					else if (direction === 'bottom' && isPlus) this.addRow();
-					else if (direction === 'bottom' && !isPlus) this.removeRow();
-					else if (direction === 'top' && isPlus) this.addRow();
-					else if (direction === 'top' && !isPlus) this.removeRow();
-				});
+      // Event-Listener für die Grid-Expansion-Buttons
+			// Spalten-Buttons (links und rechts)
+			document.querySelectorAll('.btn-add-col').forEach(btn => {
+				btn.addEventListener('click', () => this.addColumn());
+			});
+			document.querySelectorAll('.btn-remove-col').forEach(btn => {
+				btn.addEventListener('click', () => this.removeColumn());
+			});
+			
+			// Zeilen-Buttons (oben und unten)
+			document.querySelectorAll('.btn-add-row').forEach(btn => {
+				btn.addEventListener('click', () => this.addRow());
+			});
+			document.querySelectorAll('.btn-remove-row').forEach(btn => {
+				btn.addEventListener('click', () => this.removeRow());
 			});
 
   		this.saveBtn.addEventListener('click', () => this.saveNewConfig());
