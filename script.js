@@ -364,21 +364,6 @@
   		this.overflower.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
   		this.overflower.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
       
-      // Detect overflow vs. maximal erlaubte Größe
-			const wrapperRect = this.wrapper.getBoundingClientRect();
-			const maxWidthBut = window.innerWidth - 32; // 2rem ≈ 32px
-
-			const vertGroup = document.querySelector('.button-group-vertical');
-
-			// Prüfe ob die wrapper-Größe die max erlaubte Breite erreicht hat
-			const overflowX = wrapperRect.width >= maxWidthBut - 1; // kleiner Spielraum
-
-			// Setze overlay-mode Klassen
-			if (overflowX) {
-  			vertGroup.classList.add('overlay-mode');
-			} else {
-  			vertGroup.classList.remove('overlay-mode');
-			}
 		}
 
     buildGrid() {
