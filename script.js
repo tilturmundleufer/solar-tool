@@ -137,20 +137,36 @@
   		);
       
       // Event-Listener für die Grid-Expansion-Buttons
-			// Spalten-Buttons (links und rechts)
-			document.querySelectorAll('.btn-add-col').forEach(btn => {
-				btn.addEventListener('click', () => this.addColumn());
+			// Spalten-Buttons - rechts (fügt am Ende hinzu)
+			document.querySelectorAll('.btn-add-col-right').forEach(btn => {
+				btn.addEventListener('click', () => this.addColumnRight());
 			});
-			document.querySelectorAll('.btn-remove-col').forEach(btn => {
-				btn.addEventListener('click', () => this.removeColumn());
+			document.querySelectorAll('.btn-remove-col-right').forEach(btn => {
+				btn.addEventListener('click', () => this.removeColumnRight());
 			});
 			
-			// Zeilen-Buttons (oben und unten)
-			document.querySelectorAll('.btn-add-row').forEach(btn => {
-				btn.addEventListener('click', () => this.addRow());
+			// Spalten-Buttons - links (fügt am Anfang hinzu)
+			document.querySelectorAll('.btn-add-col-left').forEach(btn => {
+				btn.addEventListener('click', () => this.addColumnLeft());
 			});
-			document.querySelectorAll('.btn-remove-row').forEach(btn => {
-				btn.addEventListener('click', () => this.removeRow());
+			document.querySelectorAll('.btn-remove-col-left').forEach(btn => {
+				btn.addEventListener('click', () => this.removeColumnLeft());
+			});
+			
+			// Zeilen-Buttons - unten (fügt am Ende hinzu)
+			document.querySelectorAll('.btn-add-row-bottom').forEach(btn => {
+				btn.addEventListener('click', () => this.addRowBottom());
+			});
+			document.querySelectorAll('.btn-remove-row-bottom').forEach(btn => {
+				btn.addEventListener('click', () => this.removeRowBottom());
+			});
+			
+			// Zeilen-Buttons - oben (fügt am Anfang hinzu)
+			document.querySelectorAll('.btn-add-row-top').forEach(btn => {
+				btn.addEventListener('click', () => this.addRowTop());
+			});
+			document.querySelectorAll('.btn-remove-row-top').forEach(btn => {
+				btn.addEventListener('click', () => this.removeRowTop());
 			});
 
   		this.saveBtn.addEventListener('click', () => this.saveNewConfig());
@@ -226,37 +242,75 @@
   		this.rowsIn.addEventListener('input', this._colsRowsHandler);
 		}
     
-    addColumn() {
+    // Spalten-Methoden - Rechts (am Ende)
+    addColumnRight() {
   		this.cols += 1;
   		for (let row of this.selection) {
     		row.push(false);
   		}
-  		this.colsIn.value = this.cols; // Input-Feld aktualisieren
+  		this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
-		removeColumn() {
+		removeColumnRight() {
   		if (this.cols <= 1) return;
   		this.cols -= 1;
   		for (let row of this.selection) {
     		row.pop();
   		}
-  		this.colsIn.value = this.cols; // Input-Feld aktualisieren
+  		this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
-		addRow() {
+		// Spalten-Methoden - Links (am Anfang)
+		addColumnLeft() {
+  		this.cols += 1;
+  		for (let row of this.selection) {
+    		row.unshift(false);
+  		}
+  		this.colsIn.value = this.cols;
+  		this.updateGridAfterStructureChange();
+		}
+
+		removeColumnLeft() {
+  		if (this.cols <= 1) return;
+  		this.cols -= 1;
+  		for (let row of this.selection) {
+    		row.shift();
+  		}
+  		this.colsIn.value = this.cols;
+  		this.updateGridAfterStructureChange();
+		}
+
+		// Zeilen-Methoden - Unten (am Ende)
+		addRowBottom() {
   		this.rows += 1;
   		this.selection.push(Array(this.cols).fill(false));
-  		this.rowsIn.value = this.rows; // Input-Feld aktualisieren
+  		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
-		removeRow() {
+		removeRowBottom() {
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.pop();
-  		this.rowsIn.value = this.rows; // Input-Feld aktualisieren
+  		this.rowsIn.value = this.rows;
+  		this.updateGridAfterStructureChange();
+		}
+
+		// Zeilen-Methoden - Oben (am Anfang)
+		addRowTop() {
+  		this.rows += 1;
+  		this.selection.unshift(Array(this.cols).fill(false));
+  		this.rowsIn.value = this.rows;
+  		this.updateGridAfterStructureChange();
+		}
+
+		removeRowTop() {
+  		if (this.rows <= 1) return;
+  		this.rows -= 1;
+  		this.selection.shift();
+  		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
