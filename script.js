@@ -45,8 +45,7 @@
   class SolarGrid {
     constructor() {
       this.gridEl        = document.getElementById('grid');
-      this.wrapper       = document.querySelector('.grid-wrapper');
-      this.overflower    = document.querySelector('.grid-overflow');
+      this.wrapper       = document.querySelector('.grid-container');
       this.colsIn        = document.getElementById('cols-input');
       this.rowsIn        = document.getElementById('rows-input');
       this.wIn           = document.getElementById('width-input');
@@ -338,8 +337,11 @@
   		const originalCellH = isVertical ? inputW : inputH;
   		
   		// Maximale verfügbare Größe
-  		const parentElement = this.wrapper.parentElement;
-  		const maxWidth = parentElement.clientWidth - 100; // 100% des Parent - 100px
+  		// Buttons sind 30px breit + 10px margin links und rechts = 50px pro Seite
+  		// Insgesamt 100px für beide Seiten abziehen
+  		const gridContainer = document.querySelector('.grid-container');
+  		const canvas = document.querySelector('.canvas');
+  		const maxWidth = canvas ? canvas.clientWidth - 100 : window.innerWidth - 200; // 50px links + 50px rechts für Buttons
   		const maxHeight = window.innerHeight * 0.7 - 100; // 70vh - 100px
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
@@ -359,11 +361,13 @@
   		const h = originalCellH * scale;
 
   		// CSS Variablen setzen
+  		document.documentElement.style.setProperty('--cell-size', w + 'px');
   		document.documentElement.style.setProperty('--cell-width',  w + 'px');
   		document.documentElement.style.setProperty('--cell-height', h + 'px');
 
-  		this.overflower.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
-  		this.overflower.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
+  		// Grid-Größe direkt setzen
+  		this.gridEl.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
+  		this.gridEl.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
       
 		}
 
