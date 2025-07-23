@@ -339,8 +339,8 @@
   		
   		// Maximale verfügbare Größe
   		const parentElement = this.wrapper.parentElement;
-  		const maxWidth = parentElement.clientWidth - 50; // 100% des Parent - 50px
-  		const maxHeight = window.innerHeight * 0.7 - remPx * 2; // 70vh - 2rem
+  		const maxWidth = parentElement.clientWidth - 100; // 100% des Parent - 100px
+  		const maxHeight = window.innerHeight * 0.7 - 100; // 70vh - 100px
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
   		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
