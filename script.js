@@ -362,8 +362,8 @@
   		document.documentElement.style.setProperty('--cell-width',  w + 'px');
   		document.documentElement.style.setProperty('--cell-height', h + 'px');
 
-  		this.gridEL.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
-  		this.gridEL.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
+  		this.gridEl.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
+  		this.gridEl.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
       
 		}
 
