@@ -337,10 +337,10 @@
   		const originalCellH = isVertical ? inputW : inputH;
   		
   		// Maximale verfügbare Größe
-  		// Buttons sind 30px breit + 10px margin links und rechts = 50px pro Seite
-  		// Insgesamt 100px für beide Seiten abziehen
-  		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px für Buttons
-  		const maxHeight = window.innerHeight * 0.7 - 100; // 70vh - 100px
+  		// 50px Abstand auf allen Seiten: links, rechts, oben, unten
+  		// Insgesamt 100px für Breite (50px links + 50px rechts) und 100px für Höhe (50px oben + 50px unten)
+  		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px (50px links + 50px rechts)
+  		const maxHeight = this.wrapper.clientHeight - 100; // grid-wrapper Höhe - 100px (50px oben + 50px unten)
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
   		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
