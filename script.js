@@ -329,8 +329,8 @@
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
   		// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
-  		const inputW = parseInt(this.wIn.value, 10) || 120;
-  		const inputH = parseInt(this.hIn.value, 10) || 80;
+  		const inputW = parseInt(this.wIn.value, 10) || 179;
+  		const inputH = parseInt(this.hIn.value, 10) || 113;
   		
   		// Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
   		const isVertical = this.orV.checked;
@@ -338,8 +338,8 @@
   		const originalCellH = isVertical ? inputW : inputH;
   		
   		// Maximale verfügbare Größe
-  		const maxWidth = window.innerWidth - remPx * 4; // 100vw - 4rem
-  		const maxHeight = window.innerHeight * 0.7; // 70vh
+  		const maxWidth = window.innerWidth - remPx * 5; // 100vw - 4rem
+  		const maxHeight = window.innerHeight * 0.7 - remPx * 2; // 70vh - 2rem
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
   		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
