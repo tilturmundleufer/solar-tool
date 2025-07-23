@@ -340,7 +340,7 @@
   		// Buttons sind 30px breit + 10px margin links und rechts = 50px pro Seite
   		// Insgesamt 100px für beide Seiten abziehen
   		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px für Buttons
-  		const maxHeight = window.innerHeight * 0.7 - 100; // 70vh - 100px
+  		const maxHeight = this.wrapper.clientHeight - 100; // 70vh - 100px
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
   		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
