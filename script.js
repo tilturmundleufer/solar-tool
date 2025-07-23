@@ -369,7 +369,6 @@
   		
   		this.gridEl.style.width = finalWidth + 'px';
   		this.gridEl.style.height = finalHeight + 'px';
-      
 		}
 
     buildGrid() {
