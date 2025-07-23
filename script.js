@@ -46,7 +46,6 @@
     constructor() {
       this.gridEl        = document.getElementById('grid');
       this.wrapper       = document.querySelector('.grid-wrapper');
-      this.overflower    = document.querySelector('.grid-overflow');
       this.colsIn        = document.getElementById('cols-input');
       this.rowsIn        = document.getElementById('rows-input');
       this.wIn           = document.getElementById('width-input');
@@ -348,12 +347,12 @@
   		const totalHeightWithGaps = this.rows * originalCellH + (this.rows - 1) * gap;
   		
   		// Berechne Skalierungsfaktoren für beide Dimensionen
-  		const scaleX = totalWidthWithGaps > maxWidth ? maxWidth / totalWidthWithGaps : 1;
-  		const scaleY = totalHeightWithGaps > maxHeight ? maxHeight / totalHeightWithGaps : 1;
+  		const scaleX = maxWidth / totalWidthWithGaps;
+  		const scaleY = maxHeight / totalHeightWithGaps;
   		
   		// Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
-  		// Das bedeutet: Wenn Höhe das Problem ist, wird nach Höhe skaliert (und umgekehrt)
-  		const scale = Math.min(scaleX, scaleY);
+  		// und sicherzustellen, dass das Grid nie die Grenzen überschreitet
+  		const scale = Math.min(scaleX, scaleY, 1);
   		
   		// Berechne finale Zellgrößen
   		const w = originalCellW * scale;
@@ -364,8 +363,12 @@
   		document.documentElement.style.setProperty('--cell-width',  w + 'px');
   		document.documentElement.style.setProperty('--cell-height', h + 'px');
 
-  		this.overflower.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
-  		this.overflower.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
+  		// Grid-Größe direkt setzen - niemals größer als die maximalen Grenzen
+  		const finalWidth = Math.min(this.cols * w + (this.cols - 1) * gap, maxWidth);
+  		const finalHeight = Math.min(this.rows * h + (this.rows - 1) * gap, maxHeight);
+  		
+  		this.gridEl.style.width = finalWidth + 'px';
+  		this.gridEl.style.height = finalHeight + 'px';
       
 		}
 
