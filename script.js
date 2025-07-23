@@ -359,8 +359,6 @@
   		const w = originalCellW * scale;
   		const h = originalCellH * scale;
 
-  		// CSS Variablen setzen
-  		document.documentElement.style.setProperty('--cell-size', w + 'px');
   		document.documentElement.style.setProperty('--cell-width',  w + 'px');
   		document.documentElement.style.setProperty('--cell-height', h + 'px');
 
