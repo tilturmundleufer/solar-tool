@@ -338,7 +338,8 @@
   		const originalCellH = isVertical ? inputW : inputH;
   		
   		// Maximale verfügbare Größe
-  		const maxWidth = window.innerWidth - remPx * 5; // 100vw - 4rem
+  		const parentElement = this.wrapper.parentElement;
+  		const maxWidth = parentElement.clientWidth - 50; // 100% des Parent - 50px
   		const maxHeight = window.innerHeight * 0.7 - remPx * 2; // 70vh - 2rem
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
