@@ -324,7 +324,7 @@
     
 
     updateSize() {
-  		const railGap = 2; // Immer 2cm für Schienen-Berechnungen
+  		const RAIL_GAP = 2; // Immer 2cm für Schienen-Berechnungen
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
   		// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
@@ -343,8 +343,8 @@
   		const maxHeight = this.wrapper.clientHeight - 100; // 70vh - 100px
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
-  		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * railGap;
-  		const totalHeightWithRailGaps = this.rows * originalCellH + (this.rows - 1) * railGap;
+  		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * RAIL_GAP;
+  		const totalHeightWithRailGaps = this.rows * originalCellH + (this.rows - 1) * RAIL_GAP;
   		
   		// Berechne Skalierungsfaktoren für beide Dimensionen
   		const scaleX = maxWidth / totalWidthWithRailGaps;
@@ -358,10 +358,10 @@
   		const w = originalCellW * scale;
   		const h = originalCellH * scale;
 
-  		// Bestimme visuelle Gap: 0 wenn maximale Grenzen erreicht werden, sonst railGap * scale
+  		// Bestimme visuelle Gap: 0 wenn maximale Grenzen erreicht werden, sonst RAIL_GAP * scale
   		const isAtMaxWidth = totalWidthWithRailGaps * scale >= maxWidth;
   		const isAtMaxHeight = totalHeightWithRailGaps * scale >= maxHeight;
-  		const visualGap = (isAtMaxWidth || isAtMaxHeight) ? 0 : railGap * scale;
+  		const visualGap = (isAtMaxWidth || isAtMaxHeight) ? 0 : RAIL_GAP * scale;
 
   		// CSS Variablen setzen
   		document.documentElement.style.setProperty('--cell-size', w + 'px');
