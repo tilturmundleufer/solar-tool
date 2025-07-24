@@ -11,6 +11,7 @@
     Schiene_360_cm: 8,
     Solarmodul: 1,
     MC4_Stecker: 1,
+    Solarkabel: 1,
     Holzunterleger: 1
   };
   
@@ -25,6 +26,7 @@
   	Schiene_240_cm: 30,
   	Schiene_360_cm: 40,
   	MC4_Stecker: 1,
+  	Solarkabel: 29.99,
   	Holzunterleger: 0.5
 	};
 
@@ -91,6 +93,7 @@
     Schiene_240_cm:    { productId:'6853bd882f00db0c9a42d653', variantId:'6853bd88c4173dbe72bab10f' },
     Schiene_360_cm:    { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
     MC4_Stecker:       { productId:'687fcc9f66078f7098826ccc', variantId:'687fcca02c6537b9a9493fa7' },
+    Solarkabel:        { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
     Holzunterleger:    { productId:'xxx-holz', variantId:'xxx-holz-v' }
   };
 
@@ -106,6 +109,7 @@
       this.orV           = document.getElementById('orient-v');
       this.incM          = document.getElementById('include-modules');
       this.mc4           = document.getElementById('mc4');
+      this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
       this.listHolder    = document.querySelector('.produktliste-holder');
       this.prodList      = document.getElementById('produktliste');
@@ -179,7 +183,7 @@
   			})
 			);
 
-  		[this.incM, this.mc4, this.holz].forEach(el =>
+  		[this.incM, this.mc4, this.solarkabel, this.holz].forEach(el =>
     		el.addEventListener('change', () => {
       		this.buildList();
       		this.updateSummaryOnChange();
@@ -470,7 +474,11 @@
     buildList() {
       const parts = this.calculateParts();
       if (!this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
+      if (this.mc4.checked) {
+        const panelCount = this.selection.flat().filter(v => v).length;
+        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      }
+      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
       if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
@@ -617,6 +625,7 @@
         Schiene_240_cm:    'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bce018164af4b4a187f1_DSC04825-min.jpg',
         Schiene_360_cm:    'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bcd5726d1d33d4b86ba4_DSC04824-min.jpg',
         MC4_Stecker:       'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fcdab153f840ea15b5e7b_iStock-2186771695.jpg',
+        Solarkabel:        'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
         Holzunterleger:    'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
       };
       return imgs[key] || '';
@@ -635,6 +644,7 @@
   		this.orH.checked  = !this.orV.checked;
   		this.incM.checked = cfg.incM;
   		this.mc4.checked  = cfg.mc4;
+  		this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
   		this.holz.checked = cfg.holz;
 
   		// STATE Werte setzen - WICHTIG: Vor setup() setzen
@@ -756,6 +766,7 @@
         orientation: this.orV.checked ? 'vertical' : 'horizontal',
         incM:        this.incM.checked,
         mc4:         this.mc4.checked,
+        solarkabel:  this.solarkabel.checked,
         holz:        this.holz.checked,
         cols:        parseInt(this.colsIn.value, 10),
         rows:        parseInt(this.rowsIn.value, 10),
@@ -879,6 +890,7 @@
     renderProductSummary() {
   		const incMChecked = this.incM.checked;
   		const mc4Checked = this.mc4.checked;
+  		const solarkabelChecked = this.solarkabel.checked;
   		const holzChecked = this.holz.checked;
 
   		const bundles = this.configs.map((c, idx) => {
@@ -889,6 +901,7 @@
     				orientation: this.orV.checked ? 'vertical' : 'horizontal',
     				incM:        incMChecked,
     				mc4:         mc4Checked,
+    				solarkabel:  solarkabelChecked,
     				holz:        holzChecked
   				};
   			} else {
@@ -897,6 +910,7 @@
     				orientation: c.orientation,
     				incM:        c.incM,
     				mc4:         c.mc4,
+    				solarkabel:  c.solarkabel,
     				holz:        c.holz
   				};
   			}
@@ -926,7 +940,11 @@
 
     		let parts = this.calculateParts();
     		if (!b.incM) delete parts.Solarmodul;
-    		if (b.mc4)   parts.MC4_Stecker = b.selection.flat().filter(v => v).length;
+    		if (b.mc4) {
+    			const panelCount = b.selection.flat().filter(v => v).length;
+    			parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+    		}
+    		if (b.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
     		if (b.holz)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
     		Object.entries(parts).forEach(([k, v]) => {
@@ -1147,7 +1165,7 @@
     }
 
     addCurrentToCart() {
-      const parts = this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked);
+      const parts = this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
       const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
       
       if (itemCount === 0) {
@@ -1168,15 +1186,15 @@
       const allBundles = this.configs.map((cfg, idx) => {
         // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
         if (idx === this.currentConfig) {
-          return this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked);
+          return this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
         } else {
-          return this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.holz);
+          return this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
         }
       });
       
       // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
       if (this.currentConfig === null && this.configs.length === 0) {
-        allBundles.push(this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked));
+        allBundles.push(this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked));
       }
       
       const total = {};
@@ -1197,7 +1215,7 @@
       this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
     }
 
-    _buildPartsFor(sel, incM, mc4, holz) {
+    _buildPartsFor(sel, incM, mc4, solarkabel, holz) {
       // Speichere aktuelle Auswahl
       const originalSelection = this.selection.map(r => [...r]);
       
@@ -1205,7 +1223,11 @@
       this.selection = sel;
       let parts = this.calculateParts();
       if (!incM) delete parts.Solarmodul;
-      if (mc4)   parts.MC4_Stecker   = sel.flat().filter(v => v).length;
+      if (mc4) {
+        const panelCount = sel.flat().filter(v => v).length;
+        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      }
+      if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
       if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
       
       // Ursprüngliche Auswahl wiederherstellen
