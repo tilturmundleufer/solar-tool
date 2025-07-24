@@ -369,6 +369,16 @@
   		
   		this.gridEl.style.width = finalWidth + 'px';
   		this.gridEl.style.height = finalHeight + 'px';
+
+  		const railGap = 2; // Schienen-Gap ist immer 2cm
+  		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * railGap;
+  		const totalHeightWithRailGaps = this.rows * originalCellH + (this.rows - 1) * railGap;
+
+  		const isAtMaxWidth = totalWidthWithRailGaps * scale >= maxWidth;
+  		const isAtMaxHeight = totalHeightWithRailGaps * scale >= maxHeight;
+  		const visualGap = (isAtMaxWidth || isAtMaxHeight) ? 0 : railGap * scale;
+
+  		document.documentElement.style.setProperty('--cell-gap', visualGap + 'px');
 		}
 
     buildGrid() {
