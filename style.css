@@ -1,220 +1,426 @@
-:root {
-  --primary-color: #ffb101;
-  --secondary-color: #072544;
-  --bg-color: #1a1a2e;
-  --accent-color: #ffffff;
-  --input-bg: #ffffff;
-  --input-border: #ffb101;
-  --cols: 0;
-  --rows: 0;
-  --cell-width: 179px;
-  --cell-height: 118px;
+/* CORE LAYOUT */
+html, body {
+  height: 100%;
+  margin: 0;
 }
 
-/* Grund-Layout */
-.rechner-container {
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #ffffff;
+  color: #ffffff;
+  user-select: none;
+  overflow: hidden;
+}
+
+.planner {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* MAIN AREA */
+.main-area {
+  position: relative;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  width: 100%;
-  padding: 1rem;
-  background: var(--bg-color);
-}
-
-.setup-container {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--secondary-color);
-  border-radius: 1rem;
 }
 
-.setup-container label {
-  color: var(--accent-color);
-  font-weight: bold;
+.header {
+  width: 100%;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0e1e34;
 }
 
-.setup-container input[type="number"],
-.setup-container input[type="text"] {
-  width: 60px;
-  margin-left: 0.5rem;
-  border: 2px solid var(--input-border);
+.controls--horizontal {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dimension-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.aspect-ratio-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.scaling-presets {
+  display: flex;
+  gap: 5px;
+}
+
+.aspect-input {
+  width: 50px;
+  padding: 5px;
   border-radius: 4px;
-  background: var(--input-bg);
-  color: #000;
-  font-weight: bold;
+  border: 1px solid #d0d0d0;
+  text-align: center;
+}
+
+.dimension-input {
+  width: 40px;
   padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #d0d0d0;
+  text-align: center;
+  font-size: 14px;
+  margin: 0 5px;
 }
 
-.setup-container input[type="radio"] {
-  margin-left: 0.5rem;
-}
-
-.setup-container .btn {
-  padding: 8px 16px;
-  background: var(--primary-color);
-  color: var(--secondary-color);
+.preset-btn {
+  padding: 5px 10px;
+  background: #0e1e34;
+  color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-weight: bold;
 }
 
-.grid-overflow {
-  max-height: 70vh;
-  max-width: 100%;
-  overflow: auto;
+.frame {
+  background: #0e1e34;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 16px;
+  width: 100%;
+  height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  max-width: 95%;
+}
+
+.grid-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  background: #d0d0d0;
+  border-radius: 6px;
+  padding: 16px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .grid-wrapper {
-  position: relative;
-  display: block;
-  max-width: 100%;
-  padding: 1rem;
-  background: var(--secondary-color);
-  border-radius: 1rem;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/* Grid */
-#grid {
+.grid-overflow {
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.grid {
   display: grid;
-  grid-template-columns: repeat(var(--cols), var(--cell-width));
+  gap: var(--cell-gap);
+  grid-template-columns: repeat(var(--cols), var(--cell-size));
   grid-template-rows: repeat(var(--rows), var(--cell-height));
-  gap: 4px;
-  align-content: start;
-  justify-content: start;
+  margin: auto;
+  transition: all 0.3s ease;
 }
 
-.grid-cell {
-  width: var(--cell-width);
+.cell {
+  background: #000000;
+  border-radius: 6px;
+  width: var(--cell-size);
   height: var(--cell-height);
-  background: #ccc;
-  border: 2px solid var(--primary-color);
   cursor: pointer;
-  opacity: 0;
-  transform: scale(0.95);
-  animation: cell-in 400ms forwards ease-out;
+  transition: all 0.15s ease;
 }
 
-.grid-cell.selected {
-  background: var(--secondary-color)
-    url("https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png")
-    center/cover no-repeat;
+.cell.selected {
+  background: #7f7f7f;
 }
 
-/* Buttons in Grid */
-.button-group-vertical,
-.button-group-horizontal {
+/* CONTROLS */
+.controls {
+  margin-top: 10px;
+  display: flex;
+  gap: 24px;
+  font-size: 1.5rem;
+}
+
+.controls button {
+  font-size: 2rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  color: #ffffff;
+}
+
+.name {
+  font-size: 1rem;
+  color: #d0d0d0;
+}
+
+.bntscale {
+  border-radius: 0.2rem;
+  height: 10%;
+  width: 20%;
+  background-color: #f5a623;
+}
+
+.controls button:hover {
+  transform: scale(1.1);
+}
+
+.controls button:active {
+  transform: scale(0.9);
+}
+
+/* EXPANSION CONTROLS */
+.expansion-controls {
   position: absolute;
-  z-index: 100;
+  inset: 0;
+  pointer-events: none;
 }
 
-.button-group-vertical {
+.side-controls {
+  position: absolute;
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.top-controls {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bottom-controls {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.left-controls {
+  left: 0;
   top: 50%;
-  right: -50px;
   transform: translateY(-50%);
+  flex-direction: column;
+}
+
+.right-controls {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+
+.expand-btn {
+  background: #f5a623;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.expand-btn.plus-btn {
+  background: #4CAF50;
+}
+
+.expand-btn.minus-btn {
+  background: #f44336;
+}
+
+.expand-btn:hover {
+  transform: scale(1.05);
+}
+
+.expand-btn:active {
+  transform: scale(0.95);
+}
+
+/* TOAST NOTIFICATION */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff9800;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+/* SIDEBAR */
+.sidebar {
+  margin-top: 10px;
+  width: 20rem;
+  background: #f5a623;
   display: flex;
   flex-direction: column;
+  padding: 24px;
   gap: 10px;
+  position: relative;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  transition: width 0.3s ease;
 }
 
-.button-group-horizontal {
-  left: 50%;
-  bottom: -50px;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
+.sidebar.collapsed {
+  width: 60px;
 }
 
-.button-group-vertical.overlay-mode {
-  right: 10px;
+.sidebar.collapsed .sidebar-content {
+  opacity: 0;
+  pointer-events: none;
 }
 
-.button-group-horizontal.overlay-mode {
-  bottom: 10px;
-}
-
-.grid-wrapper button {
-  width: 40px;
-  height: 40px;
-  background: var(--primary-color);
+.collapse {
+  position: absolute;
+  left: -1rem;
+  top: 1rem;
+  background: #f5a623;
+  color: #ffffff;
   border: none;
-  border-radius: 50%;
-  font-size: 24px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  border-radius: 0 999px 999px 0;
+  padding: 4px 12px;
+  font-size: 1.25rem;
   cursor: pointer;
-  color: var(--secondary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Produktlisten */
-.produktliste-holder,
-#summary-list-holder,
-.produktliste-holder-2 {
-  background: var(--secondary-color);
-  padding: 1rem;
-  border-radius: 1rem;
-  color: var(--accent-color);
+.sidebar.collapsed .collapse {
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 999px;
 }
 
-#produktliste,
-#summary-list {
+.nav-btn {
+  margin-top: 10%;
+  width: 100%;
+  background: #0e1e34;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.nav-btn--active {
+  outline: 4px solid #ff0000;
+}
+
+.basket {
+  margin-top: 200%;
+  flex: 1 1 auto;
+  background: #0e1e34;
+  border-radius: 8px;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+   
+  padding: 30%;
+}
+
+/* Ergänzungen für Solar-Tool-spezifische Elemente */
+.produktliste-holder, #summary-list-holder, .config-list-holder, .button-bar, .checkbox-bar {
+  width: 100%;
+  margin-top: 1rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: center;
+}
+
+.button-bar button {
+  margin: 0.25rem;
+  padding: 0.5rem 1.5rem;
+  background: #0e1e34;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.button-bar button:hover {
+  background: #f5a623;
+  color: #0e1e34;
+}
+
+.checkbox-bar label {
+  margin: 0 0.5rem;
+  color: #0e1e34;
+  font-weight: 500;
+}
+
+#produktliste, #summary-list, #config-list {
+  width: 100%;
+  margin-top: 0.5rem;
 }
 
 .produkt-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 8px;
-  background: rgba(255,255,255,0.1);
-  padding: 4px 8px;
+  margin-bottom: 0.25rem;
+  background: #fff;
+  color: #0e1e34;
   border-radius: 4px;
-}
-
-.produkt-item img {
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
 }
 
 .summary-column {
-  flex: 1;
-  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .summary-total {
-  width: 100%;
+  font-weight: bold;
+  font-size: 1.2rem;
   margin-top: 1rem;
-  font-weight: bold;
+  color: #0e1e34;
 }
 
-/* Toast */
-#toast {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--primary-color);
-  color: var(--secondary-color);
-  padding: 1rem 2rem;
-  border-radius: 4px;
-  font-weight: bold;
-  opacity: 0.95;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.hidden {
-  display: none !important;
-}
-
-/* Animation */
-@keyframes cell-in {
-  0% { opacity: 0; transform: scale(0.95); }
-  100% { opacity: 1; transform: scale(1); }
+.config-item.active {
+  background: #f5a623;
+  color: #0e1e34;
 }

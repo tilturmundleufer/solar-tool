@@ -46,7 +46,6 @@
     constructor() {
       this.gridEl        = document.getElementById('grid');
       this.wrapper       = document.querySelector('.grid-wrapper');
-      this.overflower    = document.querySelector('.grid-overflow');
       this.colsIn        = document.getElementById('cols-input');
       this.rowsIn        = document.getElementById('rows-input');
       this.wIn           = document.getElementById('width-input');
@@ -61,12 +60,11 @@
       this.summaryHolder = document.getElementById('summary-list-holder');
       this.summaryList   = document.getElementById('summary-list');
       this.saveBtn       = document.getElementById('save-config-btn');
-      this.updateBtn     = document.getElementById('update-config-btn');
       this.addBtn        = document.getElementById('add-to-cart-btn');
       this.summaryBtn    = document.getElementById('summary-add-cart-btn');
       this.configListEl  = document.getElementById('config-list');
       this.resetBtn 		 = document.getElementById('reset-btn');
-      this.deleteBtn 		 = document.getElementById('delete-config-btn');
+      this.continueLaterBtn = document.getElementById('continue-later-btn');
 
       this.selection     = [];
       this.configs       = [];
@@ -77,7 +75,6 @@
     }
 
     init() {
-    	this.loadFromLocalStorage();
   		this.attachInputListeners();
       
       const params = new URLSearchParams(window.location.search);
@@ -85,10 +82,17 @@
   		if (rawData) {
     		try {
       		const json = decodeURIComponent(atob(rawData));
-      		const cfg = JSON.parse(json);
-      		this.configs.push(cfg);
-      		this.loadConfig(this.configs.length - 1);
-      		return; // ✅ direkt abbrechen – nichts anderes mehr laden
+      		const configs = JSON.parse(json);
+      		// Lade alle Konfigurationen aus der URL
+      		if (Array.isArray(configs)) {
+      			this.configs = configs;
+      			this.loadConfig(0); // Lade die erste Konfiguration
+      		} else {
+      			// Einzelne Konfiguration (alte URL-Format)
+      			this.configs.push(configs);
+      			this.loadConfig(0);
+      		}
+      		return;
     		} catch (e) {
       		console.warn('Ungültige Konfigurationsdaten in URL:', e);
     		}
@@ -113,24 +117,11 @@
 
     			if (currentOrientation === lastOrientation) return;
 
-    			// Swap Inputs
-    			const temp = this.wIn.value;
-    			this.wIn.value = this.hIn.value;
-    			this.hIn.value = temp;
-
-    			// Update Grid
+    			// KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
+    			// Nur das Grid und die Liste aktualisieren
     			this.updateSize();
     			this.buildList();
     			this.updateSummaryOnChange();
-
-    			// Synchronisiere mit CSS-Werten
-    			const computedW = getComputedStyle(document.documentElement)
-      			.getPropertyValue('--cell-width').trim().replace('px', '');
-    			const computedH = getComputedStyle(document.documentElement)
-      			.getPropertyValue('--cell-height').trim().replace('px', '');
-
-    			this.wIn.value = Math.round(parseFloat(computedW));
-    			this.hIn.value = Math.round(parseFloat(computedH));
 
     			lastOrientation = currentOrientation;
   			})
@@ -140,21 +131,48 @@
     		el.addEventListener('change', () => {
       		this.buildList();
       		this.updateSummaryOnChange();
+      		this.renderProductSummary(); // Aktualisiere auch die Summary aller Konfigurationen
     		})
   		);
       
-      document.getElementById('add-col').addEventListener('click', () => this.addColumn());
-			document.getElementById('remove-col').addEventListener('click', () => this.removeColumn());
-			document.getElementById('add-row').addEventListener('click', () => this.addRow());
-			document.getElementById('remove-row').addEventListener('click', () => this.removeRow());
+      // Event-Listener für die Grid-Expansion-Buttons
+			// Spalten-Buttons - rechts (fügt am Ende hinzu)
+			document.querySelectorAll('.btn-add-col-right').forEach(btn => {
+				btn.addEventListener('click', () => this.addColumnRight());
+			});
+			document.querySelectorAll('.btn-remove-col-right').forEach(btn => {
+				btn.addEventListener('click', () => this.removeColumnRight());
+			});
+			
+			// Spalten-Buttons - links (fügt am Anfang hinzu)
+			document.querySelectorAll('.btn-add-col-left').forEach(btn => {
+				btn.addEventListener('click', () => this.addColumnLeft());
+			});
+			document.querySelectorAll('.btn-remove-col-left').forEach(btn => {
+				btn.addEventListener('click', () => this.removeColumnLeft());
+			});
+			
+			// Zeilen-Buttons - unten (fügt am Ende hinzu)
+			document.querySelectorAll('.btn-add-row-bottom').forEach(btn => {
+				btn.addEventListener('click', () => this.addRowBottom());
+			});
+			document.querySelectorAll('.btn-remove-row-bottom').forEach(btn => {
+				btn.addEventListener('click', () => this.removeRowBottom());
+			});
+			
+			// Zeilen-Buttons - oben (fügt am Anfang hinzu)
+			document.querySelectorAll('.btn-add-row-top').forEach(btn => {
+				btn.addEventListener('click', () => this.addRowTop());
+			});
+			document.querySelectorAll('.btn-remove-row-top').forEach(btn => {
+				btn.addEventListener('click', () => this.removeRowTop());
+			});
 
   		this.saveBtn.addEventListener('click', () => this.saveNewConfig());
-  		this.updateBtn.addEventListener('click', () => this.updateConfig());
-  		this.deleteBtn.addEventListener('click', () => this.deleteCurrentConfig());
   		this.addBtn.addEventListener('click', () => this.addCurrentToCart());
   		this.summaryBtn.addEventListener('click', () => this.addAllToCart());
   		this.resetBtn.addEventListener('click', () => this.resetGridToDefault());
-      document.getElementById('delete-all-configs-btn').addEventListener('click', () => this.deleteAllConfigs());
+  		this.continueLaterBtn.addEventListener('click', () => this.generateContinueLink());
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
@@ -163,15 +181,8 @@
     		this.updateSummaryOnChange();
   		});
       
-      // 👉 Erst initiales Grid vorbereiten
-  		this.cols = this.default.cols;
-  		this.rows = this.default.rows;
-  		this.setup();
-
-  		this.loadFromLocalStorage();
-
-			if (!this.configs.length) {
-  			// 🔧 Keine gespeicherten Konfigurationen → Erstelle Default
+        		// Wenn keine Konfigurationen aus URL geladen wurden, erstelle eine Standard-Konfiguration
+  		if (this.configs.length === 0) {
   			this.cols = this.default.cols;
   			this.rows = this.default.rows;
   			this.setup();
@@ -179,43 +190,32 @@
   			const defaultConfig = this._makeConfigObject();
   			this.configs.push(defaultConfig);
   			this.loadConfig(0);
-			} else {
-  			// 🔁 Bereits gespeicherte Konfigurationen → lade passende aus URL oder letzte aktive
-  			const params = new URLSearchParams(window.location.search);
-  			const configIdx = parseInt(params.get('config'), 10);
-  			if (!isNaN(configIdx) && this.configs[configIdx]) {
-    		this.loadConfig(configIdx);
-  			} else {
-    			const fallback = this.currentConfig ?? 0;
-    			this.loadConfig(fallback);
-  			}
 			}
 		}
     
     setup() {
-    	if (
-    		!Array.isArray(this.selection) ||
-    		this.selection.length !== this.rows ||
-    		this.selection[0]?.length !== this.cols
-  		) {
-    		this.selection = Array.from({ length: this.rows }, () =>
-      		Array.from({ length: this.cols }, () => false)
-    		);
+  		// Nur aus Input lesen wenn nicht bereits durch loadConfig gesetzt
+  		if (!this.cols || !this.rows) {
+  			this.cols = parseInt(this.colsIn.value, 10);
+  			this.rows = parseInt(this.rowsIn.value, 10);
   		}
-      
-  		this.cols = parseInt(this.colsIn.value, 10);
-  		this.rows = parseInt(this.rowsIn.value, 10);
   		if (!this.cols || !this.rows) {
     		alert('Spalten und Zeilen > 0 sein');
     		return;
   		}
 
-  		const oldSel = this.selection;
-  		this.selection = Array.from({ length: this.rows }, (_, y) =>
-    		Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
-  		);
+  		// Nur dann eine neue leere Auswahl erstellen, wenn noch keine existiert oder die Dimensionen nicht stimmen
+    	if (
+    		!Array.isArray(this.selection) ||
+    		this.selection.length !== this.rows ||
+    		this.selection[0]?.length !== this.cols
+  		) {
+    		const oldSel = this.selection;
+    		this.selection = Array.from({ length: this.rows }, (_, y) =>
+      		Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
+    		);
+  		}
 
-  		this.wrapper.style.display = 'block';
   		this.listHolder.style.display = 'block';
   		this.updateSize();
   		this.buildGrid();
@@ -225,19 +225,8 @@
 		}
 
     updateSaveButtons() {
-  		if (this.currentConfig === null) {
-    		this.saveBtn.style.display = 'inline-block';
-    		this.updateBtn.style.display = 'none';
-    		this.deleteBtn.classList.add('hidden');
-  		} else {
-    		this.saveBtn.style.display = 'none';
-    		this.updateBtn.style.display = 'inline-block';
-    		this.deleteBtn.classList.remove('hidden');
-  		}
-      const deleteAllBtn = document.getElementById('delete-all-configs-btn');
-			if (deleteAllBtn) {
-  			deleteAllBtn.style.display = this.configs.length > 0 ? 'inline-block' : 'none';
-			}
+  		// Immer den "Neue Konfiguration speichern" Button anzeigen
+  		this.saveBtn.style.display = 'inline-block';
 		}
     
     attachInputListeners() {
@@ -252,7 +241,8 @@
   		this.rowsIn.addEventListener('input', this._colsRowsHandler);
 		}
     
-    addColumn() {
+    // Spalten-Methoden - Rechts (am Ende)
+    addColumnRight() {
   		this.cols += 1;
   		for (let row of this.selection) {
     		row.push(false);
@@ -261,7 +251,7 @@
   		this.updateGridAfterStructureChange();
 		}
 
-		removeColumn() {
+		removeColumnRight() {
   		if (this.cols <= 1) return;
   		this.cols -= 1;
   		for (let row of this.selection) {
@@ -271,17 +261,54 @@
   		this.updateGridAfterStructureChange();
 		}
 
-		addRow() {
+		// Spalten-Methoden - Links (am Anfang)
+		addColumnLeft() {
+  		this.cols += 1;
+  		for (let row of this.selection) {
+    		row.unshift(false);
+  		}
+  		this.colsIn.value = this.cols;
+  		this.updateGridAfterStructureChange();
+		}
+
+		removeColumnLeft() {
+  		if (this.cols <= 1) return;
+  		this.cols -= 1;
+  		for (let row of this.selection) {
+    		row.shift();
+  		}
+  		this.colsIn.value = this.cols;
+  		this.updateGridAfterStructureChange();
+		}
+
+		// Zeilen-Methoden - Unten (am Ende)
+		addRowBottom() {
   		this.rows += 1;
   		this.selection.push(Array(this.cols).fill(false));
   		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
-		removeRow() {
+		removeRowBottom() {
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.pop();
+  		this.rowsIn.value = this.rows;
+  		this.updateGridAfterStructureChange();
+		}
+
+		// Zeilen-Methoden - Oben (am Anfang)
+		addRowTop() {
+  		this.rows += 1;
+  		this.selection.unshift(Array(this.cols).fill(false));
+  		this.rowsIn.value = this.rows;
+  		this.updateGridAfterStructureChange();
+		}
+
+		removeRowTop() {
+  		if (this.rows <= 1) return;
+  		this.rows -= 1;
+  		this.selection.shift();
   		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
@@ -293,75 +320,55 @@
   		this.updateSummaryOnChange();
 		}
     
-    saveToLocalStorage() {
-  		const data = {
-    		configs: this.configs,
-    		currentConfig: this.currentConfig
-  		};
-  		localStorage.setItem('solarConfigs', JSON.stringify(data));
-		}
-    
-    loadFromLocalStorage() {
-  		const raw = localStorage.getItem('solarConfigs');
-  		if (!raw) return;
-  		try {
-    		const data = JSON.parse(raw);
-    		if (Array.isArray(data.configs)) {
-      		this.configs = data.configs;
-      		this.currentConfig = data.currentConfig ?? null;
-    		}
-  		} catch (e) {
-    		console.error('Fehler beim Laden der gespeicherten Konfiguration:', e);
-  		}
-		}
+
     
 
     updateSize() {
   		const gap = 2;
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
-  		const maxWidth = window.innerWidth - remPx * 4;
 
-  		const baseW = parseInt(this.wIn.value, 10);
-  		const baseH = parseInt(this.hIn.value, 10);
-  		const ratio = baseH / baseW;
-
-  		const defaultTotal = this.cols * baseW + (this.cols - 1) * gap;
-
-  		let w, h;
-  		if (
-    		window.innerWidth >= 1100 &&
-    		this.cols <= 10 &&
-    		defaultTotal > maxWidth
-  		) {
-    		w = (maxWidth - (this.cols - 1) * gap) / this.cols;
-    		h = w * ratio;
-  		} else {
-    		w = baseW;
-    		h = baseH;
-  		}
+  		// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
+  		const inputW = parseInt(this.wIn.value, 10) || 179;
+  		const inputH = parseInt(this.hIn.value, 10) || 113;
+  		
+  		// Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
+  		const isVertical = this.orV.checked;
+  		const originalCellW = isVertical ? inputH : inputW;
+  		const originalCellH = isVertical ? inputW : inputH;
+  		
+  		// Maximale verfügbare Größe
+  		// Buttons sind 30px breit + 10px margin links und rechts = 50px pro Seite
+  		// Insgesamt 100px für beide Seiten abziehen
+  		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px für Buttons
+  		const maxHeight = this.wrapper.clientHeight - 100; // 70vh - 100px
+  		
+  		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
+  		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
+  		const totalHeightWithGaps = this.rows * originalCellH + (this.rows - 1) * gap;
+  		
+  		// Berechne Skalierungsfaktoren für beide Dimensionen
+  		const scaleX = maxWidth / totalWidthWithGaps;
+  		const scaleY = maxHeight / totalHeightWithGaps;
+  		
+  		// Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
+  		// und sicherzustellen, dass das Grid nie die Grenzen überschreitet
+  		const scale = Math.min(scaleX, scaleY, 1);
+  		
+  		// Berechne finale Zellgrößen
+  		const w = originalCellW * scale;
+  		const h = originalCellH * scale;
 
   		// CSS Variablen setzen
+  		document.documentElement.style.setProperty('--cell-size', w + 'px');
   		document.documentElement.style.setProperty('--cell-width',  w + 'px');
   		document.documentElement.style.setProperty('--cell-height', h + 'px');
 
-  		this.overflower.style.width  = `calc(${this.cols}*${w}px + ${(this.cols-1)*gap}px)`;
-  		this.overflower.style.height = `calc(${this.rows}*${h}px + ${(this.rows-1)*gap}px)`;
-      
-      // Detect overflow vs. maximal erlaubte Größe
-			const wrapperRect = this.wrapper.getBoundingClientRect();
-			const maxWidthBut = window.innerWidth - 32; // 2rem ≈ 32px
-
-			const vertGroup = document.querySelector('.button-group-vertical');
-
-			// Prüfe ob die wrapper-Größe die max erlaubte Breite erreicht hat
-			const overflowX = wrapperRect.width >= maxWidthBut - 1; // kleiner Spielraum
-
-			// Setze overlay-mode Klassen
-			if (overflowX) {
-  			vertGroup.classList.add('overlay-mode');
-			} else {
-  			vertGroup.classList.remove('overlay-mode');
-			}
+  		// Grid-Größe direkt setzen - niemals größer als die maximalen Grenzen
+  		const finalWidth = Math.min(this.cols * w + (this.cols - 1) * gap, maxWidth);
+  		const finalHeight = Math.min(this.rows * h + (this.rows - 1) * gap, maxHeight);
+  		
+  		this.gridEl.style.width = finalWidth + 'px';
+  		this.gridEl.style.height = finalHeight + 'px';
 		}
 
     buildGrid() {
@@ -476,17 +483,7 @@
   		this.setup(); // jetzt stimmt alles beim Rebuild
 		}
     
-    deleteAllConfigs() {
-  		if (!confirm('Möchtest du wirklich alle Konfigurationen löschen?')) return;
 
-  		this.configs = [];
-  		localStorage.removeItem('solarConfigs');
-  		this.currentConfig = null;
-
-  		this.resetToDefaultGrid();
-  		this.renderConfigList();
-  		this.updateSaveButtons();
-		}
 
     calculateParts() {
   		const p = {
@@ -510,9 +507,13 @@
 		}
 
     processGroup(len, p) {
-      const totalLen = len * parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue('--cell-width')
-      );
+      // Verwende die tatsächliche Zellbreite basierend auf Orientierung
+      const isVertical = this.orV.checked;
+      const cellWidth = isVertical ? 
+        parseInt(this.hIn.value, 10) || 80 : 
+        parseInt(this.wIn.value, 10) || 120;
+      
+      const totalLen = len * cellWidth;
       const floor360 = Math.floor(totalLen / 360),
             rem360   = totalLen - floor360 * 360,
             floor240 = Math.ceil(rem360 / 240),
@@ -575,11 +576,12 @@
   		this.mc4.checked  = cfg.mc4;
   		this.holz.checked = cfg.holz;
 
-  		// STATE Werte setzen
+  		// STATE Werte setzen - WICHTIG: Vor setup() setzen
   		this.cols = cfg.cols;
   		this.rows = cfg.rows;
   		this.selection = cfg.selection.map(r => [...r]);
 
+  		// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
   		this.setup();
 
   		this.renderConfigList();
@@ -599,47 +601,96 @@
 		}
 
     saveNewConfig() {
+  		// 1. Aktuelle Auswahl in der vorherigen Konfiguration speichern
+  		if (this.currentConfig !== null) {
+  			this.updateConfig(); // Speichere aktuelle Änderungen in vorheriger Config
+  		}
+  		
+  		// 2. Temporär currentConfig auf null setzen für neue Konfiguration
+  		this.currentConfig = null;
+  		
+  		// 3. Neue Konfiguration mit leerem Grid erstellen
+  		const emptySelection = Array.from({ length: this.rows }, () =>
+  			Array.from({ length: this.cols }, () => false)
+  		);
+  		
+  		// 4. Aktuelle Auswahl temporär speichern und durch leere ersetzen
+  		const originalSelection = this.selection;
+  		this.selection = emptySelection;
+  		
   		const cfg = this._makeConfigObject();
   		this.configs.push(cfg);
+  		
+  		// 5. Neue Konfiguration auswählen und Grid neu aufbauen
+  		this.currentConfig = this.configs.length - 1;
+  		this.setup(); // Baut Grid mit leerer Auswahl neu auf
+  		
   		this.renderConfigList();
   		this.updateSaveButtons();
-
-  		this.currentConfig = null;
-  		this.resetGridToDefault();
-
-  		this.showToast('Konfiguration gespeichert ✅'); // 🎉
-      this.saveToLocalStorage();
+  		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
 		}
 
     updateConfig() {
       const idx = this.currentConfig;
       this.configs[idx] = this._makeConfigObject();
-      this.currentConfig = null;
-      this.resetToDefaultGrid();
       this.renderConfigList();
       this.updateSaveButtons();
-      this.saveToLocalStorage();
     }
     
-    deleteCurrentConfig() {
-  		if (this.currentConfig === null) return;
-  		if (!confirm('Willst du die Konfiguration wirklich löschen?')) return;
+    deleteConfig(configIndex) {
+  		const configName = this.configs[configIndex].name;
+  		if (!confirm(`Willst du "${configName}" wirklich löschen?`)) return;
 
-  		this.configs.splice(this.currentConfig, 1);
-  		this.saveToLocalStorage();
+  		this.configs.splice(configIndex, 1);
+  		
+  		// Nach dem Löschen: Wähle die nächste Konfiguration oder erstelle eine neue
+  		if (this.configs.length > 0) {
+  			// Wenn die gelöschte Konfiguration die aktuelle war
+  			if (configIndex === this.currentConfig) {
+  				// Wähle die nächste Konfiguration (oder die vorherige wenn es die letzte war)
+  				const newIndex = Math.min(configIndex, this.configs.length - 1);
+  				this.loadConfig(newIndex);
+  			} else if (configIndex < this.currentConfig) {
+  				// Eine Konfiguration vor der aktuellen wurde gelöscht, Index anpassen
+  				this.currentConfig--;
+  				this.renderConfigList();
+  			} else {
+  				// Eine Konfiguration nach der aktuellen wurde gelöscht, nur Liste neu rendern
+  				this.renderConfigList();
+  			}
+  		} else {
+  			// Keine Konfigurationen mehr - erstelle eine neue
+  			this.createNewConfig();
+  		}
 
+  		this.updateSaveButtons();
+		}
+
+    createNewConfig() {
+  		// Erstelle eine neue Standard-Konfiguration
   		this.currentConfig = null;
   		this.resetGridToDefault();
-
   		this.renderConfigList();
   		this.updateSaveButtons();
 		}
 
     _makeConfigObject() {
+      // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
+      let configName;
+      if (this.currentConfig !== null) {
+        // Bestehende Konfiguration: Behalte den Namen
+        configName = this.configs[this.currentConfig].name;
+      } else {
+        // Neue Konfiguration: Finde nächste Nummer
+        let nextNumber = 1;
+        while (this.configs.some(cfg => cfg.name === `Konfiguration ${nextNumber}`)) {
+          nextNumber++;
+        }
+        configName = `Konfiguration ${nextNumber}`;
+      }
+      
       return {
-        name:        this.currentConfig !== null
-                       ? this.configs[this.currentConfig].name
-                       : `Konfiguration ${this.configs.length+1}`,
+        name:        configName,
         selection:   this.selection.map(r => [...r]),
         orientation: this.orV.checked ? 'vertical' : 'horizontal',
         incM:        this.incM.checked,
@@ -673,14 +724,16 @@
     		nameEl.style.cursor = 'pointer';
 
     		nameEl.addEventListener('click', () => {
-  				if (this.currentConfig !== null) {
-    				const saveIndex = this.currentConfig; // 👈 merke Index VOR reset
-    				this.currentConfig = saveIndex;       // 👈 explizit setzen
+  				// Auto-Save der aktuellen Konfiguration vor dem Wechsel
+  				if (this.currentConfig !== null && this.currentConfig !== idx) {
     				this.updateConfig();
   				}
-  				this.loadConfig(idx); // 🔁 gewünschte Konfiguration laden
-  				this.updateSaveButtons();
-  				this.showToast('Automatisch gespeichert ✅', 1500);
+  				
+  				// Nur laden wenn es eine andere Konfiguration ist
+  				if (this.currentConfig !== idx) {
+  					this.loadConfig(idx);
+  					this.showToast('Konfiguration geladen', 1000);
+  				}
 				});
 
     		const editBtn = document.createElement('button');
@@ -717,9 +770,27 @@
       		input.focus();
     		});
 
+    		const deleteBtn = document.createElement('button');
+    		deleteBtn.innerHTML = '🗑️';
+    		deleteBtn.title = 'Konfiguration löschen';
+    		Object.assign(deleteBtn.style, {
+      		background: 'none',
+      		border: 'none',
+      		cursor: 'pointer',
+      		fontSize: '1rem',
+      		color: '#fff',
+      		padding: '0',
+      		marginLeft: '0.5rem',
+      		lineHeight: '1'
+    		});
+    		deleteBtn.addEventListener('click', (e) => {
+      		e.stopPropagation();
+      		this.deleteConfig(idx);
+    		});
+
     		const shareBtn = document.createElement('button');
     		shareBtn.textContent = '🔗';
-    		shareBtn.title = 'Konfiguration teilen';
+    		shareBtn.title = 'Später weitermachen - Link kopieren';
     		Object.assign(shareBtn.style, {
       		background: 'none',
       		border: 'none',
@@ -728,16 +799,13 @@
     		});
     		shareBtn.addEventListener('click', (e) => {
       		e.stopPropagation();
-      		const cfgData = JSON.stringify(this.configs[idx]);
-					const base64 = btoa(encodeURIComponent(cfgData));
-					const shareUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
-      		navigator.clipboard.writeText(shareUrl);
-      		this.showToast('Link kopiert ✅', 1500);
+      		this.generateContinueLink();
     		});
 
     		nameContainer.appendChild(nameEl);
     		nameContainer.appendChild(editBtn);
     		div.appendChild(nameContainer);
+    		div.appendChild(deleteBtn);
     		div.appendChild(shareBtn);
     		this.configListEl.appendChild(div);
   		});
@@ -752,13 +820,26 @@
   		const mc4Checked = this.mc4.checked;
   		const holzChecked = this.holz.checked;
 
-  		const bundles = this.configs.map(c => ({
-    		selection:   c.selection,
-    		orientation: c.orientation,
-    		incM:        c.incM,
-    		mc4:         c.mc4,
-    		holz:        c.holz
-  		}));
+  		const bundles = this.configs.map((c, idx) => {
+  			// Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
+  			if (idx === this.currentConfig) {
+  				return {
+    				selection:   this.selection,
+    				orientation: this.orV.checked ? 'vertical' : 'horizontal',
+    				incM:        incMChecked,
+    				mc4:         mc4Checked,
+    				holz:        holzChecked
+  				};
+  			} else {
+  				return {
+    				selection:   c.selection,
+    				orientation: c.orientation,
+    				incM:        c.incM,
+    				mc4:         c.mc4,
+    				holz:        c.holz
+  				};
+  			}
+  		});
 
   		if (this.currentConfig === null) {
   			bundles.push({
@@ -770,8 +851,13 @@
   			});
 			}
 
+  		// Speichere aktuelle Werte
+  		const currentOrientation = this.orV.checked;
+  		const currentSelection = this.selection.map(r => [...r]);
+  		
   		const total = {};
   		bundles.forEach(b => {
+    		// Temporär setzen für Berechnung
     		this.orV.checked = b.orientation === 'vertical';
     		this.orH.checked = !this.orV.checked;
     		this.selection = b.selection;
@@ -786,6 +872,12 @@
       		total[k] = (total[k] || 0) + v;
     		});
   		});
+  		
+  		// Stelle ursprüngliche Werte wieder her
+  		this.orV.checked = currentOrientation;
+  		this.orH.checked = !currentOrientation;
+  		this.selection = currentSelection;
+  		this.updateSize();
 
   		const entries = Object.entries(total).filter(([, v]) => v > 0);
   		const itemsPerColumn = 4;
@@ -819,246 +911,177 @@
   		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
   		this.summaryList.style.display = entries.length ? 'flex' : 'none';
 		}
+
+    generateContinueLink() {
+    	// Auto-Save der aktuellen Konfiguration vor dem Link-Erstellen
+    	if (this.currentConfig !== null) {
+    		this.updateConfig();
+    	}
+    	
+    	// Erstelle Link mit allen Konfigurationen
+    	const allConfigsData = JSON.stringify(this.configs);
+			const base64 = btoa(encodeURIComponent(allConfigsData));
+			const continueUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
+			
+			navigator.clipboard.writeText(continueUrl);
+			this.showToast('Später-weitermachen Link kopiert ✅', 2000);
+    }
     
-    generateHiddenCartForms() {
-      // Remove old forms first
-      const existingForms = document.getElementById('hidden-cart-forms');
-      if (existingForms) {
-        existingForms.remove();
+        generateHiddenCartForms() {
+      const webflowForms = document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]');
+      this.webflowFormMap = {};
+      webflowForms.forEach((form) => {
+        const productId = form.getAttribute('data-commerce-product-id');
+        const skuId = form.getAttribute('data-commerce-sku-id');
+        
+        const productKey = Object.keys(PRODUCT_MAP).find(key => 
+          PRODUCT_MAP[key].productId === productId || PRODUCT_MAP[key].variantId === skuId
+        );
+        
+        if (productKey) {
+          this.webflowFormMap[productKey] = form;
+        }
+      });
+      
+      this.hideWebflowForms();
+    }
+
+    hideWebflowForms() {
+      Object.values(this.webflowFormMap).forEach(form => {
+        if (form && form.style) {
+          form.style.cssText = `
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            width: 1px !important;
+            height: 1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            visibility: hidden !important;
+          `;
+        }
+      });
+      console.log('[SolarGrid] Webflow Formulare versteckt');
+    }
+
+    addProductToCart(productKey, quantity, isLastItem = false) {
+      const product = PRODUCT_MAP[productKey];
+      if (!product) return;
+      
+      const form = this.webflowFormMap[productKey];
+      if (!form) return;
+      
+      const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
+      if (qtyInput) {
+        console.log(`[SolarGrid] Setze Menge auf ${quantity} für ${productKey}`);
+        qtyInput.value = quantity;
       }
       
-      // Create container for forms - visible but positioned off-screen to avoid accessibility issues
-      const hiddenCartForms = document.createElement('div');
-      hiddenCartForms.id = 'hidden-cart-forms';
-      hiddenCartForms.style.cssText = `
+      const addToCartButton = form.querySelector('input[data-node-type="commerce-add-to-cart-button"]');
+      if (addToCartButton) {
+        this.clickWebflowButtonSafely(form, addToCartButton, productKey, quantity, isLastItem);
+      }
+    }
+
+    clickWebflowButtonSafely(form, button, productKey, quantity, isLastItem) {
+      const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
+      if (qtyInput) qtyInput.value = quantity;
+      
+      if (isLastItem) {
+        // Für das letzte Item: Normaler Button-Klick (Cart-Container ist bereits sichtbar)
+        button.click();
+        return;
+      }
+      
+      // Für alle anderen Items: Versteckter Submit (Cart-Container ist versteckt)
+      const iframe = document.createElement('iframe');
+      iframe.name = 'safe-cart-' + Date.now() + Math.random();
+      iframe.style.cssText = `
         position: absolute;
-        left: -9999px;
-        top: -9999px;
+        left: -10000px;
+        top: -10000px;
         width: 1px;
         height: 1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border: 0;
-        margin: 0;
-        padding: 0;
+        border: none;
+        visibility: hidden;
+        opacity: 0;
       `;
       
-      Object.entries(PRODUCT_MAP).forEach(([key, val]) => {
-        // Create a simple form that mimics Webflow's structure
-        const form = document.createElement('form');
-        form.setAttribute('data-product-key', key);
-        form.setAttribute('data-product-id', val.productId);
-        form.setAttribute('aria-hidden', 'true');
-        form.setAttribute('tabindex', '-1');
-        // Remove action to prevent redirect
-        form.setAttribute('method', 'POST');
-        form.innerHTML = `
-          <input type="hidden" name="product-id" value="${val.productId}" />
-          <input type="hidden" name="variant-id" value="${val.variantId}" />
-          <input type="number" name="quantity" value="1" min="1" tabindex="-1" aria-hidden="true" />
-          <button type="submit" class="w-commerce-commerceaddtocartbutton" tabindex="-1" aria-hidden="true"></button>
-        `;
-        
-        // Prevent form from redirecting by default
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-        });
-        
-        hiddenCartForms.appendChild(form);
-      });
+      document.body.appendChild(iframe);
       
-      document.body.appendChild(hiddenCartForms);
+      const originalTarget = form.target || '';
+      form.target = iframe.name;
       
-      // Add event listeners to the buttons
-      this.attachCartButtonListeners();
-    }
-
-    attachCartButtonListeners() {
-      const buttons = document.querySelectorAll('#hidden-cart-forms .add-to-cart-btn');
-      buttons.forEach(button => {
-        button.addEventListener('click', (e) => {
-          e.preventDefault();
-          const productKey = button.getAttribute('data-product-key');
-          const form = button.closest('form');
-          const quantity = parseInt(form.querySelector('input[name="quantity"]').value) || 1;
+      let hasLoaded = false;
+      iframe.onload = () => {
+        if (!hasLoaded) {
+          hasLoaded = true;
+          form.target = originalTarget;
           
-          this.performActualCartAdd(productKey, quantity);
-        });
-      });
-    }
-
-    addProductToCart(productKey, quantity) {
-      const product = PRODUCT_MAP[productKey];
-      if (!product) {
-        console.warn(`[SolarGrid] Kein Produkt für Schlüssel '${productKey}' im PRODUCT_MAP gefunden.`);
-        return;
-      }
-      
-      // Try multiple methods to add to Webflow cart without redirect
-      if (this.tryWebflowCartAPI(product, quantity, productKey)) {
-        return;
-      }
-      
-      if (this.tryWebflowFormSubmit(product, quantity, productKey)) {
-        return;
-      }
-      
-      // Final fallback
-      this.fallbackAddToCart(product, quantity, productKey);
-    }
-
-    tryWebflowCartAPI(product, quantity, productKey) {
-      // Method 1: Try Webflow's commerce API
-      if (window.Webflow && window.Webflow.commerce && window.Webflow.commerce.addToCart) {
-        try {
-          window.Webflow.commerce.addToCart({
-            productId: product.productId,
-            variantId: product.variantId,
-            quantity: quantity
-          });
-          console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (API).`);
-          return true;
-        } catch (error) {
-          console.warn(`[SolarGrid] Webflow API fehlgeschlagen für ${productKey}:`, error);
-        }
-      }
-      return false;
-    }
-
-    tryWebflowFormSubmit(product, quantity, productKey) {
-      // Method 2: Try to simulate Webflow's add-to-cart behavior without redirect
-      const form = document.querySelector(`form[data-product-id="${product.productId}"]`);
-      if (!form) {
-        return false;
-      }
-      
-      const qtyInput = form.querySelector('input[name="quantity"]');
-      const submitBtn = form.querySelector('button[type="submit"]');
-      
-      if (!qtyInput || !submitBtn) {
-        return false;
-      }
-      
-      try {
-        qtyInput.value = quantity;
-        
-        // Try to use Webflow's internal cart methods
-        if (window.Webflow && window.Webflow.commerce) {
-          // Look for Webflow's cart instance
-          const commerceInstance = window.Webflow.commerce;
+          if (qtyInput) qtyInput.value = 1;
           
-          // Try different possible method names
-          const addMethods = ['addProductToCart', 'addToCart', 'updateCart', 'addItem'];
-          
-          for (const methodName of addMethods) {
-            if (typeof commerceInstance[methodName] === 'function') {
-              try {
-                commerceInstance[methodName]({
-                  productId: product.productId,
-                  variantId: product.variantId,
-                  quantity: quantity
-                });
-                console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (${methodName}).`);
-                setTimeout(() => { qtyInput.value = 1; }, 100);
-                return true;
-              } catch (methodError) {
-                console.warn(`[SolarGrid] Methode ${methodName} fehlgeschlagen:`, methodError);
-                continue;
-              }
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
             }
-          }
+          }, 1000);
         }
-        
-        // Alternative: Try to trigger form submission with AJAX to prevent redirect
-        const formData = new FormData(form);
-        
-        // Prevent default form behavior
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }, { once: true });
-        
-        // Try AJAX submission to Webflow's cart endpoint
-        fetch('/cart/add', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        })
-        .then(response => {
-          if (response.ok) {
-            console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (AJAX).`);
-            // Update cart UI if possible
-            this.updateCartUI();
-          } else {
-            throw new Error('Cart update failed');
-          }
-        })
-        .catch(error => {
-          console.warn(`[SolarGrid] AJAX cart update fehlgeschlagen für ${productKey}:`, error);
-        });
-        
-        setTimeout(() => { qtyInput.value = 1; }, 100);
-        return true;
-        
-      } catch (error) {
-        console.warn(`[SolarGrid] Form-Submit fehlgeschlagen für ${productKey}:`, error);
-        return false;
-      }
-    }
-
-    updateCartUI() {
-      // Try to refresh cart count and other UI elements
-      if (window.Webflow && window.Webflow.commerce && window.Webflow.commerce.refreshCart) {
-        window.Webflow.commerce.refreshCart();
-      }
+      };
       
-      // Dispatch custom event for cart update
-      const cartUpdateEvent = new CustomEvent('cartUpdated', {
-        bubbles: true,
-        detail: { source: 'solarGrid' }
-      });
-      document.dispatchEvent(cartUpdateEvent);
-    }
-
-    fallbackAddToCart(product, quantity, productKey) {
-      // Method 3: Manual cart management (fallback)
-      console.log(`[SolarGrid] Fallback: ${quantity}x ${productKey} wird verarbeitet.`);
+      iframe.onerror = () => {
+        form.target = originalTarget;
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
       
-      // Try to update cart count in UI if possible
-      const cartCountElements = document.querySelectorAll('[data-wf-cart-quantity]');
-      cartCountElements.forEach(el => {
-        const currentCount = parseInt(el.textContent) || 0;
-        el.textContent = currentCount + quantity;
-      });
-      
-      // Store in localStorage as backup
-      const cartKey = 'webflow-cart-backup';
-      let cartBackup = JSON.parse(localStorage.getItem(cartKey) || '{}');
-      cartBackup[product.productId] = (cartBackup[product.productId] || 0) + quantity;
-      localStorage.setItem(cartKey, JSON.stringify(cartBackup));
-      
-      console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum lokalen Warenkorb hinzugefügt.`);
+      button.click();
     }
 
     addPartsListToCart(parts) {
       const entries = Object.entries(parts).filter(([_, qty]) => qty > 0);
       if (!entries.length) {
-        console.info('[SolarGrid] Keine Produkte zum Hinzufügen gefunden.');
         return;
       }
       
-      console.log('[SolarGrid] Füge folgende Teile zum Warenkorb hinzu:', parts);
+      // Verstecke Cart-Container temporär
+      this.hideCartContainer();
       
-      entries.forEach(([key, qty], i) => {
-        // Calculate packs needed based on VE (Verpackungseinheit)
+      // Füge alle Produkte außer dem letzten sofort hinzu (ohne Delays)
+      const allButLast = entries.slice(0, -1);
+      const lastEntry = entries[entries.length - 1];
+      
+      // Alle Produkte außer dem letzten sofort hinzufügen
+      allButLast.forEach(([key, qty]) => {
         const packsNeeded = Math.ceil(qty / VE[key]);
-        console.log(`[SolarGrid] ${key}: ${qty} Stück benötigt, ${packsNeeded} Packungen à ${VE[key]} Stück`);
-        
-        setTimeout(() => this.addProductToCart(key, packsNeeded), i * 800); // 800ms Delay for better reliability
+        this.addProductToCart(key, packsNeeded, false);
       });
+      
+      // Das letzte Produkt nach kurzer Verzögerung hinzufügen (zeigt Cart)
+      setTimeout(() => {
+        this.showCartContainer();
+        const [lastKey, lastQty] = lastEntry;
+        const packsNeeded = Math.ceil(lastQty / VE[lastKey]);
+        this.addProductToCart(lastKey, packsNeeded, true);
+      }, 500);
+    }
+
+    hideCartContainer() {
+      const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+      if (cartContainer) {
+        cartContainer.style.display = 'none';
+      }
+    }
+
+    showCartContainer() {
+      const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+      if (cartContainer) {
+        cartContainer.style.display = '';
+      }
     }
 
     addCurrentToCart() {
@@ -1075,12 +1098,25 @@
     }
 
     addAllToCart() {
-      const allBundles = this.configs.map(cfg =>
-        this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.holz)
-      );
-      if (this.currentConfig === null) {
+      // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
+      if (this.currentConfig !== null) {
+        this.updateConfig();
+      }
+      
+      const allBundles = this.configs.map((cfg, idx) => {
+        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+        if (idx === this.currentConfig) {
+          return this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked);
+        } else {
+          return this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.holz);
+        }
+      });
+      
+      // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
+      if (this.currentConfig === null && this.configs.length === 0) {
         allBundles.push(this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.holz.checked));
       }
+      
       const total = {};
       allBundles.forEach(parts => {
         Object.entries(parts).forEach(([k, v]) => {
@@ -1100,11 +1136,19 @@
     }
 
     _buildPartsFor(sel, incM, mc4, holz) {
+      // Speichere aktuelle Auswahl
+      const originalSelection = this.selection.map(r => [...r]);
+      
+      // Temporär setzen für Berechnung
       this.selection = sel;
       let parts = this.calculateParts();
       if (!incM) delete parts.Solarmodul;
       if (mc4)   parts.MC4_Stecker   = sel.flat().filter(v => v).length;
       if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
+      
+      // Ursprüngliche Auswahl wiederherstellen
+      this.selection = originalSelection;
+      
       return parts;
     }
 
@@ -1124,29 +1168,5 @@
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
     window.solarGrid = grid;
-    
-    // Debug function to check cart forms
-    window.debugCartForms = () => {
-      const forms = document.querySelectorAll('#hidden-cart-forms form');
-      console.log(`[Debug] Gefundene Cart-Formulare: ${forms.length}`);
-      forms.forEach((form, i) => {
-        const productKey = form.getAttribute('data-product-key');
-        const productId = form.getAttribute('data-product-id');
-        const qtyInput = form.querySelector('input[name="quantity"]');
-        const button = form.querySelector('.add-to-cart-btn');
-        console.log(`[Debug] Form ${i+1}: ProductKey=${productKey}, ProductID=${productId}, Quantity Input=${!!qtyInput}, Button=${!!button}`);
-      });
-      return forms;
-    };
-    
-    // Debug function to test single product addition
-    window.testAddToCart = (productKey = 'Solarmodul', quantity = 1) => {
-      console.log(`[Debug] Teste Hinzufügung: ${quantity}x ${productKey}`);
-      grid.addProductToCart(productKey, quantity);
-    };
-    
-    console.log('[SolarGrid] Initialisierung abgeschlossen. Debug-Funktionen verfügbar:');
-    console.log('- window.debugCartForms() - Zeigt alle Cart-Formulare');
-    console.log('- window.testAddToCart(productKey, quantity) - Testet Hinzufügung eines Produkts');
   });
 })();
