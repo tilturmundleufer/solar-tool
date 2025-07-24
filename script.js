@@ -28,6 +28,51 @@
   	Holzunterleger: 0.5
 	};
 
+  // Funktion um Preise dynamisch aus HTML zu lesen
+  function getPriceFromHTML(productKey) {
+    try {
+      // Alle Preis-Elemente finden
+      const priceElements = document.querySelectorAll('[data-wf-sku-bindings*="f_price_"]');
+      
+      // Mögliche Produkt-IDs basierend auf PRODUCT_MAP
+      const productInfo = PRODUCT_MAP[productKey];
+      if (!productInfo) return PRICE_MAP[productKey] || 0;
+      
+      const productId = productInfo.productId;
+      const variantId = productInfo.variantId;
+      
+      // Suche nach Preis-Element das zu diesem Produkt gehört
+      for (const priceElement of priceElements) {
+        // Suche im übergeordneten Container nach Produkt-/Variant-ID
+        const container = priceElement.closest('[data-wf-sku-bindings*="' + productId + '"]') ||
+                         priceElement.closest('[data-wf-sku-bindings*="' + variantId + '"]') ||
+                         priceElement.closest('.w-commerce-commerceaddtocartform');
+        
+        if (container) {
+          // Prüfe ob Container die richtige Produkt-ID enthält
+          const containerBindings = container.getAttribute('data-wf-sku-bindings') || '';
+          if (containerBindings.includes(productId) || containerBindings.includes(variantId)) {
+            const priceText = priceElement.textContent || priceElement.innerHTML;
+            // Extrahiere Preis (Format: €99,00 oder 99.00 etc.)
+            const priceMatch = priceText.match(/(\d+(?:[.,]\d+)?)/);
+            if (priceMatch) {
+              const price = parseFloat(priceMatch[1].replace(',', '.'));
+              console.log(`Preis für ${productKey} aus HTML gelesen: ${price}€`);
+              return price;
+            }
+          }
+        }
+      }
+      
+      console.log(`Kein HTML-Preis für ${productKey} gefunden, verwende Fallback: ${PRICE_MAP[productKey]}€`);
+    } catch (error) {
+      console.warn(`Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
+    }
+    
+    // Fallback auf hardcoded Preis
+    return PRICE_MAP[productKey] || 0;
+  }
+
   const PRODUCT_MAP = {
     Solarmodul:        { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
     Endklemmen:        { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
@@ -899,7 +944,7 @@
     		const columnEntries = entries.slice(i * itemsPerColumn, (i + 1) * itemsPerColumn);
     		const columnHtml = columnEntries.map(([k, v]) => {
       		const packs = Math.ceil(v / VE[k]);
-      		const price = PRICE_MAP[k] || 0;
+      		const price = getPriceFromHTML(k);
       		const itemTotal = packs * price;
       		totalPrice += itemTotal;
 
