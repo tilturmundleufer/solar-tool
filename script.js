@@ -31,9 +31,6 @@
   // Funktion um Preise dynamisch aus HTML zu lesen
   function getPriceFromHTML(productKey) {
     try {
-      // Alle Preis-Elemente finden
-      const priceElements = document.querySelectorAll('[data-wf-sku-bindings*="f_price_"]');
-      
       // Mögliche Produkt-IDs basierend auf PRODUCT_MAP
       const productInfo = PRODUCT_MAP[productKey];
       if (!productInfo) return PRICE_MAP[productKey] || 0;
@@ -41,32 +38,42 @@
       const productId = productInfo.productId;
       const variantId = productInfo.variantId;
       
-      // Suche nach Preis-Element das zu diesem Produkt gehört
-      for (const priceElement of priceElements) {
-        // Suche im übergeordneten Container nach Produkt-/Variant-ID
-        const container = priceElement.closest('[data-wf-sku-bindings*="' + productId + '"]') ||
-                         priceElement.closest('[data-wf-sku-bindings*="' + variantId + '"]') ||
-                         priceElement.closest('.w-commerce-commerceaddtocartform');
+      // Suche nach dem Form-Element mit der entsprechenden product-id oder sku-id
+      const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
+                         document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
+      
+      if (productForm) {
+        // Suche nach dem Preis-Element innerhalb des Forms
+        const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
         
-        if (container) {
-          // Prüfe ob Container die richtige Produkt-ID enthält
-          const containerBindings = container.getAttribute('data-wf-sku-bindings') || '';
-          if (containerBindings.includes(productId) || containerBindings.includes(variantId)) {
-            const priceText = priceElement.textContent || priceElement.innerHTML;
-            // Extrahiere Preis (Format: €99,00 oder 99.00 etc.)
-            const priceMatch = priceText.match(/(\d+(?:[.,]\d+)?)/);
-            if (priceMatch) {
-              const price = parseFloat(priceMatch[1].replace(',', '.'));
-              console.log(`Preis für ${productKey} aus HTML gelesen: ${price}€`);
-              return price;
-            }
+        if (priceElement) {
+          // Hole den Text-Inhalt und bereinige ihn
+          let priceText = priceElement.textContent || priceElement.innerHTML;
+          
+          // Ersetze &nbsp; und andere HTML-Entities
+          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
+          
+          // Extrahiere Preis (Format: €9,99 EUR, €99,00, 99.50 etc.)
+          // Suche nach Zahlen mit Komma oder Punkt als Dezimaltrennzeichen
+          const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
+          
+          if (priceMatch) {
+            const price = parseFloat(priceMatch[1].replace(',', '.'));
+            console.log(`✅ Preis für ${productKey} aus HTML gelesen: ${price}€ (Original: "${priceText.trim()}")`);
+            return price;
+          } else {
+            console.warn(`❌ Preis-Format nicht erkannt für ${productKey}: "${priceText.trim()}"`);
           }
+        } else {
+          console.warn(`❌ Kein Preis-Element gefunden für ${productKey} in Form`);
         }
+      } else {
+        console.warn(`❌ Kein Product-Form gefunden für ${productKey} (ProductID: ${productId}, VariantID: ${variantId})`);
       }
       
-      console.log(`Kein HTML-Preis für ${productKey} gefunden, verwende Fallback: ${PRICE_MAP[productKey]}€`);
+      console.log(`⚠️ Fallback-Preis für ${productKey}: ${PRICE_MAP[productKey]}€`);
     } catch (error) {
-      console.warn(`Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
+      console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
     }
     
     // Fallback auf hardcoded Preis
