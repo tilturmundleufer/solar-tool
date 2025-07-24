@@ -358,10 +358,10 @@
   		const w = originalCellW * scale;
   		const h = originalCellH * scale;
 
-  		// Bestimme visuelle Gap: 0 wenn maximale Grenzen erreicht werden, sonst RAIL_GAP * scale
-  		const isAtMaxWidth = totalWidthWithRailGaps * scale >= maxWidth;
-  		const isAtMaxHeight = totalHeightWithRailGaps * scale >= maxHeight;
-  		const visualGap = (isAtMaxWidth || isAtMaxHeight) ? 0 : RAIL_GAP * scale;
+  		// Bestimme visuelle Gap: 0 wenn viele Spalten/Zeilen, sonst RAIL_GAP * scale
+  		// Gap verschwindet horizontal ab 15 Spalten, vertikal ab 10 Zeilen
+  		const shouldHideGap = this.cols >= 15 || this.rows >= 10;
+  		const visualGap = shouldHideGap ? 0 : RAIL_GAP * scale;
 
   		// CSS Variablen setzen
   		document.documentElement.style.setProperty('--cell-size', w + 'px');
