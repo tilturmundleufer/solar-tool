@@ -324,7 +324,7 @@
     
 
     updateSize() {
-  		const gap = 2;
+  		const railGap = 2; // Immer 2cm für Schienen-Berechnungen
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
   		// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
@@ -342,13 +342,13 @@
   		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px für Buttons
   		const maxHeight = this.wrapper.clientHeight - 100; // 70vh - 100px
   		
-  		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps)
-  		const totalWidthWithGaps = this.cols * originalCellW + (this.cols - 1) * gap;
-  		const totalHeightWithGaps = this.rows * originalCellH + (this.rows - 1) * gap;
+  		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
+  		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * railGap;
+  		const totalHeightWithRailGaps = this.rows * originalCellH + (this.rows - 1) * railGap;
   		
   		// Berechne Skalierungsfaktoren für beide Dimensionen
-  		const scaleX = maxWidth / totalWidthWithGaps;
-  		const scaleY = maxHeight / totalHeightWithGaps;
+  		const scaleX = maxWidth / totalWidthWithRailGaps;
+  		const scaleY = maxHeight / totalHeightWithRailGaps;
   		
   		// Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
   		// und sicherzustellen, dass das Grid nie die Grenzen überschreitet
@@ -358,14 +358,20 @@
   		const w = originalCellW * scale;
   		const h = originalCellH * scale;
 
+  		// Bestimme visuelle Gap: 0 wenn maximale Grenzen erreicht werden, sonst railGap * scale
+  		const isAtMaxWidth = totalWidthWithRailGaps * scale >= maxWidth;
+  		const isAtMaxHeight = totalHeightWithRailGaps * scale >= maxHeight;
+  		const visualGap = (isAtMaxWidth || isAtMaxHeight) ? 0 : railGap * scale;
+
   		// CSS Variablen setzen
   		document.documentElement.style.setProperty('--cell-size', w + 'px');
   		document.documentElement.style.setProperty('--cell-width',  w + 'px');
   		document.documentElement.style.setProperty('--cell-height', h + 'px');
+  		document.documentElement.style.setProperty('--cell-gap', visualGap + 'px');
 
   		// Grid-Größe direkt setzen - niemals größer als die maximalen Grenzen
-  		const finalWidth = Math.min(this.cols * w + (this.cols - 1) * gap, maxWidth);
-  		const finalHeight = Math.min(this.rows * h + (this.rows - 1) * gap, maxHeight);
+  		const finalWidth = Math.min(this.cols * w + (this.cols - 1) * visualGap, maxWidth);
+  		const finalHeight = Math.min(this.rows * h + (this.rows - 1) * visualGap, maxHeight);
   		
   		this.gridEl.style.width = finalWidth + 'px';
   		this.gridEl.style.height = finalHeight + 'px';
