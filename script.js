@@ -455,8 +455,11 @@
   		this.rowsIn.value = rows;
   		this.wIn.value = width;
   		this.hIn.value = height;
-  		this.orH.checked = true;
-  		this.orV.checked = false;
+  		
+  		// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
+  		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
+  		this.orH.checked = !defaultVertical;
+  		this.orV.checked = defaultVertical;
 
   		this.cols = cols;
   		this.rows = rows;
