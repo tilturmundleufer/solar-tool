@@ -337,10 +337,10 @@
   		const originalCellH = isVertical ? inputW : inputH;
   		
   		// Maximale verfügbare Größe
-  		// Buttons sind 30px breit + 10px margin links und rechts = 50px pro Seite
-  		// Insgesamt 100px für beide Seiten abziehen
-  		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px für Buttons
-  		const maxHeight = this.wrapper.clientHeight - 100; // 70vh - 100px
+  		// 50px Abstand auf allen Seiten: links, rechts, oben, unten
+  		// Insgesamt 100px für Breite (50px links + 50px rechts) und 100px für Höhe (50px oben + 50px unten)
+  		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px (50px links + 50px rechts)
+  		const maxHeight = this.wrapper.clientHeight - 100; // grid-wrapper Höhe - 100px (50px oben + 50px unten)
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
   		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * RAIL_GAP;
@@ -375,16 +375,6 @@
   		
   		this.gridEl.style.width = finalWidth + 'px';
   		this.gridEl.style.height = finalHeight + 'px';
-
-  		const railGap = 2; // Schienen-Gap ist immer 2cm
-  		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * railGap;
-  		const totalHeightWithRailGaps = this.rows * originalCellH + (this.rows - 1) * railGap;
-
-  		const isAtMaxWidth = totalWidthWithRailGaps * scale >= maxWidth;
-  		const isAtMaxHeight = totalHeightWithRailGaps * scale >= maxHeight;
-  		const visualGap = (isAtMaxWidth || isAtMaxHeight) ? 0 : railGap * scale;
-
-  		document.documentElement.style.setProperty('--cell-gap', visualGap + 'px');
 		}
 
     buildGrid() {
