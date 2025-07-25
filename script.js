@@ -346,9 +346,9 @@
   		this.rows -= 1;
   		this.selection.shift();
   		this.updateGridAfterStructureChange();
-		}
+				}
 
-		updateGridAfterStructureChange() {
+    updateGridAfterStructureChange() {
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
@@ -817,23 +817,27 @@
       		input.focus();
     		});
 
-    		const deleteBtn = document.createElement('button');
-    		deleteBtn.innerHTML = '🗑️';
-    		deleteBtn.title = 'Konfiguration löschen';
-    		Object.assign(deleteBtn.style, {
-      		background: 'none',
-      		border: 'none',
-      		cursor: 'pointer',
-      		fontSize: '1rem',
-      		color: '#fff',
-      		padding: '0',
-      		marginLeft: '0.5rem',
-      		lineHeight: '1'
-    		});
-    		deleteBtn.addEventListener('click', (e) => {
-      		e.stopPropagation();
-      		this.deleteConfig(idx);
-    		});
+    		// Löschen-Button nur anzeigen wenn mehr als eine Konfiguration existiert
+    		let deleteBtn = null;
+    		if (this.configs.length > 1) {
+    			deleteBtn = document.createElement('button');
+    			deleteBtn.innerHTML = '🗑️';
+    			deleteBtn.title = 'Konfiguration löschen';
+    			Object.assign(deleteBtn.style, {
+      			background: 'none',
+      			border: 'none',
+      			cursor: 'pointer',
+      			fontSize: '1rem',
+      			color: '#fff',
+      			padding: '0',
+      			marginLeft: '0.5rem',
+      			lineHeight: '1'
+    			});
+    			deleteBtn.addEventListener('click', (e) => {
+      			e.stopPropagation();
+      			this.deleteConfig(idx);
+    			});
+    		}
 
     		const shareBtn = document.createElement('button');
     		shareBtn.textContent = '🔗';
@@ -852,7 +856,7 @@
     		nameContainer.appendChild(nameEl);
     		nameContainer.appendChild(editBtn);
     		div.appendChild(nameContainer);
-    		div.appendChild(deleteBtn);
+    		if (deleteBtn) div.appendChild(deleteBtn); // Nur hinzufügen wenn vorhanden
     		div.appendChild(shareBtn);
     		this.configListEl.appendChild(div);
   		});
