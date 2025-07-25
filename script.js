@@ -743,8 +743,8 @@
         mc4:         this.mc4.checked,
         solarkabel:  this.solarkabel.checked,
         holz:        this.holz.checked,
-        cols:        parseInt(this.colsIn.value, 10),
-        rows:        parseInt(this.rowsIn.value, 10),
+        cols:        this.cols,
+        rows:        this.rows,
         cellWidth:   parseInt(this.wIn.value, 10),
         cellHeight:  parseInt(this.hIn.value, 10)
       };
