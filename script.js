@@ -109,8 +109,6 @@
       this.mc4           = document.getElementById('mc4');
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
-      this.sidebar       = document.getElementById('sidebar');
-      this.sidebarToggle = document.getElementById('sidebar-toggle');
       this.listHolder    = document.querySelector('.produktliste-holder');
       this.prodList      = document.getElementById('produktliste');
       this.summaryHolder = document.getElementById('summary-list-holder');
@@ -228,9 +226,6 @@
   		this.summaryBtn.addEventListener('click', () => this.addAllToCart());
   		this.resetBtn.addEventListener('click', () => this.resetGridToDefault());
   		this.continueLaterBtn.addEventListener('click', () => this.generateContinueLink());
-  		
-  		// Sidebar Toggle
-  		this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
@@ -352,10 +347,6 @@
   		this.selection.shift();
   		this.updateGridAfterStructureChange();
 				}
-		
-		toggleSidebar() {
-			this.sidebar.classList.toggle('open');
-		}
 
     updateGridAfterStructureChange() {
   		this.updateSize();

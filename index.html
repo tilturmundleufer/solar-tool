@@ -10,10 +10,15 @@
   <div class="planner">
     <div class="main-area">
       <div class="header">
-        <!-- Header bleibt leer oder kann für andere Inhalte genutzt werden -->
+        <div class="controls controls--horizontal">
+          <div class="aspect-ratio-controls">
+            <input type="number" id="width-input" class="aspect-input" value="176" min="1">
+            <span>:</span>
+            <input type="number" id="height-input" class="aspect-input" value="113" min="1" step="1">
+          </div>
+        </div>
       </div>
       <div class="frame">
-        <button id="sidebar-toggle" class="sidebar-toggle">⚙️</button>
         <div class="grid-container">
           <div class="canvas">
             <div class="grid-wrapper">
@@ -41,48 +46,6 @@
             </div>
           </div>
         </div>
-        
-        <!-- Sidebar -->
-        <div id="sidebar" class="sidebar">
-          <!-- Setup Container -->
-          <div class="sidebar-section">
-            <h3>Setup</h3>
-            <div class="aspect-ratio-controls">
-              <input type="number" id="width-input" class="aspect-input" value="176" min="1">
-              <span>:</span>
-              <input type="number" id="height-input" class="aspect-input" value="113" min="1" step="1">
-            </div>
-            <div class="checkbox-bar">
-              <label><input type="checkbox" id="include-modules" checked> Module</label>
-              <label><input type="checkbox" id="mc4"> MC4-Stecker</label>
-              <label><input type="checkbox" id="solarkabel"> Solarkabel</label>
-              <label><input type="checkbox" id="holz"> Holzunterleger</label>
-              <label><input type="radio" name="orient" id="orient-h" checked> Horizontal</label>
-              <label><input type="radio" name="orient" id="orient-v"> Vertikal</label>
-            </div>
-          </div>
-          
-          <!-- Config List -->
-          <div class="sidebar-section">
-            <div class="config-list-holder">
-              <div id="config-list"></div>
-            </div>
-            <div class="button-group">
-              <button id="save-config-btn">Konfiguration speichern</button>
-              <button id="continue-later-btn">Später weitermachen</button>
-              <button id="add-to-cart-btn">Aktuelle Konfiguration zum Warenkorb</button>
-              <button id="summary-add-cart-btn">Alle Konfigurationen zum Warenkorb</button>
-              <button id="reset-btn">Zurücksetzen</button>
-            </div>
-          </div>
-          
-          <!-- Product List -->
-          <div class="sidebar-section">
-            <div class="produktliste-holder">
-              <div id="produktliste"></div>
-            </div>
-          </div>
-        </div>
       </div>
       <div id="toast" class="toast hidden"></div>
       <!-- Produktliste und Summary aus solar-tool -->
@@ -92,7 +55,40 @@
       <div id="summary-list-holder" style="display:none">
         <div id="summary-list"></div>
       </div>
+      <div class="config-list-holder">
+        <div id="config-list"></div>
+      </div>
+      <div class="button-bar">
+        <button id="save-config-btn">Konfiguration speichern</button>
+        <button id="add-to-cart-btn">Aktuelle Konfiguration zum Warenkorb</button>
+        <button id="summary-add-cart-btn">Alle Konfigurationen zum Warenkorb</button>
+        <button id="reset-btn">Zurücksetzen</button>
+        <button id="continue-later-btn">Später weitermachen</button>
+      </div>
+      <div class="checkbox-bar">
+        <label><input type="checkbox" id="include-modules" checked> Module</label>
+        <label><input type="checkbox" id="mc4"> MC4-Stecker</label>
+        <label><input type="checkbox" id="solarkabel"> Solarkabel</label>
+        <label><input type="checkbox" id="holz"> Holzunterleger</label>
+        <label><input type="radio" name="orient" id="orient-h" checked> Horizontal</label>
+        <label><input type="radio" name="orient" id="orient-v"> Vertikal</label>
+      </div>
+    </div>
 
+    <div class="produktliste-holder">
+      <div id="produktliste"></div>
+      <button id="add-to-cart-btn">In den Warenkorb</button>
+    </div>
+
+    <div id="summary-list-holder">
+      <div id="summary-list"></div>
+      <button id="summary-add-cart-btn">Gesamte Auswahl in den Warenkorb</button>
+    </div>
+
+    <div class="produktliste-holder-2">
+      <button id="save-config-btn" class="btn primary">Konfiguration speichern</button>
+      <button id="continue-later-btn" class="btn secondary">Später weitermachen</button>
+      <div id="config-list"></div>
     </div>
 
 
