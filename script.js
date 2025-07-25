@@ -109,6 +109,8 @@
       this.mc4           = document.getElementById('mc4');
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
+      this.sidebar       = document.getElementById('sidebar');
+      this.sidebarToggle = document.getElementById('sidebar-toggle');
       this.listHolder    = document.querySelector('.produktliste-holder');
       this.prodList      = document.getElementById('produktliste');
       this.summaryHolder = document.getElementById('summary-list-holder');
@@ -226,6 +228,9 @@
   		this.summaryBtn.addEventListener('click', () => this.addAllToCart());
   		this.resetBtn.addEventListener('click', () => this.resetGridToDefault());
   		this.continueLaterBtn.addEventListener('click', () => this.generateContinueLink());
+  		
+  		// Sidebar Toggle
+  		this.sidebarToggle.addEventListener('click', () => this.toggleSidebar());
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
@@ -346,9 +351,13 @@
   		this.rows -= 1;
   		this.selection.shift();
   		this.updateGridAfterStructureChange();
+				}
+		
+		toggleSidebar() {
+			this.sidebar.classList.toggle('open');
 		}
 
-		updateGridAfterStructureChange() {
+    updateGridAfterStructureChange() {
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
@@ -817,23 +826,27 @@
       		input.focus();
     		});
 
-    		const deleteBtn = document.createElement('button');
-    		deleteBtn.innerHTML = '🗑️';
-    		deleteBtn.title = 'Konfiguration löschen';
-    		Object.assign(deleteBtn.style, {
-      		background: 'none',
-      		border: 'none',
-      		cursor: 'pointer',
-      		fontSize: '1rem',
-      		color: '#fff',
-      		padding: '0',
-      		marginLeft: '0.5rem',
-      		lineHeight: '1'
-    		});
-    		deleteBtn.addEventListener('click', (e) => {
-      		e.stopPropagation();
-      		this.deleteConfig(idx);
-    		});
+    		// Löschen-Button nur anzeigen wenn mehr als eine Konfiguration existiert
+    		let deleteBtn = null;
+    		if (this.configs.length > 1) {
+    			deleteBtn = document.createElement('button');
+    			deleteBtn.innerHTML = '🗑️';
+    			deleteBtn.title = 'Konfiguration löschen';
+    			Object.assign(deleteBtn.style, {
+      			background: 'none',
+      			border: 'none',
+      			cursor: 'pointer',
+      			fontSize: '1rem',
+      			color: '#fff',
+      			padding: '0',
+      			marginLeft: '0.5rem',
+      			lineHeight: '1'
+    			});
+    			deleteBtn.addEventListener('click', (e) => {
+      			e.stopPropagation();
+      			this.deleteConfig(idx);
+    			});
+    		}
 
     		const shareBtn = document.createElement('button');
     		shareBtn.textContent = '🔗';
@@ -852,7 +865,7 @@
     		nameContainer.appendChild(nameEl);
     		nameContainer.appendChild(editBtn);
     		div.appendChild(nameContainer);
-    		div.appendChild(deleteBtn);
+    		if (deleteBtn) div.appendChild(deleteBtn); // Nur hinzufügen wenn vorhanden
     		div.appendChild(shareBtn);
     		this.configListEl.appendChild(div);
   		});

@@ -266,6 +266,101 @@ body {
   transform: scale(0.95);
 }
 
+/* SIDEBAR */
+.sidebar-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  background: #f5a623;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.sidebar-toggle:hover {
+  background: #e09612;
+  transform: scale(1.05);
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -400px; /* Initially hidden */
+  width: 400px;
+  height: 100vh;
+  background: #2a2a2a;
+  color: white;
+  overflow-y: auto;
+  z-index: 50;
+  transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.sidebar.open {
+  right: 0;
+}
+
+.sidebar-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #444;
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+}
+
+.sidebar-section h3 {
+  margin: 0 0 1rem 0;
+  color: #f5a623;
+  font-size: 1.1rem;
+}
+
+.sidebar .aspect-ratio-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar .aspect-input {
+  background: #3a3a3a;
+  border: 1px solid #555;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  width: 80px;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.button-group button {
+  background: #f5a623;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.button-group button:hover {
+  background: #e09612;
+}
+
 /* TOAST NOTIFICATION */
 .toast {
   position: fixed;
