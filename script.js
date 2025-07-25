@@ -101,8 +101,6 @@
     constructor() {
       this.gridEl        = document.getElementById('grid');
       this.wrapper       = document.querySelector('.grid-wrapper');
-      this.colsIn        = document.getElementById('cols-input');
-      this.rowsIn        = document.getElementById('rows-input');
       this.wIn           = document.getElementById('width-input');
       this.hIn           = document.getElementById('height-input');
       this.orH           = document.getElementById('orient-h');
@@ -131,7 +129,6 @@
     }
 
     init() {
-  		this.attachInputListeners();
       
       const params = new URLSearchParams(window.location.search);
   		const rawData = params.get('configData');
@@ -250,13 +247,13 @@
 		}
     
     setup() {
-  		// Nur aus Input lesen wenn nicht bereits durch loadConfig gesetzt
+  		// Verwende Standard-Werte falls nicht bereits gesetzt
   		if (!this.cols || !this.rows) {
-  			this.cols = parseInt(this.colsIn.value, 10);
-  			this.rows = parseInt(this.rowsIn.value, 10);
+  			this.cols = this.default.cols;
+  			this.rows = this.default.rows;
   		}
   		if (!this.cols || !this.rows) {
-    		alert('Spalten und Zeilen > 0 sein');
+    		alert('Spalten und Zeilen müssen > 0 sein');
     		return;
   		}
 
@@ -285,17 +282,7 @@
   		this.saveBtn.style.display = 'inline-block';
 		}
     
-    attachInputListeners() {
-  		this._colsRowsHandler = () => {
-    		// Nutze aktuelle Input-Werte
-    		this.cols = parseInt(this.colsIn.value, 10);
-    		this.rows = parseInt(this.rowsIn.value, 10);
-    		this.setup();
-    		this.updateSummaryOnChange();
-  		};
-  		this.colsIn.addEventListener('input', this._colsRowsHandler);
-  		this.rowsIn.addEventListener('input', this._colsRowsHandler);
-		}
+
     
     // Spalten-Methoden - Rechts (am Ende)
     addColumnRight() {
@@ -303,7 +290,6 @@
   		for (let row of this.selection) {
     		row.push(false);
   		}
-  		this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -313,7 +299,6 @@
   		for (let row of this.selection) {
     		row.pop();
   		}
-  		this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -323,7 +308,6 @@
   		for (let row of this.selection) {
     		row.unshift(false);
   		}
-  		this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -333,7 +317,6 @@
   		for (let row of this.selection) {
     		row.shift();
   		}
-  		this.colsIn.value = this.cols;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -341,7 +324,6 @@
 		addRowBottom() {
   		this.rows += 1;
   		this.selection.push(Array(this.cols).fill(false));
-  		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -349,7 +331,6 @@
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.pop();
-  		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -357,7 +338,6 @@
 		addRowTop() {
   		this.rows += 1;
   		this.selection.unshift(Array(this.cols).fill(false));
-  		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -365,7 +345,6 @@
   		if (this.rows <= 1) return;
   		this.rows -= 1;
   		this.selection.shift();
-  		this.rowsIn.value = this.rows;
   		this.updateGridAfterStructureChange();
 		}
 
@@ -511,8 +490,6 @@
   		}
 
   		// Setze Inputs und interne Werte
-  		this.colsIn.value = cols;
-  		this.rowsIn.value = rows;
   		this.wIn.value = width;
   		this.hIn.value = height;
   		
@@ -636,8 +613,6 @@
   		this.currentConfig = idx;
 
   		// Input-Werte setzen
-  		this.colsIn.value = cfg.cols;
-  		this.rowsIn.value = cfg.rows;
   		this.wIn.value    = cfg.cellWidth;
   		this.hIn.value    = cfg.cellHeight;
   		this.orV.checked  = cfg.orientation === 'vertical';
