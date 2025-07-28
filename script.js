@@ -124,8 +124,236 @@
       this.configs       = [];
       this.currentConfig = null;
       this.default       = { cols:5, rows:5, width:176, height:113 };
+      
+      // Tracking für Session-Daten
+      this.sessionStartTime = Date.now();
+      this.firstInteractionTime = null;
+      this.lastInteractionTime = Date.now();
+      this.interactionCount = 0;
+      this.webhookUrl = 'https://hook.eu2.make.com/c7lkudk1v2a2xsr291xbvfs2cb25b84k';
 
       this.init();
+    }
+
+    // ===== WEBHOOK FUNKTIONEN =====
+    
+    trackInteraction() {
+      if (!this.firstInteractionTime) {
+        this.firstInteractionTime = Date.now();
+      }
+      this.lastInteractionTime = Date.now();
+      this.interactionCount++;
+    }
+
+    getSessionData() {
+      const now = Date.now();
+      const sessionDuration = now - this.sessionStartTime;
+      const timeToFirstInteraction = this.firstInteractionTime ? this.firstInteractionTime - this.sessionStartTime : 0;
+      const timeSinceLastInteraction = now - this.lastInteractionTime;
+      
+      return {
+        sessionDuration,
+        timeToFirstInteraction,
+        timeSinceLastInteraction,
+        interactionCount: this.interactionCount,
+        sessionStartTime: this.sessionStartTime,
+        firstInteractionTime: this.firstInteractionTime,
+        lastInteractionTime: this.lastInteractionTime
+      };
+    }
+
+    getProductSummary() {
+      const parts = this.calculateParts();
+      if (!this.incM.checked) delete parts.Solarmodul;
+      if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
+      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+
+      const entries = Object.entries(parts).filter(([,v]) => v > 0);
+      let totalPrice = 0;
+      
+      const products = entries.map(([k,v]) => {
+        const packs = Math.ceil(v / VE[k]);
+        const price = PRICE_MAP[k] || 0;
+        const itemTotal = packs * price;
+        totalPrice += itemTotal;
+        
+        return {
+          name: k.replace(/_/g, ' '),
+          quantity: v,
+          packs: packs,
+          pricePerUnit: price,
+          totalPrice: itemTotal
+        };
+      });
+
+      return { products, totalPrice };
+    }
+
+    getConfigData(config = null) {
+      const targetConfig = config || {
+        cols: this.cols,
+        rows: this.rows,
+        cellWidth: parseInt(this.wIn.value, 10),
+        cellHeight: parseInt(this.hIn.value, 10),
+        orientation: this.orV.checked ? 'vertical' : 'horizontal',
+        selection: this.selection,
+        incM: this.incM.checked,
+        mc4: this.mc4.checked,
+        holz: this.holz.checked
+      };
+
+      const summary = this.getProductSummary();
+      
+      return {
+        timestamp: new Date().toISOString(),
+        sessionData: this.getSessionData(),
+        config: {
+          cols: targetConfig.cols,
+          rows: targetConfig.rows,
+          cellWidth: targetConfig.cellWidth,
+          cellHeight: targetConfig.cellHeight,
+          orientation: targetConfig.orientation,
+          selection: targetConfig.selection,
+          options: {
+            includeModules: targetConfig.incM,
+            mc4Connectors: targetConfig.mc4,
+            woodUnderlay: targetConfig.holz
+          }
+        },
+        summary: summary,
+        analytics: {
+          totalCells: targetConfig.cols * targetConfig.rows,
+          selectedCells: targetConfig.selection.flat().filter(v => v).length,
+          selectionPercentage: ((targetConfig.selection.flat().filter(v => v).length / (targetConfig.cols * targetConfig.rows)) * 100).toFixed(2),
+          gridArea: targetConfig.cols * targetConfig.rows,
+          averageCellSize: ((targetConfig.cellWidth + targetConfig.cellHeight) / 2).toFixed(2)
+        }
+      };
+    }
+
+    async sendConfigToWebhook(configData) {
+      try {
+        const response = await fetch(this.webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(configData)
+        });
+
+        if (response.ok) {
+          console.log('Webhook data sent successfully');
+          return true;
+        } else {
+          console.error('Webhook request failed:', response.status, response.statusText);
+          return false;
+        }
+      } catch (error) {
+        console.error('Error sending webhook data:', error);
+        return false;
+      }
+    }
+
+    async sendCurrentConfigToWebhook() {
+      const configData = this.getConfigData();
+      return await this.sendConfigToWebhook(configData);
+    }
+
+    async sendAllConfigsToWebhook() {
+      const allConfigsData = {
+        timestamp: new Date().toISOString(),
+        sessionData: this.getSessionData(),
+        type: 'multiple_configs',
+        configs: []
+      };
+
+      // Sammle alle Konfigurationen
+      this.configs.forEach((cfg, idx) => {
+        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+        let currentConfig;
+        if (idx === this.currentConfig) {
+          currentConfig = {
+            cols: this.cols,
+            rows: this.rows,
+            cellWidth: parseInt(this.wIn.value, 10),
+            cellHeight: parseInt(this.hIn.value, 10),
+            orientation: this.orV.checked ? 'vertical' : 'horizontal',
+            selection: this.selection,
+            incM: this.incM.checked,
+            mc4: this.mc4.checked,
+            holz: this.holz.checked
+          };
+        } else {
+          currentConfig = {
+            cols: cfg.cols,
+            rows: cfg.rows,
+            cellWidth: cfg.cellWidth,
+            cellHeight: cfg.cellHeight,
+            orientation: cfg.orientation,
+            selection: cfg.selection,
+            incM: cfg.incM,
+            mc4: cfg.mc4,
+            holz: cfg.holz
+          };
+        }
+
+        // Temporär setzen für Berechnung
+        const originalSelection = this.selection;
+        const originalOrientation = this.orV.checked;
+        this.selection = currentConfig.selection;
+        this.orV.checked = currentConfig.orientation === 'vertical';
+        this.orH.checked = !this.orV.checked;
+
+        const summary = this.getProductSummary();
+        
+        allConfigsData.configs.push({
+          configIndex: idx,
+          configName: cfg.name,
+          config: currentConfig,
+          summary: summary,
+          analytics: {
+            totalCells: currentConfig.cols * currentConfig.rows,
+            selectedCells: currentConfig.selection.flat().filter(v => v).length,
+            selectionPercentage: ((currentConfig.selection.flat().filter(v => v).length / (currentConfig.cols * currentConfig.rows)) * 100).toFixed(2),
+            gridArea: currentConfig.cols * currentConfig.rows,
+            averageCellSize: ((currentConfig.cellWidth + currentConfig.cellHeight) / 2).toFixed(2)
+          }
+        });
+
+        // Ursprüngliche Werte wiederherstellen
+        this.selection = originalSelection;
+        this.orV.checked = originalOrientation;
+        this.orH.checked = !originalOrientation;
+      });
+
+      // Gesamtstatistiken hinzufügen
+      const totalProducts = {};
+      let grandTotalPrice = 0;
+      let totalConfigs = allConfigsData.configs.length;
+      let totalCells = 0;
+      let totalSelectedCells = 0;
+
+      allConfigsData.configs.forEach(config => {
+        config.summary.products.forEach(product => {
+          totalProducts[product.name] = (totalProducts[product.name] || 0) + product.quantity;
+        });
+        grandTotalPrice += config.summary.totalPrice;
+        totalCells += config.analytics.totalCells;
+        totalSelectedCells += config.analytics.selectedCells;
+      });
+
+      allConfigsData.totalAnalytics = {
+        totalConfigs,
+        totalProducts,
+        grandTotalPrice,
+        totalCells,
+        totalSelectedCells,
+        averageSelectionPercentage: ((totalSelectedCells / totalCells) * 100).toFixed(2),
+        averageConfigsPerSession: totalConfigs,
+        averageProductsPerConfig: Object.keys(totalProducts).length
+      };
+
+      return await this.sendConfigToWebhook(allConfigsData);
     }
 
     init() {
@@ -153,6 +381,7 @@
 
   		[this.wIn, this.hIn].forEach(el =>
     		el.addEventListener('change', () => {
+      		this.trackInteraction();
       		this.updateSize();
       		this.buildList();
       		this.updateSummaryOnChange();
@@ -172,6 +401,7 @@
 
     			// KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
     			// Nur das Grid und die Liste aktualisieren
+    			this.trackInteraction();
     			this.updateSize();
     			this.buildList();
     			this.updateSummaryOnChange();
@@ -182,6 +412,7 @@
 
   		[this.incM, this.mc4, this.solarkabel, this.holz].forEach(el =>
     		el.addEventListener('change', () => {
+      		this.trackInteraction();
       		this.buildList();
       		this.updateSummaryOnChange();
       		this.renderProductSummary(); // Aktualisiere auch die Summary aller Konfigurationen
@@ -191,41 +422,80 @@
       // Event-Listener für die Grid-Expansion-Buttons
 			// Spalten-Buttons - rechts (fügt am Ende hinzu)
 			document.querySelectorAll('.btn-add-col-right').forEach(btn => {
-				btn.addEventListener('click', () => this.addColumnRight());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.addColumnRight();
+				});
 			});
 			document.querySelectorAll('.btn-remove-col-right').forEach(btn => {
-				btn.addEventListener('click', () => this.removeColumnRight());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.removeColumnRight();
+				});
 			});
 			
 			// Spalten-Buttons - links (fügt am Anfang hinzu)
 			document.querySelectorAll('.btn-add-col-left').forEach(btn => {
-				btn.addEventListener('click', () => this.addColumnLeft());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.addColumnLeft();
+				});
 			});
 			document.querySelectorAll('.btn-remove-col-left').forEach(btn => {
-				btn.addEventListener('click', () => this.removeColumnLeft());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.removeColumnLeft();
+				});
 			});
 			
 			// Zeilen-Buttons - unten (fügt am Ende hinzu)
 			document.querySelectorAll('.btn-add-row-bottom').forEach(btn => {
-				btn.addEventListener('click', () => this.addRowBottom());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.addRowBottom();
+				});
 			});
 			document.querySelectorAll('.btn-remove-row-bottom').forEach(btn => {
-				btn.addEventListener('click', () => this.removeRowBottom());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.removeRowBottom();
+				});
 			});
 			
 			// Zeilen-Buttons - oben (fügt am Anfang hinzu)
 			document.querySelectorAll('.btn-add-row-top').forEach(btn => {
-				btn.addEventListener('click', () => this.addRowTop());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.addRowTop();
+				});
 			});
 			document.querySelectorAll('.btn-remove-row-top').forEach(btn => {
-				btn.addEventListener('click', () => this.removeRowTop());
+				btn.addEventListener('click', () => {
+					this.trackInteraction();
+					this.removeRowTop();
+				});
 			});
 
-  		this.saveBtn.addEventListener('click', () => this.saveNewConfig());
-  		this.addBtn.addEventListener('click', () => this.addCurrentToCart());
-  		this.summaryBtn.addEventListener('click', () => this.addAllToCart());
-  		this.resetBtn.addEventListener('click', () => this.resetGridToDefault());
-  		this.continueLaterBtn.addEventListener('click', () => this.generateContinueLink());
+  		this.saveBtn.addEventListener('click', () => {
+  			this.trackInteraction();
+  			this.saveNewConfig();
+  		});
+  		this.addBtn.addEventListener('click', () => {
+  			this.trackInteraction();
+  			this.addCurrentToCart();
+  		});
+  		this.summaryBtn.addEventListener('click', () => {
+  			this.trackInteraction();
+  			this.addAllToCart();
+  		});
+  		this.resetBtn.addEventListener('click', () => {
+  			this.trackInteraction();
+  			this.resetGridToDefault();
+  		});
+  		this.continueLaterBtn.addEventListener('click', () => {
+  			this.trackInteraction();
+  			this.generateContinueLink();
+  		});
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
@@ -434,6 +704,7 @@
         		if (!this.selection[y]) this.selection[y] = [];
         		this.selection[y][x] = !this.selection[y][x];
         		cell.classList.toggle('selected');
+        		this.trackInteraction();
         		this.buildList();
         		this.updateSummaryOnChange();
       		});
@@ -556,8 +827,8 @@
       // Verwende die tatsächliche Zellbreite basierend auf Orientierung
       const isVertical = this.orV.checked;
       const cellWidth = isVertical ? 
-        parseInt(this.hIn.value, 10) || 80 : 
-        parseInt(this.wIn.value, 10) || 120;
+        parseInt(this.hIn.value, 10) || 113 : 
+        parseInt(this.wIn.value, 10) || 179;
       
       const totalLen = len * cellWidth;
       const floor360 = Math.floor(totalLen / 360),
@@ -1152,6 +1423,15 @@
         return;
       }
       
+      // Sende Daten an Webhook
+      this.sendCurrentConfigToWebhook().then(success => {
+        if (success) {
+          console.log('Current config data sent to webhook');
+        } else {
+          console.warn('Failed to send current config data to webhook');
+        }
+      });
+      
       this.addPartsListToCart(parts);
       this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
     }
@@ -1189,6 +1469,15 @@
         this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
         return;
       }
+      
+      // Sende alle Konfigurationen an Webhook
+      this.sendAllConfigsToWebhook().then(success => {
+        if (success) {
+          console.log('All configs data sent to webhook');
+        } else {
+          console.warn('Failed to send all configs data to webhook');
+        }
+      });
       
       this.addPartsListToCart(total);
       this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
