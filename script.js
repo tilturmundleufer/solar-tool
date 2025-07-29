@@ -192,7 +192,7 @@
       
       const products = entries.map(([k,v]) => {
         const packs = Math.ceil(v / VE[k]);
-        const price = PRICE_MAP[k] || 0;
+        const price = getPriceFromHTML(k);
         const itemTotal = packs * price;
         totalPrice += itemTotal;
         
