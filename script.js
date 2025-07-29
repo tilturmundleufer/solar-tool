@@ -189,23 +189,24 @@
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       let totalPrice = 0;
+      const productQuantities = {};
       
-      const products = entries.map(([k,v]) => {
+      // Berechne Preise und sammle Quantities
+      entries.forEach(([k,v]) => {
         const packs = Math.ceil(v / VE[k]);
-        const price = PRICE_MAP[k] || 0;
+        const price = getPriceFromHTML(k);
         const itemTotal = packs * price;
         totalPrice += itemTotal;
         
-        return {
-          name: k.replace(/_/g, ' '),
-          quantity: v,
-          packs: packs,
-          pricePerUnit: price,
-          totalPrice: itemTotal
-        };
+        // Verwende den Produktnamen ohne Unterstriche als Key
+        const productKey = k.replace(/_/g, '');
+        productQuantities[productKey] = v;
       });
 
-      return { products, totalPrice };
+      return { 
+        productQuantities,
+        totalPrice 
+      };
     }
 
     generateGridVisualization(selection, cols, rows, cellWidth, cellHeight) {
