@@ -145,16 +145,27 @@
       this.interactionCount++;
     }
 
+    formatDuration(milliseconds) {
+      if (!milliseconds || milliseconds < 0) return "00:00:00";
+      
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
     getSessionData() {
       const now = Date.now();
-      const sessionDuration = now - this.sessionStartTime;
-      const timeToFirstInteraction = this.firstInteractionTime ? this.firstInteractionTime - this.sessionStartTime : 0;
-      const timeSinceLastInteraction = now - this.lastInteractionTime;
+      const sessionDurationMs = now - this.sessionStartTime;
+      const timeToFirstInteractionMs = this.firstInteractionTime ? this.firstInteractionTime - this.sessionStartTime : 0;
+      const timeSinceLastInteractionMs = now - this.lastInteractionTime;
       
       return {
-        sessionDuration,
-        timeToFirstInteraction,
-        timeSinceLastInteraction,
+        sessionDuration: this.formatDuration(sessionDurationMs),
+        timeToFirstInteraction: this.formatDuration(timeToFirstInteractionMs),
+        timeSinceLastInteraction: this.formatDuration(timeSinceLastInteractionMs),
         interactionCount: this.interactionCount,
         sessionStartTime: this.sessionStartTime,
         firstInteractionTime: this.firstInteractionTime,
