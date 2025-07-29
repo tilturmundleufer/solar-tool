@@ -189,6 +189,43 @@
       return { products, totalPrice };
     }
 
+    generateGridVisualization(selection, cols, rows, cellWidth, cellHeight) {
+      // Generate HTML for the grid
+      let html = `<div class="grid" style="--cols: ${cols}; --rows: ${rows}; --cell-size: ${cellWidth}px; --cell-height: ${cellHeight}px; --cell-gap: 2px;">`;
+      
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const isSelected = selection[y] && selection[y][x];
+          const cellClass = isSelected ? 'cell selected' : 'cell';
+          html += `<div class="${cellClass}"></div>`;
+        }
+      }
+      
+      html += '</div>';
+      
+      // Generate CSS for the grid
+      const css = `.grid { 
+        display: grid; 
+        gap: var(--cell-gap); 
+        grid-template-columns: repeat(var(--cols), var(--cell-size)); 
+        grid-template-rows: repeat(var(--rows), var(--cell-height)); 
+        margin: auto; 
+        background: transparent; 
+      } 
+      .cell { 
+        background: #000000; 
+        border-radius: 6px; 
+        width: var(--cell-size); 
+        height: var(--cell-height); 
+        transition: all 0.15s ease; 
+      } 
+      .cell.selected { 
+        background: #7f7f7f; 
+      }`;
+      
+      return { html, css };
+    }
+
     getConfigData(config = null) {
       const targetConfig = config || {
         cols: this.cols,
@@ -203,6 +240,13 @@
       };
 
       const summary = this.getProductSummary();
+      const gridVisualization = this.generateGridVisualization(
+        targetConfig.selection, 
+        targetConfig.cols, 
+        targetConfig.rows, 
+        targetConfig.cellWidth, 
+        targetConfig.cellHeight
+      );
       
       return {
         timestamp: new Date().toISOString(),
@@ -213,7 +257,7 @@
           cellWidth: targetConfig.cellWidth,
           cellHeight: targetConfig.cellHeight,
           orientation: targetConfig.orientation,
-          selection: targetConfig.selection,
+          gridVisualization: gridVisualization,
           options: {
             includeModules: targetConfig.incM,
             mc4Connectors: targetConfig.mc4,
@@ -305,11 +349,30 @@
         this.orH.checked = !this.orV.checked;
 
         const summary = this.getProductSummary();
+        const gridVisualization = this.generateGridVisualization(
+          currentConfig.selection,
+          currentConfig.cols,
+          currentConfig.rows,
+          currentConfig.cellWidth,
+          currentConfig.cellHeight
+        );
         
         allConfigsData.configs.push({
           configIndex: idx,
           configName: cfg.name,
-          config: currentConfig,
+          config: {
+            cols: currentConfig.cols,
+            rows: currentConfig.rows,
+            cellWidth: currentConfig.cellWidth,
+            cellHeight: currentConfig.cellHeight,
+            orientation: currentConfig.orientation,
+            gridVisualization: gridVisualization,
+            options: {
+              includeModules: currentConfig.incM,
+              mc4Connectors: currentConfig.mc4,
+              woodUnderlay: currentConfig.holz
+            }
+          },
           summary: summary,
           analytics: {
             totalCells: currentConfig.cols * currentConfig.rows,
