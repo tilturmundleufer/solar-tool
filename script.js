@@ -126,6 +126,7 @@
       this.default       = { cols:5, rows:5, width:176, height:113 };
       
       // Tracking für Session-Daten
+      this.sessionId = this.generateSessionId();
       this.sessionStartTime = Date.now();
       this.firstInteractionTime = null;
       this.lastInteractionTime = Date.now();
@@ -136,6 +137,13 @@
     }
 
     // ===== WEBHOOK FUNKTIONEN =====
+    
+    generateSessionId() {
+      // Generiere eine einzigartige Session-ID basierend auf Timestamp und Zufallszahl
+      const timestamp = Date.now().toString(36);
+      const randomPart = Math.random().toString(36).substr(2, 9);
+      return `session_${timestamp}_${randomPart}`;
+    }
     
     trackInteraction() {
       if (!this.firstInteractionTime) {
@@ -261,6 +269,7 @@
       
       return {
         timestamp: new Date().toISOString(),
+        sessionId: this.sessionId,
         sessionData: this.getSessionData(),
         config: {
           cols: targetConfig.cols,
@@ -315,15 +324,13 @@
     }
 
     async sendAllConfigsToWebhook() {
-      const allConfigsData = {
-        timestamp: new Date().toISOString(),
-        sessionData: this.getSessionData(),
-        type: 'multiple_configs',
-        configs: []
-      };
+      const results = [];
+      let successCount = 0;
 
-      // Sammle alle Konfigurationen
-      this.configs.forEach((cfg, idx) => {
+      // Sende jede Konfiguration einzeln
+      for (let idx = 0; idx < this.configs.length; idx++) {
+        const cfg = this.configs[idx];
+        
         // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
         let currentConfig;
         if (idx === this.currentConfig) {
@@ -359,75 +366,42 @@
         this.orV.checked = currentConfig.orientation === 'vertical';
         this.orH.checked = !this.orV.checked;
 
-        const summary = this.getProductSummary();
-        const gridVisualization = this.generateGridVisualization(
-          currentConfig.selection,
-          currentConfig.cols,
-          currentConfig.rows,
-          currentConfig.cellWidth,
-          currentConfig.cellHeight
-        );
+        // Erstelle individuelle Konfigurationsdaten mit getConfigData
+        const configData = this.getConfigData(currentConfig);
         
-        allConfigsData.configs.push({
-          configIndex: idx,
-          configName: cfg.name,
-          config: {
-            cols: currentConfig.cols,
-            rows: currentConfig.rows,
-            cellWidth: currentConfig.cellWidth,
-            cellHeight: currentConfig.cellHeight,
-            orientation: currentConfig.orientation,
-            gridVisualization: gridVisualization,
-            options: {
-              includeModules: currentConfig.incM,
-              mc4Connectors: currentConfig.mc4,
-              woodUnderlay: currentConfig.holz
-            }
-          },
-          summary: summary,
-          analytics: {
-            totalCells: currentConfig.cols * currentConfig.rows,
-            selectedCells: currentConfig.selection.flat().filter(v => v).length,
-            selectionPercentage: ((currentConfig.selection.flat().filter(v => v).length / (currentConfig.cols * currentConfig.rows)) * 100).toFixed(2),
-            gridArea: currentConfig.cols * currentConfig.rows,
-            averageCellSize: ((currentConfig.cellWidth + currentConfig.cellHeight) / 2).toFixed(2)
-          }
-        });
+        // Füge zusätzliche Metadaten hinzu
+        configData.configIndex = idx;
+        configData.configName = cfg.name;
+        configData.totalConfigsInSession = this.configs.length;
 
         // Ursprüngliche Werte wiederherstellen
         this.selection = originalSelection;
         this.orV.checked = originalOrientation;
         this.orH.checked = !originalOrientation;
-      });
 
-      // Gesamtstatistiken hinzufügen
-      const totalProducts = {};
-      let grandTotalPrice = 0;
-      let totalConfigs = allConfigsData.configs.length;
-      let totalCells = 0;
-      let totalSelectedCells = 0;
+        // Sende einzelne Konfiguration
+        try {
+          const success = await this.sendConfigToWebhook(configData);
+          if (success) {
+            successCount++;
+            console.log(`Configuration ${idx + 1}/${this.configs.length} sent successfully`);
+          } else {
+            console.warn(`Failed to send configuration ${idx + 1}/${this.configs.length}`);
+          }
+          results.push(success);
+          
+          // Kurze Pause zwischen Requests um Server nicht zu überlasten
+          if (idx < this.configs.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.error(`Error sending configuration ${idx + 1}:`, error);
+          results.push(false);
+        }
+      }
 
-      allConfigsData.configs.forEach(config => {
-        config.summary.products.forEach(product => {
-          totalProducts[product.name] = (totalProducts[product.name] || 0) + product.quantity;
-        });
-        grandTotalPrice += config.summary.totalPrice;
-        totalCells += config.analytics.totalCells;
-        totalSelectedCells += config.analytics.selectedCells;
-      });
-
-      allConfigsData.totalAnalytics = {
-        totalConfigs,
-        totalProducts,
-        grandTotalPrice,
-        totalCells,
-        totalSelectedCells,
-        averageSelectionPercentage: ((totalSelectedCells / totalCells) * 100).toFixed(2),
-        averageConfigsPerSession: totalConfigs,
-        averageProductsPerConfig: Object.keys(totalProducts).length
-      };
-
-      return await this.sendConfigToWebhook(allConfigsData);
+      console.log(`Sent ${successCount}/${this.configs.length} configurations successfully`);
+      return successCount === this.configs.length;
     }
 
     init() {
