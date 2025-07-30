@@ -423,7 +423,54 @@
       return successCount === this.configs.length;
     }
 
+    checkMobileDevice() {
+      // Mobile Device Detection
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                       window.innerWidth <= 768 ||
+                       ('ontouchstart' in window && window.innerWidth <= 1024);
+      
+      if (isMobile) {
+        this.showMobileWarning();
+      }
+    }
+
+    showMobileWarning() {
+      const mobileWarning = document.getElementById('mobile-warning');
+      const continueBtn = document.getElementById('mobile-continue');
+      const closeBtn = document.getElementById('mobile-close');
+      
+      if (mobileWarning) {
+        // Check if user has already dismissed the warning in this session
+        const hasSeenWarning = sessionStorage.getItem('mobile-warning-seen');
+        
+        if (!hasSeenWarning) {
+          mobileWarning.classList.remove('hidden');
+          
+          // Event Listeners für Buttons
+          continueBtn?.addEventListener('click', () => {
+            mobileWarning.classList.add('hidden');
+            sessionStorage.setItem('mobile-warning-seen', 'true');
+          });
+          
+          closeBtn?.addEventListener('click', () => {
+            mobileWarning.classList.add('hidden');
+            sessionStorage.setItem('mobile-warning-seen', 'true');
+          });
+          
+          // Schließen bei Klick außerhalb des Modals
+          mobileWarning.addEventListener('click', (e) => {
+            if (e.target === mobileWarning) {
+              mobileWarning.classList.add('hidden');
+              sessionStorage.setItem('mobile-warning-seen', 'true');
+            }
+          });
+        }
+      }
+    }
+
     init() {
+      // Mobile Detection und Warning
+      this.checkMobileDevice();
       
       const params = new URLSearchParams(window.location.search);
   		const rawData = params.get('configData');
