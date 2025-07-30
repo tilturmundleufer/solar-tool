@@ -185,6 +185,7 @@
       const parts = this.calculateParts();
       if (!this.incM.checked) delete parts.Solarmodul;
       if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
+      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
       if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
@@ -256,6 +257,7 @@
         selection: this.selection,
         incM: this.incM.checked,
         mc4: this.mc4.checked,
+        solarkabel: this.solarkabel.checked,
         holz: this.holz.checked
       };
 
@@ -282,6 +284,7 @@
           options: {
             includeModules: targetConfig.incM,
             mc4Connectors: targetConfig.mc4,
+            solarkabel: targetConfig.solarkabel,
             woodUnderlay: targetConfig.holz
           }
         },
@@ -344,6 +347,7 @@
             selection: this.selection,
             incM: this.incM.checked,
             mc4: this.mc4.checked,
+            solarkabel: this.solarkabel.checked,
             holz: this.holz.checked
           };
         } else {
@@ -356,6 +360,7 @@
             selection: cfg.selection,
             incM: cfg.incM,
             mc4: cfg.mc4,
+            solarkabel: cfg.solarkabel,
             holz: cfg.holz
           };
         }
@@ -363,9 +368,18 @@
         // Temporär setzen für Berechnung
         const originalSelection = this.selection;
         const originalOrientation = this.orV.checked;
+        const originalSolarkabel = this.solarkabel.checked;
+        const originalIncM = this.incM.checked;
+        const originalMc4 = this.mc4.checked;
+        const originalHolz = this.holz.checked;
+        
         this.selection = currentConfig.selection;
         this.orV.checked = currentConfig.orientation === 'vertical';
         this.orH.checked = !this.orV.checked;
+        this.solarkabel.checked = currentConfig.solarkabel;
+        this.incM.checked = currentConfig.incM;
+        this.mc4.checked = currentConfig.mc4;
+        this.holz.checked = currentConfig.holz;
 
         // Erstelle individuelle Konfigurationsdaten mit getConfigData
         const configData = this.getConfigData(currentConfig);
@@ -379,6 +393,10 @@
         this.selection = originalSelection;
         this.orV.checked = originalOrientation;
         this.orH.checked = !originalOrientation;
+        this.solarkabel.checked = originalSolarkabel;
+        this.incM.checked = originalIncM;
+        this.mc4.checked = originalMc4;
+        this.holz.checked = originalHolz;
 
         // Sende einzelne Konfiguration
         try {
