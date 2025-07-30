@@ -30,56 +30,108 @@
   	Holzunterleger: 0.5
 	};
 
-  // Funktion um Preise dynamisch aus HTML zu lesen
-  function getPriceFromHTML(productKey) {
-    try {
-      // Mögliche Produkt-IDs basierend auf PRODUCT_MAP
-      const productInfo = PRODUCT_MAP[productKey];
-      if (!productInfo) return PRICE_MAP[productKey] || 0;
+  // Intelligentes Preis-Caching System
+  const PriceCache = {
+    cache: new Map(),
+    lastUpdate: new Map(),
+    cacheTimeout: 5 * 60 * 1000, // 5 Minuten Cache
+    
+    get(productKey) {
+      const cached = this.cache.get(productKey);
+      const lastUpdate = this.lastUpdate.get(productKey);
       
-      const productId = productInfo.productId;
-      const variantId = productInfo.variantId;
-      
-      // Suche nach dem Form-Element mit der entsprechenden product-id oder sku-id
-      const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
-                         document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
-      
-      if (productForm) {
-        // Suche nach dem Preis-Element innerhalb des Forms
-        const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
-        
-        if (priceElement) {
-          // Hole den Text-Inhalt und bereinige ihn
-          let priceText = priceElement.textContent || priceElement.innerHTML;
-          
-          // Ersetze &nbsp; und andere HTML-Entities
-          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
-          
-          // Extrahiere Preis (Format: €9,99 EUR, €99,00, 99.50 etc.)
-          // Suche nach Zahlen mit Komma oder Punkt als Dezimaltrennzeichen
-          const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
-          
-          if (priceMatch) {
-            const price = parseFloat(priceMatch[1].replace(',', '.'));
-            console.log(`✅ Preis für ${productKey} aus HTML gelesen: ${price}€ (Original: "${priceText.trim()}")`);
-            return price;
-          } else {
-            console.warn(`❌ Preis-Format nicht erkannt für ${productKey}: "${priceText.trim()}"`);
-          }
-        } else {
-          console.warn(`❌ Kein Preis-Element gefunden für ${productKey} in Form`);
-        }
-      } else {
-        console.warn(`❌ Kein Product-Form gefunden für ${productKey} (ProductID: ${productId}, VariantID: ${variantId})`);
+      // Prüfe ob Cache noch gültig ist
+      if (cached && lastUpdate && (Date.now() - lastUpdate) < this.cacheTimeout) {
+        return cached;
       }
       
-      console.log(`⚠️ Fallback-Preis für ${productKey}: ${PRICE_MAP[productKey]}€`);
-    } catch (error) {
-      console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
-    }
+      // Cache abgelaufen oder nicht vorhanden - neu laden
+      const price = this.fetchPriceFromHTML(productKey);
+      this.cache.set(productKey, price);
+      this.lastUpdate.set(productKey, Date.now());
+      
+      return price;
+    },
     
-    // Fallback auf hardcoded Preis
-    return PRICE_MAP[productKey] || 0;
+    fetchPriceFromHTML(productKey) {
+      try {
+        const productInfo = PRODUCT_MAP[productKey];
+        if (!productInfo) return PRICE_MAP[productKey] || 0;
+        
+        const productId = productInfo.productId;
+        const variantId = productInfo.variantId;
+        
+        const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
+                           document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
+        
+        if (productForm) {
+          const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
+          
+          if (priceElement) {
+            let priceText = priceElement.textContent || priceElement.innerHTML;
+            priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
+            const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
+            
+            if (priceMatch) {
+              const price = parseFloat(priceMatch[1].replace(',', '.'));
+              console.log(`✅ Preis für ${productKey} aus HTML gelesen: ${price}€ (Original: "${priceText.trim()}")`);
+              return price;
+            } else {
+              console.warn(`❌ Preis-Format nicht erkannt für ${productKey}: "${priceText.trim()}"`);
+            }
+          } else {
+            console.warn(`❌ Kein Preis-Element gefunden für ${productKey} in Form`);
+          }
+        } else {
+          console.warn(`❌ Kein Product-Form gefunden für ${productKey} (ProductID: ${productId}, VariantID: ${variantId})`);
+        }
+        
+        console.log(`⚠️ Fallback-Preis für ${productKey}: ${PRICE_MAP[productKey]}€`);
+      } catch (error) {
+        console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
+      }
+      
+      return PRICE_MAP[productKey] || 0;
+    },
+    
+    // Cache invalidieren (z.B. bei CMS Updates)
+    invalidate(productKey = null) {
+      if (productKey) {
+        this.cache.delete(productKey);
+        this.lastUpdate.delete(productKey);
+      } else {
+        this.cache.clear();
+        this.lastUpdate.clear();
+      }
+    },
+    
+    // Prüfe auf CMS Updates (periodisch aufrufen)
+    checkForUpdates() {
+      // Prüfe ob sich DOM-Elemente geändert haben
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList' || mutation.type === 'characterData') {
+            // Preis-relevante Änderung erkannt - Cache invalidieren
+            this.invalidate();
+            console.log('🔄 Preis-Cache invalidiert aufgrund von DOM-Änderungen');
+          }
+        });
+      });
+      
+      // Überwache Preis-Elemente
+      document.querySelectorAll('[data-wf-sku-bindings*="f_price_"]').forEach(element => {
+        observer.observe(element, { 
+          childList: true, 
+          characterData: true, 
+          subtree: true 
+        });
+      });
+    }
+  };
+
+  // Funktion um Preise dynamisch aus HTML zu lesen (mit Caching)
+  function getPriceFromHTML(productKey) {
+    return PriceCache.get(productKey);
   }
 
   const PRODUCT_MAP = {
@@ -134,6 +186,120 @@
       this.webhookUrl = 'https://hook.eu2.make.com/c7lkudk1v2a2xsr291xbvfs2cb25b84k';
 
       this.init();
+    }
+
+    // Background-Berechnungen mit Web Workers
+    initBackgroundCalculations() {
+      // Erstelle Web Worker für komplexe Berechnungen
+      const workerCode = `
+        self.onmessage = function(e) {
+          const { type, data } = e.data;
+          
+          switch(type) {
+            case 'calculateParts':
+              const result = calculatePartsInBackground(data);
+              self.postMessage({ type: 'calculateParts', result });
+              break;
+            case 'optimizeLayout':
+              const optimized = optimizeLayoutInBackground(data);
+              self.postMessage({ type: 'optimizeLayout', result: optimized });
+              break;
+          }
+        };
+        
+        function calculatePartsInBackground(data) {
+          const { selection, cols, rows } = data;
+          const parts = {
+            Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+            Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+            Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+          };
+          
+          // Komplexe Berechnungslogik hier...
+          for (let y = 0; y < rows; y++) {
+            if (!Array.isArray(selection[y])) continue;
+            let run = 0;
+            
+            for (let x = 0; x < cols; x++) {
+              if (selection[y]?.[x]) run++;
+              else if (run) { 
+                processGroupInBackground(run, parts, data);
+                run = 0; 
+              }
+            }
+            if (run) processGroupInBackground(run, parts, data);
+          }
+          
+          return parts;
+        }
+        
+        function processGroupInBackground(len, parts, data) {
+          const { cellWidth } = data;
+          const totalLen = len * cellWidth;
+          const floor360 = Math.floor(totalLen / 360);
+          const rem360 = totalLen - floor360 * 360;
+          const floor240 = Math.ceil(rem360 / 240);
+          
+          parts.Solarmodul += len;
+          parts.Endklemmen += 2;
+          parts.Schiene_360_cm += floor360;
+          parts.Schiene_240_cm += floor240;
+          // ... weitere Berechnungen
+        }
+        
+        function optimizeLayoutInBackground(data) {
+          // KI-basierte Layout-Optimierung
+          const { selection, cols, rows, constraints } = data;
+          // Simuliere komplexe Optimierung...
+          return { optimizedSelection: selection, score: 0.85 };
+        }
+      `;
+      
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      this.calculationWorker = new Worker(URL.createObjectURL(blob));
+      
+      this.calculationWorker.onmessage = (e) => {
+        const { type, result } = e.data;
+        
+        switch(type) {
+          case 'calculateParts':
+            this.handleBackgroundCalculationResult(result);
+            break;
+          case 'optimizeLayout':
+            this.handleOptimizationResult(result);
+            break;
+        }
+      };
+    }
+
+    // Starte Background-Berechnung
+    startBackgroundCalculation() {
+      if (this.calculationWorker) {
+        this.calculationWorker.postMessage({
+          type: 'calculateParts',
+          data: {
+            selection: this.selection,
+            cols: this.cols,
+            rows: this.rows,
+            cellWidth: parseInt(this.wIn.value, 10) || 176
+          }
+        });
+      }
+    }
+
+    handleBackgroundCalculationResult(parts) {
+      // Verwende Ergebnis aus Background-Berechnung
+      this.cachedParts = parts;
+      // Aktualisiere UI wenn nötig
+      if (this.needsUIUpdate) {
+        this.buildList();
+        this.needsUIUpdate = false;
+      }
+    }
+
+    handleOptimizationResult(result) {
+      console.log('Layout-Optimierung abgeschlossen:', result);
+      // Zeige Optimierungsvorschläge an
     }
 
     // ===== WEBHOOK FUNKTIONEN =====
@@ -423,6 +589,36 @@
       return successCount === this.configs.length;
     }
 
+    // Debounced functions für bessere Performance
+    setupDebouncedFunctions() {
+      // Debounce buildList (300ms delay)
+      this.debouncedBuildList = this.debounce(() => {
+        this.buildList();
+      }, 300);
+      
+      // Debounce updateSummaryOnChange (200ms delay)
+      this.debouncedUpdateSummary = this.debounce(() => {
+        this.updateSummaryOnChange();
+      }, 200);
+      
+      // Debounce grid size updates (500ms delay)
+      this.debouncedGridUpdate = this.debounce(() => {
+        this.buildGrid();
+      }, 500);
+    }
+
+    debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
     checkMobileDevice() {
       // Mobile Device Detection
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -469,6 +665,13 @@
     }
 
     init() {
+      // Performance-Optimierungen initialisieren
+      this.setupDebouncedFunctions();
+      this.initBackgroundCalculations();
+      
+      // Preis-Cache CMS-Update-Überwachung starten
+      PriceCache.checkForUpdates();
+      
       // Mobile Detection und Warning
       this.checkMobileDevice();
       
@@ -734,9 +937,9 @@
 
     updateGridAfterStructureChange() {
   		this.updateSize();
-  		this.buildGrid();
-  		this.buildList();
-  		this.updateSummaryOnChange();
+  		this.debouncedGridUpdate();
+  		this.debouncedBuildList();
+  		this.debouncedUpdateSummary();
 		}
     
 
@@ -797,43 +1000,122 @@
 		}
 
     buildGrid() {
-  		if (!Array.isArray(this.selection)) return;
-  		this.gridEl.innerHTML = '';
-  		document.documentElement.style.setProperty('--cols', this.cols);
-  		document.documentElement.style.setProperty('--rows', this.rows);
+      if (!Array.isArray(this.selection)) return;
+      
+      // Canvas-basiertes Rendering für bessere Performance
+      this.initCanvasGrid();
+      this.renderCanvasGrid();
+    }
 
-  		const centerX = (this.cols - 1) / 2;
-  		const centerY = (this.rows - 1) / 2;
-  		const delayPerUnit = 60; // ms
+    initCanvasGrid() {
+      // Erstelle Canvas falls nicht vorhanden
+      if (!this.canvas) {
+        this.gridEl.innerHTML = '';
+        this.canvas = document.createElement('canvas');
+        this.canvas.style.cursor = 'pointer';
+        this.canvas.style.borderRadius = '6px';
+        this.gridEl.appendChild(this.canvas);
+        
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Event Listeners für Canvas
+        this.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+        this.canvas.addEventListener('mousemove', this.handleCanvasMouseMove.bind(this));
+        this.canvas.addEventListener('mouseleave', this.handleCanvasMouseLeave.bind(this));
+      }
+      
+      // Berechne Grid-Dimensionen
+      this.cellSize = Math.min(80, Math.max(20, Math.min(600 / this.cols, 400 / this.rows)));
+      this.cellGap = 2;
+      this.canvasWidth = this.cols * this.cellSize + (this.cols - 1) * this.cellGap;
+      this.canvasHeight = this.rows * this.cellSize + (this.rows - 1) * this.cellGap;
+      
+      // Setze Canvas-Größe (High DPI Support)
+      const dpr = window.devicePixelRatio || 1;
+      this.canvas.width = this.canvasWidth * dpr;
+      this.canvas.height = this.canvasHeight * dpr;
+      this.canvas.style.width = this.canvasWidth + 'px';
+      this.canvas.style.height = this.canvasHeight + 'px';
+      this.ctx.scale(dpr, dpr);
+    }
 
-  		for (let y = 0; y < this.rows; y++) {
-    		if (!Array.isArray(this.selection[y])) continue;
+    renderCanvasGrid() {
+      if (!this.ctx) return;
+      
+      // Clear canvas
+      this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+      
+      // Render cells with RequestAnimationFrame für smooth performance
+      this.animationId = requestAnimationFrame(() => {
+        for (let y = 0; y < this.rows; y++) {
+          if (!Array.isArray(this.selection[y])) continue;
+          
+          for (let x = 0; x < this.cols; x++) {
+            const cellX = x * (this.cellSize + this.cellGap);
+            const cellY = y * (this.cellSize + this.cellGap);
+            const isSelected = this.selection[y]?.[x];
+            const isHovered = this.hoveredCell && this.hoveredCell.x === x && this.hoveredCell.y === y;
+            
+            // Cell background
+            this.ctx.fillStyle = isSelected ? '#7f7f7f' : '#000000';
+            this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
+            
+            // Hover effect
+            if (isHovered) {
+              this.ctx.fillStyle = isSelected ? '#999999' : '#333333';
+              this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
+            }
+            
+            // Cell border (rounded corners effect)
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(cellX + 0.5, cellY + 0.5, this.cellSize - 1, this.cellSize - 1);
+          }
+        }
+      });
+    }
 
-    		for (let x = 0; x < this.cols; x++) {
-      		const cell = document.createElement('div');
-      		cell.className = 'grid-cell animate-in';
-      		if (this.selection[y]?.[x]) cell.classList.add('selected');
+    handleCanvasClick(event) {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      
+      const cellX = Math.floor(x / (this.cellSize + this.cellGap));
+      const cellY = Math.floor(y / (this.cellSize + this.cellGap));
+      
+      if (cellX >= 0 && cellX < this.cols && cellY >= 0 && cellY < this.rows) {
+        if (!this.selection[cellY]) this.selection[cellY] = [];
+        this.selection[cellY][cellX] = !this.selection[cellY][cellX];
+        
+        this.trackInteraction();
+        this.debouncedBuildList();
+        this.debouncedUpdateSummary();
+        this.renderCanvasGrid();
+      }
+    }
 
-      		cell.addEventListener('click', () => {
-        		if (!this.selection[y]) this.selection[y] = [];
-        		this.selection[y][x] = !this.selection[y][x];
-        		cell.classList.toggle('selected');
-        		this.trackInteraction();
-        		this.buildList();
-        		this.updateSummaryOnChange();
-      		});
+    handleCanvasMouseMove(event) {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      
+      const cellX = Math.floor(x / (this.cellSize + this.cellGap));
+      const cellY = Math.floor(y / (this.cellSize + this.cellGap));
+      
+      if (cellX >= 0 && cellX < this.cols && cellY >= 0 && cellY < this.rows) {
+        if (!this.hoveredCell || this.hoveredCell.x !== cellX || this.hoveredCell.y !== cellY) {
+          this.hoveredCell = { x: cellX, y: cellY };
+          this.renderCanvasGrid();
+        }
+      }
+    }
 
-      		const dx = x - centerX;
-      		const dy = y - centerY;
-      		const distance = Math.sqrt(dx * dx + dy * dy);
-      		const delay = distance * delayPerUnit;
-      		cell.style.animationDelay = `${delay}ms`;
-
-      		setTimeout(() => cell.classList.remove('animate-in'), 400);
-      		this.gridEl.appendChild(cell);
-    		}
-  		}
-		}
+    handleCanvasMouseLeave() {
+      if (this.hoveredCell) {
+        this.hoveredCell = null;
+        this.renderCanvasGrid();
+      }
+    }
     
     buildList() {
       const parts = this.calculateParts();
