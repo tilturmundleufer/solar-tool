@@ -544,3 +544,31 @@ body {
     font-size: 15px;
   }
 }
+
+/* USAGE TIPS */
+.usage-tips {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(245, 166, 35, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #f5a623;
+}
+
+.tip {
+  font-size: 13px;
+  color: #0e1e34;
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.tip strong {
+  color: #f5a623;
+  font-weight: 600;
+}
+
+/* Hide tips on mobile */
+@media (max-width: 768px) {
+  .usage-tips {
+    display: none;
+  }
+}

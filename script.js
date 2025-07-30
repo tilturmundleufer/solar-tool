@@ -1020,8 +1020,17 @@
         
         // Event Listeners für Canvas
         this.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
+        this.canvas.addEventListener('mousedown', this.handleCanvasMouseDown.bind(this));
         this.canvas.addEventListener('mousemove', this.handleCanvasMouseMove.bind(this));
+        this.canvas.addEventListener('mouseup', this.handleCanvasMouseUp.bind(this));
         this.canvas.addEventListener('mouseleave', this.handleCanvasMouseLeave.bind(this));
+        
+        // Drag & Drop und Rechteck-Selektion Variablen
+        this.isDragging = false;
+        this.dragStartCell = null;
+        this.dragCurrentCell = null;
+        this.rectangleStartCell = null;
+        this.rectanglePreview = null;
       }
       
       // Berechne Grid-Dimensionen
@@ -1072,29 +1081,129 @@
             this.ctx.strokeRect(cellX + 0.5, cellY + 0.5, this.cellSize - 1, this.cellSize - 1);
           }
         }
+        
+        // Drag & Drop Preview
+        if (this.isDragging && this.dragStartCell && this.dragCurrentCell) {
+          this.renderDragPreview();
+        }
+        
+        // Rechteck-Selektion Preview
+        if (this.rectanglePreview) {
+          this.renderRectanglePreview();
+        }
       });
     }
 
     handleCanvasClick(event) {
-      const rect = this.canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+      // Verhindere normale Klick-Behandlung während Drag oder wenn es ein Rechteck-Klick war
+      if (this.isDragging || this.wasRectangleSelection) {
+        this.wasRectangleSelection = false;
+        return;
+      }
       
-      const cellX = Math.floor(x / (this.cellSize + this.cellGap));
-      const cellY = Math.floor(y / (this.cellSize + this.cellGap));
+      const cellPos = this.getCellFromEvent(event);
+      if (!cellPos) return;
       
-      if (cellX >= 0 && cellX < this.cols && cellY >= 0 && cellY < this.rows) {
-        if (!this.selection[cellY]) this.selection[cellY] = [];
-        this.selection[cellY][cellX] = !this.selection[cellY][cellX];
+      const { cellX, cellY } = cellPos;
+      
+      // Rechteck-Selektion mit Shift+Click
+      if (event.shiftKey && this.rectangleStartCell) {
+        this.completeRectangleSelection(cellX, cellY);
+        this.wasRectangleSelection = true;
+        return;
+      }
+      
+      // Normale Einzelzell-Selektion
+      if (!this.selection[cellY]) this.selection[cellY] = [];
+      this.selection[cellY][cellX] = !this.selection[cellY][cellX];
+      
+      // Setze Startpunkt für mögliche Rechteck-Selektion
+      this.rectangleStartCell = { x: cellX, y: cellY };
+      
+      this.trackInteraction();
+      this.debouncedBuildList();
+      this.debouncedUpdateSummary();
+      this.renderCanvasGrid();
+    }
+
+    handleCanvasMouseDown(event) {
+      const cellPos = this.getCellFromEvent(event);
+      if (!cellPos) return;
+      
+      const { cellX, cellY } = cellPos;
+      
+      // Starte Drag & Drop (aber nicht bei Shift+Click für Rechteck-Selektion)
+      if (!event.shiftKey) {
+        this.isDragging = true;
+        this.dragStartCell = { x: cellX, y: cellY };
+        this.dragCurrentCell = { x: cellX, y: cellY };
+        this.dragInitialState = this.selection[cellY]?.[cellX] || false;
         
-        this.trackInteraction();
-        this.debouncedBuildList();
-        this.debouncedUpdateSummary();
-        this.renderCanvasGrid();
+        // Verhindere Textauswahl während Drag
+        event.preventDefault();
+      }
+    }
+
+    handleCanvasMouseUp(event) {
+      if (this.isDragging) {
+        this.completeDragSelection();
+        this.isDragging = false;
+        this.dragStartCell = null;
+        this.dragCurrentCell = null;
       }
     }
 
     handleCanvasMouseMove(event) {
+      const cellPos = this.getCellFromEvent(event);
+      if (!cellPos) return;
+      
+      const { cellX, cellY } = cellPos;
+      
+      // Update Drag & Drop
+      if (this.isDragging) {
+        this.dragCurrentCell = { x: cellX, y: cellY };
+        this.renderCanvasGrid();
+        return;
+      }
+      
+      // Update Rechteck-Preview bei Shift+Hover
+      if (event.shiftKey && this.rectangleStartCell) {
+        this.rectanglePreview = {
+          start: this.rectangleStartCell,
+          end: { x: cellX, y: cellY }
+        };
+        this.renderCanvasGrid();
+        return;
+      } else {
+        this.rectanglePreview = null;
+      }
+      
+      // Normale Hover-Behandlung
+      if (!this.hoveredCell || this.hoveredCell.x !== cellX || this.hoveredCell.y !== cellY) {
+        this.hoveredCell = { x: cellX, y: cellY };
+        this.renderCanvasGrid();
+      }
+    }
+
+    handleCanvasMouseLeave() {
+      // Beende Drag & Drop
+      if (this.isDragging) {
+        this.completeDragSelection();
+        this.isDragging = false;
+        this.dragStartCell = null;
+        this.dragCurrentCell = null;
+      }
+      
+      // Clear Previews
+      if (this.hoveredCell || this.rectanglePreview) {
+        this.hoveredCell = null;
+        this.rectanglePreview = null;
+        this.renderCanvasGrid();
+      }
+    }
+
+    // Hilfsfunktionen
+    getCellFromEvent(event) {
       const rect = this.canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -1103,18 +1212,122 @@
       const cellY = Math.floor(y / (this.cellSize + this.cellGap));
       
       if (cellX >= 0 && cellX < this.cols && cellY >= 0 && cellY < this.rows) {
-        if (!this.hoveredCell || this.hoveredCell.x !== cellX || this.hoveredCell.y !== cellY) {
-          this.hoveredCell = { x: cellX, y: cellY };
-          this.renderCanvasGrid();
-        }
+        return { cellX, cellY };
       }
+      return null;
     }
 
-    handleCanvasMouseLeave() {
-      if (this.hoveredCell) {
-        this.hoveredCell = null;
-        this.renderCanvasGrid();
+    completeDragSelection() {
+      if (!this.dragStartCell || !this.dragCurrentCell) return;
+      
+      const minX = Math.min(this.dragStartCell.x, this.dragCurrentCell.x);
+      const maxX = Math.max(this.dragStartCell.x, this.dragCurrentCell.x);
+      const minY = Math.min(this.dragStartCell.y, this.dragCurrentCell.y);
+      const maxY = Math.max(this.dragStartCell.y, this.dragCurrentCell.y);
+      
+      // Bestimme neuen Zustand basierend auf Startzelle
+      const newState = !this.dragInitialState;
+      
+      // Wende auf alle Zellen im Drag-Bereich an
+      for (let y = minY; y <= maxY; y++) {
+        if (!this.selection[y]) this.selection[y] = [];
+        for (let x = minX; x <= maxX; x++) {
+          this.selection[y][x] = newState;
+        }
       }
+      
+      this.trackInteraction();
+      this.debouncedBuildList();
+      this.debouncedUpdateSummary();
+      this.renderCanvasGrid();
+    }
+
+    completeRectangleSelection(endX, endY) {
+      if (!this.rectangleStartCell) return;
+      
+      const minX = Math.min(this.rectangleStartCell.x, endX);
+      const maxX = Math.max(this.rectangleStartCell.x, endX);
+      const minY = Math.min(this.rectangleStartCell.y, endY);
+      const maxY = Math.max(this.rectangleStartCell.y, endY);
+      
+      // Bestimme neuen Zustand basierend auf Startzelle
+      const startState = this.selection[this.rectangleStartCell.y]?.[this.rectangleStartCell.x] || false;
+      const newState = !startState;
+      
+      // Wende auf alle Zellen im Rechteck an
+      for (let y = minY; y <= maxY; y++) {
+        if (!this.selection[y]) this.selection[y] = [];
+        for (let x = minX; x <= maxX; x++) {
+          this.selection[y][x] = newState;
+        }
+      }
+      
+      this.rectanglePreview = null;
+      this.trackInteraction();
+      this.debouncedBuildList();
+      this.debouncedUpdateSummary();
+      this.renderCanvasGrid();
+    }
+
+    renderDragPreview() {
+      if (!this.dragStartCell || !this.dragCurrentCell) return;
+      
+      const minX = Math.min(this.dragStartCell.x, this.dragCurrentCell.x);
+      const maxX = Math.max(this.dragStartCell.x, this.dragCurrentCell.x);
+      const minY = Math.min(this.dragStartCell.y, this.dragCurrentCell.y);
+      const maxY = Math.max(this.dragStartCell.y, this.dragCurrentCell.y);
+      
+      // Zeichne Drag-Preview mit transparentem Overlay
+      this.ctx.fillStyle = this.dragInitialState ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 0, 0.3)';
+      
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const cellX = x * (this.cellSize + this.cellGap);
+          const cellY = y * (this.cellSize + this.cellGap);
+          this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
+        }
+      }
+      
+      // Zeichne Rahmen
+      this.ctx.strokeStyle = this.dragInitialState ? '#ff0000' : '#00ff00';
+      this.ctx.lineWidth = 2;
+      const startX = minX * (this.cellSize + this.cellGap);
+      const startY = minY * (this.cellSize + this.cellGap);
+      const width = (maxX - minX + 1) * (this.cellSize + this.cellGap) - this.cellGap;
+      const height = (maxY - minY + 1) * (this.cellSize + this.cellGap) - this.cellGap;
+      this.ctx.strokeRect(startX, startY, width, height);
+    }
+
+    renderRectanglePreview() {
+      if (!this.rectanglePreview) return;
+      
+      const { start, end } = this.rectanglePreview;
+      const minX = Math.min(start.x, end.x);
+      const maxX = Math.max(start.x, end.x);
+      const minY = Math.min(start.y, end.y);
+      const maxY = Math.max(start.y, end.y);
+      
+      // Zeichne Rechteck-Preview mit blauem transparentem Overlay
+      this.ctx.fillStyle = 'rgba(0, 100, 255, 0.2)';
+      
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const cellX = x * (this.cellSize + this.cellGap);
+          const cellY = y * (this.cellSize + this.cellGap);
+          this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
+        }
+      }
+      
+      // Zeichne gestrichelten Rahmen
+      this.ctx.strokeStyle = '#0064ff';
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([5, 5]);
+      const startX = minX * (this.cellSize + this.cellGap);
+      const startY = minY * (this.cellSize + this.cellGap);
+      const width = (maxX - minX + 1) * (this.cellSize + this.cellGap) - this.cellGap;
+      const height = (maxY - minY + 1) * (this.cellSize + this.cellGap) - this.cellGap;
+      this.ctx.strokeRect(startX, startY, width, height);
+      this.ctx.setLineDash([]); // Reset line dash
     }
     
     buildList() {
