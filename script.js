@@ -30,108 +30,56 @@
   	Holzunterleger: 0.5
 	};
 
-  // Intelligentes Preis-Caching System
-  const PriceCache = {
-    cache: new Map(),
-    lastUpdate: new Map(),
-    cacheTimeout: 5 * 60 * 1000, // 5 Minuten Cache
-    
-    get(productKey) {
-      const cached = this.cache.get(productKey);
-      const lastUpdate = this.lastUpdate.get(productKey);
+  // Funktion um Preise dynamisch aus HTML zu lesen
+  function getPriceFromHTML(productKey) {
+    try {
+      // Mögliche Produkt-IDs basierend auf PRODUCT_MAP
+      const productInfo = PRODUCT_MAP[productKey];
+      if (!productInfo) return PRICE_MAP[productKey] || 0;
       
-      // Prüfe ob Cache noch gültig ist
-      if (cached && lastUpdate && (Date.now() - lastUpdate) < this.cacheTimeout) {
-        return cached;
-      }
+      const productId = productInfo.productId;
+      const variantId = productInfo.variantId;
       
-      // Cache abgelaufen oder nicht vorhanden - neu laden
-      const price = this.fetchPriceFromHTML(productKey);
-      this.cache.set(productKey, price);
-      this.lastUpdate.set(productKey, Date.now());
+      // Suche nach dem Form-Element mit der entsprechenden product-id oder sku-id
+      const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
+                         document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
       
-      return price;
-    },
-    
-    fetchPriceFromHTML(productKey) {
-      try {
-        const productInfo = PRODUCT_MAP[productKey];
-        if (!productInfo) return PRICE_MAP[productKey] || 0;
+      if (productForm) {
+        // Suche nach dem Preis-Element innerhalb des Forms
+        const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
         
-        const productId = productInfo.productId;
-        const variantId = productInfo.variantId;
-        
-        const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
-                           document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
-        
-        if (productForm) {
-          const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
+        if (priceElement) {
+          // Hole den Text-Inhalt und bereinige ihn
+          let priceText = priceElement.textContent || priceElement.innerHTML;
           
-          if (priceElement) {
-            let priceText = priceElement.textContent || priceElement.innerHTML;
-            priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
-            const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
-            
-            if (priceMatch) {
-              const price = parseFloat(priceMatch[1].replace(',', '.'));
-              console.log(`✅ Preis für ${productKey} aus HTML gelesen: ${price}€ (Original: "${priceText.trim()}")`);
-              return price;
-            } else {
-              console.warn(`❌ Preis-Format nicht erkannt für ${productKey}: "${priceText.trim()}"`);
-            }
+          // Ersetze &nbsp; und andere HTML-Entities
+          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
+          
+          // Extrahiere Preis (Format: €9,99 EUR, €99,00, 99.50 etc.)
+          // Suche nach Zahlen mit Komma oder Punkt als Dezimaltrennzeichen
+          const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
+          
+          if (priceMatch) {
+            const price = parseFloat(priceMatch[1].replace(',', '.'));
+            console.log(`✅ Preis für ${productKey} aus HTML gelesen: ${price}€ (Original: "${priceText.trim()}")`);
+            return price;
           } else {
-            console.warn(`❌ Kein Preis-Element gefunden für ${productKey} in Form`);
+            console.warn(`❌ Preis-Format nicht erkannt für ${productKey}: "${priceText.trim()}"`);
           }
         } else {
-          console.warn(`❌ Kein Product-Form gefunden für ${productKey} (ProductID: ${productId}, VariantID: ${variantId})`);
+          console.warn(`❌ Kein Preis-Element gefunden für ${productKey} in Form`);
         }
-        
-        console.log(`⚠️ Fallback-Preis für ${productKey}: ${PRICE_MAP[productKey]}€`);
-      } catch (error) {
-        console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
-      }
-      
-      return PRICE_MAP[productKey] || 0;
-    },
-    
-    // Cache invalidieren (z.B. bei CMS Updates)
-    invalidate(productKey = null) {
-      if (productKey) {
-        this.cache.delete(productKey);
-        this.lastUpdate.delete(productKey);
       } else {
-        this.cache.clear();
-        this.lastUpdate.clear();
+        console.warn(`❌ Kein Product-Form gefunden für ${productKey} (ProductID: ${productId}, VariantID: ${variantId})`);
       }
-    },
-    
-    // Prüfe auf CMS Updates (periodisch aufrufen)
-    checkForUpdates() {
-      // Prüfe ob sich DOM-Elemente geändert haben
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' || mutation.type === 'characterData') {
-            // Preis-relevante Änderung erkannt - Cache invalidieren
-            this.invalidate();
-            console.log('🔄 Preis-Cache invalidiert aufgrund von DOM-Änderungen');
-          }
-        });
-      });
       
-      // Überwache Preis-Elemente
-      document.querySelectorAll('[data-wf-sku-bindings*="f_price_"]').forEach(element => {
-        observer.observe(element, { 
-          childList: true, 
-          characterData: true, 
-          subtree: true 
-        });
-      });
+      console.log(`⚠️ Fallback-Preis für ${productKey}: ${PRICE_MAP[productKey]}€`);
+    } catch (error) {
+      console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
     }
-  };
-
-  // Funktion um Preise dynamisch aus HTML zu lesen (mit Caching)
-  function getPriceFromHTML(productKey) {
-    return PriceCache.get(productKey);
+    
+    // Fallback auf hardcoded Preis
+    return PRICE_MAP[productKey] || 0;
   }
 
   const PRODUCT_MAP = {
@@ -186,120 +134,6 @@
       this.webhookUrl = 'https://hook.eu2.make.com/c7lkudk1v2a2xsr291xbvfs2cb25b84k';
 
       this.init();
-    }
-
-    // Background-Berechnungen mit Web Workers
-    initBackgroundCalculations() {
-      // Erstelle Web Worker für komplexe Berechnungen
-      const workerCode = `
-        self.onmessage = function(e) {
-          const { type, data } = e.data;
-          
-          switch(type) {
-            case 'calculateParts':
-              const result = calculatePartsInBackground(data);
-              self.postMessage({ type: 'calculateParts', result });
-              break;
-            case 'optimizeLayout':
-              const optimized = optimizeLayoutInBackground(data);
-              self.postMessage({ type: 'optimizeLayout', result: optimized });
-              break;
-          }
-        };
-        
-        function calculatePartsInBackground(data) {
-          const { selection, cols, rows } = data;
-          const parts = {
-            Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
-            Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-            Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
-          };
-          
-          // Komplexe Berechnungslogik hier...
-          for (let y = 0; y < rows; y++) {
-            if (!Array.isArray(selection[y])) continue;
-            let run = 0;
-            
-            for (let x = 0; x < cols; x++) {
-              if (selection[y]?.[x]) run++;
-              else if (run) { 
-                processGroupInBackground(run, parts, data);
-                run = 0; 
-              }
-            }
-            if (run) processGroupInBackground(run, parts, data);
-          }
-          
-          return parts;
-        }
-        
-        function processGroupInBackground(len, parts, data) {
-          const { cellWidth } = data;
-          const totalLen = len * cellWidth;
-          const floor360 = Math.floor(totalLen / 360);
-          const rem360 = totalLen - floor360 * 360;
-          const floor240 = Math.ceil(rem360 / 240);
-          
-          parts.Solarmodul += len;
-          parts.Endklemmen += 2;
-          parts.Schiene_360_cm += floor360;
-          parts.Schiene_240_cm += floor240;
-          // ... weitere Berechnungen
-        }
-        
-        function optimizeLayoutInBackground(data) {
-          // KI-basierte Layout-Optimierung
-          const { selection, cols, rows, constraints } = data;
-          // Simuliere komplexe Optimierung...
-          return { optimizedSelection: selection, score: 0.85 };
-        }
-      `;
-      
-      const blob = new Blob([workerCode], { type: 'application/javascript' });
-      this.calculationWorker = new Worker(URL.createObjectURL(blob));
-      
-      this.calculationWorker.onmessage = (e) => {
-        const { type, result } = e.data;
-        
-        switch(type) {
-          case 'calculateParts':
-            this.handleBackgroundCalculationResult(result);
-            break;
-          case 'optimizeLayout':
-            this.handleOptimizationResult(result);
-            break;
-        }
-      };
-    }
-
-    // Starte Background-Berechnung
-    startBackgroundCalculation() {
-      if (this.calculationWorker) {
-        this.calculationWorker.postMessage({
-          type: 'calculateParts',
-          data: {
-            selection: this.selection,
-            cols: this.cols,
-            rows: this.rows,
-            cellWidth: parseInt(this.wIn.value, 10) || 176
-          }
-        });
-      }
-    }
-
-    handleBackgroundCalculationResult(parts) {
-      // Verwende Ergebnis aus Background-Berechnung
-      this.cachedParts = parts;
-      // Aktualisiere UI wenn nötig
-      if (this.needsUIUpdate) {
-        this.buildList();
-        this.needsUIUpdate = false;
-      }
-    }
-
-    handleOptimizationResult(result) {
-      console.log('Layout-Optimierung abgeschlossen:', result);
-      // Zeige Optimierungsvorschläge an
     }
 
     // ===== WEBHOOK FUNKTIONEN =====
@@ -589,36 +423,6 @@
       return successCount === this.configs.length;
     }
 
-    // Debounced functions für bessere Performance
-    setupDebouncedFunctions() {
-      // Debounce buildList (300ms delay)
-      this.debouncedBuildList = this.debounce(() => {
-        this.buildList();
-      }, 300);
-      
-      // Debounce updateSummaryOnChange (200ms delay)
-      this.debouncedUpdateSummary = this.debounce(() => {
-        this.updateSummaryOnChange();
-      }, 200);
-      
-      // Debounce grid size updates (500ms delay)
-      this.debouncedGridUpdate = this.debounce(() => {
-        this.buildGrid();
-      }, 500);
-    }
-
-    debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func.apply(this, args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
-    }
-
     checkMobileDevice() {
       // Mobile Device Detection
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -665,13 +469,6 @@
     }
 
     init() {
-      // Performance-Optimierungen initialisieren
-      this.setupDebouncedFunctions();
-      this.initBackgroundCalculations();
-      
-      // Preis-Cache CMS-Update-Überwachung starten
-      PriceCache.checkForUpdates();
-      
       // Mobile Detection und Warning
       this.checkMobileDevice();
       
@@ -937,9 +734,9 @@
 
     updateGridAfterStructureChange() {
   		this.updateSize();
-  		this.debouncedGridUpdate();
-  		this.debouncedBuildList();
-  		this.debouncedUpdateSummary();
+  		this.buildGrid();
+  		this.buildList();
+  		this.updateSummaryOnChange();
 		}
     
 
@@ -1000,335 +797,43 @@
 		}
 
     buildGrid() {
-      if (!Array.isArray(this.selection)) return;
-      
-      // Canvas-basiertes Rendering für bessere Performance
-      this.initCanvasGrid();
-      this.renderCanvasGrid();
-    }
+  		if (!Array.isArray(this.selection)) return;
+  		this.gridEl.innerHTML = '';
+  		document.documentElement.style.setProperty('--cols', this.cols);
+  		document.documentElement.style.setProperty('--rows', this.rows);
 
-    initCanvasGrid() {
-      // Erstelle Canvas falls nicht vorhanden
-      if (!this.canvas) {
-        this.gridEl.innerHTML = '';
-        this.canvas = document.createElement('canvas');
-        this.canvas.style.cursor = 'pointer';
-        this.canvas.style.borderRadius = '6px';
-        this.gridEl.appendChild(this.canvas);
-        
-        this.ctx = this.canvas.getContext('2d');
-        
-        // Event Listeners für Canvas
-        this.canvas.addEventListener('click', this.handleCanvasClick.bind(this));
-        this.canvas.addEventListener('mousedown', this.handleCanvasMouseDown.bind(this));
-        this.canvas.addEventListener('mousemove', this.handleCanvasMouseMove.bind(this));
-        this.canvas.addEventListener('mouseup', this.handleCanvasMouseUp.bind(this));
-        this.canvas.addEventListener('mouseleave', this.handleCanvasMouseLeave.bind(this));
-        
-        // Drag & Drop und Rechteck-Selektion Variablen
-        this.isDragging = false;
-        this.dragStartCell = null;
-        this.dragCurrentCell = null;
-        this.rectangleStartCell = null;
-        this.rectanglePreview = null;
-      }
-      
-      // Berechne Grid-Dimensionen
-      this.cellSize = Math.min(80, Math.max(20, Math.min(600 / this.cols, 400 / this.rows)));
-      this.cellGap = 2;
-      this.canvasWidth = this.cols * this.cellSize + (this.cols - 1) * this.cellGap;
-      this.canvasHeight = this.rows * this.cellSize + (this.rows - 1) * this.cellGap;
-      
-      // Setze Canvas-Größe (High DPI Support)
-      const dpr = window.devicePixelRatio || 1;
-      this.canvas.width = this.canvasWidth * dpr;
-      this.canvas.height = this.canvasHeight * dpr;
-      this.canvas.style.width = this.canvasWidth + 'px';
-      this.canvas.style.height = this.canvasHeight + 'px';
-      this.ctx.scale(dpr, dpr);
-    }
+  		const centerX = (this.cols - 1) / 2;
+  		const centerY = (this.rows - 1) / 2;
+  		const delayPerUnit = 60; // ms
 
-    renderCanvasGrid() {
-      if (!this.ctx) return;
-      
-      // Clear canvas
-      this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-      
-      // Render cells with RequestAnimationFrame für smooth performance
-      this.animationId = requestAnimationFrame(() => {
-        for (let y = 0; y < this.rows; y++) {
-          if (!Array.isArray(this.selection[y])) continue;
-          
-          for (let x = 0; x < this.cols; x++) {
-            const cellX = x * (this.cellSize + this.cellGap);
-            const cellY = y * (this.cellSize + this.cellGap);
-            const isSelected = this.selection[y]?.[x];
-            const isHovered = this.hoveredCell && this.hoveredCell.x === x && this.hoveredCell.y === y;
-            
-            // Cell background
-            this.ctx.fillStyle = isSelected ? '#7f7f7f' : '#000000';
-            this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
-            
-            // Hover effect
-            if (isHovered) {
-              this.ctx.fillStyle = isSelected ? '#999999' : '#333333';
-              this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
-            }
-            
-            // Cell border (rounded corners effect)
-            this.ctx.strokeStyle = '#ffffff';
-            this.ctx.lineWidth = 1;
-            this.ctx.strokeRect(cellX + 0.5, cellY + 0.5, this.cellSize - 1, this.cellSize - 1);
-          }
-        }
-        
-        // Drag & Drop Preview
-        if (this.isDragging && this.dragStartCell && this.dragCurrentCell) {
-          this.renderDragPreview();
-        }
-        
-        // Rechteck-Selektion Preview
-        if (this.rectanglePreview) {
-          this.renderRectanglePreview();
-        }
-      });
-    }
+  		for (let y = 0; y < this.rows; y++) {
+    		if (!Array.isArray(this.selection[y])) continue;
 
-    handleCanvasClick(event) {
-      // Verhindere normale Klick-Behandlung während Drag oder wenn es ein Rechteck-Klick war
-      if (this.isDragging || this.wasRectangleSelection) {
-        this.wasRectangleSelection = false;
-        return;
-      }
-      
-      const cellPos = this.getCellFromEvent(event);
-      if (!cellPos) return;
-      
-      const { cellX, cellY } = cellPos;
-      
-      // Rechteck-Selektion mit Shift+Click
-      if (event.shiftKey && this.rectangleStartCell) {
-        this.completeRectangleSelection(cellX, cellY);
-        this.wasRectangleSelection = true;
-        return;
-      }
-      
-      // Normale Einzelzell-Selektion
-      if (!this.selection[cellY]) this.selection[cellY] = [];
-      this.selection[cellY][cellX] = !this.selection[cellY][cellX];
-      
-      // Setze Startpunkt für mögliche Rechteck-Selektion
-      this.rectangleStartCell = { x: cellX, y: cellY };
-      
-      this.trackInteraction();
-      this.debouncedBuildList();
-      this.debouncedUpdateSummary();
-      this.renderCanvasGrid();
-    }
+    		for (let x = 0; x < this.cols; x++) {
+      		const cell = document.createElement('div');
+      		cell.className = 'grid-cell animate-in';
+      		if (this.selection[y]?.[x]) cell.classList.add('selected');
 
-    handleCanvasMouseDown(event) {
-      const cellPos = this.getCellFromEvent(event);
-      if (!cellPos) return;
-      
-      const { cellX, cellY } = cellPos;
-      
-      // Starte Drag & Drop (aber nicht bei Shift+Click für Rechteck-Selektion)
-      if (!event.shiftKey) {
-        this.isDragging = true;
-        this.dragStartCell = { x: cellX, y: cellY };
-        this.dragCurrentCell = { x: cellX, y: cellY };
-        this.dragInitialState = this.selection[cellY]?.[cellX] || false;
-        
-        // Verhindere Textauswahl während Drag
-        event.preventDefault();
-      }
-    }
+      		cell.addEventListener('click', () => {
+        		if (!this.selection[y]) this.selection[y] = [];
+        		this.selection[y][x] = !this.selection[y][x];
+        		cell.classList.toggle('selected');
+        		this.trackInteraction();
+        		this.buildList();
+        		this.updateSummaryOnChange();
+      		});
 
-    handleCanvasMouseUp(event) {
-      if (this.isDragging) {
-        this.completeDragSelection();
-        this.isDragging = false;
-        this.dragStartCell = null;
-        this.dragCurrentCell = null;
-      }
-    }
+      		const dx = x - centerX;
+      		const dy = y - centerY;
+      		const distance = Math.sqrt(dx * dx + dy * dy);
+      		const delay = distance * delayPerUnit;
+      		cell.style.animationDelay = `${delay}ms`;
 
-    handleCanvasMouseMove(event) {
-      const cellPos = this.getCellFromEvent(event);
-      if (!cellPos) return;
-      
-      const { cellX, cellY } = cellPos;
-      
-      // Update Drag & Drop
-      if (this.isDragging) {
-        this.dragCurrentCell = { x: cellX, y: cellY };
-        this.renderCanvasGrid();
-        return;
-      }
-      
-      // Update Rechteck-Preview bei Shift+Hover
-      if (event.shiftKey && this.rectangleStartCell) {
-        this.rectanglePreview = {
-          start: this.rectangleStartCell,
-          end: { x: cellX, y: cellY }
-        };
-        this.renderCanvasGrid();
-        return;
-      } else {
-        this.rectanglePreview = null;
-      }
-      
-      // Normale Hover-Behandlung
-      if (!this.hoveredCell || this.hoveredCell.x !== cellX || this.hoveredCell.y !== cellY) {
-        this.hoveredCell = { x: cellX, y: cellY };
-        this.renderCanvasGrid();
-      }
-    }
-
-    handleCanvasMouseLeave() {
-      // Beende Drag & Drop
-      if (this.isDragging) {
-        this.completeDragSelection();
-        this.isDragging = false;
-        this.dragStartCell = null;
-        this.dragCurrentCell = null;
-      }
-      
-      // Clear Previews
-      if (this.hoveredCell || this.rectanglePreview) {
-        this.hoveredCell = null;
-        this.rectanglePreview = null;
-        this.renderCanvasGrid();
-      }
-    }
-
-    // Hilfsfunktionen
-    getCellFromEvent(event) {
-      const rect = this.canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      
-      const cellX = Math.floor(x / (this.cellSize + this.cellGap));
-      const cellY = Math.floor(y / (this.cellSize + this.cellGap));
-      
-      if (cellX >= 0 && cellX < this.cols && cellY >= 0 && cellY < this.rows) {
-        return { cellX, cellY };
-      }
-      return null;
-    }
-
-    completeDragSelection() {
-      if (!this.dragStartCell || !this.dragCurrentCell) return;
-      
-      const minX = Math.min(this.dragStartCell.x, this.dragCurrentCell.x);
-      const maxX = Math.max(this.dragStartCell.x, this.dragCurrentCell.x);
-      const minY = Math.min(this.dragStartCell.y, this.dragCurrentCell.y);
-      const maxY = Math.max(this.dragStartCell.y, this.dragCurrentCell.y);
-      
-      // Bestimme neuen Zustand basierend auf Startzelle
-      const newState = !this.dragInitialState;
-      
-      // Wende auf alle Zellen im Drag-Bereich an
-      for (let y = minY; y <= maxY; y++) {
-        if (!this.selection[y]) this.selection[y] = [];
-        for (let x = minX; x <= maxX; x++) {
-          this.selection[y][x] = newState;
-        }
-      }
-      
-      this.trackInteraction();
-      this.debouncedBuildList();
-      this.debouncedUpdateSummary();
-      this.renderCanvasGrid();
-    }
-
-    completeRectangleSelection(endX, endY) {
-      if (!this.rectangleStartCell) return;
-      
-      const minX = Math.min(this.rectangleStartCell.x, endX);
-      const maxX = Math.max(this.rectangleStartCell.x, endX);
-      const minY = Math.min(this.rectangleStartCell.y, endY);
-      const maxY = Math.max(this.rectangleStartCell.y, endY);
-      
-      // Bestimme neuen Zustand basierend auf Startzelle
-      const startState = this.selection[this.rectangleStartCell.y]?.[this.rectangleStartCell.x] || false;
-      const newState = !startState;
-      
-      // Wende auf alle Zellen im Rechteck an
-      for (let y = minY; y <= maxY; y++) {
-        if (!this.selection[y]) this.selection[y] = [];
-        for (let x = minX; x <= maxX; x++) {
-          this.selection[y][x] = newState;
-        }
-      }
-      
-      this.rectanglePreview = null;
-      this.trackInteraction();
-      this.debouncedBuildList();
-      this.debouncedUpdateSummary();
-      this.renderCanvasGrid();
-    }
-
-    renderDragPreview() {
-      if (!this.dragStartCell || !this.dragCurrentCell) return;
-      
-      const minX = Math.min(this.dragStartCell.x, this.dragCurrentCell.x);
-      const maxX = Math.max(this.dragStartCell.x, this.dragCurrentCell.x);
-      const minY = Math.min(this.dragStartCell.y, this.dragCurrentCell.y);
-      const maxY = Math.max(this.dragStartCell.y, this.dragCurrentCell.y);
-      
-      // Zeichne Drag-Preview mit transparentem Overlay
-      this.ctx.fillStyle = this.dragInitialState ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 0, 0.3)';
-      
-      for (let y = minY; y <= maxY; y++) {
-        for (let x = minX; x <= maxX; x++) {
-          const cellX = x * (this.cellSize + this.cellGap);
-          const cellY = y * (this.cellSize + this.cellGap);
-          this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
-        }
-      }
-      
-      // Zeichne Rahmen
-      this.ctx.strokeStyle = this.dragInitialState ? '#ff0000' : '#00ff00';
-      this.ctx.lineWidth = 2;
-      const startX = minX * (this.cellSize + this.cellGap);
-      const startY = minY * (this.cellSize + this.cellGap);
-      const width = (maxX - minX + 1) * (this.cellSize + this.cellGap) - this.cellGap;
-      const height = (maxY - minY + 1) * (this.cellSize + this.cellGap) - this.cellGap;
-      this.ctx.strokeRect(startX, startY, width, height);
-    }
-
-    renderRectanglePreview() {
-      if (!this.rectanglePreview) return;
-      
-      const { start, end } = this.rectanglePreview;
-      const minX = Math.min(start.x, end.x);
-      const maxX = Math.max(start.x, end.x);
-      const minY = Math.min(start.y, end.y);
-      const maxY = Math.max(start.y, end.y);
-      
-      // Zeichne Rechteck-Preview mit blauem transparentem Overlay
-      this.ctx.fillStyle = 'rgba(0, 100, 255, 0.2)';
-      
-      for (let y = minY; y <= maxY; y++) {
-        for (let x = minX; x <= maxX; x++) {
-          const cellX = x * (this.cellSize + this.cellGap);
-          const cellY = y * (this.cellSize + this.cellGap);
-          this.ctx.fillRect(cellX, cellY, this.cellSize, this.cellSize);
-        }
-      }
-      
-      // Zeichne gestrichelten Rahmen
-      this.ctx.strokeStyle = '#0064ff';
-      this.ctx.lineWidth = 2;
-      this.ctx.setLineDash([5, 5]);
-      const startX = minX * (this.cellSize + this.cellGap);
-      const startY = minY * (this.cellSize + this.cellGap);
-      const width = (maxX - minX + 1) * (this.cellSize + this.cellGap) - this.cellGap;
-      const height = (maxY - minY + 1) * (this.cellSize + this.cellGap) - this.cellGap;
-      this.ctx.strokeRect(startX, startY, width, height);
-      this.ctx.setLineDash([]); // Reset line dash
-    }
+      		setTimeout(() => cell.classList.remove('animate-in'), 400);
+      		this.gridEl.appendChild(cell);
+    		}
+  		}
+		}
     
     buildList() {
       const parts = this.calculateParts();
