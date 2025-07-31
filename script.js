@@ -522,10 +522,14 @@
         this.solarGrid.selection = config.selection || [];
         this.solarGrid.cols = config.cols || 5;
         this.solarGrid.rows = config.rows || 5;
+        
+        // Aktualisiere Grid-Größe und baue Grid auf
+        this.solarGrid.updateSize();
         this.solarGrid.buildGrid();
 
-        // Warte kurz damit das Grid gerendert wird
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Warte auf DOM-Updates und Animation-Completion
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         // Erfasse das Grid
         const gridElement = document.getElementById('grid');
@@ -537,7 +541,11 @@
           logging: false,
           useCORS: true,
           allowTaint: true,
-          foreignObjectRendering: true
+          foreignObjectRendering: true,
+          width: gridElement.offsetWidth,
+          height: gridElement.offsetHeight,
+          scrollX: 0,
+          scrollY: 0
         });
 
         return canvas.toDataURL('image/png');
@@ -550,10 +558,14 @@
         this.solarGrid.selection = currentSelection;
         this.solarGrid.cols = currentCols;
         this.solarGrid.rows = currentRows;
+        
+        // Komplette Wiederherstellung mit Größenaktualisierung
+        this.solarGrid.updateSize();
         this.solarGrid.buildGrid();
         
-        // Warte kurz damit das ursprüngliche Grid gerendert wird
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Warte auf vollständige Wiederherstellung
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
