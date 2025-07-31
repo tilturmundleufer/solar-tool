@@ -308,3 +308,93 @@
     color: #ffffff;
   }
 }
+/* X-Button zum Schließen */
+#smart-config-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(14, 30, 52, 0.1);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #0e1e34;
+  transition: all 0.2s ease;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1;
+  z-index: 10;
+}
+
+#smart-config-close:hover {
+  background: rgba(14, 30, 52, 0.2);
+  transform: scale(1.1);
+}
+
+#smart-config-close:active {
+  transform: scale(0.95);
+}
+
+#smart-config-close::before {
+  content: "×";
+  font-weight: bold;
+}
+
+/* Versteckte Elemente */
+.bulk-selection-help.hidden {
+  display: none !important;
+}
+
+.smart-config-container.hidden {
+  display: none !important;
+}
+
+
+/* X-Button zum Schließen */
+#smart-config-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(14, 30, 52, 0.1);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #0e1e34;
+  transition: all 0.2s ease;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1;
+  z-index: 10;
+}
+
+#smart-config-close:hover {
+  background: rgba(14, 30, 52, 0.2);
+  transform: scale(1.1);
+}
+
+#smart-config-close:active {
+  transform: scale(0.95);
+}
+
+#smart-config-close::before {
+  content: "×";
+  font-weight: bold;
+}
+
+/* Versteckte Elemente */
+.bulk-selection-help.hidden {
+  display: none !important;
+}
+
+.smart-config-container.hidden {
+  display: none !important;
+}

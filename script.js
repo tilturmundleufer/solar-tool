@@ -435,16 +435,7 @@
     }
 
     parseInput(input) {
-      const config = {
-        cols: null,
-        rows: null,
-        moduleCount: null,
-        orientation: 'horizontal',
-        includeModules: true,
-        mc4: false,
-        cable: false,
-        wood: false
-      };
+      const config = {};
 
       // Grid-Größe parsen
       const gridMatch = input.match(this.patterns.gridSize);
@@ -463,14 +454,14 @@
         config.rows = gridSize.rows;
       }
 
-      // Orientierung parsen
+      // Orientierung parsen (nur wenn explizit erwähnt)
       const orientationMatch = input.match(this.patterns.orientation);
       if (orientationMatch) {
         config.orientation = orientationMatch[0].toLowerCase().includes('vertikal') || 
                             orientationMatch[0].toLowerCase().includes('vertical') ? 'vertical' : 'horizontal';
       }
 
-      // Optionen parsen
+      // Optionen parsen (nur wenn explizit erwähnt)
       const mc4Match = input.match(this.patterns.mc4);
       if (mc4Match) {
         config.mc4 = mc4Match[0].toLowerCase().includes('mit');
@@ -511,28 +502,50 @@
     applyConfiguration(config) {
       console.log('🚀 Applying configuration:', config);
       
-      // Grid-Größe setzen (überschreibt bestehende Konfiguration)
+      // Speichere bestehende Auswahl
+      const oldSelection = this.solarGrid.selection ? 
+        this.solarGrid.selection.map(row => [...row]) : null;
+      const oldCols = this.solarGrid.cols;
+      const oldRows = this.solarGrid.rows;
+      
+      // Grid-Größe setzen (nur wenn angegeben)
       if (config.cols && config.rows) {
         this.solarGrid.cols = config.cols;
         this.solarGrid.rows = config.rows;
-        // Behalte bestehende Zellgrößen bei, ändere nur Grid-Dimensionen
-        // this.solarGrid.wIn.value und hIn.value bleiben unverändert
       }
 
-      // Orientierung setzen
-      this.solarGrid.orV.checked = config.orientation === 'vertical';
-      this.solarGrid.orH.checked = config.orientation === 'horizontal';
+      // Orientierung setzen (nur wenn angegeben)
+      if (config.orientation) {
+        this.solarGrid.orV.checked = config.orientation === 'vertical';
+        this.solarGrid.orH.checked = config.orientation === 'horizontal';
+      }
 
-      // Optionen setzen
-      this.solarGrid.incM.checked = config.includeModules;
-      this.solarGrid.mc4.checked = config.mc4;
-      this.solarGrid.solarkabel.checked = config.cable;
-      this.solarGrid.holz.checked = config.wood;
+      // Optionen setzen (nur die angegebenen)
+      if (config.hasOwnProperty('includeModules')) {
+        this.solarGrid.incM.checked = config.includeModules;
+      }
+      if (config.hasOwnProperty('mc4')) {
+        this.solarGrid.mc4.checked = config.mc4;
+      }
+      if (config.hasOwnProperty('cable')) {
+        this.solarGrid.solarkabel.checked = config.cable;
+      }
+      if (config.hasOwnProperty('wood')) {
+        this.solarGrid.holz.checked = config.wood;
+      }
 
-      // Bestehende Auswahl zurücksetzen
-      this.solarGrid.selection = Array.from({ length: this.solarGrid.rows }, () =>
-        Array.from({ length: this.solarGrid.cols }, () => false)
+      // Erstelle neue Auswahl-Matrix mit angepasster Größe
+      const newSelection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
+        Array.from({ length: this.solarGrid.cols }, (_, x) => {
+          // Behalte bestehende Auswahl bei, falls sie existiert und im neuen Grid passt
+          if (oldSelection && y < oldSelection.length && x < oldSelection[y].length) {
+            return oldSelection[y][x];
+          }
+          return false;
+        })
       );
+      
+      this.solarGrid.selection = newSelection;
 
       // Grid mit neuen Dimensionen neu aufbauen
       this.solarGrid.updateSize();
@@ -540,9 +553,21 @@
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
 
-      // Wenn Module-Anzahl angegeben, automatisch auswählen
-      if (config.moduleCount) {
+      // Wenn Module-Anzahl angegeben, automatisch auswählen (nur bei neuen Grids)
+      if (config.moduleCount && (!oldSelection || oldSelection.flat().every(cell => !cell))) {
         this.autoSelectModules(config.moduleCount);
+      }
+      
+      // Verstecke Tipps nach erster Nutzung
+      this.hideHelpAfterFirstUse();
+    }
+    
+    hideHelpAfterFirstUse() {
+      const helpSection = document.querySelector('.bulk-selection-help');
+      if (helpSection) {
+        helpSection.style.display = 'none';
+        // Speichere in localStorage, dass Tipps versteckt werden sollen
+        localStorage.setItem('solarTool_hideHelp', 'true');
       }
     }
 
@@ -575,8 +600,16 @@
       
       this.solarGrid.buildGrid = () => {
         originalBuildGrid();
-        this.addBulkSelectionToGrid();
+        // Warte kurz bis DOM aktualisiert ist, dann füge Bulk Selection hinzu
+        setTimeout(() => {
+          this.addBulkSelectionToGrid();
+        }, 10);
       };
+      
+      // Initialisiere Bulk Selection auch für das bestehende Grid
+      setTimeout(() => {
+        this.addBulkSelectionToGrid();
+      }, 100);
     }
 
     addBulkSelectionToGrid() {
@@ -1219,6 +1252,35 @@
 			
 			// Quick Config Event Listeners
 			this.initQuickConfigInterface();
+			
+			// Initialisiere zusätzliche Features
+			this.checkAndHideHelp();
+			this.initSmartConfigCloseButton();
+		}
+		
+		checkAndHideHelp() {
+			const shouldHideHelp = localStorage.getItem('solarTool_hideHelp');
+			if (shouldHideHelp === 'true') {
+				setTimeout(() => {
+					const helpSection = document.querySelector('.bulk-selection-help');
+					if (helpSection) {
+						helpSection.style.display = 'none';
+					}
+				}, 600);
+			}
+		}
+		
+		initSmartConfigCloseButton() {
+			setTimeout(() => {
+				const closeButton = document.getElementById('smart-config-close');
+				const container = document.querySelector('.smart-config-container');
+				if (closeButton && container) {
+					closeButton.addEventListener('click', () => {
+						container.style.display = 'none';
+						localStorage.setItem('solarTool_hideSmartConfig', 'true');
+					});
+				}
+			}, 600);
 		}
 
 		initQuickConfigInterface() {
