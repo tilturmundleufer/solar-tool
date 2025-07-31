@@ -399,6 +399,366 @@
     return getPriceFromCache(productKey);
   }
 
+  // ===== PDF GENERATOR =====
+  class SolarPDFGenerator {
+    constructor(solarGrid) {
+      this.solarGrid = solarGrid;
+      this.jsPDF = window.jspdf?.jsPDF;
+      this.html2canvas = window.html2canvas;
+    }
+
+    // Prüfe ob PDF-Libraries verfügbar sind
+    isAvailable() {
+      return !!(this.jsPDF && this.html2canvas);
+    }
+
+    // Generiere PDF für aktuelle oder alle Konfigurationen
+    async generatePDF(type = 'current') {
+      if (!this.isAvailable()) {
+        console.warn('PDF Libraries nicht verfügbar');
+        this.solarGrid.showToast('PDF-Generierung nicht verfügbar', 3000);
+        return;
+      }
+
+      try {
+        this.solarGrid.showToast('PDF wird erstellt...', 2000);
+        
+        const configs = type === 'current' ? 
+          [this.solarGrid.getCurrentConfigData()] : 
+          this.solarGrid.getAllConfigsData();
+
+        if (!configs || configs.length === 0) {
+          this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
+          return;
+        }
+
+        const pdf = new this.jsPDF('p', 'mm', 'a4');
+        let isFirstPage = true;
+
+        for (const config of configs) {
+          if (!isFirstPage) {
+            pdf.addPage();
+          }
+          await this.addConfigurationToPDF(pdf, config, isFirstPage);
+          isFirstPage = false;
+        }
+
+        // Generiere Dateinamen
+        const fileName = this.generateFileName(configs);
+        
+        // PDF herunterladen
+        pdf.save(fileName);
+        this.solarGrid.showToast('PDF erfolgreich erstellt ✅', 3000);
+
+      } catch (error) {
+        console.error('PDF-Generierung fehlgeschlagen:', error);
+        this.solarGrid.showToast('PDF-Erstellung fehlgeschlagen', 3000);
+      }
+    }
+
+    // Füge eine Konfiguration zum PDF hinzu
+    async addConfigurationToPDF(pdf, config, isFirstPage) {
+      const pageWidth = 210; // A4 Breite in mm
+      const pageHeight = 297; // A4 Höhe in mm
+      let yPosition = 20;
+
+      // Header
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Solar-Konfiguration', 20, yPosition);
+      
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, yPosition);
+      yPosition += 15;
+
+      // Konfigurationsname
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Konfiguration: ${config.name || 'Unbenannt'}`, 20, yPosition);
+      yPosition += 10;
+
+      // Grid-Informationen
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Grid-Größe: ${config.cols} × ${config.rows}`, 20, yPosition);
+      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 120, yPosition);
+      yPosition += 8;
+
+      const moduleCount = config.selection ? config.selection.flat().filter(v => v).length : 0;
+      pdf.text(`Module: ${moduleCount} Stück`, 20, yPosition);
+      yPosition += 15;
+
+      // Grid-Screenshot hinzufügen
+      try {
+        const gridImage = await this.captureGridVisualization(config);
+        if (gridImage) {
+          const imgWidth = 80;
+          const imgHeight = 60;
+          pdf.addImage(gridImage, 'PNG', 20, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 10;
+        }
+      } catch (error) {
+        console.warn('Grid-Screenshot fehlgeschlagen:', error);
+        yPosition += 10;
+      }
+
+      // Produkttabelle
+      yPosition = this.addProductTable(pdf, config, yPosition);
+
+      // Produkte pro Modul Informationen
+      yPosition = this.addProductPerModuleInfo(pdf, yPosition);
+    }
+
+    // Erfasse Grid-Visualisierung als Bild
+    async captureGridVisualization(config) {
+      // Temporär die Konfiguration laden
+      const currentSelection = this.solarGrid.selection;
+      const currentCols = this.solarGrid.cols;
+      const currentRows = this.solarGrid.rows;
+
+      try {
+        // Setze temporär die zu erfassende Konfiguration
+        this.solarGrid.selection = config.selection || [];
+        this.solarGrid.cols = config.cols || 5;
+        this.solarGrid.rows = config.rows || 5;
+        this.solarGrid.updateGrid();
+
+        // Erfasse das Grid
+        const gridElement = document.getElementById('grid');
+        if (!gridElement) return null;
+
+        const canvas = await this.html2canvas(gridElement, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          logging: false,
+          useCORS: true
+        });
+
+        return canvas.toDataURL('image/png');
+
+      } catch (error) {
+        console.warn('Grid-Erfassung fehlgeschlagen:', error);
+        return null;
+      } finally {
+        // Stelle ursprüngliche Konfiguration wieder her
+        this.solarGrid.selection = currentSelection;
+        this.solarGrid.cols = currentCols;
+        this.solarGrid.rows = currentRows;
+        this.solarGrid.updateGrid();
+      }
+    }
+
+    // Füge Produkttabelle zum PDF hinzu
+    addProductTable(pdf, config, yPosition) {
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Benötigte Produkte:', 20, yPosition);
+      yPosition += 10;
+
+      // Berechne Teile für diese Konfiguration
+      const parts = this.calculateConfigParts(config);
+      
+      if (!parts || Object.keys(parts).length === 0) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Keine Produkte berechnet', 20, yPosition);
+        return yPosition + 10;
+      }
+
+      // Tabellen-Header
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Produkt', 20, yPosition);
+      pdf.text('Benötigt', 80, yPosition);
+      pdf.text('Packungen', 120, yPosition);
+      pdf.text('Preis/Pack', 150, yPosition);
+      pdf.text('Gesamt', 180, yPosition);
+      yPosition += 8;
+
+      // Linie unter Header
+      pdf.line(20, yPosition - 2, 200, yPosition - 2);
+      yPosition += 2;
+
+      let totalPrice = 0;
+      pdf.setFont('helvetica', 'normal');
+
+      Object.entries(parts).forEach(([productKey, needed]) => {
+        if (needed > 0) {
+          const ve = VE[productKey] || 1;
+          const packs = Math.ceil(needed / ve);
+          const pricePerPack = getPriceFromCache(productKey);
+          const totalProductPrice = packs * pricePerPack;
+          totalPrice += totalProductPrice;
+
+          const productName = productKey.replace(/_/g, ' ');
+          
+          pdf.text(productName, 20, yPosition);
+          pdf.text(needed.toString(), 80, yPosition);
+          pdf.text(`${packs}×`, 120, yPosition);
+          pdf.text(`${pricePerPack.toFixed(2)} €`, 150, yPosition);
+          pdf.text(`${totalProductPrice.toFixed(2)} €`, 180, yPosition);
+          yPosition += 6;
+        }
+      });
+
+      // Gesamtpreis
+      yPosition += 5;
+      pdf.line(150, yPosition - 2, 200, yPosition - 2);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Gesamtpreis: ${totalPrice.toFixed(2)} €`, 150, yPosition);
+      yPosition += 15;
+
+      return yPosition;
+    }
+
+    // Füge "Produkte pro Modul" Informationen hinzu
+    addProductPerModuleInfo(pdf, yPosition) {
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Produkte pro Modul (Richtwerte):', 20, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      const perModuleInfo = [
+        'Endklemmen: 2 Stück (je Modulreihe)',
+        'Mittelklemmen: 1 Stück (zwischen Modulen)',
+        'Dachhaken: 1-2 Stück (je nach Dachtyp)',
+        'Schrauben: 4-6 Stück (je Dachhaken)',
+        'MC4-Stecker: 1 Packung pro 30 Module',
+        'Solarkabel: 1 Rolle pro Anlage',
+        'Holzunterleger: 1 Stück pro Schienenmeter'
+      ];
+
+      perModuleInfo.forEach(info => {
+        pdf.text(`• ${info}`, 25, yPosition);
+        yPosition += 6;
+      });
+
+      yPosition += 10;
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'italic');
+      pdf.text('Hinweis: Genaue Mengen hängen von der spezifischen Dachkonfiguration ab.', 20, yPosition);
+
+      return yPosition + 10;
+    }
+
+    // Berechne Teile für eine spezifische Konfiguration
+    calculateConfigParts(config) {
+      if (!config.selection || !config.cols || !config.rows) {
+        return {};
+      }
+
+      // Verwende die gleiche Logik wie im SolarGrid
+      const parts = {
+        Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+        Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+        Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+      };
+
+      const cellWidth = 176; // Standard-Zellbreite
+      const cellHeight = 113; // Standard-Zellhöhe
+      const orientation = config.orientation || 'horizontal';
+
+      // Berechne Teile pro Reihe
+      for (let y = 0; y < config.rows; y++) {
+        if (!Array.isArray(config.selection[y])) continue;
+        let run = 0;
+
+        for (let x = 0; x < config.cols; x++) {
+          if (config.selection[y]?.[x]) run++;
+          else if (run) { 
+            this.processGroup(run, parts, cellWidth, cellHeight, orientation); 
+            run = 0; 
+          }
+        }
+        if (run) this.processGroup(run, parts, cellWidth, cellHeight, orientation);
+      }
+
+      // Füge optionale Komponenten hinzu
+      const moduleCount = config.selection.flat().filter(v => v).length;
+      
+      if (config.includeModules !== false) {
+        parts.Solarmodul = moduleCount;
+      }
+      
+      if (config.mc4) {
+        parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+      }
+      
+      if (config.cable) {
+        parts.Solarkabel = 1;
+      }
+      
+      if (config.wood) {
+        parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+      }
+
+      return parts;
+    }
+
+    // Hilfsfunktion für Gruppenverarbeitung (aus CalculationManager übernommen)
+    processGroup(len, parts, cellWidth, cellHeight, orientation) {
+      const isVertical = orientation === 'vertical';
+      const actualCellWidth = isVertical ? cellHeight : cellWidth;
+      
+      const totalLen = len * actualCellWidth;
+      const floor360 = Math.floor(totalLen / 360);
+      const rem360 = totalLen - floor360 * 360;
+      const floor240 = Math.ceil(rem360 / 240);
+      const pure360 = Math.ceil(totalLen / 360);
+      const pure240 = Math.ceil(totalLen / 240);
+      
+      const mixed = floor360 + floor240;
+      const pure = Math.min(pure360, pure240);
+      
+      if (mixed <= pure) {
+        parts.Schiene_360_cm += floor360;
+        parts.Schiene_240_cm += floor240;
+      } else {
+        if (pure360 <= pure240) {
+          parts.Schiene_360_cm += pure360;
+        } else {
+          parts.Schiene_240_cm += pure240;
+        }
+      }
+      
+      parts.Solarmodul += len;
+      parts.Endklemmen += 2;
+      parts.Mittelklemmen += Math.max(0, len - 1);
+      parts.Dachhaken += len;
+      parts.Schrauben += len * 4;
+      parts.Endkappen += 2;
+      
+      const totalSchienen = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+      if (totalSchienen > 1) {
+        parts.Schienenverbinder += Math.max(0, totalSchienen - len);
+      }
+    }
+
+    // Generiere Dateinamen basierend auf Konfiguration(en)
+    generateFileName(configs) {
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+      const timeStr = now.toTimeString().slice(0, 5).replace(':', '-'); // HH-MM
+      
+      let configName = 'Solar-Konfiguration';
+      
+      if (configs.length === 1) {
+        configName = configs[0].name || 'Konfiguration';
+      } else if (configs.length > 1) {
+        configName = `${configs.length}-Konfigurationen`;
+      }
+      
+      // Bereinige Dateinamen von ungültigen Zeichen
+      configName = configName.replace(/[<>:"/\\|?*]/g, '-');
+      
+      return `${configName}_${dateStr}_${timeStr}.pdf`;
+    }
+  }
+
   // ===== SMART CONFIGURATION PARSER =====
   class SmartConfigParser {
     constructor(solarGrid) {
@@ -1109,6 +1469,9 @@
       this.lastInteractionTime = Date.now();
       this.interactionCount = 0;
       this.webhookUrl = 'https://hook.eu2.make.com/c7lkudk1v2a2xsr291xbvfs2cb25b84k';
+
+      // PDF Generator initialisieren
+      this.pdfGenerator = new SolarPDFGenerator(this);
 
       this.init();
     }
@@ -2768,6 +3131,13 @@
         
         this.addPartsListToCart(parts);
         this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
+        
+        // PDF für aktuelle Konfiguration generieren
+        if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
+          setTimeout(() => {
+            this.pdfGenerator.generatePDF('current');
+          }, 500); // Kurze Verzögerung damit Warenkorb-Toast zuerst angezeigt wird
+        }
       } catch (error) {
         this.showToast('Fehler beim Berechnen der Produkte ❌', 2000);
       }
@@ -2818,6 +3188,20 @@
         
         this.addPartsListToCart(total);
         this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
+        
+        // PDF für alle Konfigurationen generieren
+        if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
+          setTimeout(() => {
+            this.pdfGenerator.generatePDF('all');
+          }, 500); // Kurze Verzögerung damit Warenkorb-Toast zuerst angezeigt wird
+        }
+        
+        // PDF für alle Konfigurationen generieren
+        if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
+          setTimeout(() => {
+            this.pdfGenerator.generatePDF('all');
+          }, 500); // Kurze Verzögerung damit Warenkorb-Toast zuerst angezeigt wird
+        }
       } catch (error) {
         this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
       }
@@ -2855,6 +3239,44 @@
           quantity:  packs
         };
       }).filter(Boolean);
+    }
+
+    // ===== PDF HELPER METHODS =====
+    
+    // Hole aktuelle Konfigurationsdaten für PDF
+    getCurrentConfigData() {
+      return {
+        name: this.currentConfig !== null && this.configs[this.currentConfig] ? 
+              this.configs[this.currentConfig].name : 'Aktuelle Konfiguration',
+        cols: this.cols,
+        rows: this.rows,
+        selection: this.selection.map(row => [...row]), // Deep copy
+        orientation: this.orV.checked ? 'vertical' : 'horizontal',
+        includeModules: this.incM.checked,
+        mc4: this.mc4.checked,
+        cable: this.solarkabel.checked,
+        wood: this.holz.checked
+      };
+    }
+
+    // Hole alle Konfigurationsdaten für PDF
+    getAllConfigsData() {
+      // Auto-Save der aktuellen Konfiguration falls nötig
+      if (this.currentConfig !== null) {
+        this.updateConfig();
+      }
+      
+      return this.configs.map((config, index) => ({
+        name: config.name || `Konfiguration ${index + 1}`,
+        cols: config.cols,
+        rows: config.rows,
+        selection: config.selection.map(row => [...row]), // Deep copy
+        orientation: config.orientation,
+        includeModules: config.incM,
+        mc4: config.mc4,
+        cable: config.solarkabel,
+        wood: config.holz
+      }));
     }
   }
 
