@@ -308,40 +308,51 @@
     color: #ffffff;
   }
 }
-/* X-Button zum Schließen */
+/* X-Button zum Schließen - im Mobile Warning Style */
 #smart-config-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: rgba(14, 30, 52, 0.1);
-  border-radius: 50%;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #e0e0e0;
+  background: #ffffff;
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: #0e1e34;
+  font-size: 20px;
+  color: #666666;
   transition: all 0.2s ease;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1;
   z-index: 10;
+  box-shadow: 0 2px 8px rgba(14, 30, 52, 0.1);
 }
 
 #smart-config-close:hover {
-  background: rgba(14, 30, 52, 0.2);
-  transform: scale(1.1);
+  background: #f5a623;
+  border-color: #f5a623;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
 }
 
 #smart-config-close:active {
-  transform: scale(0.95);
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(245, 166, 35, 0.3);
 }
 
 #smart-config-close::before {
   content: "×";
-  font-weight: bold;
+  font-weight: 600;
+}
+
+#smart-config-close:focus {
+  outline: 2px solid #f5a623;
+  outline-offset: 2px;
+}
 }
 
 /* Versteckte Elemente */
@@ -354,40 +365,51 @@
 }
 
 
-/* X-Button zum Schließen */
+/* X-Button zum Schließen - im Mobile Warning Style */
 #smart-config-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: rgba(14, 30, 52, 0.1);
-  border-radius: 50%;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #e0e0e0;
+  background: #ffffff;
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: #0e1e34;
+  font-size: 20px;
+  color: #666666;
   transition: all 0.2s ease;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1;
   z-index: 10;
+  box-shadow: 0 2px 8px rgba(14, 30, 52, 0.1);
 }
 
 #smart-config-close:hover {
-  background: rgba(14, 30, 52, 0.2);
-  transform: scale(1.1);
+  background: #f5a623;
+  border-color: #f5a623;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
 }
 
 #smart-config-close:active {
-  transform: scale(0.95);
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(245, 166, 35, 0.3);
 }
 
 #smart-config-close::before {
   content: "×";
-  font-weight: bold;
+  font-weight: 600;
+}
+
+#smart-config-close:focus {
+  outline: 2px solid #f5a623;
+  outline-offset: 2px;
+}
 }
 
 /* Versteckte Elemente */

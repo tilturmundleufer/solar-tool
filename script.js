@@ -423,6 +423,8 @@
         gridSize: /(\d+)\s*[x×]\s*(\d+)/i,
         // "20 module" → Anzahl Module
         moduleCount: /(\d+)\s*modul[e]?[n]?/i,
+        // "mit modulen" oder "ohne module" → Module-Checkbox
+        moduleCheckbox: /(?:mit|ohne)\s*modul[e]?[n]?(?!\s*\d)/i,
         // "horizontal" oder "vertikal"
         orientation: /(?:horizontal|vertikal|vertical)/i,
         // "mit mc4" oder "ohne mc4"
@@ -459,6 +461,12 @@
       if (orientationMatch) {
         config.orientation = orientationMatch[0].toLowerCase().includes('vertikal') || 
                             orientationMatch[0].toLowerCase().includes('vertical') ? 'vertical' : 'horizontal';
+      }
+
+      // Module-Checkbox parsen (getrennt von moduleCount)
+      const moduleCheckboxMatch = input.match(this.patterns.moduleCheckbox);
+      if (moduleCheckboxMatch) {
+        config.includeModules = moduleCheckboxMatch[0].toLowerCase().includes('mit');
       }
 
       // Optionen parsen (nur wenn explizit erwähnt)
@@ -572,6 +580,17 @@
     }
 
     autoSelectModules(count) {
+      console.log(`🔧 Auto-selecting ${count} modules...`);
+      
+      // Prüfe ob das aktuelle Grid groß genug ist
+      const currentCapacity = this.solarGrid.cols * this.solarGrid.rows;
+      
+      if (currentCapacity < count) {
+        console.log(`📏 Grid zu klein (${currentCapacity} < ${count}), erweitere Grid...`);
+        this.expandGridForModules(count);
+      }
+      
+      // Selektiere Module von links nach rechts, oben nach unten
       let selected = 0;
       for (let y = 0; y < this.solarGrid.rows && selected < count; y++) {
         for (let x = 0; x < this.solarGrid.cols && selected < count; x++) {
@@ -580,9 +599,54 @@
           selected++;
         }
       }
+      
+      console.log(`✅ ${selected} Module ausgewählt`);
       this.solarGrid.buildGrid();
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
+    }
+    
+    expandGridForModules(targetCount) {
+      const currentCapacity = this.solarGrid.cols * this.solarGrid.rows;
+      
+      if (currentCapacity >= targetCount) return;
+      
+      // Berechne optimale neue Grid-Größe
+      const optimalGrid = this.calculateOptimalGrid(targetCount);
+      
+      // Erweitere das Grid intelligent
+      let newCols = this.solarGrid.cols;
+      let newRows = this.solarGrid.rows;
+      
+      // Bevorzuge Spalten-Erweiterung (horizontal wachsen)
+      while (newCols * newRows < targetCount) {
+        if (newCols <= newRows) {
+          newCols++;
+        } else {
+          newRows++;
+        }
+      }
+      
+      console.log(`📏 Erweitere Grid von ${this.solarGrid.cols}×${this.solarGrid.rows} auf ${newCols}×${newRows}`);
+      
+      // Aktualisiere Grid-Dimensionen
+      this.solarGrid.cols = newCols;
+      this.solarGrid.rows = newRows;
+      
+      // Erweitere bestehende Auswahl-Matrix
+      const oldSelection = this.solarGrid.selection || [];
+      this.solarGrid.selection = Array.from({ length: newRows }, (_, y) =>
+        Array.from({ length: newCols }, (_, x) => {
+          // Behalte bestehende Auswahl bei
+          if (y < oldSelection.length && x < oldSelection[y].length) {
+            return oldSelection[y][x];
+          }
+          return false;
+        })
+      );
+      
+      // Grid neu aufbauen
+      this.solarGrid.updateSize();
     }
   }
 
