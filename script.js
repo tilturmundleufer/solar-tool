@@ -986,9 +986,10 @@
           if (this.bulkMode) {
             // Bulk-Modus aktiv
             if (!this.firstClick) {
-              // Erste Zelle markieren
-              this.firstClick = { x, y };
-              console.log(`📍 Erste Zelle markiert: ${x},${y}`);
+              // Erste Zelle markieren und ihren aktuellen Zustand speichern
+              const isCurrentlySelected = this.solarGrid.selection[y]?.[x] || false;
+              this.firstClick = { x, y, wasSelected: isCurrentlySelected };
+              console.log(`📍 Erste Zelle markiert: ${x},${y} (war ${isCurrentlySelected ? 'ausgewählt' : 'leer'})`);
               newCell.classList.add('first-click-marker');
             } else {
               // Zweite Zelle: Bereich auswählen
@@ -1039,8 +1040,11 @@
       const minY = Math.min(start.y, end.y);
       const maxY = Math.max(start.y, end.y);
 
-      // Bulk-Modus soll immer Zellen hinzufügen (true setzen), nicht den Zustand der ersten Zelle kopieren
-      const shouldSelect = true;
+      // Wenn die erste Zelle ausgewählt war, deselektiere den gesamten Bereich
+      // Wenn die erste Zelle leer war, wähle den gesamten Bereich aus
+      const shouldSelect = !start.wasSelected;
+      
+      console.log(`🎯 Bereich-Auswahl: ${shouldSelect ? 'Auswählen' : 'Entfernen'} (erste Zelle war ${start.wasSelected ? 'ausgewählt' : 'leer'})`);
 
       for (let y = minY; y <= maxY; y++) {
         if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
