@@ -409,15 +409,15 @@
         // "20 module" → Anzahl Module
         moduleCount: /(\d+)\s*modul[e]?[n]?/i,
         // "mit modulen" oder "ohne module" → Module-Checkbox
-        moduleCheckbox: /(?:mit|ohne)\s*modul[e]?[n]?(?!\s*\d)/i,
+        moduleCheckbox: /(?:mit|ohne)[\s-]*modul[e]?[n]?(?!\s*\d)/i,
         // "horizontal" oder "vertikal"
         orientation: /(?:horizontal|vertikal|vertical)/i,
         // "mit mc4" oder "ohne mc4"
-        mc4: /(?:mit|ohne)\s*mc4/i,
+        mc4: /(?:mit|ohne)[\s-]*mc4/i,
         // "mit kabel" oder "ohne kabel"  
-        cable: /(?:mit|ohne)\s*(?:kabel|solarkabel)/i,
+        cable: /(?:mit|ohne)[\s-]*(?:kabel|solarkabel)/i,
         // "mit holz" oder "ohne holz"
-        wood: /(?:mit|ohne)\s*holz(?:unterleger)?/i,
+        wood: /(?:mit|ohne)[\s-]*holz(?:unterleger)?/i,
         // "3 reihen mit 5 modulen" oder "drei reihen 5 module"
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))/i,
         // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
@@ -473,7 +473,7 @@
         // Prüfe auf Module (aber nicht wenn es Teil einer Reihen-Konfiguration ist)
         if (/\bmodul[e]?[n]?\b/.test(trimmedPart) && !/\d+\s*modul/.test(trimmedPart) && !/reihen/.test(trimmedPart)) {
           // Prüfe ob "ohne" davor steht (auch im ursprünglichen Input)
-          if (/\bohne\s+modul[e]?[n]?\b/.test(trimmedPart) || /\bohne\s+modul[e]?[n]?\b/.test(input.toLowerCase())) {
+          if (/\bohne[\s-]+modul[e]?[n]?\b/.test(trimmedPart) || /\bohne[\s-]+modul[e]?[n]?\b/.test(input.toLowerCase())) {
             checkboxes.modules = false;
           } else {
             checkboxes.modules = true;
@@ -482,7 +482,7 @@
         
         // Prüfe auf MC4
         if (/\bmc4\b/.test(trimmedPart)) {
-          if (/\bohne\s+mc4\b/.test(trimmedPart) || /\bohne\s+mc4\b/.test(input.toLowerCase())) {
+          if (/\bohne[\s-]+mc4\b/.test(trimmedPart) || /\bohne[\s-]+mc4\b/.test(input.toLowerCase())) {
             checkboxes.mc4 = false;
           } else {
             checkboxes.mc4 = true;
@@ -491,7 +491,7 @@
         
         // Prüfe auf Kabel
         if (/\b(?:kabel|solarkabel)\b/.test(trimmedPart)) {
-          if (/\bohne\s+(?:kabel|solarkabel)\b/.test(trimmedPart) || /\bohne\s+(?:kabel|solarkabel)\b/.test(input.toLowerCase())) {
+          if (/\bohne[\s-]+(?:kabel|solarkabel)\b/.test(trimmedPart) || /\bohne[\s-]+(?:kabel|solarkabel)\b/.test(input.toLowerCase())) {
             checkboxes.cable = false;
           } else {
             checkboxes.cable = true;
@@ -500,7 +500,7 @@
         
         // Prüfe auf Holzunterleger
         if (/\b(?:holz|holzunterleger)\b/.test(trimmedPart)) {
-          if (/\bohne\s+(?:holz|holzunterleger)\b/.test(trimmedPart) || /\bohne\s+(?:holz|holzunterleger)\b/.test(input.toLowerCase())) {
+          if (/\bohne[\s-]+(?:holz|holzunterleger)\b/.test(trimmedPart) || /\bohne[\s-]+(?:holz|holzunterleger)\b/.test(input.toLowerCase())) {
             checkboxes.wood = false;
           } else {
             checkboxes.wood = true;
