@@ -460,34 +460,47 @@
     async addConfigurationToPDF(pdf, config, isFirstPage) {
       const pageWidth = 210; // A4 Breite in mm
       const pageHeight = 297; // A4 Höhe in mm
-      let yPosition = 20;
+      const bottomMargin = 20; // Unterer Rand
+      
+      // Verwende Objekt für yPosition damit es von checkPageBreak geändert werden kann
+      const positionRef = { y: 20 };
+
+      // Hilfsfunktion für Seitenumbruch-Prüfung
+      const checkPageBreak = (neededSpace = 15) => {
+        if (positionRef.y + neededSpace > pageHeight - bottomMargin) {
+          pdf.addPage();
+          positionRef.y = 20;
+          return true;
+        }
+        return false;
+      };
 
       // Header
       pdf.setFontSize(20);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Solar-Konfiguration', 20, yPosition);
+      pdf.text('Solar-Konfiguration', 20, positionRef.y);
       
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, yPosition);
-      yPosition += 15;
+      pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, positionRef.y);
+      positionRef.y += 15;
 
       // Konfigurationsname
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Konfiguration: ${config.name || 'Unbenannt'}`, 20, yPosition);
-      yPosition += 10;
+      pdf.text(`Konfiguration: ${config.name || 'Unbenannt'}`, 20, positionRef.y);
+      positionRef.y += 10;
 
       // Grid-Informationen
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Grid-Größe: ${config.cols} × ${config.rows}`, 20, yPosition);
-      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 120, yPosition);
-      yPosition += 8;
+      pdf.text(`Grid-Größe: ${config.cols} × ${config.rows}`, 20, positionRef.y);
+      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 120, positionRef.y);
+      positionRef.y += 8;
 
       const moduleCount = config.selection ? config.selection.flat().filter(v => v).length : 0;
-      pdf.text(`Module: ${moduleCount} Stück`, 20, yPosition);
-      yPosition += 15;
+      pdf.text(`Module: ${moduleCount} Stück`, 20, positionRef.y);
+      positionRef.y += 15;
 
       // Grid-Screenshot hinzufügen
       try {
@@ -495,21 +508,27 @@
         if (gridImage) {
           const imgWidth = 120;  // Größeres Bild für bessere Sichtbarkeit
           const imgHeight = 90;
+          
+          // Prüfe ob genug Platz für das Bild
+          checkPageBreak(imgHeight + 10);
+          
           // Horizontal zentrieren: (210mm - imgWidth) / 2
           const centerX = (pageWidth - imgWidth) / 2;
-          pdf.addImage(gridImage, 'PNG', centerX, yPosition, imgWidth, imgHeight);
-          yPosition += imgHeight + 10;
+          pdf.addImage(gridImage, 'PNG', centerX, positionRef.y, imgWidth, imgHeight);
+          positionRef.y += imgHeight + 10;
         }
       } catch (error) {
         console.warn('Grid-Screenshot fehlgeschlagen:', error);
-        yPosition += 10;
+        positionRef.y += 10;
       }
 
       // Produkttabelle
-      yPosition = await this.addProductTable(pdf, config, yPosition);
+      checkPageBreak(50); // Prüfe ob genug Platz für Tabelle
+      positionRef.y = await this.addProductTable(pdf, config, positionRef.y, checkPageBreak);
 
       // Produkte pro Modul Informationen
-      yPosition = this.addProductPerModuleInfo(pdf, yPosition);
+      checkPageBreak(60); // Prüfe ob genug Platz für Zusatzinfos
+      positionRef.y = this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
     }
 
     // Erfasse Grid-Visualisierung als Bild
@@ -596,7 +615,7 @@
     }
 
     // Füge Produkttabelle zum PDF hinzu
-    async addProductTable(pdf, config, yPosition) {
+    async addProductTable(pdf, config, yPosition, checkPageBreak) {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Benötigte Produkte:', 20, yPosition);
@@ -631,6 +650,22 @@
 
       Object.entries(parts).forEach(([productKey, needed]) => {
         if (needed > 0) {
+          // Prüfe ob noch Platz für eine weitere Zeile vorhanden ist
+          if (checkPageBreak && checkPageBreak(8)) {
+            // Nach Seitenumbruch Tabellen-Header wiederholen
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Produkt', 20, yPosition);
+            pdf.text('Benötigt', 80, yPosition);
+            pdf.text('Packungen', 120, yPosition);
+            pdf.text('Preis/Pack', 150, yPosition);
+            pdf.text('Gesamt', 180, yPosition);
+            yPosition += 8;
+            pdf.line(20, yPosition - 2, 200, yPosition - 2);
+            yPosition += 2;
+            pdf.setFont('helvetica', 'normal');
+          }
+
           const ve = VE[productKey] || 1;
           const packs = Math.ceil(needed / ve);
           const pricePerPack = getPriceFromCache(productKey);
@@ -659,7 +694,7 @@
     }
 
     // Füge "Produkte pro Modul" Informationen hinzu
-    addProductPerModuleInfo(pdf, yPosition) {
+    addProductPerModuleInfo(pdf, yPosition, checkPageBreak) {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Produkte pro Modul (Richtwerte):', 20, yPosition);
@@ -679,9 +714,25 @@
       ];
 
       perModuleInfo.forEach(info => {
+        // Prüfe ob noch Platz für eine weitere Zeile vorhanden ist
+        if (checkPageBreak && checkPageBreak(8)) {
+          // Nach Seitenumbruch den Titel wiederholen
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Produkte pro Modul (Richtwerte) - Fortsetzung:', 20, yPosition);
+          yPosition += 10;
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+        }
+        
         pdf.text(`• ${info}`, 25, yPosition);
         yPosition += 6;
       });
+
+      // Prüfe ob noch Platz für Hinweis vorhanden ist
+      if (checkPageBreak && checkPageBreak(15)) {
+        // Kein Titel nötig nach Seitenumbruch für Hinweis
+      }
 
       yPosition += 10;
       pdf.setFontSize(9);
