@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Solar-Tool</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="smart-config.css" />
 </head>
 <body>
   <!-- Mobile Warning Overlay -->
@@ -88,6 +89,32 @@
         <label><input type="radio" name="orient" id="orient-v"> Vertikal</label>
       </div>
       
+      <!-- Smart Config Interface -->
+      <div class="smart-config-container">
+        <div class="quick-input-section">
+          <label for="quick-config-input">🧠 Smart Konfiguration</label>
+          <input 
+            type="text" 
+            id="quick-config-input" 
+            placeholder="z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen, ohne holz • 6x3 vertikal • mit mc4 und kabel • ohne module, ohne mc4 • 4x5 horizontal mit modulen"
+          />
+          <div id="config-preview" style="display: none;"></div>
+          <button id="apply-quick-config">Konfiguration anwenden</button>
+        </div>
+        
+        <div class="bulk-selection-help">
+          <strong>💡 Mögliche Eingaben:</strong>
+          <p>
+            <strong>Grid:</strong> "5x4", "6x3" • 
+            <strong>Module:</strong> "20 module", "mit modulen", "ohne module" • 
+            <strong>Reihen:</strong> "3 reihen mit 5 modulen" • 
+            <strong>Optionen:</strong> "mit/ohne mc4", "mit/ohne kabel", "mit/ohne holz" • 
+            <strong>Orientierung:</strong> "vertikal", "horizontal" • 
+            <strong>Kombiniert:</strong> "5x4 vertikal mit module, ohne mc4"
+          </p>
+        </div>
+      </div>
+
       <!-- Benutzeranleitung für neue Features -->
       <div class="usage-tips">
         <div class="tip">

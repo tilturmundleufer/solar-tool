@@ -1,0 +1,158 @@
+# 🤖 Agent Development Guide - Solar Tool
+
+## 📋 Critical Development Rules
+
+### ⚠️ **MANDATORY: Dual File Management**
+
+**ALWAYS** update both files when making JavaScript changes:
+- `script.js` (Development version - readable, commented)
+- `script.min.js` (Production version - minified, optimized)
+
+### 🔄 Development Workflow
+
+#### When Making JavaScript Changes:
+
+1. **Primary Edit**: Make changes to `script.js` first
+2. **Minification**: Generate updated `script.min.js` 
+3. **Verification**: Ensure both files are functionally identical
+
+#### File Relationship:
+```
+script.js (2857 lines) ──minify──> script.min.js (1 line)
+     ↓                                    ↓
+Development Environment            Production Environment
+```
+
+### 🛠️ Required Actions for Every JS Modification:
+
+#### Step 1: Edit script.js
+- Make all changes to the readable `script.js` file
+- Maintain proper formatting and comments
+- Test functionality in development
+
+#### Step 2: Update script.min.js
+After editing `script.js`, you MUST:
+
+```bash
+# Option A: Use online minifier or build tool
+# Copy content from script.js to minifier tool
+# Paste result into script.min.js
+
+# Option B: Use Node.js/npm tools (if available)
+npx terser script.js -o script.min.js -c -m
+
+# Option C: Manual replacement
+# Replace entire content of script.min.js with minified version
+```
+
+#### Step 3: Verify Both Files
+- ✅ `script.js` contains readable, properly formatted code
+- ✅ `script.min.js` contains minified, single-line code
+- ✅ Both files have identical functionality
+- ✅ File sizes: script.js (~96KB), script.min.js (~48KB)
+
+### 🎯 Key Components in Both Files:
+
+The following major components must exist in both files:
+
+1. **Constants & Configuration**
+   - `VE` object (Verpackungseinheiten)
+   - `PRICE_MAP` object
+   - Product mappings (`PRODUCT_MAP`)
+
+2. **Core Classes**
+   - `CalculationManager` - Background calculations
+   - `PriceCache` - Price management
+   - `SmartConfigParser` - Configuration parsing
+   - `BulkSelector` - Bulk selection functionality
+   - `SolarGrid` - Main grid management
+
+3. **Key Functions**
+   - Grid manipulation (add/remove rows/columns)
+   - Part calculations
+   - Cart management
+   - Configuration save/load
+
+### 🚨 Common Mistakes to Avoid:
+
+❌ **DON'T:**
+- Edit only `script.js` without updating `script.min.js`
+- Edit only `script.min.js` without updating `script.js`
+- Leave files out of sync
+- Forget to test both versions
+
+✅ **DO:**
+- Always update both files
+- Maintain functional parity
+- Test in both dev and prod contexts
+- Keep backups before major changes
+
+### 🔍 Verification Checklist:
+
+Before completing any JavaScript modification:
+
+- [ ] `script.js` has been updated with changes
+- [ ] `script.min.js` has been regenerated from `script.js`
+- [ ] Both files contain the same functionality
+- [ ] File sizes are appropriate (script.js ~96KB, script.min.js ~48KB)
+- [ ] No syntax errors in either file
+- [ ] All major classes and functions are present in both files
+
+### 📁 Project Structure:
+
+```
+solar-tool/
+├── script.js           ← Development version (EDIT THIS)
+├── script.min.js       ← Production version (REGENERATE FROM script.js)
+├── calculation-worker.js
+├── index.html
+├── test.html
+├── style.css
+├── smart-config.css
+└── README.md
+```
+
+### 🎯 Environment Usage:
+
+- **Development/Testing**: Uses `script.js`
+- **Production**: Uses `script.min.js`
+- **Both must work identically**
+
+### 🔧 Minification Tools:
+
+Recommended tools for generating `script.min.js`:
+1. **Online**: jscompress.com, minifier.org
+2. **CLI**: terser, uglify-js
+3. **IDE**: VSCode extensions, WebStorm built-in
+4. **Build Tools**: webpack, rollup, gulp
+
+### 📝 Change Log Template:
+
+When making changes, document:
+```markdown
+## Changes Made - [Date]
+- Modified: [specific functions/classes]
+- Files Updated: script.js ✅, script.min.js ✅
+- Testing: [brief description]
+- Size Check: script.js (~96KB), script.min.js (~48KB)
+```
+
+---
+
+## 🚀 Quick Reference Commands:
+
+```bash
+# Check file sizes
+ls -lh script.js script.min.js
+
+# Minify with terser (if available)
+npx terser script.js -o script.min.js -c -m
+
+# Verify syntax
+node -c script.js
+node -c script.min.js
+```
+
+---
+
+**Remember: The dev/prod process only works if BOTH files are kept in sync!**
