@@ -1039,8 +1039,8 @@
       const minY = Math.min(start.y, end.y);
       const maxY = Math.max(start.y, end.y);
 
-      // Bestimme Aktion basierend auf Start-Zelle
-      const shouldSelect = this.solarGrid.selection[start.y][start.x];
+      // Bulk-Modus soll immer Zellen hinzufügen (true setzen), nicht den Zustand der ersten Zelle kopieren
+      const shouldSelect = true;
 
       for (let y = minY; y <= maxY; y++) {
         if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
@@ -1629,21 +1629,49 @@
 			// Quick Config Event Listeners
 			this.initQuickConfigInterface();
 			
-			// Initialisiere zusätzliche Features
+			// Stelle sicher, dass Smart Config und Tipps permanent sichtbar sind
+			this.ensurePermanentVisibility();
+			
+			// Initialisiere zusätzliche Features (aber deaktiviert für permanente Sichtbarkeit)
 			this.checkAndHideHelp();
 			this.initSmartConfigCloseButton();
 		}
 		
+		ensurePermanentVisibility() {
+			// Stelle sicher, dass Tipps permanent sichtbar sind
+			setTimeout(() => {
+				const usageTips = document.querySelector('.usage-tips');
+				if (usageTips) {
+					usageTips.style.display = 'block';
+					usageTips.classList.remove('hidden');
+				}
+				
+				// Stelle sicher, dass Smart Config Container permanent sichtbar sind
+				const smartConfigContainers = document.querySelectorAll('.smart-config-container');
+				smartConfigContainers.forEach(container => {
+					container.style.display = 'block';
+					container.classList.remove('hidden');
+				});
+				
+				// Entferne localStorage-Einstellungen, die das Verstecken verursachen
+				localStorage.removeItem('solarTool_hideHelp');
+				localStorage.removeItem('solarTool_hideSmartConfig');
+				
+				console.log('✅ Tipps und Smart Config Container sind permanent sichtbar');
+			}, 100);
+		}
+		
 		checkAndHideHelp() {
-			const shouldHideHelp = localStorage.getItem('solarTool_hideHelp');
-			if (shouldHideHelp === 'true') {
-				setTimeout(() => {
-					const helpSection = document.querySelector('.bulk-selection-help');
-					if (helpSection) {
-						helpSection.style.display = 'none';
-					}
-				}, 600);
-			}
+			// Tipps sollen permanent sichtbar bleiben - diese Funktion wird deaktiviert
+			// const shouldHideHelp = localStorage.getItem('solarTool_hideHelp');
+			// if (shouldHideHelp === 'true') {
+			// 	setTimeout(() => {
+			// 		const helpSection = document.querySelector('.bulk-selection-help');
+			// 		if (helpSection) {
+			// 			helpSection.style.display = 'none';
+			// 		}
+			// 	}, 600);
+			// }
 		}
 		
 		initSmartConfigCloseButton() {
@@ -1652,8 +1680,10 @@
 				const container = document.querySelector('.smart-config-container');
 				if (closeButton && container) {
 					closeButton.addEventListener('click', () => {
-						container.style.display = 'none';
-						localStorage.setItem('solarTool_hideSmartConfig', 'true');
+						// Smart Config Container soll permanent sichtbar bleiben - Close-Button deaktiviert
+						// container.style.display = 'none';
+						// localStorage.setItem('solarTool_hideSmartConfig', 'true');
+						console.log('Smart Config Container bleibt permanent sichtbar');
 					});
 				}
 			}, 600);
