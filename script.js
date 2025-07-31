@@ -293,33 +293,33 @@
 
     extractPriceFromHTML(productKey) {
       try {
-        const productInfo = PRODUCT_MAP[productKey];
-        if (!productInfo) return PRICE_MAP[productKey] || 0;
+      const productInfo = PRODUCT_MAP[productKey];
+      if (!productInfo) return PRICE_MAP[productKey] || 0;
+      
+      const productId = productInfo.productId;
+      const variantId = productInfo.variantId;
+      
+      const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
+                         document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
+      
+      if (productForm) {
+        const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
         
-        const productId = productInfo.productId;
-        const variantId = productInfo.variantId;
-        
-        const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
-                           document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
-        
-        if (productForm) {
-          const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
+        if (priceElement) {
+          let priceText = priceElement.textContent || priceElement.innerHTML;
+          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
+          const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
           
-          if (priceElement) {
-            let priceText = priceElement.textContent || priceElement.innerHTML;
-            priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
-            const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
-            
-            if (priceMatch) {
-              const price = parseFloat(priceMatch[1].replace(',', '.'));
-              return price;
-            }
+          if (priceMatch) {
+            const price = parseFloat(priceMatch[1].replace(',', '.'));
+            return price;
           }
         }
-      } catch (error) {
       }
-      
-      return PRICE_MAP[productKey] || 0;
+    } catch (error) {
+    }
+    
+    return PRICE_MAP[productKey] || 0;
     }
 
     getPrice(productKey) {
@@ -493,9 +493,11 @@
       try {
         const gridImage = await this.captureGridVisualization(config);
         if (gridImage) {
-          const imgWidth = 80;
-          const imgHeight = 60;
-          pdf.addImage(gridImage, 'PNG', 20, yPosition, imgWidth, imgHeight);
+          const imgWidth = 120;  // Größeres Bild für bessere Sichtbarkeit
+          const imgHeight = 90;
+          // Horizontal zentrieren: (210mm - imgWidth) / 2
+          const centerX = (pageWidth - imgWidth) / 2;
+          pdf.addImage(gridImage, 'PNG', centerX, yPosition, imgWidth, imgHeight);
           yPosition += imgHeight + 10;
         }
       } catch (error) {
@@ -527,17 +529,19 @@
         tempContainer.style.backgroundColor = '#ffffff';
         document.body.appendChild(tempContainer);
 
-        // Erstelle Grid HTML mit inline Styles
-        const cellSize = 40; // Feste Größe für Screenshot
-        const cellGap = 2;
+        // Erstelle Grid HTML mit inline Styles (genau wie echtes Grid)
+        const cellSize = 50; // Größere Zellen für bessere Sichtbarkeit
+        const cellGap = 3;
         
         const gridEl = document.createElement('div');
         gridEl.style.display = 'grid';
         gridEl.style.gap = `${cellGap}px`;
         gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
         gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
-        gridEl.style.padding = '10px';
+        gridEl.style.padding = '15px';
         gridEl.style.backgroundColor = '#ffffff';
+        gridEl.style.border = '2px solid #d0d0d0';
+        gridEl.style.borderRadius = '8px';
 
         // Erstelle alle Grid-Zellen
         for (let y = 0; y < rows; y++) {
@@ -545,20 +549,26 @@
             const cell = document.createElement('div');
             const isSelected = selection[y] && selection[y][x];
             
-            // Inline Styles für Screenshot-Kompatibilität
+            // Basis-Styles für alle Zellen
             cell.style.width = `${cellSize}px`;
             cell.style.height = `${cellSize}px`;
-            cell.style.borderRadius = '6px';
-            cell.style.border = '2px solid #333333';
+            cell.style.borderRadius = '4px';
+            cell.style.position = 'relative';
+            cell.style.overflow = 'hidden';
             
             if (isSelected) {
-              // Ausgewählte Zelle - Solarmodul-Blau wie im echten Grid
-              cell.style.backgroundColor = '#4169E1';
-              cell.style.background = 'linear-gradient(45deg, #4169E1 25%, #5B7FE5 25%, #5B7FE5 50%, #4169E1 50%, #4169E1 75%, #5B7FE5 75%)';
-              cell.style.backgroundSize = '8px 8px';
+              // Ausgewählte Zelle - Solarmodul mit echtem Hintergrundbild
+              cell.style.backgroundColor = '#1e3a8a';
+              cell.style.backgroundImage = 'url("https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png")';
+              cell.style.backgroundSize = 'cover';
+              cell.style.backgroundPosition = 'center';
+              cell.style.backgroundRepeat = 'no-repeat';
+              cell.style.border = '2px solid #f59e0b'; // Goldener Rahmen wie im echten Grid
+              cell.style.boxShadow = 'inset 0 0 10px rgba(0,0,0,0.1)';
             } else {
-              // Nicht-ausgewählte Zelle
-              cell.style.backgroundColor = '#e0e0e0';
+              // Nicht-ausgewählte Zelle - hell-grau wie im echten Grid
+              cell.style.backgroundColor = '#f3f4f6';
+              cell.style.border = '2px solid #d1d5db';
             }
             
             gridEl.appendChild(cell);
@@ -567,9 +577,9 @@
         
         tempContainer.appendChild(gridEl);
 
-        // Warte auf Rendering
+        // Warte auf Rendering und Laden des Hintergrundbildes
         await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 800)); // Längere Wartezeit für Bild-Download
 
         // Screenshot von temporärem Element
         const canvas = await this.html2canvas(tempContainer, {
@@ -1575,8 +1585,8 @@
         const productKey = k.replace(/_/g, '');
         productQuantities[productKey] = v;
       });
-
-      return { 
+        
+        return {
         productQuantities,
         totalPrice 
       };
@@ -2415,29 +2425,29 @@
     async buildList() {
       try {
         const parts = await this.calculateParts();
-        if (!this.incM.checked) delete parts.Solarmodul;
-        if (this.mc4.checked) {
-          const panelCount = this.selection.flat().filter(v => v).length;
-          parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-        }
-        if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-        if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (!this.incM.checked) delete parts.Solarmodul;
+      if (this.mc4.checked) {
+        const panelCount = this.selection.flat().filter(v => v).length;
+        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      }
+      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
-        const entries = Object.entries(parts).filter(([,v]) => v > 0);
-        if (!entries.length) {
-          this.listHolder.style.display = 'none';
-          return;
-        }
-        this.listHolder.style.display = 'block';
-        this.prodList.innerHTML = entries.map(([k,v]) => {
-          const packs = Math.ceil(v / VE[k]);
-          return `<div class="produkt-item">
-            <span>${packs}×</span>
-            <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
-            <span>${k.replace(/_/g,' ')} (${v})</span>
-          </div>`;
-        }).join('');
-        this.prodList.style.display = 'block';
+      const entries = Object.entries(parts).filter(([,v]) => v > 0);
+      if (!entries.length) {
+        this.listHolder.style.display = 'none';
+        return;
+      }
+      this.listHolder.style.display = 'block';
+      this.prodList.innerHTML = entries.map(([k,v]) => {
+        const packs = Math.ceil(v / VE[k]);
+        return `<div class="produkt-item">
+          <span>${packs}×</span>
+          <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
+          <span>${k.replace(/_/g,' ')} (${v})</span>
+        </div>`;
+      }).join('');
+      this.prodList.style.display = 'block';
       } catch (error) {
         // Fallback: Verstecke Liste bei Fehler
         this.listHolder.style.display = 'none';
@@ -2460,10 +2470,10 @@
   		this.wIn.value = width;
   		this.hIn.value = height;
   		
-  				// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
-		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
-		this.orH.checked = !defaultVertical;
-		this.orV.checked = defaultVertical;
+  		// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
+  		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
+  		this.orH.checked = !defaultVertical;
+  		this.orV.checked = defaultVertical;
 
 		// Setze alle Checkboxen zurück für neue Konfiguration
 		this.incM.checked = false;
@@ -2471,8 +2481,8 @@
 		this.solarkabel.checked = false;
 		this.holz.checked = false;
 
-		this.cols = cols;
-		this.rows = rows;
+  		this.cols = cols;
+  		this.rows = rows;
 
   		// Aktualisiere alles ohne Checkboxen zu ändern
   		this.setup();
@@ -2926,10 +2936,10 @@
   		try {
   			const allParts = await Promise.all(calculations);
   			allParts.forEach(parts => {
-  				Object.entries(parts).forEach(([k, v]) => {
-      			total[k] = (total[k] || 0) + v;
-    			});
-  			});
+    		Object.entries(parts).forEach(([k, v]) => {
+      		total[k] = (total[k] || 0) + v;
+    		});
+  		});
   		} catch (error) {
   			// Fallback: Verwende leeres total
   		}
@@ -3147,22 +3157,22 @@
     async addCurrentToCart() {
       try {
         const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
-        const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
-        
-        if (itemCount === 0) {
-          this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
-          return;
+      const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
+      
+      if (itemCount === 0) {
+        this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
+        return;
+      }
+      
+      // Sende Daten an Webhook
+      this.sendCurrentConfigToWebhook().then(success => {
+        if (success) {
+        } else {
         }
-        
-        // Sende Daten an Webhook
-        this.sendCurrentConfigToWebhook().then(success => {
-          if (success) {
-          } else {
-          }
-        });
-        
-        this.addPartsListToCart(parts);
-        this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
+      });
+      
+      this.addPartsListToCart(parts);
+      this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
         
         // PDF für aktuelle Konfiguration generieren
         if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
@@ -3177,49 +3187,49 @@
 
     async addAllToCart() {
       try {
-        // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
-        if (this.currentConfig !== null) {
-          this.updateConfig();
-        }
-        
+      // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
+      if (this.currentConfig !== null) {
+        this.updateConfig();
+      }
+      
         const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
-          // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
-          if (idx === this.currentConfig) {
+        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+        if (idx === this.currentConfig) {
             return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
-          } else {
+        } else {
             return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
-          }
+        }
         }));
-        
-        // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
-        if (this.currentConfig === null && this.configs.length === 0) {
+      
+      // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
+      if (this.currentConfig === null && this.configs.length === 0) {
           const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
           allBundles.push(currentParts);
-        }
-        
-        const total = {};
-        allBundles.forEach(parts => {
-          Object.entries(parts).forEach(([k, v]) => {
-            total[k] = (total[k] || 0) + v;
-          });
+      }
+      
+      const total = {};
+      allBundles.forEach(parts => {
+        Object.entries(parts).forEach(([k, v]) => {
+          total[k] = (total[k] || 0) + v;
         });
-        
-        const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
-        
-        if (totalItemCount === 0) {
-          this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
-          return;
+      });
+      
+      const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
+      
+      if (totalItemCount === 0) {
+        this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
+        return;
+      }
+      
+      // Sende alle Konfigurationen an Webhook
+      this.sendAllConfigsToWebhook().then(success => {
+        if (success) {
+        } else {
         }
-        
-        // Sende alle Konfigurationen an Webhook
-        this.sendAllConfigsToWebhook().then(success => {
-          if (success) {
-          } else {
-          }
-        });
-        
-        this.addPartsListToCart(total);
-        this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
+      });
+      
+      this.addPartsListToCart(total);
+      this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
         
         // PDF für alle Konfigurationen generieren
         if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
@@ -3237,21 +3247,21 @@
       const originalSelection = this.selection.map(r => [...r]);
       
       try {
-        // Temporär setzen für Berechnung
-        this.selection = sel;
+      // Temporär setzen für Berechnung
+      this.selection = sel;
         let parts = await this.calculateParts();
-        if (!incM) delete parts.Solarmodul;
-        if (mc4) {
-          const panelCount = sel.flat().filter(v => v).length;
-          parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-        }
-        if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-        if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
-        
+      if (!incM) delete parts.Solarmodul;
+      if (mc4) {
+        const panelCount = sel.flat().filter(v => v).length;
+        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      }
+      if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
+      
         return parts;
       } finally {
-        // Ursprüngliche Auswahl wiederherstellen
-        this.selection = originalSelection;
+      // Ursprüngliche Auswahl wiederherstellen
+      this.selection = originalSelection;
       }
     }
 
