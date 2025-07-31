@@ -436,7 +436,9 @@
         // "3 reihen mit 5 modulen" oder "drei reihen 5 module"
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))/i,
         // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
-        spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i
+        spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
+        // Kombinierte Checkbox-Logik mit "und" Verknüpfungen
+        checkboxCombination: /(?:^|\s)(?:mit|und)\s+(.+?)(?:\s+und\s+(.+?))*(?:\s*$)/i
       };
     }
 
@@ -452,6 +454,59 @@
       }
       
       return parseInt(word) || 0;
+    }
+
+    // Hilfsfunktion: Parst Checkbox-Kombinationen mit "und" Verknüpfungen
+    parseCheckboxCombinations(input) {
+      const checkboxes = {
+        modules: false,
+        mc4: false,
+        cable: false,
+        wood: false
+      };
+
+      // Normalisiere Input für bessere Erkennung
+      const normalizedInput = input.toLowerCase()
+        .replace(/modulen?/g, 'module')
+        .replace(/solarkabeln?/g, 'solarkabel')
+        .replace(/holzunterlegern?/g, 'holzunterleger');
+
+      // Teile Input bei "und" oder "," auf und analysiere jeden Teil
+      let parts = normalizedInput.split(/\s*(?:und|,)\s*/);
+      
+      // Bereinige den ersten Teil, falls er mit "mit" beginnt
+      if (parts[0] && parts[0].includes('mit ')) {
+        parts[0] = parts[0].replace(/.*mit\s+/, '');
+      }
+      
+      // Entferne leere Teile
+      parts = parts.filter(part => part.trim().length > 0);
+
+      for (const part of parts) {
+        const trimmedPart = part.trim();
+        
+        // Prüfe auf Module (aber nicht wenn es Teil einer Reihen-Konfiguration ist)
+        if (/\bmodul[e]?[n]?\b/.test(trimmedPart) && !/\d+\s*modul/.test(trimmedPart) && !/reihen/.test(trimmedPart)) {
+          checkboxes.modules = true;
+        }
+        
+        // Prüfe auf MC4
+        if (/\bmc4\b/.test(trimmedPart)) {
+          checkboxes.mc4 = true;
+        }
+        
+        // Prüfe auf Kabel
+        if (/\b(?:kabel|solarkabel)\b/.test(trimmedPart)) {
+          checkboxes.cable = true;
+        }
+        
+        // Prüfe auf Holzunterleger
+        if (/\b(?:holz|holzunterleger)\b/.test(trimmedPart)) {
+          checkboxes.wood = true;
+        }
+      }
+
+      return checkboxes;
     }
 
     parseInput(input) {
@@ -527,26 +582,41 @@
                             orientationMatch[0].toLowerCase().includes('vertical') ? 'vertical' : 'horizontal';
       }
 
-      // Module-Checkbox parsen (getrennt von moduleCount)
-      const moduleCheckboxMatch = input.match(this.patterns.moduleCheckbox);
-      if (moduleCheckboxMatch) {
-        config.includeModules = moduleCheckboxMatch[0].toLowerCase().includes('mit');
-      }
+      // Checkbox-Kombinationen parsen (hat Priorität vor einzelnen Patterns)
+      const checkboxCombinations = this.parseCheckboxCombinations(input);
+      let hasCheckboxCombinations = Object.values(checkboxCombinations).some(value => value);
 
-      // Optionen parsen (nur wenn explizit erwähnt)
-      const mc4Match = input.match(this.patterns.mc4);
-      if (mc4Match) {
-        config.mc4 = mc4Match[0].toLowerCase().includes('mit');
-      }
+      if (hasCheckboxCombinations) {
+        console.log(`🔧 Checkbox-Kombinationen erkannt:`, checkboxCombinations);
+        
+        if (checkboxCombinations.modules) config.includeModules = true;
+        if (checkboxCombinations.mc4) config.mc4 = true;
+        if (checkboxCombinations.cable) config.cable = true;
+        if (checkboxCombinations.wood) config.wood = true;
+      } else {
+        // Fallback: Einzelne Checkbox-Patterns parsen
+        
+        // Module-Checkbox parsen (getrennt von moduleCount)
+        const moduleCheckboxMatch = input.match(this.patterns.moduleCheckbox);
+        if (moduleCheckboxMatch) {
+          config.includeModules = moduleCheckboxMatch[0].toLowerCase().includes('mit');
+        }
 
-      const cableMatch = input.match(this.patterns.cable);
-      if (cableMatch) {
-        config.cable = cableMatch[0].toLowerCase().includes('mit');
-      }
+        // Optionen parsen (nur wenn explizit erwähnt)
+        const mc4Match = input.match(this.patterns.mc4);
+        if (mc4Match) {
+          config.mc4 = mc4Match[0].toLowerCase().includes('mit');
+        }
 
-      const woodMatch = input.match(this.patterns.wood);
-      if (woodMatch) {
-        config.wood = woodMatch[0].toLowerCase().includes('mit');
+        const cableMatch = input.match(this.patterns.cable);
+        if (cableMatch) {
+          config.cable = cableMatch[0].toLowerCase().includes('mit');
+        }
+
+        const woodMatch = input.match(this.patterns.wood);
+        if (woodMatch) {
+          config.wood = woodMatch[0].toLowerCase().includes('mit');
+        }
       }
 
       return config;
