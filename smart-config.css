@@ -420,3 +420,61 @@
 .smart-config-container.hidden {
   display: none !important;
 }
+
+/* First Click Marker für Bulk Selection */
+.grid-cell.first-click-marker {
+  border: 3px solid #f5a623;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.4);
+  transform: scale(1.05);
+  z-index: 5;
+  position: relative;
+}
+
+.grid-cell.first-click-marker::after {
+  content: "1";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #f5a623;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(245, 166, 35, 0.3);
+}
+
+/* First Click Marker für Bulk Selection */
+.grid-cell.first-click-marker {
+  border: 3px solid #f5a623;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.4);
+  transform: scale(1.05);
+  z-index: 5;
+  position: relative;
+}
+
+.grid-cell.first-click-marker::after {
+  content: "1";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #f5a623;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(245, 166, 35, 0.3);
+}

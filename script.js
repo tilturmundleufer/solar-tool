@@ -888,6 +888,68 @@
       this.solarGrid = solarGrid;
       this.firstClick = null;
       this.isSelecting = false;
+      this.bulkMode = false; // Neuer Toggle-Modus für Shift
+      this.setupKeyListener();
+    }
+
+    setupKeyListener() {
+      // Globaler Keyboard-Listener für Shift-Toggle
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Shift' && !e.repeat) {
+          this.toggleBulkMode();
+        }
+      });
+    }
+
+    toggleBulkMode() {
+      this.bulkMode = !this.bulkMode;
+      
+      if (this.bulkMode) {
+        console.log('🔄 Bulk-Modus aktiviert - Klicke auf erste Zelle');
+        this.showBulkModeIndicator(true);
+        this.firstClick = null; // Reset bei Aktivierung
+      } else {
+        console.log('🔄 Bulk-Modus deaktiviert');
+        this.showBulkModeIndicator(false);
+        this.firstClick = null;
+        this.clearHighlight();
+      }
+    }
+
+    showBulkModeIndicator(active) {
+      // Entferne bestehende Indikatoren
+      document.querySelectorAll('.bulk-mode-indicator').forEach(el => el.remove());
+      
+      if (active) {
+        const indicator = document.createElement('div');
+        indicator.className = 'bulk-mode-indicator';
+        indicator.innerHTML = '🔄 Bulk-Modus aktiv - Klicke auf zwei Zellen um einen Bereich auszuwählen';
+        indicator.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #f5a623;
+          color: white;
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: bold;
+          z-index: 1000;
+          box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
+          animation: slideIn 0.3s ease;
+        `;
+        
+        // Animation hinzufügen
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(indicator);
+      }
     }
 
     initializeBulkSelection() {
@@ -921,21 +983,34 @@
         
         // Füge neue Event Listener hinzu
         newCell.addEventListener('click', (e) => {
-          if (e.shiftKey && this.firstClick) {
-            // Shift+Click: Bereich auswählen
-            this.selectRange(this.firstClick, { x, y });
-            this.firstClick = null;
+          if (this.bulkMode) {
+            // Bulk-Modus aktiv
+            if (!this.firstClick) {
+              // Erste Zelle markieren
+              this.firstClick = { x, y };
+              console.log(`📍 Erste Zelle markiert: ${x},${y}`);
+              newCell.classList.add('first-click-marker');
+            } else {
+              // Zweite Zelle: Bereich auswählen
+              console.log(`📍 Zweite Zelle: ${x},${y} - Wähle Bereich aus`);
+              this.selectRange(this.firstClick, { x, y });
+              
+              // Bulk-Modus deaktivieren nach Auswahl
+              this.bulkMode = false;
+              this.showBulkModeIndicator(false);
+              this.firstClick = null;
+              this.clearFirstClickMarker();
+            }
           } else {
-            // Normaler Click
+            // Normaler Click-Modus
             if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
             
             if (e.ctrlKey || e.metaKey) {
               // Ctrl+Click: Toggle ohne firstClick zu ändern
               this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
             } else {
-              // Normaler Click: Toggle und setze firstClick
+              // Normaler Click: Toggle
               this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
-              this.firstClick = { x, y };
             }
             
             newCell.classList.toggle('selected');
@@ -947,7 +1022,7 @@
 
         // Visuelle Feedback für Bereich-Auswahl
         newCell.addEventListener('mouseenter', (e) => {
-          if (e.shiftKey && this.firstClick) {
+          if (this.bulkMode && this.firstClick) {
             this.highlightRange(this.firstClick, { x, y });
           }
         });
@@ -1002,6 +1077,11 @@
     clearHighlight() {
       const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight');
       highlighted.forEach(cell => cell.classList.remove('bulk-highlight'));
+    }
+
+    clearFirstClickMarker() {
+      const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+      cells.forEach(cell => cell.classList.remove('first-click-marker'));
     }
   }
 
@@ -1983,13 +2063,19 @@
   		this.wIn.value = width;
   		this.hIn.value = height;
   		
-  		// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
-  		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
-  		this.orH.checked = !defaultVertical;
-  		this.orV.checked = defaultVertical;
+  				// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
+		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
+		this.orH.checked = !defaultVertical;
+		this.orV.checked = defaultVertical;
 
-  		this.cols = cols;
-  		this.rows = rows;
+		// Setze alle Checkboxen zurück für neue Konfiguration
+		this.incM.checked = false;
+		this.mc4.checked = false;
+		this.solarkabel.checked = false;
+		this.holz.checked = false;
+
+		this.cols = cols;
+		this.rows = rows;
 
   		// Aktualisiere alles ohne Checkboxen zu ändern
   		this.setup();
