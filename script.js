@@ -504,7 +504,7 @@
       }
 
       // Produkttabelle
-      yPosition = this.addProductTable(pdf, config, yPosition);
+      yPosition = await this.addProductTable(pdf, config, yPosition);
 
       // Produkte pro Modul Informationen
       yPosition = this.addProductPerModuleInfo(pdf, yPosition);
@@ -558,14 +558,14 @@
     }
 
     // Füge Produkttabelle zum PDF hinzu
-    addProductTable(pdf, config, yPosition) {
+    async addProductTable(pdf, config, yPosition) {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Benötigte Produkte:', 20, yPosition);
       yPosition += 10;
 
       // Berechne Teile für diese Konfiguration
-      const parts = this.calculateConfigParts(config);
+      const parts = await this.calculateConfigParts(config);
       
       if (!parts || Object.keys(parts).length === 0) {
         pdf.setFontSize(10);
@@ -654,57 +654,45 @@
     }
 
     // Berechne Teile für eine spezifische Konfiguration
-    calculateConfigParts(config) {
+    async calculateConfigParts(config) {
       if (!config.selection || !config.cols || !config.rows) {
         return {};
       }
 
-      // Verwende die gleiche Logik wie im SolarGrid
-      const parts = {
-        Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
-        Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-        Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
-      };
-
-      const cellWidth = 176; // Standard-Zellbreite
-      const cellHeight = 113; // Standard-Zellhöhe
-      const orientation = config.orientation || 'horizontal';
-
-      // Berechne Teile pro Reihe
-      for (let y = 0; y < config.rows; y++) {
-        if (!Array.isArray(config.selection[y])) continue;
-        let run = 0;
-
-        for (let x = 0; x < config.cols; x++) {
-          if (config.selection[y]?.[x]) run++;
-          else if (run) { 
-            this.processGroup(run, parts, cellWidth, cellHeight, orientation); 
-            run = 0; 
-          }
+      // Verwende die gleiche Logik wie _buildPartsFor für Konsistenz
+      const originalSelection = this.solarGrid.selection.map(r => [...r]);
+      
+      try {
+        // Temporär die Konfiguration setzen
+        this.solarGrid.selection = config.selection;
+        
+        // Berechne alle strukturellen Teile
+        let parts = await this.solarGrid.calculateParts();
+        
+        // Entferne Module wenn nicht ausgewählt
+        if (!config.includeModules) {
+          delete parts.Solarmodul;
         }
-        if (run) this.processGroup(run, parts, cellWidth, cellHeight, orientation);
-      }
+        
+        // Füge optionale Komponenten nur hinzu wenn ausgewählt
+        if (config.mc4) {
+          const moduleCount = config.selection.flat().filter(v => v).length;
+          parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+        }
+        
+        if (config.cable) {
+          parts.Solarkabel = 1;
+        }
+        
+        if (config.wood) {
+          parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+        }
 
-      // Füge optionale Komponenten hinzu
-      const moduleCount = config.selection.flat().filter(v => v).length;
-      
-      if (config.includeModules !== false) {
-        parts.Solarmodul = moduleCount;
+        return parts;
+      } finally {
+        // Ursprüngliche Auswahl wiederherstellen
+        this.solarGrid.selection = originalSelection;
       }
-      
-      if (config.mc4) {
-        parts.MC4_Stecker = Math.ceil(moduleCount / 30);
-      }
-      
-      if (config.cable) {
-        parts.Solarkabel = 1;
-      }
-      
-      if (config.wood) {
-        parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
-      }
-
-      return parts;
     }
 
     // Hilfsfunktion für Gruppenverarbeitung (aus CalculationManager übernommen)
