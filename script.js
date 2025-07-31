@@ -113,7 +113,7 @@
     }
 
     calculatePartsSync(data) {
-      // Vereinfachte synchrone Version der Berechnung
+      // Korrekte Berechnung mit Schienenlogik (wie in der ursprünglichen processGroup Methode)
       const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
       const parts = {
         Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
@@ -121,18 +121,61 @@
         Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
       };
 
-      // Vereinfachte Berechnung - kann durch komplexere Logik ersetzt werden
-      const selectedCells = selection.flat().filter(v => v).length;
-      if (selectedCells > 0) {
-        parts.Solarmodul = selectedCells;
-        parts.Endklemmen = selectedCells * 2;
-        parts.Mittelklemmen = Math.max(0, selectedCells - 1) * 2;
-        parts.Dachhaken = selectedCells * 3;
-        parts.Schrauben = parts.Dachhaken * 2;
-        parts.Endkappen = parts.Endklemmen;
+      // Verwende die korrekte Schienenlogik
+      for (let y = 0; y < rows; y++) {
+        if (!Array.isArray(selection[y])) continue;
+        let run = 0;
+
+        for (let x = 0; x < cols; x++) {
+          if (selection[y]?.[x]) run++;
+          else if (run) { 
+            this.processGroupSync(run, parts, cellWidth, cellHeight, orientation); 
+            run = 0; 
+          }
+        }
+        if (run) this.processGroupSync(run, parts, cellWidth, cellHeight, orientation);
       }
 
       return parts;
+    }
+
+    processGroupSync(len, parts, cellWidth, cellHeight, orientation) {
+      // Verwende die tatsächliche Zellbreite basierend auf Orientierung
+      const isVertical = orientation === 'vertical';
+      const actualCellWidth = isVertical ? cellHeight : cellWidth;
+      
+      const totalLen = len * actualCellWidth;
+      const floor360 = Math.floor(totalLen / 360);
+      const rem360 = totalLen - floor360 * 360;
+      const floor240 = Math.ceil(rem360 / 240);
+      const pure360 = Math.ceil(totalLen / 360);
+      const pure240 = Math.ceil(totalLen / 240);
+      
+      const variants = [
+        {cnt360: floor360, cnt240: floor240},
+        {cnt360: pure360,  cnt240: 0},
+        {cnt360: 0,        cnt240: pure240}
+      ].map(v => ({
+        ...v,
+        rails: v.cnt360 + v.cnt240,
+        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+      }));
+      
+      const minRails = Math.min(...variants.map(v => v.rails));
+      const best = variants
+        .filter(v => v.rails === minRails)
+        .reduce((a, b) => a.waste <= b.waste ? a : b);
+      
+      const {cnt360, cnt240} = best;
+      parts.Schiene_360_cm     += cnt360 * 2;
+      parts.Schiene_240_cm     += cnt240 * 2;
+      parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+      parts.Endklemmen         += 4;
+      parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+      parts.Dachhaken          += len > 1 ? len * 3 : 4;
+      parts.Endkappen          += parts.Endklemmen;
+      parts.Solarmodul         += len;
+      parts.Schrauben          += parts.Dachhaken * 2;
     }
 
     calculateExtendedPartsSync(data) {
@@ -324,7 +367,22 @@
     }
   }
 
-  // Globale Price Cache Instanz
+  const PRODUCT_MAP = {
+    Solarmodul:        { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
+    Endklemmen:        { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
+    Schrauben:         { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
+    Dachhaken:         { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
+    Mittelklemmen:     { productId:'68531088654d1468dca962c', variantId:'6853c1084c04541622ba3e26' },
+    Endkappen:         { productId:'6853be0895a5a578324f9682', variantId:'6853be0805e96b5a16c705cd' },
+    Schienenverbinder: { productId:'6853c2018bf6755ddde216a8', variantId:'6853c202c488ee61eb51a3dc' },
+    Schiene_240_cm:    { productId:'6853bd882f00db0c9a42d653', variantId:'6853bd88c4173dbe72bab10f' },
+    Schiene_360_cm:    { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
+    MC4_Stecker:       { productId:'687fcc9f66078f7098826ccc', variantId:'687fcca02c6537b9a9493fa7' },
+    Solarkabel:        { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
+    Holzunterleger:    { productId:'xxx-holz', variantId:'xxx-holz-v' }
+  };
+
+  // Globale Price Cache Instanz (nach PRODUCT_MAP Definition)
   const priceCache = new PriceCache();
 
   // Debug-Funktionen für Price Cache (nur für Entwicklung)
@@ -355,21 +413,6 @@
   function getPriceFromHTML(productKey) {
     return getPriceFromCache(productKey);
   }
-
-  const PRODUCT_MAP = {
-    Solarmodul:        { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
-    Endklemmen:        { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
-    Schrauben:         { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
-    Dachhaken:         { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
-    Mittelklemmen:     { productId:'68531088654d1468dca962c', variantId:'6853c1084c04541622ba3e26' },
-    Endkappen:         { productId:'6853be0895a5a578324f9682', variantId:'6853be0805e96b5a16c705cd' },
-    Schienenverbinder: { productId:'6853c2018bf6755ddde216a8', variantId:'6853c202c488ee61eb51a3dc' },
-    Schiene_240_cm:    { productId:'6853bd882f00db0c9a42d653', variantId:'6853bd88c4173dbe72bab10f' },
-    Schiene_360_cm:    { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
-    MC4_Stecker:       { productId:'687fcc9f66078f7098826ccc', variantId:'687fcca02c6537b9a9493fa7' },
-    Solarkabel:        { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
-    Holzunterleger:    { productId:'xxx-holz', variantId:'xxx-holz-v' }
-  };
 
   class SolarGrid {
     constructor() {
