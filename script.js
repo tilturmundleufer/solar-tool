@@ -524,6 +524,9 @@
         this.solarGrid.rows = config.rows || 5;
         this.solarGrid.updateGrid();
 
+        // Warte kurz damit das Grid gerendert wird
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Erfasse das Grid
         const gridElement = document.getElementById('grid');
         if (!gridElement) return null;
@@ -532,7 +535,9 @@
           backgroundColor: '#ffffff',
           scale: 2,
           logging: false,
-          useCORS: true
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: true
         });
 
         return canvas.toDataURL('image/png');
@@ -546,6 +551,9 @@
         this.solarGrid.cols = currentCols;
         this.solarGrid.rows = currentRows;
         this.solarGrid.updateGrid();
+        
+        // Warte kurz damit das ursprüngliche Grid gerendert wird
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
 
@@ -604,7 +612,7 @@
 
       // Gesamtpreis
       yPosition += 5;
-      pdf.line(150, yPosition - 2, 200, yPosition - 2);
+      pdf.line(150, yPosition - 5, 200, yPosition - 5);
       pdf.setFont('helvetica', 'bold');
       pdf.text(`Gesamtpreis: ${totalPrice.toFixed(2)} €`, 150, yPosition);
       yPosition += 15;
