@@ -512,60 +512,84 @@
 
     // Erfasse Grid-Visualisierung als Bild
     async captureGridVisualization(config) {
-      // Temporär die Konfiguration laden
-      const currentSelection = this.solarGrid.selection;
-      const currentCols = this.solarGrid.cols;
-      const currentRows = this.solarGrid.rows;
-
+      // Alternative Methode: Erstelle temporäres Grid-Element für Screenshot
       try {
-        // Setze temporär die zu erfassende Konfiguration
-        this.solarGrid.selection = config.selection || [];
-        this.solarGrid.cols = config.cols || 5;
-        this.solarGrid.rows = config.rows || 5;
+        const selection = config.selection || [];
+        const cols = config.cols || 5;
+        const rows = config.rows || 5;
         
-        // Aktualisiere Grid-Größe und baue Grid auf
-        this.solarGrid.updateSize();
-        this.solarGrid.buildGrid();
+        // Erstelle temporäres Container Element
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-10000px';
+        tempContainer.style.top = '-10000px';
+        tempContainer.style.padding = '20px';
+        tempContainer.style.backgroundColor = '#ffffff';
+        document.body.appendChild(tempContainer);
 
-        // Warte auf DOM-Updates und Animation-Completion
+        // Erstelle Grid HTML mit inline Styles
+        const cellSize = 40; // Feste Größe für Screenshot
+        const cellGap = 2;
+        
+        const gridEl = document.createElement('div');
+        gridEl.style.display = 'grid';
+        gridEl.style.gap = `${cellGap}px`;
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+        gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+        gridEl.style.padding = '10px';
+        gridEl.style.backgroundColor = '#ffffff';
+
+        // Erstelle alle Grid-Zellen
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const cell = document.createElement('div');
+            const isSelected = selection[y] && selection[y][x];
+            
+            // Inline Styles für Screenshot-Kompatibilität
+            cell.style.width = `${cellSize}px`;
+            cell.style.height = `${cellSize}px`;
+            cell.style.borderRadius = '6px';
+            cell.style.border = '2px solid #333333';
+            
+            if (isSelected) {
+              // Ausgewählte Zelle - Solarmodul-Blau wie im echten Grid
+              cell.style.backgroundColor = '#4169E1';
+              cell.style.background = 'linear-gradient(45deg, #4169E1 25%, #5B7FE5 25%, #5B7FE5 50%, #4169E1 50%, #4169E1 75%, #5B7FE5 75%)';
+              cell.style.backgroundSize = '8px 8px';
+            } else {
+              // Nicht-ausgewählte Zelle
+              cell.style.backgroundColor = '#e0e0e0';
+            }
+            
+            gridEl.appendChild(cell);
+          }
+        }
+        
+        tempContainer.appendChild(gridEl);
+
+        // Warte auf Rendering
         await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Erfasse das Grid
-        const gridElement = document.getElementById('grid');
-        if (!gridElement) return null;
-
-        const canvas = await this.html2canvas(gridElement, {
+        // Screenshot von temporärem Element
+        const canvas = await this.html2canvas(tempContainer, {
           backgroundColor: '#ffffff',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
-          foreignObjectRendering: true,
-          width: gridElement.offsetWidth,
-          height: gridElement.offsetHeight,
-          scrollX: 0,
-          scrollY: 0
+          width: tempContainer.offsetWidth,
+          height: tempContainer.offsetHeight
         });
 
+        // Aufräumen
+        document.body.removeChild(tempContainer);
+        
         return canvas.toDataURL('image/png');
 
       } catch (error) {
-        console.warn('Grid-Erfassung fehlgeschlagen:', error);
+        console.warn('Grid-Screenshot fehlgeschlagen:', error);
         return null;
-      } finally {
-        // Stelle ursprüngliche Konfiguration wieder her
-        this.solarGrid.selection = currentSelection;
-        this.solarGrid.cols = currentCols;
-        this.solarGrid.rows = currentRows;
-        
-        // Komplette Wiederherstellung mit Größenaktualisierung
-        this.solarGrid.updateSize();
-        this.solarGrid.buildGrid();
-        
-        // Warte auf vollständige Wiederherstellung
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
