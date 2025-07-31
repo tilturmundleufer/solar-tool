@@ -529,19 +529,19 @@
         tempContainer.style.backgroundColor = '#ffffff';
         document.body.appendChild(tempContainer);
 
-        // Erstelle Grid HTML mit inline Styles (genau wie echtes Grid)
-        const cellSize = 50; // Größere Zellen für bessere Sichtbarkeit
-        const cellGap = 3;
+        // Erstelle Grid HTML mit kompaktem Design
+        const cellSize = 50; // Zellgröße beibehalten
+        const cellGap = 2; // Maximal 2px Abstand
         
         const gridEl = document.createElement('div');
         gridEl.style.display = 'grid';
         gridEl.style.gap = `${cellGap}px`;
         gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
         gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
-        gridEl.style.padding = '15px';
+        gridEl.style.padding = '2px'; // Kompakter äußerer Abstand
         gridEl.style.backgroundColor = '#ffffff';
-        gridEl.style.border = '2px solid #d0d0d0';
-        gridEl.style.borderRadius = '8px';
+        gridEl.style.border = '1px solid #000000'; // 1px schwarze Border
+        gridEl.style.borderRadius = '1rem'; // 1rem border-radius
 
         // Erstelle alle Grid-Zellen
         for (let y = 0; y < rows; y++) {
@@ -552,23 +552,15 @@
             // Basis-Styles für alle Zellen
             cell.style.width = `${cellSize}px`;
             cell.style.height = `${cellSize}px`;
-            cell.style.borderRadius = '4px';
-            cell.style.position = 'relative';
-            cell.style.overflow = 'hidden';
+            cell.style.borderRadius = '1rem'; // 1rem border-radius
+            cell.style.border = '1px solid #000000'; // 1px schwarze Border
             
             if (isSelected) {
-              // Ausgewählte Zelle - Solarmodul mit echtem Hintergrundbild
-              cell.style.backgroundColor = '#1e3a8a';
-              cell.style.backgroundImage = 'url("https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png")';
-              cell.style.backgroundSize = 'cover';
-              cell.style.backgroundPosition = 'center';
-              cell.style.backgroundRepeat = 'no-repeat';
-              cell.style.border = '2px solid #f59e0b'; // Goldener Rahmen wie im echten Grid
-              cell.style.boxShadow = 'inset 0 0 10px rgba(0,0,0,0.1)';
+              // Ausgewählte Zelle - Dunkelblaue Farbe
+              cell.style.backgroundColor = '#072544';
             } else {
-              // Nicht-ausgewählte Zelle - hell-grau wie im echten Grid
+              // Nicht-ausgewählte Zelle - hell-grau
               cell.style.backgroundColor = '#f3f4f6';
-              cell.style.border = '2px solid #d1d5db';
             }
             
             gridEl.appendChild(cell);
@@ -577,9 +569,9 @@
         
         tempContainer.appendChild(gridEl);
 
-        // Warte auf Rendering und Laden des Hintergrundbildes
+        // Warte auf Rendering
         await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => setTimeout(resolve, 800)); // Längere Wartezeit für Bild-Download
+        await new Promise(resolve => setTimeout(resolve, 100)); // Kurze Wartezeit, kein Bild-Download nötig
 
         // Screenshot von temporärem Element
         const canvas = await this.html2canvas(tempContainer, {
