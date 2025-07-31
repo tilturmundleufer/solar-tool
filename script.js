@@ -444,10 +444,10 @@
     // Hilfsfunktion: Parst Checkbox-Kombinationen mit "und" Verknüpfungen
     parseCheckboxCombinations(input) {
       const checkboxes = {
-        modules: false,
-        mc4: false,
-        cable: false,
-        wood: false
+        modules: null,  // null = nicht erkannt, true = mit, false = ohne
+        mc4: null,
+        cable: null,
+        wood: null
       };
 
       // Normalisiere Input für bessere Erkennung
@@ -459,9 +459,9 @@
       // Teile Input bei "und" oder "," auf und analysiere jeden Teil
       let parts = normalizedInput.split(/\s*(?:und|,)\s*/);
       
-      // Bereinige den ersten Teil, falls er mit "mit" beginnt
-      if (parts[0] && parts[0].includes('mit ')) {
-        parts[0] = parts[0].replace(/.*mit\s+/, '');
+      // Bereinige den ersten Teil, falls er mit "mit" oder "ohne" beginnt
+      if (parts[0] && (parts[0].includes('mit ') || parts[0].includes('ohne '))) {
+        parts[0] = parts[0].replace(/.*(?:mit|ohne)\s+/, '');
       }
       
       // Entferne leere Teile
@@ -472,22 +472,39 @@
         
         // Prüfe auf Module (aber nicht wenn es Teil einer Reihen-Konfiguration ist)
         if (/\bmodul[e]?[n]?\b/.test(trimmedPart) && !/\d+\s*modul/.test(trimmedPart) && !/reihen/.test(trimmedPart)) {
-          checkboxes.modules = true;
+          // Prüfe ob "ohne" davor steht (auch im ursprünglichen Input)
+          if (/\bohne\s+modul[e]?[n]?\b/.test(trimmedPart) || /\bohne\s+modul[e]?[n]?\b/.test(input.toLowerCase())) {
+            checkboxes.modules = false;
+          } else {
+            checkboxes.modules = true;
+          }
         }
         
         // Prüfe auf MC4
         if (/\bmc4\b/.test(trimmedPart)) {
-          checkboxes.mc4 = true;
+          if (/\bohne\s+mc4\b/.test(trimmedPart) || /\bohne\s+mc4\b/.test(input.toLowerCase())) {
+            checkboxes.mc4 = false;
+          } else {
+            checkboxes.mc4 = true;
+          }
         }
         
         // Prüfe auf Kabel
         if (/\b(?:kabel|solarkabel)\b/.test(trimmedPart)) {
-          checkboxes.cable = true;
+          if (/\bohne\s+(?:kabel|solarkabel)\b/.test(trimmedPart) || /\bohne\s+(?:kabel|solarkabel)\b/.test(input.toLowerCase())) {
+            checkboxes.cable = false;
+          } else {
+            checkboxes.cable = true;
+          }
         }
         
         // Prüfe auf Holzunterleger
         if (/\b(?:holz|holzunterleger)\b/.test(trimmedPart)) {
-          checkboxes.wood = true;
+          if (/\bohne\s+(?:holz|holzunterleger)\b/.test(trimmedPart) || /\bohne\s+(?:holz|holzunterleger)\b/.test(input.toLowerCase())) {
+            checkboxes.wood = false;
+          } else {
+            checkboxes.wood = true;
+          }
         }
       }
 
@@ -577,14 +594,14 @@
 
       // Checkbox-Kombinationen parsen (hat Priorität vor einzelnen Patterns)
       const checkboxCombinations = this.parseCheckboxCombinations(input);
-      let hasCheckboxCombinations = Object.values(checkboxCombinations).some(value => value);
+      let hasCheckboxCombinations = Object.values(checkboxCombinations).some(value => value !== null);
 
       if (hasCheckboxCombinations) {
-        
-        if (checkboxCombinations.modules) config.includeModules = true;
-        if (checkboxCombinations.mc4) config.mc4 = true;
-        if (checkboxCombinations.cable) config.cable = true;
-        if (checkboxCombinations.wood) config.wood = true;
+        // Setze nur die Werte, die explizit erkannt wurden (nicht null)
+        if (checkboxCombinations.modules !== null) config.includeModules = checkboxCombinations.modules;
+        if (checkboxCombinations.mc4 !== null) config.mc4 = checkboxCombinations.mc4;
+        if (checkboxCombinations.cable !== null) config.cable = checkboxCombinations.cable;
+        if (checkboxCombinations.wood !== null) config.wood = checkboxCombinations.wood;
       } else {
         // Fallback: Einzelne Checkbox-Patterns parsen
         
