@@ -30,56 +30,330 @@
   	Holzunterleger: 0.5
 	};
 
-  // Funktion um Preise dynamisch aus HTML zu lesen
-  function getPriceFromHTML(productKey) {
-    try {
-      // Mögliche Produkt-IDs basierend auf PRODUCT_MAP
-      const productInfo = PRODUCT_MAP[productKey];
-      if (!productInfo) return PRICE_MAP[productKey] || 0;
+  // ===== BACKGROUND CALCULATION MANAGER =====
+  class CalculationManager {
+    constructor() {
+      this.worker = null;
+      this.pendingCalculations = new Map();
+      this.calculationId = 0;
+      this.isWorkerReady = false;
       
-      const productId = productInfo.productId;
-      const variantId = productInfo.variantId;
-      
-      // Suche nach dem Form-Element mit der entsprechenden product-id oder sku-id
-      const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
-                         document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
-      
-      if (productForm) {
-        // Suche nach dem Preis-Element innerhalb des Forms
-        const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
+      this.initWorker();
+    }
+
+    initWorker() {
+      try {
+        this.worker = new Worker('./calculation-worker.js');
         
-        if (priceElement) {
-          // Hole den Text-Inhalt und bereinige ihn
-          let priceText = priceElement.textContent || priceElement.innerHTML;
+        this.worker.onmessage = (e) => {
+          const { type, id, data, error } = e.data;
           
-          // Ersetze &nbsp; und andere HTML-Entities
-          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
-          
-          // Extrahiere Preis (Format: €9,99 EUR, €99,00, 99.50 etc.)
-          // Suche nach Zahlen mit Komma oder Punkt als Dezimaltrennzeichen
-          const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
-          
-          if (priceMatch) {
-            const price = parseFloat(priceMatch[1].replace(',', '.'));
-            console.log(`✅ Preis für ${productKey} aus HTML gelesen: ${price}€ (Original: "${priceText.trim()}")`);
-            return price;
-          } else {
-            console.warn(`❌ Preis-Format nicht erkannt für ${productKey}: "${priceText.trim()}"`);
+          if (type === 'ready') {
+            this.isWorkerReady = true;
+            console.log('🚀 Calculation Worker bereit');
+            return;
           }
-        } else {
-          console.warn(`❌ Kein Preis-Element gefunden für ${productKey} in Form`);
-        }
-      } else {
-        console.warn(`❌ Kein Product-Form gefunden für ${productKey} (ProductID: ${productId}, VariantID: ${variantId})`);
+          
+          if (type === 'result' && this.pendingCalculations.has(id)) {
+            const { resolve } = this.pendingCalculations.get(id);
+            this.pendingCalculations.delete(id);
+            resolve(data);
+          }
+          
+          if (type === 'error' && this.pendingCalculations.has(id)) {
+            const { reject } = this.pendingCalculations.get(id);
+            this.pendingCalculations.delete(id);
+            reject(new Error(error.message));
+          }
+        };
+        
+        this.worker.onerror = (error) => {
+          console.error('❌ Worker Error:', error);
+          this.isWorkerReady = false;
+        };
+        
+      } catch (error) {
+        console.warn('⚠️ Web Worker nicht verfügbar, verwende Fallback-Berechnungen');
+        this.isWorkerReady = false;
+      }
+    }
+
+    async calculate(type, data) {
+      if (!this.isWorkerReady || !this.worker) {
+        // Fallback: Synchrone Berechnung im Main Thread
+        return this.calculateSync(type, data);
+      }
+
+      return new Promise((resolve, reject) => {
+        const id = ++this.calculationId;
+        this.pendingCalculations.set(id, { resolve, reject });
+        
+        // Timeout für Berechnungen
+        setTimeout(() => {
+          if (this.pendingCalculations.has(id)) {
+            this.pendingCalculations.delete(id);
+            reject(new Error('Calculation timeout'));
+          }
+        }, 10000); // 10 Sekunden Timeout
+        
+        this.worker.postMessage({ type, data, id });
+      });
+    }
+
+    // Fallback-Berechnungen für den Fall, dass Web Worker nicht verfügbar ist
+    calculateSync(type, data) {
+      switch (type) {
+        case 'calculateParts':
+          return this.calculatePartsSync(data);
+        case 'calculateExtendedParts':
+          return this.calculateExtendedPartsSync(data);
+        default:
+          throw new Error(`Unsupported sync calculation: ${type}`);
+      }
+    }
+
+    calculatePartsSync(data) {
+      // Vereinfachte synchrone Version der Berechnung
+      const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
+      const parts = {
+        Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+        Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+        Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+      };
+
+      // Vereinfachte Berechnung - kann durch komplexere Logik ersetzt werden
+      const selectedCells = selection.flat().filter(v => v).length;
+      if (selectedCells > 0) {
+        parts.Solarmodul = selectedCells;
+        parts.Endklemmen = selectedCells * 2;
+        parts.Mittelklemmen = Math.max(0, selectedCells - 1) * 2;
+        parts.Dachhaken = selectedCells * 3;
+        parts.Schrauben = parts.Dachhaken * 2;
+        parts.Endkappen = parts.Endklemmen;
+      }
+
+      return parts;
+    }
+
+    calculateExtendedPartsSync(data) {
+      let parts = this.calculatePartsSync(data);
+      const { options } = data;
+      
+      if (!options.includeModules) {
+        delete parts.Solarmodul;
       }
       
-      console.log(`⚠️ Fallback-Preis für ${productKey}: ${PRICE_MAP[productKey]}€`);
-    } catch (error) {
-      console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
+      if (options.mc4Connectors) {
+        const panelCount = data.selection.flat().filter(v => v).length;
+        parts.MC4_Stecker = Math.ceil(panelCount / 30);
+      }
+      
+      if (options.solarkabel) {
+        parts.Solarkabel = 1;
+      }
+      
+      if (options.woodUnderlay) {
+        parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      }
+      
+      return parts;
     }
-    
-    // Fallback auf hardcoded Preis
-    return PRICE_MAP[productKey] || 0;
+
+    destroy() {
+      if (this.worker) {
+        this.worker.terminate();
+        this.worker = null;
+      }
+      this.pendingCalculations.clear();
+      this.isWorkerReady = false;
+    }
+  }
+
+  // Globale Calculation Manager Instanz
+  const calculationManager = new CalculationManager();
+
+  // ===== PRICE CACHING SYSTEM =====
+  class PriceCache {
+    constructor() {
+      this.cache = new Map();
+      this.lastUpdate = null;
+      this.cacheKey = 'solarTool_priceCache';
+      this.timestampKey = 'solarTool_priceTimestamp';
+      this.cacheDuration = 24 * 60 * 60 * 1000; // 24 Stunden in Millisekunden
+      this.isUpdating = false;
+      
+      this.loadFromStorage();
+      this.scheduleNextUpdate();
+    }
+
+    loadFromStorage() {
+      try {
+        const cachedData = localStorage.getItem(this.cacheKey);
+        const timestamp = localStorage.getItem(this.timestampKey);
+        
+        if (cachedData && timestamp) {
+          const parsedData = JSON.parse(cachedData);
+          this.lastUpdate = parseInt(timestamp, 10);
+          
+          // Prüfe ob Cache noch gültig ist
+          if (Date.now() - this.lastUpdate < this.cacheDuration) {
+            this.cache = new Map(Object.entries(parsedData));
+            console.log('✅ Preise aus Cache geladen:', this.cache.size, 'Produkte');
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Fehler beim Laden des Price-Cache:', error);
+      }
+      
+      // Cache ist ungültig oder nicht vorhanden - lade Preise neu
+      this.updatePricesFromHTML();
+    }
+
+    saveToStorage() {
+      try {
+        const cacheObject = Object.fromEntries(this.cache);
+        localStorage.setItem(this.cacheKey, JSON.stringify(cacheObject));
+        localStorage.setItem(this.timestampKey, this.lastUpdate.toString());
+        console.log('💾 Preise im Cache gespeichert');
+      } catch (error) {
+        console.warn('⚠️ Fehler beim Speichern des Price-Cache:', error);
+      }
+    }
+
+    async updatePricesFromHTML() {
+      if (this.isUpdating) return;
+      
+      this.isUpdating = true;
+      console.log('🔄 Aktualisiere Preise aus HTML...');
+      
+      const promises = Object.keys(PRODUCT_MAP).map(async (productKey) => {
+        const price = await this.getPriceFromHTMLAsync(productKey);
+        this.cache.set(productKey, price);
+        return { productKey, price };
+      });
+
+      try {
+        const results = await Promise.all(promises);
+        this.lastUpdate = Date.now();
+        this.saveToStorage();
+        
+        console.log('✅ Preise aktualisiert:', results.length, 'Produkte');
+        results.forEach(({ productKey, price }) => {
+          console.log(`  ${productKey}: ${price}€`);
+        });
+      } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren der Preise:', error);
+      } finally {
+        this.isUpdating = false;
+      }
+    }
+
+    async getPriceFromHTMLAsync(productKey) {
+      return new Promise((resolve) => {
+        // Verwende setTimeout um DOM-Zugriffe nicht zu blockieren
+        setTimeout(() => {
+          const price = this.extractPriceFromHTML(productKey);
+          resolve(price);
+        }, 0);
+      });
+    }
+
+    extractPriceFromHTML(productKey) {
+      try {
+        const productInfo = PRODUCT_MAP[productKey];
+        if (!productInfo) return PRICE_MAP[productKey] || 0;
+        
+        const productId = productInfo.productId;
+        const variantId = productInfo.variantId;
+        
+        const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
+                           document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
+        
+        if (productForm) {
+          const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
+          
+          if (priceElement) {
+            let priceText = priceElement.textContent || priceElement.innerHTML;
+            priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
+            const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
+            
+            if (priceMatch) {
+              const price = parseFloat(priceMatch[1].replace(',', '.'));
+              return price;
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
+      }
+      
+      return PRICE_MAP[productKey] || 0;
+    }
+
+    getPrice(productKey) {
+      if (this.cache.has(productKey)) {
+        return this.cache.get(productKey);
+      }
+      
+      // Fallback auf hardcoded Preis wenn nicht im Cache
+      const fallbackPrice = PRICE_MAP[productKey] || 0;
+      console.warn(`⚠️ Preis für ${productKey} nicht im Cache, verwende Fallback: ${fallbackPrice}€`);
+      return fallbackPrice;
+    }
+
+    scheduleNextUpdate() {
+      // Berechne Zeit bis zum nächsten Update
+      const nextUpdate = this.lastUpdate ? 
+        this.lastUpdate + this.cacheDuration : 
+        Date.now() + this.cacheDuration;
+      
+      const timeUntilUpdate = Math.max(0, nextUpdate - Date.now());
+      
+      setTimeout(() => {
+        this.updatePricesFromHTML();
+        this.scheduleNextUpdate(); // Plane nächstes Update
+      }, timeUntilUpdate);
+      
+      console.log(`⏰ Nächstes Preis-Update in ${Math.round(timeUntilUpdate / (1000 * 60 * 60))} Stunden`);
+    }
+
+    // Manuelle Aktualisierung für Debugging
+    forceUpdate() {
+      return this.updatePricesFromHTML();
+    }
+  }
+
+  // Globale Price Cache Instanz
+  const priceCache = new PriceCache();
+
+  // Debug-Funktionen für Price Cache (nur für Entwicklung)
+  window.debugPriceCache = {
+    forceUpdate: () => priceCache.forceUpdate(),
+    getCache: () => Object.fromEntries(priceCache.cache),
+    getCacheAge: () => {
+      if (!priceCache.lastUpdate) return 'Nie aktualisiert';
+      const ageMs = Date.now() - priceCache.lastUpdate;
+      const ageHours = Math.round(ageMs / (1000 * 60 * 60));
+      return `${ageHours} Stunden alt`;
+    },
+    clearCache: () => {
+      localStorage.removeItem(priceCache.cacheKey);
+      localStorage.removeItem(priceCache.timestampKey);
+      priceCache.cache.clear();
+      priceCache.lastUpdate = null;
+      console.log('💾 Price Cache geleert');
+    }
+  };
+
+  // Funktion um Preise aus Cache zu lesen (ersetzt getPriceFromHTML)
+  function getPriceFromCache(productKey) {
+    return priceCache.getPrice(productKey);
+  }
+
+  // Legacy-Funktion für Rückwärtskompatibilität
+  function getPriceFromHTML(productKey) {
+    return getPriceFromCache(productKey);
   }
 
   const PRODUCT_MAP = {
@@ -195,7 +469,7 @@
       // Berechne Preise und sammle Quantities
       entries.forEach(([k,v]) => {
         const packs = Math.ceil(v / VE[k]);
-        const price = getPriceFromHTML(k);
+        const price = getPriceFromCache(k);
         const itemTotal = packs * price;
         totalPrice += itemTotal;
         
@@ -835,31 +1109,37 @@
   		}
 		}
     
-    buildList() {
-      const parts = this.calculateParts();
-      if (!this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4.checked) {
-        const panelCount = this.selection.flat().filter(v => v).length;
-        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-      }
-      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+    async buildList() {
+      try {
+        const parts = await this.calculateParts();
+        if (!this.incM.checked) delete parts.Solarmodul;
+        if (this.mc4.checked) {
+          const panelCount = this.selection.flat().filter(v => v).length;
+          parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+        }
+        if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+        if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
-      const entries = Object.entries(parts).filter(([,v]) => v > 0);
-      if (!entries.length) {
+        const entries = Object.entries(parts).filter(([,v]) => v > 0);
+        if (!entries.length) {
+          this.listHolder.style.display = 'none';
+          return;
+        }
+        this.listHolder.style.display = 'block';
+        this.prodList.innerHTML = entries.map(([k,v]) => {
+          const packs = Math.ceil(v / VE[k]);
+          return `<div class="produkt-item">
+            <span>${packs}×</span>
+            <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
+            <span>${k.replace(/_/g,' ')} (${v})</span>
+          </div>`;
+        }).join('');
+        this.prodList.style.display = 'block';
+      } catch (error) {
+        console.error('❌ Fehler beim Erstellen der Produktliste:', error);
+        // Fallback: Verstecke Liste bei Fehler
         this.listHolder.style.display = 'none';
-        return;
       }
-      this.listHolder.style.display = 'block';
-      this.prodList.innerHTML = entries.map(([k,v]) => {
-        const packs = Math.ceil(v / VE[k]);
-        return `<div class="produkt-item">
-          <span>${packs}×</span>
-          <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
-          <span>${k.replace(/_/g,' ')} (${v})</span>
-        </div>`;
-      }).join('');
-      this.prodList.style.display = 'block';
     }
     
     resetGridToDefault() {
@@ -916,7 +1196,27 @@
     
 
 
-    calculateParts() {
+    async calculateParts() {
+      try {
+        const calculationData = {
+          selection: this.selection,
+          rows: this.rows,
+          cols: this.cols,
+          cellWidth: parseInt(this.wIn.value, 10) || 179,
+          cellHeight: parseInt(this.hIn.value, 10) || 113,
+          orientation: this.orV.checked ? 'vertical' : 'horizontal'
+        };
+
+        const parts = await calculationManager.calculate('calculateParts', calculationData);
+        return parts;
+      } catch (error) {
+        console.warn('⚠️ Background-Berechnung fehlgeschlagen, verwende Fallback:', error);
+        return this.calculatePartsSync();
+      }
+    }
+
+    // Fallback synchrone Berechnung (ursprüngliche Methode)
+    calculatePartsSync() {
   		const p = {
     		Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
     		Dachhaken: 0, Schrauben: 0, Endkappen: 0,
@@ -1251,7 +1551,7 @@
       this.renderProductSummary();
     }
 
-    renderProductSummary() {
+    async renderProductSummary() {
   		const incMChecked = this.incM.checked;
   		const mc4Checked = this.mc4.checked;
   		const solarkabelChecked = this.solarkabel.checked;
@@ -1295,14 +1595,16 @@
   		const currentSelection = this.selection.map(r => [...r]);
   		
   		const total = {};
-  		bundles.forEach(b => {
+  		
+  		// Verwende Promise.all für parallele Berechnungen
+  		const calculations = bundles.map(async (b) => {
     		// Temporär setzen für Berechnung
     		this.orV.checked = b.orientation === 'vertical';
     		this.orH.checked = !this.orV.checked;
     		this.selection = b.selection;
     		this.updateSize();
 
-    		let parts = this.calculateParts();
+    		let parts = await this.calculateParts();
     		if (!b.incM) delete parts.Solarmodul;
     		if (b.mc4) {
     			const panelCount = b.selection.flat().filter(v => v).length;
@@ -1311,10 +1613,20 @@
     		if (b.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
     		if (b.holz)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
-    		Object.entries(parts).forEach(([k, v]) => {
-      		total[k] = (total[k] || 0) + v;
-    		});
+    		return parts;
   		});
+  		
+  		try {
+  			const allParts = await Promise.all(calculations);
+  			allParts.forEach(parts => {
+  				Object.entries(parts).forEach(([k, v]) => {
+      			total[k] = (total[k] || 0) + v;
+    			});
+  			});
+  		} catch (error) {
+  			console.error('❌ Fehler bei Summary-Berechnungen:', error);
+  			// Fallback: Verwende leeres total
+  		}
   		
   		// Stelle ursprüngliche Werte wieder her
   		this.orV.checked = currentOrientation;
@@ -1333,7 +1645,7 @@
     		const columnEntries = entries.slice(i * itemsPerColumn, (i + 1) * itemsPerColumn);
     		const columnHtml = columnEntries.map(([k, v]) => {
       		const packs = Math.ceil(v / VE[k]);
-      		const price = getPriceFromHTML(k);
+      		const price = getPriceFromCache(k);
       		const itemTotal = packs * price;
       		totalPrice += itemTotal;
 
@@ -1528,94 +1840,107 @@
       }
     }
 
-    addCurrentToCart() {
-      const parts = this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
-      const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
-      
-      if (itemCount === 0) {
-        this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
-        return;
-      }
-      
-      // Sende Daten an Webhook
-      this.sendCurrentConfigToWebhook().then(success => {
-        if (success) {
-          console.log('Current config data sent to webhook');
-        } else {
-          console.warn('Failed to send current config data to webhook');
+    async addCurrentToCart() {
+      try {
+        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+        const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
+        
+        if (itemCount === 0) {
+          this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
+          return;
         }
-      });
-      
-      this.addPartsListToCart(parts);
-      this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
-    }
-
-    addAllToCart() {
-      // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
-      if (this.currentConfig !== null) {
-        this.updateConfig();
-      }
-      
-      const allBundles = this.configs.map((cfg, idx) => {
-        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
-        if (idx === this.currentConfig) {
-          return this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
-        } else {
-          return this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
-        }
-      });
-      
-      // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
-      if (this.currentConfig === null && this.configs.length === 0) {
-        allBundles.push(this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked));
-      }
-      
-      const total = {};
-      allBundles.forEach(parts => {
-        Object.entries(parts).forEach(([k, v]) => {
-          total[k] = (total[k] || 0) + v;
+        
+        // Sende Daten an Webhook
+        this.sendCurrentConfigToWebhook().then(success => {
+          if (success) {
+            console.log('Current config data sent to webhook');
+          } else {
+            console.warn('Failed to send current config data to webhook');
+          }
         });
-      });
-      
-      const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
-      
-      if (totalItemCount === 0) {
-        this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
-        return;
+        
+        this.addPartsListToCart(parts);
+        this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
+      } catch (error) {
+        console.error('❌ Fehler beim Hinzufügen zum Warenkorb:', error);
+        this.showToast('Fehler beim Berechnen der Produkte ❌', 2000);
       }
-      
-      // Sende alle Konfigurationen an Webhook
-      this.sendAllConfigsToWebhook().then(success => {
-        if (success) {
-          console.log('All configs data sent to webhook');
-        } else {
-          console.warn('Failed to send all configs data to webhook');
-        }
-      });
-      
-      this.addPartsListToCart(total);
-      this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
     }
 
-    _buildPartsFor(sel, incM, mc4, solarkabel, holz) {
+    async addAllToCart() {
+      try {
+        // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
+        if (this.currentConfig !== null) {
+          this.updateConfig();
+        }
+        
+        const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
+          // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+          if (idx === this.currentConfig) {
+            return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+          } else {
+            return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
+          }
+        }));
+        
+        // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
+        if (this.currentConfig === null && this.configs.length === 0) {
+          const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+          allBundles.push(currentParts);
+        }
+        
+        const total = {};
+        allBundles.forEach(parts => {
+          Object.entries(parts).forEach(([k, v]) => {
+            total[k] = (total[k] || 0) + v;
+          });
+        });
+        
+        const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
+        
+        if (totalItemCount === 0) {
+          this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
+          return;
+        }
+        
+        // Sende alle Konfigurationen an Webhook
+        this.sendAllConfigsToWebhook().then(success => {
+          if (success) {
+            console.log('All configs data sent to webhook');
+          } else {
+            console.warn('Failed to send all configs data to webhook');
+          }
+        });
+        
+        this.addPartsListToCart(total);
+        this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
+      } catch (error) {
+        console.error('❌ Fehler beim Hinzufügen aller Konfigurationen zum Warenkorb:', error);
+        this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
+      }
+    }
+
+    async _buildPartsFor(sel, incM, mc4, solarkabel, holz) {
       // Speichere aktuelle Auswahl
       const originalSelection = this.selection.map(r => [...r]);
       
-      // Temporär setzen für Berechnung
-      this.selection = sel;
-      let parts = this.calculateParts();
-      if (!incM) delete parts.Solarmodul;
-      if (mc4) {
-        const panelCount = sel.flat().filter(v => v).length;
-        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      try {
+        // Temporär setzen für Berechnung
+        this.selection = sel;
+        let parts = await this.calculateParts();
+        if (!incM) delete parts.Solarmodul;
+        if (mc4) {
+          const panelCount = sel.flat().filter(v => v).length;
+          parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+        }
+        if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
+        if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
+        
+        return parts;
+      } finally {
+        // Ursprüngliche Auswahl wiederherstellen
+        this.selection = originalSelection;
       }
-      if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
-      
-      // Ursprüngliche Auswahl wiederherstellen
-      this.selection = originalSelection;
-      
-      return parts;
     }
 
     _buildCartItems(parts) {
@@ -1634,5 +1959,12 @@
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
     window.solarGrid = grid;
+  });
+
+  // Cleanup beim Verlassen der Seite
+  window.addEventListener('beforeunload', () => {
+    if (calculationManager) {
+      calculationManager.destroy();
+    }
   });
 })();
