@@ -511,12 +511,12 @@
     applyConfiguration(config) {
       console.log('🚀 Applying configuration:', config);
       
-      // Grid-Größe setzen
+      // Grid-Größe setzen (überschreibt bestehende Konfiguration)
       if (config.cols && config.rows) {
         this.solarGrid.cols = config.cols;
         this.solarGrid.rows = config.rows;
-        this.solarGrid.wIn.value = 179; // Standard Breite
-        this.solarGrid.hIn.value = 113; // Standard Höhe
+        // Behalte bestehende Zellgrößen bei, ändere nur Grid-Dimensionen
+        // this.solarGrid.wIn.value und hIn.value bleiben unverändert
       }
 
       // Orientierung setzen
@@ -529,8 +529,16 @@
       this.solarGrid.solarkabel.checked = config.cable;
       this.solarGrid.holz.checked = config.wood;
 
-      // Grid neu aufbauen
-      this.solarGrid.setup();
+      // Bestehende Auswahl zurücksetzen
+      this.solarGrid.selection = Array.from({ length: this.solarGrid.rows }, () =>
+        Array.from({ length: this.solarGrid.cols }, () => false)
+      );
+
+      // Grid mit neuen Dimensionen neu aufbauen
+      this.solarGrid.updateSize();
+      this.solarGrid.buildGrid();
+      this.solarGrid.buildList();
+      this.solarGrid.updateSummaryOnChange();
 
       // Wenn Module-Anzahl angegeben, automatisch auswählen
       if (config.moduleCount) {

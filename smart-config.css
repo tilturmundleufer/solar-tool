@@ -1,0 +1,310 @@
+/* SMART CONFIGURATION STYLES */
+/* Basiert auf dem Design der Mobile Warning */
+
+.smart-config-container {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 16px auto;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(14, 30, 52, 0.15);
+  border: 1px solid rgba(14, 30, 52, 0.1);
+  animation: slideInDown 0.3s ease-out;
+  box-sizing: border-box;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Quick Input Section */
+.quick-input-section {
+  margin-bottom: 20px;
+}
+
+.quick-input-section label {
+  display: block;
+  color: #0e1e34;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.quick-input-section input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 16px;
+  color: #0e1e34;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.quick-input-section input:focus {
+  border-color: #f5a623;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.1);
+  transform: translateY(-1px);
+}
+
+.quick-input-section input::placeholder {
+  color: #999999;
+  font-style: italic;
+}
+
+.quick-input-section button {
+  width: 100%;
+  padding: 14px 24px;
+  margin-top: 12px;
+  background: #f5a623;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.quick-input-section button:hover {
+  background: #e6951f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
+}
+
+.quick-input-section button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(245, 166, 35, 0.3);
+}
+
+/* Config Preview */
+#config-preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: 8px;
+  color: #0e1e34;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Bulk Selection Help */
+.bulk-selection-help {
+  background: rgba(14, 30, 52, 0.05);
+  border: 1px solid rgba(14, 30, 52, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.bulk-selection-help strong {
+  color: #0e1e34;
+  font-size: 16px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.bulk-selection-help {
+  color: #666666;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.bulk-selection-help kbd {
+  background: #0e1e34;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: monospace;
+  margin: 0 2px;
+}
+
+/* Bulk Highlight für Grid-Zellen */
+.bulk-highlight {
+  background-color: rgba(245, 166, 35, 0.3) !important;
+  border: 2px dashed #f5a623 !important;
+  transform: scale(0.95);
+  transition: all 0.1s ease;
+  box-shadow: 0 0 8px rgba(245, 166, 35, 0.4);
+}
+
+/* Grid Cell Hover Verbesserungen */
+.grid-cell {
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.grid-cell:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .smart-config-container {
+    margin: 12px;
+    padding: 20px;
+    border-radius: 12px;
+  }
+  
+  .quick-input-section label {
+    font-size: 16px;
+  }
+  
+  .quick-input-section input {
+    padding: 12px 14px;
+    font-size: 16px; /* Verhindert Zoom auf iOS */
+  }
+  
+  .quick-input-section button {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+  
+  .bulk-selection-help {
+    padding: 14px;
+    font-size: 13px;
+  }
+  
+  .bulk-selection-help strong {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .smart-config-container {
+    margin: 8px;
+    padding: 16px;
+  }
+  
+  .quick-input-section input {
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .bulk-selection-help kbd {
+    font-size: 11px;
+    padding: 1px 4px;
+  }
+}
+
+/* Integration mit bestehendem Design */
+.smart-config-container * {
+  box-sizing: border-box;
+}
+
+/* Fokus-Styles für Accessibility */
+.quick-input-section button:focus,
+.quick-input-section input:focus {
+  outline: 2px solid #f5a623;
+  outline-offset: 2px;
+}
+
+/* Loading State für Button */
+.quick-input-section button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.quick-input-section button.loading {
+  position: relative;
+  color: transparent;
+}
+
+.quick-input-section button.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #ffffff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Success/Error States */
+.quick-input-section input.success {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.1);
+}
+
+.quick-input-section input.error {
+  border-color: #f44336;
+  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.1);
+}
+
+/* Dark Mode Support (falls gewünscht) */
+@media (prefers-color-scheme: dark) {
+  .smart-config-container {
+    background: #1a2d47;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  
+  .quick-input-section label {
+    color: #ffffff;
+  }
+  
+  .quick-input-section input {
+    background: #0e1e34;
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+  
+  .quick-input-section input::placeholder {
+    color: #aaaaaa;
+  }
+  
+  .bulk-selection-help {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .bulk-selection-help strong {
+    color: #ffffff;
+  }
+  
+  .bulk-selection-help {
+    color: #cccccc;
+  }
+  
+  #config-preview {
+    background: rgba(245, 166, 35, 0.2);
+    border-color: rgba(245, 166, 35, 0.4);
+    color: #ffffff;
+  }
+}
