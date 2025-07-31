@@ -522,7 +522,7 @@
         this.solarGrid.selection = config.selection || [];
         this.solarGrid.cols = config.cols || 5;
         this.solarGrid.rows = config.rows || 5;
-        this.solarGrid.updateGrid();
+        this.solarGrid.buildGrid();
 
         // Warte kurz damit das Grid gerendert wird
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -550,7 +550,7 @@
         this.solarGrid.selection = currentSelection;
         this.solarGrid.cols = currentCols;
         this.solarGrid.rows = currentRows;
-        this.solarGrid.updateGrid();
+        this.solarGrid.buildGrid();
         
         // Warte kurz damit das ursprüngliche Grid gerendert wird
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -3184,13 +3184,6 @@
         
         this.addPartsListToCart(total);
         this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
-        
-        // PDF für alle Konfigurationen generieren
-        if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
-          setTimeout(() => {
-            this.pdfGenerator.generatePDF('all');
-          }, 500); // Kurze Verzögerung damit Warenkorb-Toast zuerst angezeigt wird
-        }
         
         // PDF für alle Konfigurationen generieren
         if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
