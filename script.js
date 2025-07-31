@@ -529,10 +529,19 @@
           numRows = this.parseWordNumber(rowMatch[1]);
           modulesPerRow = parseInt(rowMatch[2]);
         } else if (rowMatch[3] && rowMatch[4]) {
-          // "15 module in 3 reihen" Format
+          // "20 module in 6 reihen" Format
           const totalModules = parseInt(rowMatch[3]);
           numRows = this.parseWordNumber(rowMatch[4]);
+          // Berechne minimale Spalten für gleichmäßige Verteilung
           modulesPerRow = Math.ceil(totalModules / numRows);
+          
+          // Speichere zusätzliche Info für intelligente Verteilung
+          config.intelligentDistribution = {
+            totalModules: totalModules,
+            numRows: numRows,
+            baseModulesPerRow: Math.floor(totalModules / numRows),
+            extraModules: totalModules % numRows
+          };
         }
         
         if (numRows && modulesPerRow) {
@@ -697,7 +706,7 @@
 
       // Wenn Reihen-Konfiguration angegeben, verwende spezielle Selektion
       if (config.rowConfig) {
-        this.applyRowConfiguration(config.rowConfig);
+        this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
       }
       // Wenn Module-Anzahl angegeben, automatisch auswählen (nur bei neuen Grids)
       else if (config.moduleCount && (!oldSelection || oldSelection.flat().every(cell => !cell))) {
@@ -787,8 +796,11 @@
       this.solarGrid.updateSize();
     }
     
-    applyRowConfiguration(rowConfig) {
+    applyRowConfiguration(rowConfig, intelligentDistribution = null) {
       console.log(`🏗️ Wende Reihen-Konfiguration an:`, rowConfig);
+      if (intelligentDistribution) {
+        console.log(`🧠 Intelligente Verteilung:`, intelligentDistribution);
+      }
       
       const { rows, modulesPerRow, spacing, totalModules } = rowConfig;
       
@@ -809,21 +821,37 @@
         }
       }
       
-      // Selektiere Module in Reihen mit Abständen
+      // Selektiere Module in Reihen mit intelligenter Verteilung
       let currentRow = 0;
+      let modulesPlaced = 0;
+      
       for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+        let modulesInThisRow;
+        
+        if (intelligentDistribution) {
+          // Intelligente Verteilung: Gleichmäßig verteilen + Reste von oben
+          const { baseModulesPerRow, extraModules } = intelligentDistribution;
+          modulesInThisRow = baseModulesPerRow + (rowIndex < extraModules ? 1 : 0);
+        } else {
+          // Standard: Alle Reihen gleich voll
+          modulesInThisRow = Math.min(modulesPerRow, totalModules - modulesPlaced);
+        }
+        
         // Selektiere Module in dieser Reihe
-        for (let x = 0; x < modulesPerRow && x < this.solarGrid.cols; x++) {
+        for (let x = 0; x < modulesInThisRow && x < this.solarGrid.cols; x++) {
           if (currentRow < this.solarGrid.rows) {
             this.solarGrid.selection[currentRow][x] = true;
+            modulesPlaced++;
           }
         }
+        
+        console.log(`📍 Reihe ${rowIndex + 1}: ${modulesInThisRow} Module platziert`);
         
         // Springe über Abstand-Reihen
         currentRow += 1 + spacing;
       }
       
-      console.log(`✅ ${totalModules} Module in ${rows} Reihen mit ${spacing} Reihen Abstand selektiert`);
+      console.log(`✅ ${modulesPlaced} von ${totalModules} Modulen in ${rows} Reihen mit ${spacing} Reihen Abstand selektiert`);
       
       // Grid neu aufbauen
       this.solarGrid.buildGrid();
