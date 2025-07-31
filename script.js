@@ -50,7 +50,6 @@
           
           if (type === 'ready') {
             this.isWorkerReady = true;
-            console.log('🚀 Calculation Worker bereit');
             return;
           }
           
@@ -68,12 +67,10 @@
         };
         
         this.worker.onerror = (error) => {
-          console.error('❌ Worker Error:', error);
           this.isWorkerReady = false;
         };
         
       } catch (error) {
-        console.warn('⚠️ Web Worker nicht verfügbar, verwende Fallback-Berechnungen');
         this.isWorkerReady = false;
       }
     }
@@ -241,12 +238,10 @@
           // Prüfe ob Cache noch gültig ist
           if (Date.now() - this.lastUpdate < this.cacheDuration) {
             this.cache = new Map(Object.entries(parsedData));
-            console.log('✅ Preise aus Cache geladen:', this.cache.size, 'Produkte');
             return;
           }
         }
       } catch (error) {
-        console.warn('⚠️ Fehler beim Laden des Price-Cache:', error);
       }
       
       // Cache ist ungültig oder nicht vorhanden - lade Preise neu
@@ -258,9 +253,7 @@
         const cacheObject = Object.fromEntries(this.cache);
         localStorage.setItem(this.cacheKey, JSON.stringify(cacheObject));
         localStorage.setItem(this.timestampKey, this.lastUpdate.toString());
-        console.log('💾 Preise im Cache gespeichert');
       } catch (error) {
-        console.warn('⚠️ Fehler beim Speichern des Price-Cache:', error);
       }
     }
 
@@ -268,7 +261,6 @@
       if (this.isUpdating) return;
       
       this.isUpdating = true;
-      console.log('🔄 Aktualisiere Preise aus HTML...');
       
       const promises = Object.keys(PRODUCT_MAP).map(async (productKey) => {
         const price = await this.getPriceFromHTMLAsync(productKey);
@@ -281,12 +273,9 @@
         this.lastUpdate = Date.now();
         this.saveToStorage();
         
-        console.log('✅ Preise aktualisiert:', results.length, 'Produkte');
         results.forEach(({ productKey, price }) => {
-          console.log(`  ${productKey}: ${price}€`);
         });
       } catch (error) {
-        console.error('❌ Fehler beim Aktualisieren der Preise:', error);
       } finally {
         this.isUpdating = false;
       }
@@ -328,7 +317,6 @@
           }
         }
       } catch (error) {
-        console.error(`❌ Fehler beim Lesen des HTML-Preises für ${productKey}:`, error);
       }
       
       return PRICE_MAP[productKey] || 0;
@@ -341,7 +329,6 @@
       
       // Fallback auf hardcoded Preis wenn nicht im Cache
       const fallbackPrice = PRICE_MAP[productKey] || 0;
-      console.warn(`⚠️ Preis für ${productKey} nicht im Cache, verwende Fallback: ${fallbackPrice}€`);
       return fallbackPrice;
     }
 
@@ -358,7 +345,6 @@
         this.scheduleNextUpdate(); // Plane nächstes Update
       }, timeUntilUpdate);
       
-      console.log(`⏰ Nächstes Preis-Update in ${Math.round(timeUntilUpdate / (1000 * 60 * 60))} Stunden`);
     }
 
     // Manuelle Aktualisierung für Debugging
@@ -400,7 +386,6 @@
       localStorage.removeItem(priceCache.timestampKey);
       priceCache.cache.clear();
       priceCache.lastUpdate = null;
-      console.log('💾 Price Cache geleert');
     }
   };
 
@@ -569,7 +554,6 @@
           config.cols = modulesPerRow;
           config.rows = neededRows;
           
-          console.log(`🏗️ Reihen-Konfiguration erkannt: ${numRows} Reihen × ${modulesPerRow} Module, Abstand: ${spacingRows}`);
         }
       }
       // Module-Anzahl parsen (nur wenn keine Reihen-Konfiguration)
@@ -596,7 +580,6 @@
       let hasCheckboxCombinations = Object.values(checkboxCombinations).some(value => value);
 
       if (hasCheckboxCombinations) {
-        console.log(`🔧 Checkbox-Kombinationen erkannt:`, checkboxCombinations);
         
         if (checkboxCombinations.modules) config.includeModules = true;
         if (checkboxCombinations.mc4) config.mc4 = true;
@@ -651,7 +634,6 @@
     }
 
     applyConfiguration(config) {
-      console.log('🚀 Applying configuration:', config);
       
       // Speichere bestehende Auswahl
       const oldSelection = this.solarGrid.selection ? 
@@ -727,13 +709,11 @@
     }
 
     autoSelectModules(count) {
-      console.log(`🔧 Auto-selecting ${count} modules...`);
       
       // Prüfe ob das aktuelle Grid groß genug ist
       const currentCapacity = this.solarGrid.cols * this.solarGrid.rows;
       
       if (currentCapacity < count) {
-        console.log(`📏 Grid zu klein (${currentCapacity} < ${count}), erweitere Grid...`);
         this.expandGridForModules(count);
       }
       
@@ -747,7 +727,6 @@
         }
       }
       
-      console.log(`✅ ${selected} Module ausgewählt`);
       this.solarGrid.buildGrid();
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
@@ -774,7 +753,6 @@
         }
       }
       
-      console.log(`📏 Erweitere Grid von ${this.solarGrid.cols}×${this.solarGrid.rows} auf ${newCols}×${newRows}`);
       
       // Aktualisiere Grid-Dimensionen
       this.solarGrid.cols = newCols;
@@ -797,9 +775,7 @@
     }
     
     applyRowConfiguration(rowConfig, intelligentDistribution = null) {
-      console.log(`🏗️ Wende Reihen-Konfiguration an:`, rowConfig);
       if (intelligentDistribution) {
-        console.log(`🧠 Intelligente Verteilung:`, intelligentDistribution);
       }
       
       const { rows, modulesPerRow, spacing, totalModules } = rowConfig;
@@ -809,7 +785,6 @@
       const neededCols = modulesPerRow;
       
       if (this.solarGrid.rows < neededRows || this.solarGrid.cols < neededCols) {
-        console.log(`📏 Erweitere Grid für Reihen-Konfiguration auf ${neededCols}×${neededRows}`);
         this.expandGridForRowConfig(neededCols, neededRows);
       }
       
@@ -845,13 +820,11 @@
           }
         }
         
-        console.log(`📍 Reihe ${rowIndex + 1}: ${modulesInThisRow} Module platziert`);
         
         // Springe über Abstand-Reihen
         currentRow += 1 + spacing;
       }
       
-      console.log(`✅ ${modulesPlaced} von ${totalModules} Modulen in ${rows} Reihen mit ${spacing} Reihen Abstand selektiert`);
       
       // Grid neu aufbauen
       this.solarGrid.buildGrid();
@@ -905,11 +878,9 @@
       this.bulkMode = !this.bulkMode;
       
       if (this.bulkMode) {
-        console.log('🔄 Bulk-Modus aktiviert - Klicke auf erste Zelle');
         this.showBulkModeIndicator(true);
         this.firstClick = null; // Reset bei Aktivierung
       } else {
-        console.log('🔄 Bulk-Modus deaktiviert');
         this.showBulkModeIndicator(false);
         this.firstClick = null;
         this.clearHighlight();
@@ -989,11 +960,9 @@
               // Erste Zelle markieren und ihren aktuellen Zustand speichern
               const isCurrentlySelected = this.solarGrid.selection[y]?.[x] || false;
               this.firstClick = { x, y, wasSelected: isCurrentlySelected };
-              console.log(`📍 Erste Zelle markiert: ${x},${y} (war ${isCurrentlySelected ? 'ausgewählt' : 'leer'})`);
               newCell.classList.add('first-click-marker');
             } else {
               // Zweite Zelle: Bereich auswählen
-              console.log(`📍 Zweite Zelle: ${x},${y} - Wähle Bereich aus`);
               this.selectRange(this.firstClick, { x, y });
               
               // Bulk-Modus deaktivieren nach Auswahl
@@ -1044,7 +1013,6 @@
       // Wenn die erste Zelle leer war, wähle den gesamten Bereich aus
       const shouldSelect = !start.wasSelected;
       
-      console.log(`🎯 Bereich-Auswahl: ${shouldSelect ? 'Auswählen' : 'Entfernen'} (erste Zelle war ${start.wasSelected ? 'ausgewählt' : 'leer'})`);
 
       for (let y = minY; y <= maxY; y++) {
         if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
@@ -1302,14 +1270,11 @@
         });
 
         if (response.ok) {
-          console.log('Webhook data sent successfully');
           return true;
         } else {
-          console.error('Webhook request failed:', response.status, response.statusText);
           return false;
         }
       } catch (error) {
-        console.error('Error sending webhook data:', error);
         return false;
       }
     }
@@ -1395,9 +1360,7 @@
           const success = await this.sendConfigToWebhook(configData);
           if (success) {
             successCount++;
-            console.log(`Configuration ${idx + 1}/${this.configs.length} sent successfully`);
           } else {
-            console.warn(`Failed to send configuration ${idx + 1}/${this.configs.length}`);
           }
           results.push(success);
           
@@ -1406,12 +1369,10 @@
             await new Promise(resolve => setTimeout(resolve, 100));
           }
         } catch (error) {
-          console.error(`Error sending configuration ${idx + 1}:`, error);
           results.push(false);
         }
       }
 
-      console.log(`Sent ${successCount}/${this.configs.length} configurations successfully`);
       return successCount === this.configs.length;
     }
 
@@ -1481,7 +1442,6 @@
       		}
       		return;
     		} catch (e) {
-      		console.warn('Ungültige Konfigurationsdaten in URL:', e);
     		}
   		}
 
@@ -1661,7 +1621,6 @@
 				localStorage.removeItem('solarTool_hideHelp');
 				localStorage.removeItem('solarTool_hideSmartConfig');
 				
-				console.log('✅ Tipps und Smart Config Container sind permanent sichtbar');
 			}, 100);
 		}
 		
@@ -1687,7 +1646,6 @@
 						// Smart Config Container soll permanent sichtbar bleiben - Close-Button deaktiviert
 						// container.style.display = 'none';
 						// localStorage.setItem('solarTool_hideSmartConfig', 'true');
-						console.log('Smart Config Container bleibt permanent sichtbar');
 					});
 				}
 			}, 600);
@@ -1709,7 +1667,6 @@
 								this.showToast(`Konfiguration "${input}" angewendet ✅`, 2000);
 								quickInput.value = ''; // Input leeren
 							} catch (error) {
-								console.error('Fehler beim Anwenden der Konfiguration:', error);
 								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
 							}
 						}
@@ -1735,9 +1692,7 @@
 						}
 					});
 					
-					console.log('🚀 Smart Config Interface initialisiert');
 				} else {
-					console.warn('⚠️ Quick Config HTML-Elemente nicht gefunden. Stelle sicher, dass das HTML eingefügt wurde.');
 				}
 			}, 500);
 		}
@@ -1784,7 +1739,6 @@
 								this.showToast(`Konfiguration "${input}" angewendet ✅`, 2000);
 								quickInput.value = ''; // Input leeren
 							} catch (error) {
-								console.error('Fehler beim Anwenden der Konfiguration:', error);
 								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
 							}
 						}
@@ -1810,9 +1764,7 @@
 						}
 					});
 					
-					console.log('🚀 Smart Config Interface initialisiert');
 				} else {
-					console.warn('⚠️ Quick Config HTML-Elemente nicht gefunden. Stelle sicher, dass das HTML eingefügt wurde.');
 				}
 			}, 500);
 		}
@@ -2075,7 +2027,6 @@
         }).join('');
         this.prodList.style.display = 'block';
       } catch (error) {
-        console.error('❌ Fehler beim Erstellen der Produktliste:', error);
         // Fallback: Verstecke Liste bei Fehler
         this.listHolder.style.display = 'none';
       }
@@ -2155,7 +2106,6 @@
         const parts = await calculationManager.calculate('calculateParts', calculationData);
         return parts;
       } catch (error) {
-        console.warn('⚠️ Background-Berechnung fehlgeschlagen, verwende Fallback:', error);
         return this.calculatePartsSync();
       }
     }
@@ -2569,7 +2519,6 @@
     			});
   			});
   		} catch (error) {
-  			console.error('❌ Fehler bei Summary-Berechnungen:', error);
   			// Fallback: Verwende leeres total
   		}
   		
@@ -2666,7 +2615,6 @@
           `;
         }
       });
-      console.log('[SolarGrid] Webflow Formulare versteckt');
     }
 
     addProductToCart(productKey, quantity, isLastItem = false) {
@@ -2678,7 +2626,6 @@
       
       const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
       if (qtyInput) {
-        console.log(`[SolarGrid] Setze Menge auf ${quantity} für ${productKey}`);
         qtyInput.value = quantity;
       }
       
@@ -2798,16 +2745,13 @@
         // Sende Daten an Webhook
         this.sendCurrentConfigToWebhook().then(success => {
           if (success) {
-            console.log('Current config data sent to webhook');
           } else {
-            console.warn('Failed to send current config data to webhook');
           }
         });
         
         this.addPartsListToCart(parts);
         this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
       } catch (error) {
-        console.error('❌ Fehler beim Hinzufügen zum Warenkorb:', error);
         this.showToast('Fehler beim Berechnen der Produkte ❌', 2000);
       }
     }
@@ -2851,16 +2795,13 @@
         // Sende alle Konfigurationen an Webhook
         this.sendAllConfigsToWebhook().then(success => {
           if (success) {
-            console.log('All configs data sent to webhook');
           } else {
-            console.warn('Failed to send all configs data to webhook');
           }
         });
         
         this.addPartsListToCart(total);
         this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
       } catch (error) {
-        console.error('❌ Fehler beim Hinzufügen aller Konfigurationen zum Warenkorb:', error);
         this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
       }
     }
