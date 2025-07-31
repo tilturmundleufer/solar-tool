@@ -432,8 +432,26 @@
         // "mit kabel" oder "ohne kabel"  
         cable: /(?:mit|ohne)\s*(?:kabel|solarkabel)/i,
         // "mit holz" oder "ohne holz"
-        wood: /(?:mit|ohne)\s*holz(?:unterleger)?/i
+        wood: /(?:mit|ohne)\s*holz(?:unterleger)?/i,
+        // "3 reihen mit 5 modulen" oder "drei reihen 5 module"
+        rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))/i,
+        // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
+        spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i
       };
+    }
+
+    // Hilfsfunktion: Wandelt Wortzahlen in Nummern um
+    parseWordNumber(word) {
+      const wordNumbers = {
+        'ein': 1, 'eine': 1, 'zwei': 2, 'drei': 3, 'vier': 4, 'fünf': 5,
+        'sechs': 6, 'sieben': 7, 'acht': 8, 'neun': 9, 'zehn': 10
+      };
+      
+      if (typeof word === 'string' && wordNumbers[word.toLowerCase()]) {
+        return wordNumbers[word.toLowerCase()];
+      }
+      
+      return parseInt(word) || 0;
     }
 
     parseInput(input) {
@@ -446,14 +464,60 @@
         config.rows = parseInt(gridMatch[2]);
       }
 
-      // Module-Anzahl parsen
-      const moduleMatch = input.match(this.patterns.moduleCount);
-      if (moduleMatch && !gridMatch) {
-        config.moduleCount = parseInt(moduleMatch[1]);
-        // Automatisch optimale Grid-Größe berechnen
-        const gridSize = this.calculateOptimalGrid(config.moduleCount);
-        config.cols = gridSize.cols;
-        config.rows = gridSize.rows;
+      // Reihen-Pattern parsen (hat Priorität vor einfacher moduleCount)
+      const rowMatch = input.match(this.patterns.rowPattern);
+      if (rowMatch) {
+        let numRows, modulesPerRow;
+        
+        if (rowMatch[1] && rowMatch[2]) {
+          // "3 reihen mit 5 modulen" Format
+          numRows = this.parseWordNumber(rowMatch[1]);
+          modulesPerRow = parseInt(rowMatch[2]);
+        } else if (rowMatch[3] && rowMatch[4]) {
+          // "15 module in 3 reihen" Format
+          const totalModules = parseInt(rowMatch[3]);
+          numRows = this.parseWordNumber(rowMatch[4]);
+          modulesPerRow = Math.ceil(totalModules / numRows);
+        }
+        
+        if (numRows && modulesPerRow) {
+          // Prüfe auf Abstand-Spezifikation
+          const spacingMatch = input.match(this.patterns.spacing);
+          let spacingRows = 0;
+          
+          if (spacingMatch) {
+            if (spacingMatch[0].toLowerCase().includes('mit') && !spacingMatch[1]) {
+              spacingRows = 1; // Standard-Abstand
+            } else if (spacingMatch[1]) {
+              spacingRows = parseInt(spacingMatch[1]);
+            }
+          }
+          
+          config.rowConfig = {
+            rows: numRows,
+            modulesPerRow: modulesPerRow,
+            spacing: spacingRows,
+            totalModules: numRows * modulesPerRow
+          };
+          
+          // Berechne benötigte Grid-Größe
+          const neededRows = numRows + (numRows - 1) * spacingRows;
+          config.cols = modulesPerRow;
+          config.rows = neededRows;
+          
+          console.log(`🏗️ Reihen-Konfiguration erkannt: ${numRows} Reihen × ${modulesPerRow} Module, Abstand: ${spacingRows}`);
+        }
+      }
+      // Module-Anzahl parsen (nur wenn keine Reihen-Konfiguration)
+      else {
+        const moduleMatch = input.match(this.patterns.moduleCount);
+        if (moduleMatch && !gridMatch) {
+          config.moduleCount = parseInt(moduleMatch[1]);
+          // Automatisch optimale Grid-Größe berechnen
+          const gridSize = this.calculateOptimalGrid(config.moduleCount);
+          config.cols = gridSize.cols;
+          config.rows = gridSize.rows;
+        }
       }
 
       // Orientierung parsen (nur wenn explizit erwähnt)
@@ -561,8 +625,12 @@
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
 
+      // Wenn Reihen-Konfiguration angegeben, verwende spezielle Selektion
+      if (config.rowConfig) {
+        this.applyRowConfiguration(config.rowConfig);
+      }
       // Wenn Module-Anzahl angegeben, automatisch auswählen (nur bei neuen Grids)
-      if (config.moduleCount && (!oldSelection || oldSelection.flat().every(cell => !cell))) {
+      else if (config.moduleCount && (!oldSelection || oldSelection.flat().every(cell => !cell))) {
         this.autoSelectModules(config.moduleCount);
       }
       
@@ -637,6 +705,72 @@
       const oldSelection = this.solarGrid.selection || [];
       this.solarGrid.selection = Array.from({ length: newRows }, (_, y) =>
         Array.from({ length: newCols }, (_, x) => {
+          // Behalte bestehende Auswahl bei
+          if (y < oldSelection.length && x < oldSelection[y].length) {
+            return oldSelection[y][x];
+          }
+          return false;
+        })
+      );
+      
+      // Grid neu aufbauen
+      this.solarGrid.updateSize();
+    }
+    
+    applyRowConfiguration(rowConfig) {
+      console.log(`🏗️ Wende Reihen-Konfiguration an:`, rowConfig);
+      
+      const { rows, modulesPerRow, spacing, totalModules } = rowConfig;
+      
+      // Stelle sicher, dass das Grid die richtige Größe hat
+      const neededRows = rows + (rows - 1) * spacing;
+      const neededCols = modulesPerRow;
+      
+      if (this.solarGrid.rows < neededRows || this.solarGrid.cols < neededCols) {
+        console.log(`📏 Erweitere Grid für Reihen-Konfiguration auf ${neededCols}×${neededRows}`);
+        this.expandGridForRowConfig(neededCols, neededRows);
+      }
+      
+      // Lösche bestehende Auswahl
+      for (let y = 0; y < this.solarGrid.rows; y++) {
+        for (let x = 0; x < this.solarGrid.cols; x++) {
+          if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+          this.solarGrid.selection[y][x] = false;
+        }
+      }
+      
+      // Selektiere Module in Reihen mit Abständen
+      let currentRow = 0;
+      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+        // Selektiere Module in dieser Reihe
+        for (let x = 0; x < modulesPerRow && x < this.solarGrid.cols; x++) {
+          if (currentRow < this.solarGrid.rows) {
+            this.solarGrid.selection[currentRow][x] = true;
+          }
+        }
+        
+        // Springe über Abstand-Reihen
+        currentRow += 1 + spacing;
+      }
+      
+      console.log(`✅ ${totalModules} Module in ${rows} Reihen mit ${spacing} Reihen Abstand selektiert`);
+      
+      // Grid neu aufbauen
+      this.solarGrid.buildGrid();
+      this.solarGrid.buildList();
+      this.solarGrid.updateSummaryOnChange();
+    }
+    
+    expandGridForRowConfig(neededCols, neededRows) {
+      const oldSelection = this.solarGrid.selection || [];
+      
+      // Aktualisiere Grid-Dimensionen
+      this.solarGrid.cols = Math.max(this.solarGrid.cols, neededCols);
+      this.solarGrid.rows = Math.max(this.solarGrid.rows, neededRows);
+      
+      // Erweitere Auswahl-Matrix
+      this.solarGrid.selection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
+        Array.from({ length: this.solarGrid.cols }, (_, x) => {
           // Behalte bestehende Auswahl bei
           if (y < oldSelection.length && x < oldSelection[y].length) {
             return oldSelection[y][x];
