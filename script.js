@@ -414,6 +414,260 @@
     return getPriceFromCache(productKey);
   }
 
+  // ===== SMART CONFIGURATION PARSER =====
+  class SmartConfigParser {
+    constructor(solarGrid) {
+      this.solarGrid = solarGrid;
+      this.patterns = {
+        // "5x4" oder "5 x 4" → Grid-Größe
+        gridSize: /(\d+)\s*[x×]\s*(\d+)/i,
+        // "20 module" → Anzahl Module
+        moduleCount: /(\d+)\s*modul[e]?[n]?/i,
+        // "horizontal" oder "vertikal"
+        orientation: /(?:horizontal|vertikal|vertical)/i,
+        // "mit mc4" oder "ohne mc4"
+        mc4: /(?:mit|ohne)\s*mc4/i,
+        // "mit kabel" oder "ohne kabel"  
+        cable: /(?:mit|ohne)\s*(?:kabel|solarkabel)/i,
+        // "mit holz" oder "ohne holz"
+        wood: /(?:mit|ohne)\s*holz(?:unterleger)?/i
+      };
+    }
+
+    parseInput(input) {
+      const config = {
+        cols: null,
+        rows: null,
+        moduleCount: null,
+        orientation: 'horizontal',
+        includeModules: true,
+        mc4: false,
+        cable: false,
+        wood: false
+      };
+
+      // Grid-Größe parsen
+      const gridMatch = input.match(this.patterns.gridSize);
+      if (gridMatch) {
+        config.cols = parseInt(gridMatch[1]);
+        config.rows = parseInt(gridMatch[2]);
+      }
+
+      // Module-Anzahl parsen
+      const moduleMatch = input.match(this.patterns.moduleCount);
+      if (moduleMatch && !gridMatch) {
+        config.moduleCount = parseInt(moduleMatch[1]);
+        // Automatisch optimale Grid-Größe berechnen
+        const gridSize = this.calculateOptimalGrid(config.moduleCount);
+        config.cols = gridSize.cols;
+        config.rows = gridSize.rows;
+      }
+
+      // Orientierung parsen
+      const orientationMatch = input.match(this.patterns.orientation);
+      if (orientationMatch) {
+        config.orientation = orientationMatch[0].toLowerCase().includes('vertikal') || 
+                            orientationMatch[0].toLowerCase().includes('vertical') ? 'vertical' : 'horizontal';
+      }
+
+      // Optionen parsen
+      const mc4Match = input.match(this.patterns.mc4);
+      if (mc4Match) {
+        config.mc4 = mc4Match[0].toLowerCase().includes('mit');
+      }
+
+      const cableMatch = input.match(this.patterns.cable);
+      if (cableMatch) {
+        config.cable = cableMatch[0].toLowerCase().includes('mit');
+      }
+
+      const woodMatch = input.match(this.patterns.wood);
+      if (woodMatch) {
+        config.wood = woodMatch[0].toLowerCase().includes('mit');
+      }
+
+      return config;
+    }
+
+    calculateOptimalGrid(moduleCount) {
+      // Finde beste Rechteck-Aufteilung
+      const factors = [];
+      for (let i = 1; i <= Math.sqrt(moduleCount); i++) {
+        if (moduleCount % i === 0) {
+          factors.push([i, moduleCount / i]);
+        }
+      }
+      
+      // Bevorzuge quadratische oder leicht rechteckige Formen
+      const best = factors.reduce((a, b) => {
+        const ratioA = Math.max(a[0], a[1]) / Math.min(a[0], a[1]);
+        const ratioB = Math.max(b[0], b[1]) / Math.min(b[0], b[1]);
+        return ratioA <= ratioB ? a : b;
+      });
+
+      return { cols: Math.max(best[0], best[1]), rows: Math.min(best[0], best[1]) };
+    }
+
+    applyConfiguration(config) {
+      console.log('🚀 Applying configuration:', config);
+      
+      // Grid-Größe setzen
+      if (config.cols && config.rows) {
+        this.solarGrid.cols = config.cols;
+        this.solarGrid.rows = config.rows;
+        this.solarGrid.wIn.value = 179; // Standard Breite
+        this.solarGrid.hIn.value = 113; // Standard Höhe
+      }
+
+      // Orientierung setzen
+      this.solarGrid.orV.checked = config.orientation === 'vertical';
+      this.solarGrid.orH.checked = config.orientation === 'horizontal';
+
+      // Optionen setzen
+      this.solarGrid.incM.checked = config.includeModules;
+      this.solarGrid.mc4.checked = config.mc4;
+      this.solarGrid.solarkabel.checked = config.cable;
+      this.solarGrid.holz.checked = config.wood;
+
+      // Grid neu aufbauen
+      this.solarGrid.setup();
+
+      // Wenn Module-Anzahl angegeben, automatisch auswählen
+      if (config.moduleCount) {
+        this.autoSelectModules(config.moduleCount);
+      }
+    }
+
+    autoSelectModules(count) {
+      let selected = 0;
+      for (let y = 0; y < this.solarGrid.rows && selected < count; y++) {
+        for (let x = 0; x < this.solarGrid.cols && selected < count; x++) {
+          if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+          this.solarGrid.selection[y][x] = true;
+          selected++;
+        }
+      }
+      this.solarGrid.buildGrid();
+      this.solarGrid.buildList();
+      this.solarGrid.updateSummaryOnChange();
+    }
+  }
+
+  // ===== BULK SELECTOR =====
+  class BulkSelector {
+    constructor(solarGrid) {
+      this.solarGrid = solarGrid;
+      this.firstClick = null;
+      this.isSelecting = false;
+    }
+
+    initializeBulkSelection() {
+      // Erweitere die bestehende Grid-Erstellung
+      const originalBuildGrid = this.solarGrid.buildGrid.bind(this.solarGrid);
+      
+      this.solarGrid.buildGrid = () => {
+        originalBuildGrid();
+        this.addBulkSelectionToGrid();
+      };
+    }
+
+    addBulkSelectionToGrid() {
+      const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+      
+      cells.forEach((cell, index) => {
+        const x = index % this.solarGrid.cols;
+        const y = Math.floor(index / this.solarGrid.cols);
+        
+        // Entferne alte Event Listener
+        const newCell = cell.cloneNode(true);
+        cell.parentNode.replaceChild(newCell, cell);
+        
+        // Füge neue Event Listener hinzu
+        newCell.addEventListener('click', (e) => {
+          if (e.shiftKey && this.firstClick) {
+            // Shift+Click: Bereich auswählen
+            this.selectRange(this.firstClick, { x, y });
+            this.firstClick = null;
+          } else {
+            // Normaler Click
+            if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+            
+            if (e.ctrlKey || e.metaKey) {
+              // Ctrl+Click: Toggle ohne firstClick zu ändern
+              this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
+            } else {
+              // Normaler Click: Toggle und setze firstClick
+              this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
+              this.firstClick = { x, y };
+            }
+            
+            newCell.classList.toggle('selected');
+            this.solarGrid.trackInteraction();
+            this.solarGrid.buildList();
+            this.solarGrid.updateSummaryOnChange();
+          }
+        });
+
+        // Visuelle Feedback für Bereich-Auswahl
+        newCell.addEventListener('mouseenter', (e) => {
+          if (e.shiftKey && this.firstClick) {
+            this.highlightRange(this.firstClick, { x, y });
+          }
+        });
+
+        newCell.addEventListener('mouseleave', () => {
+          this.clearHighlight();
+        });
+      });
+    }
+
+    selectRange(start, end) {
+      const minX = Math.min(start.x, end.x);
+      const maxX = Math.max(start.x, end.x);
+      const minY = Math.min(start.y, end.y);
+      const maxY = Math.max(start.y, end.y);
+
+      // Bestimme Aktion basierend auf Start-Zelle
+      const shouldSelect = this.solarGrid.selection[start.y][start.x];
+
+      for (let y = minY; y <= maxY; y++) {
+        if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+        for (let x = minX; x <= maxX; x++) {
+          this.solarGrid.selection[y][x] = shouldSelect;
+        }
+      }
+
+      this.solarGrid.buildGrid();
+      this.solarGrid.buildList();
+      this.solarGrid.updateSummaryOnChange();
+    }
+
+    highlightRange(start, end) {
+      this.clearHighlight();
+      
+      const minX = Math.min(start.x, end.x);
+      const maxX = Math.max(start.x, end.x);
+      const minY = Math.min(start.y, end.y);
+      const maxY = Math.max(start.y, end.y);
+
+      const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+      
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const index = y * this.solarGrid.cols + x;
+          if (cells[index]) {
+            cells[index].classList.add('bulk-highlight');
+          }
+        }
+      }
+    }
+
+    clearHighlight() {
+      const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight');
+      highlighted.forEach(cell => cell.classList.remove('bulk-highlight'));
+    }
+  }
+
   class SolarGrid {
     constructor() {
       this.gridEl        = document.getElementById('grid');
@@ -944,6 +1198,168 @@
   			const defaultConfig = this._makeConfigObject();
   			this.configs.push(defaultConfig);
   			this.loadConfig(0);
+			}
+			
+			// Initialisiere Smart Config Features
+			this.initSmartConfigFeatures();
+		}
+		
+		initSmartConfigFeatures() {
+			this.smartParser = new SmartConfigParser(this);
+			this.bulkSelector = new BulkSelector(this);
+			this.bulkSelector.initializeBulkSelection();
+			
+			// Quick Config Event Listeners
+			this.initQuickConfigInterface();
+		}
+
+		initQuickConfigInterface() {
+			// Warte kurz, damit das DOM vollständig geladen ist
+			setTimeout(() => {
+				const quickInput = document.getElementById('quick-config-input');
+				const applyButton = document.getElementById('apply-quick-config');
+				
+				if (quickInput && applyButton) {
+					applyButton.addEventListener('click', () => {
+						const input = quickInput.value.trim();
+						if (input) {
+							try {
+								const config = this.smartParser.parseInput(input);
+								this.smartParser.applyConfiguration(config);
+								this.showToast(`Konfiguration "${input}" angewendet ✅`, 2000);
+								quickInput.value = ''; // Input leeren
+							} catch (error) {
+								console.error('Fehler beim Anwenden der Konfiguration:', error);
+								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
+							}
+						}
+					});
+					
+					// Enter-Taste Support
+					quickInput.addEventListener('keypress', (e) => {
+						if (e.key === 'Enter') {
+							applyButton.click();
+						}
+					});
+					
+					// Live-Vorschau beim Tippen (optional)
+					quickInput.addEventListener('input', (e) => {
+						const input = e.target.value.trim();
+						if (input.length > 3) {
+							try {
+								const config = this.smartParser.parseInput(input);
+								this.showConfigPreview(config);
+							} catch (error) {
+								// Ignoriere Parsing-Fehler während des Tippens
+							}
+						}
+					});
+					
+					console.log('🚀 Smart Config Interface initialisiert');
+				} else {
+					console.warn('⚠️ Quick Config HTML-Elemente nicht gefunden. Stelle sicher, dass das HTML eingefügt wurde.');
+				}
+			}, 500);
+		}
+		
+		showConfigPreview(config) {
+			// Optional: Zeige eine kleine Vorschau der erkannten Konfiguration
+			const preview = document.getElementById('config-preview');
+			if (preview && (config.cols || config.moduleCount)) {
+				let previewText = '';
+				if (config.cols && config.rows) {
+					previewText += `${config.cols}×${config.rows} Grid`;
+				}
+				if (config.moduleCount) {
+					previewText += ` (${config.moduleCount} Module)`;
+				}
+				if (config.orientation !== 'horizontal') {
+					previewText += `, ${config.orientation}`;
+				}
+				if (config.mc4 || config.cable || config.wood) {
+					const extras = [];
+					if (config.mc4) extras.push('MC4');
+					if (config.cable) extras.push('Kabel');
+					if (config.wood) extras.push('Holz');
+					previewText += ` + ${extras.join(', ')}`;
+				}
+				preview.textContent = previewText;
+				preview.style.display = previewText ? 'block' : 'none';
+			}
+		}
+
+		initQuickConfigInterface() {
+			// Warte kurz, damit das DOM vollständig geladen ist
+			setTimeout(() => {
+				const quickInput = document.getElementById('quick-config-input');
+				const applyButton = document.getElementById('apply-quick-config');
+				
+				if (quickInput && applyButton) {
+					applyButton.addEventListener('click', () => {
+						const input = quickInput.value.trim();
+						if (input) {
+							try {
+								const config = this.smartParser.parseInput(input);
+								this.smartParser.applyConfiguration(config);
+								this.showToast(`Konfiguration "${input}" angewendet ✅`, 2000);
+								quickInput.value = ''; // Input leeren
+							} catch (error) {
+								console.error('Fehler beim Anwenden der Konfiguration:', error);
+								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
+							}
+						}
+					});
+					
+					// Enter-Taste Support
+					quickInput.addEventListener('keypress', (e) => {
+						if (e.key === 'Enter') {
+							applyButton.click();
+						}
+					});
+					
+					// Live-Vorschau beim Tippen (optional)
+					quickInput.addEventListener('input', (e) => {
+						const input = e.target.value.trim();
+						if (input.length > 3) {
+							try {
+								const config = this.smartParser.parseInput(input);
+								this.showConfigPreview(config);
+							} catch (error) {
+								// Ignoriere Parsing-Fehler während des Tippens
+							}
+						}
+					});
+					
+					console.log('🚀 Smart Config Interface initialisiert');
+				} else {
+					console.warn('⚠️ Quick Config HTML-Elemente nicht gefunden. Stelle sicher, dass das HTML eingefügt wurde.');
+				}
+			}, 500);
+		}
+		
+		showConfigPreview(config) {
+			// Optional: Zeige eine kleine Vorschau der erkannten Konfiguration
+			const preview = document.getElementById('config-preview');
+			if (preview && (config.cols || config.moduleCount)) {
+				let previewText = '';
+				if (config.cols && config.rows) {
+					previewText += `${config.cols}×${config.rows} Grid`;
+				}
+				if (config.moduleCount) {
+					previewText += ` (${config.moduleCount} Module)`;
+				}
+				if (config.orientation !== 'horizontal') {
+					previewText += `, ${config.orientation}`;
+				}
+				if (config.mc4 || config.cable || config.wood) {
+					const extras = [];
+					if (config.mc4) extras.push('MC4');
+					if (config.cable) extras.push('Kabel');
+					if (config.wood) extras.push('Holz');
+					previewText += ` + ${extras.join(', ')}`;
+				}
+				preview.textContent = previewText;
+				preview.style.display = previewText ? 'block' : 'none';
 			}
 		}
     
