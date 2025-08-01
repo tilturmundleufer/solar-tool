@@ -1321,7 +1321,16 @@
         // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
         spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
         // Kombinierte Checkbox-Logik mit "und" Verknüpfungen
-        checkboxCombination: /(?:^|\s)(?:mit|und)\s+(.+?)(?:\s+und\s+(.+?))*(?:\s*$)/i
+        checkboxCombination: /(?:^|\s)(?:mit|und)\s+(.+?)(?:\s+und\s+(.+?))*(?:\s*$)/i,
+        // NEUE ACTION PATTERNS:
+        // "Konfiguration speichern", "config speichern", "speichern", "save"
+        saveConfig: /^(?:(?:konfiguration|konfig|config)\s*)?(?:speichern|save)$/i,
+        // "Konfiguration löschen", "config löschen" (NICHT nur "löschen" oder "delete")
+        deleteConfig: /^(?:konfiguration|konfig|config)\s*(?:löschen|delete)$/i,
+        // "module löschen" → Module-Auswahl löschen
+        deleteModules: /^modul[e]?[n]?\s*löschen$/i,
+        // "reset", "zurücksetzen" → Grid zurücksetzen
+        resetGrid: /^(?:reset|zurücksetzen|zurücksetzen)$/i
       };
     }
 
@@ -1526,6 +1535,31 @@
         }
       }
 
+      // NEUE ACTION PATTERNS PRÜFEN (höchste Priorität - vor allen anderen Patterns)
+      const saveConfigMatch = input.match(this.patterns.saveConfig);
+      if (saveConfigMatch) {
+        config.action = 'saveConfig';
+        return config;
+      }
+
+      const deleteConfigMatch = input.match(this.patterns.deleteConfig);
+      if (deleteConfigMatch) {
+        config.action = 'deleteConfig';
+        return config;
+      }
+
+      const deleteModulesMatch = input.match(this.patterns.deleteModules);
+      if (deleteModulesMatch) {
+        config.action = 'deleteModules';
+        return config;
+      }
+
+      const resetGridMatch = input.match(this.patterns.resetGrid);
+      if (resetGridMatch) {
+        config.action = 'resetGrid';
+        return config;
+      }
+
       return config;
     }
 
@@ -1566,6 +1600,12 @@
       if (config.orientation) {
         this.solarGrid.orV.checked = config.orientation === 'vertical';
         this.solarGrid.orH.checked = config.orientation === 'horizontal';
+      }
+
+      // NEUE ACTION PATTERNS HANDHABEN (höchste Priorität)
+      if (config.action) {
+        this.handleAction(config.action);
+        return; // Keine weitere Konfiguration anwenden
       }
 
       // Optionen setzen (nur die angegebenen)
@@ -1635,6 +1675,60 @@
       this.hideHelpAfterFirstUse();
     }
     
+    // NEUE ACTION HANDLER METHODE
+    handleAction(action) {
+      switch (action) {
+        case 'saveConfig':
+          this.solarGrid.saveNewConfig();
+          this.solarGrid.showToast('💾 Konfiguration gespeichert', 2000);
+          break;
+          
+        case 'deleteConfig':
+          // Prüfe ob mindestens 2 Konfigurationen vorhanden sind
+          if (this.solarGrid.configs.length <= 1) {
+            this.solarGrid.showToast('⚠️ Kann letzte Konfiguration nicht löschen', 3000);
+            return;
+          }
+          // Lösche aktuelle Konfiguration
+          if (this.solarGrid.currentConfig !== null) {
+            this.solarGrid.deleteConfig(this.solarGrid.currentConfig);
+            this.solarGrid.showToast('🗑️ Konfiguration gelöscht', 2000);
+          }
+          break;
+          
+        case 'deleteModules':
+          // Lösche nur die Module-Auswahl, behalte Grid-Größe
+          this.clearModuleSelection();
+          this.solarGrid.showToast('🔄 Module-Auswahl gelöscht', 2000);
+          break;
+          
+        case 'resetGrid':
+          this.solarGrid.resetGridToDefault();
+          this.solarGrid.showToast('⚡ Grid zurückgesetzt', 2000);
+          break;
+          
+        default:
+          console.warn('Unbekannte Action:', action);
+      }
+    }
+
+    // Hilfsmethode: Lösche nur Module-Auswahl (nicht Grid-Größe)
+    clearModuleSelection() {
+      // Setze alle Zellen auf false, behalte aber Grid-Dimensionen
+      for (let y = 0; y < this.solarGrid.rows; y++) {
+        for (let x = 0; x < this.solarGrid.cols; x++) {
+          if (this.solarGrid.selection[y]) {
+            this.solarGrid.selection[y][x] = false;
+          }
+        }
+      }
+      
+      // Grid und Liste neu aufbauen
+      this.solarGrid.buildGrid();
+      this.solarGrid.buildList();
+      this.solarGrid.updateSummaryOnChange();
+    }
+
     hideHelpAfterFirstUse() {
       const helpSection = document.querySelector('.bulk-selection-help');
       if (helpSection) {
