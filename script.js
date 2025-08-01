@@ -2959,27 +2959,22 @@
     }
 
     async renderProductSummary() {
-  		const incMChecked = this.incM.checked;
-  		const mc4Checked = this.mc4.checked;
-  		const solarkabelChecked = this.solarkabel.checked;
-  		const holzChecked = this.holz.checked;
-
   		const bundles = this.configs.map((c, idx) => {
   			// Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
   			if (idx === this.currentConfig) {
   				return {
     				selection:   this.selection,
     				orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    				incM:        incMChecked,
-    				mc4:         mc4Checked,
-    				solarkabel:  solarkabelChecked,
-    				holz:        holzChecked
+    				incM:        this.incM.checked,        // Aktuelle UI-Werte nur für current config
+    				mc4:         this.mc4.checked,
+    				solarkabel:  this.solarkabel.checked,
+    				holz:        this.holz.checked
   				};
   			} else {
   				return {
     				selection:   c.selection,
     				orientation: c.orientation,
-    				incM:        c.incM,
+    				incM:        c.incM,                   // Gespeicherte Werte für andere Configs
     				mc4:         c.mc4,
     				solarkabel:  c.solarkabel,
     				holz:        c.holz
@@ -2991,9 +2986,10 @@
   			bundles.push({
     			selection:   this.selection,
     			orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    			incM:        incMChecked,
-    			mc4:         mc4Checked,
-    			holz:        holzChecked
+    			incM:        this.incM.checked,            // Aktuelle UI-Werte für neue Config
+    			mc4:         this.mc4.checked,
+    			solarkabel:  this.solarkabel.checked,
+    			holz:        this.holz.checked
   			});
 			}
 
