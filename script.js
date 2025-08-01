@@ -16,19 +16,19 @@
   };
   
   const PRICE_MAP = {
-  	Solarmodul: 120,
-  	Endklemmen: 20,
-  	Schrauben: 5,
-  	Dachhaken: 15,
-  	Mittelklemmen: 18,
-  	Endkappen: 12,
-  	Schienenverbinder: 10,
-  	Schiene_240_cm: 30,
-  	Schiene_360_cm: 40,
-  	MC4_Stecker: 1,
+	Solarmodul: 59.00,
+	Endklemmen: 20.00,
+	Schrauben: 5.00,
+	Dachhaken: 15.00,
+	Mittelklemmen: 18.00,
+	Endkappen: 9.99,
+	Schienenverbinder: 9.99,
+	Schiene_240_cm: 8.99,
+	Schiene_360_cm: 40.00,
+	MC4_Stecker: 99.00,
   	Solarkabel: 29.99,
-  	Holzunterleger: 0.5
-	};
+	Holzunterleger: 0.50
+};
 
   // ===== BACKGROUND CALCULATION MANAGER =====
   class CalculationManager {
@@ -948,7 +948,7 @@
 
             const productName = productKey.replace(/_/g, ' ');
             const packsNeeded = Math.ceil(quantity / (VE[productKey] || 1));
-            const pricePerPack = PRICE_MAP[productKey] || 0;
+            const pricePerPack = getPriceFromCache(productKey);
             const totalForProduct = packsNeeded * pricePerPack;
             totalPrice += totalForProduct;
 
@@ -3767,11 +3767,11 @@
 
     async addAllToCart() {
       try {
-        // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
-        if (this.currentConfig !== null) {
-          this.updateConfig();
-        }
-        
+      // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
+      if (this.currentConfig !== null) {
+        this.updateConfig();
+      }
+      
         // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
         const configSnapshot = this.createConfigSnapshot();
         
@@ -3784,34 +3784,34 @@
         
         // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
         const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
-          // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
-          if (idx === this.currentConfig) {
+        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+        if (idx === this.currentConfig) {
               return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
-          } else {
+        } else {
               return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
-          }
+        }
         }));
-        
-        // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
-        if (this.currentConfig === null && this.configs.length === 0) {
+      
+      // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
+      if (this.currentConfig === null && this.configs.length === 0) {
             const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
             allBundles.push(currentParts);
-        }
-        
-        const total = {};
-        allBundles.forEach(parts => {
-          Object.entries(parts).forEach(([k, v]) => {
-            total[k] = (total[k] || 0) + v;
-          });
+      }
+      
+      const total = {};
+      allBundles.forEach(parts => {
+        Object.entries(parts).forEach(([k, v]) => {
+          total[k] = (total[k] || 0) + v;
         });
-        
-        const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
-        
-        if (totalItemCount === 0) {
-          this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
-          return;
-        }
-        
+      });
+      
+      const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
+      
+      if (totalItemCount === 0) {
+        this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
+        return;
+      }
+      
         // SCHRITT 4: Sende alle Konfigurationen an Webhook (NACH PDF)
         const webhookSuccess = await this.sendAllConfigsToWebhook();
         if (webhookSuccess) {
@@ -3819,10 +3819,10 @@
         } else {
           // Error handling if needed  
         }
-        
+      
         // SCHRITT 5: Füge zum Warenkorb hinzu
-        this.addPartsListToCart(total);
-        this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
+      this.addPartsListToCart(total);
+      this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
         
       } catch (error) {
         console.error('Fehler in addAllToCart:', error);
