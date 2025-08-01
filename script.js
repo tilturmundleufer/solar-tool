@@ -566,12 +566,25 @@
         gridEl.style.border = '1px solid #000000'; // 1px schwarze Border
         gridEl.style.borderRadius = '1rem'; // 1rem border-radius
 
-        // Debug: Log der Konfiguration um Probleme zu identifizieren
-        console.log('Grid Debug - Config:', {
-          rows: rows,
-          cols: cols,
-          selectionLength: selection.length,
-          selection: selection
+        // Normalisiere Selection-Array für die gewünschten Dimensionen
+        const normalizedSelection = Array.from({ length: rows }, (_, y) =>
+          Array.from({ length: cols }, (_, x) => {
+            // Prüfe ob die gespeicherte Selection diese Position abdeckt
+            if (selection[y] && Array.isArray(selection[y]) && x < selection[y].length) {
+              return selection[y][x] === true;
+            }
+            // Falls außerhalb der gespeicherten Dimensionen: false (nicht ausgewählt)
+            return false;
+          })
+        );
+
+        // Debug: Log der normalisierten Konfiguration
+        console.log('Grid Debug - Normalized:', {
+          originalRows: selection.length,
+          originalCols: selection[0] ? selection[0].length : 0,
+          targetRows: rows,
+          targetCols: cols,
+          normalizedSelection: normalizedSelection
         });
 
         // Erstelle alle Grid-Zellen
@@ -579,12 +592,12 @@
           for (let x = 0; x < cols; x++) {
             const cell = document.createElement('div');
             
-            // Robuste Prüfung: Behandle undefined/null Reihen korrekt
-            const isSelected = selection[y] && Array.isArray(selection[y]) && selection[y][x] === true;
+            // Verwende die normalisierte Selection
+            const isSelected = normalizedSelection[y][x];
             
             // Debug: Log für problematische Bereiche
-            if (y >= rows - 2) { // Letzten 2 Reihen debuggen
-              console.log(`Cell [${y}][${x}]: selection[${y}] =`, selection[y], 'isSelected =', isSelected);
+            if (y >= rows - 2 || x >= cols - 2) { 
+              console.log(`Cell [${y}][${x}]: isSelected =`, isSelected);
             }
             
             // Basis-Styles für alle Zellen
