@@ -805,7 +805,12 @@
         gridEl.style.padding = '2px';
         gridEl.style.backgroundColor = '#ffffff';
         gridEl.style.border = '1px solid #000000';
-        gridEl.style.borderRadius = '3px'; // Stark reduzierter border-radius
+        gridEl.style.borderRadius = '3px';
+        // CSS für scharfe Linien und pixelgenaue Darstellung
+        gridEl.style.imageRendering = 'crisp-edges';
+        gridEl.style.imageRendering = '-webkit-optimize-contrast';
+        gridEl.style.transform = 'translateZ(0)';
+        gridEl.style.backfaceVisibility = 'hidden';
 
         // Erstelle alle Grid-Zellen direkt aus Snapshot-Selection
         for (let y = 0; y < rows; y++) {
@@ -815,11 +820,15 @@
             // Verwende direkt die Snapshot-Selection (bereits normalisiert)
             const isSelected = selection[y] && selection[y][x] === true;
             
-            // Basis-Styles für alle Zellen mit Orientation-bewussten Dimensionen
+            // Basis-Styles für alle Zellen mit ultra-scharfen Linien
             cell.style.width = `${finalCellWidth}px`;
             cell.style.height = `${finalCellHeight}px`;
-            cell.style.borderRadius = '2px'; // Stark reduzierter border-radius
-            cell.style.border = '0.5px solid #000000'; // Dünnere Border
+            cell.style.borderRadius = '2px';
+            cell.style.border = '1px solid #000000'; // Stärkere Border für schärfere Linien
+            cell.style.imageRendering = 'crisp-edges';
+            cell.style.imageRendering = '-webkit-optimize-contrast';
+            cell.style.transform = 'translateZ(0)';
+            cell.style.backfaceVisibility = 'hidden';
             
             if (isSelected) {
               // Ausgewählte Zelle - Dunkelblaue Farbe
@@ -856,19 +865,36 @@
           backgroundColor: '#ffffff',
           width: actualGridWidth,
           height: actualGridHeight,
-          scale: 2, // Höhere Scale für schärferes Bild
+          scale: 4, // Ultra-hohe Scale für kristallscharfe Linien
           logging: false,
           useCORS: true,
           allowTaint: true,
           foreignObjectRendering: false,
-          removeContainer: false // Behält Container für korrektes Rendering
+          removeContainer: false,
+          pixelRatio: window.devicePixelRatio || 1, // Nutze native Pixeldichte
+          imageTimeout: 15000, // Längere Timeout für bessere Qualität
+          onclone: (clonedDoc) => {
+            // CSS-Optimierungen für schärfere Darstellung
+            const style = clonedDoc.createElement('style');
+            style.textContent = `
+              * {
+                image-rendering: -webkit-optimize-contrast !important;
+                image-rendering: crisp-edges !important;
+                image-rendering: pixelated !important;
+                text-rendering: optimizeLegibility !important;
+                -webkit-font-smoothing: antialiased !important;
+                -moz-osx-font-smoothing: grayscale !important;
+              }
+            `;
+            clonedDoc.head.appendChild(style);
+          }
         });
 
         // Cleanup - Element sofort entfernen
         document.body.removeChild(tempContainer);
 
-        // Canvas zu Data URL konvertieren
-        return canvas.toDataURL('image/png');
+        // Canvas zu optimiertem Data URL konvertieren - JPEG für kleinere Datei bei guter Qualität
+        return canvas.toDataURL('image/jpeg', 0.95); // 95% Qualität = scharf aber kompakt
 
       } catch (error) {
         console.error('Grid-Screenshot fehlgeschlagen:', error);
