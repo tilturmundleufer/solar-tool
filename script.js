@@ -1467,6 +1467,42 @@
         }
       }
 
+      // NEUE: Separate Abstand-Anpassung ohne Grid-Größe (z.B. nur "mit abstand")
+      if (!gridMatch) { // Nur wenn keine Grid-Größe angegeben wurde
+        const spacingOnlyMatch = input.match(this.patterns.spacing);
+        if (spacingOnlyMatch) {
+          let spacingRows = 0;
+          
+          if (spacingOnlyMatch[0].toLowerCase().includes('ohne')) {
+            spacingRows = 0; // "ohne abstand"
+          } else if (spacingOnlyMatch[0].toLowerCase().includes('mit') && !spacingOnlyMatch[1]) {
+            spacingRows = 1; // "mit abstand" (Standard)
+          } else if (spacingOnlyMatch[1]) {
+            spacingRows = parseInt(spacingOnlyMatch[1]); // "mit X reihen abstand"
+          }
+          
+          // Prüfe ob bereits Module vorhanden sind
+          const hasExistingSelection = this.solarGrid.selection && 
+            this.solarGrid.selection.some(row => row && row.some(cell => cell === true));
+          
+          if (hasExistingSelection) {
+            // Dynamische Abstand-Anpassung auf bestehendes Grid
+            config.adjustSpacing = {
+              spacing: spacingRows,
+              targetCols: null, // Keine spezifische Ziel-Spalten-Anzahl
+              targetRows: null  // Keine spezifische Ziel-Reihen-Anzahl
+            };
+            
+            // Früher Return, da dies die Hauptfunktion ist
+            return config;
+          } else {
+            // Keine Module vorhanden - Fehlermeldung
+            this.solarGrid.showToast(`⚠️ Keine Module vorhanden - erst Module auswählen, dann Abstand anpassen`, 3000);
+            return {};
+          }
+        }
+      }
+
       // Reihen-Pattern parsen (hat Priorität vor einfacher moduleCount)
       const rowMatch = input.match(this.patterns.rowPattern);
       if (rowMatch) {
@@ -1912,8 +1948,14 @@
         newRows = occupiedRows.length + (occupiedRows.length - 1) * spacing;
       }
       
-      const newCols = Math.max(targetCols || this.solarGrid.cols, 
-        Math.max(...occupiedRows.map(row => Math.max(...row.modules))) + 1);
+      // Berechne benötigte Spalten (mindestens so viele wie das breiteste Modul braucht)
+      const maxModuleX = Math.max(...occupiedRows.map(row => 
+        row.modules.length > 0 ? Math.max(...row.modules) : 0
+      ));
+      const newCols = Math.max(
+        targetCols || this.solarGrid.cols, // Ziel-Spalten oder aktuelle Spalten
+        maxModuleX + 1                     // Mindestens so breit wie das breiteste Modul
+      );
       
       // 3. Passe Grid-Größe an
       this.solarGrid.cols = newCols;
