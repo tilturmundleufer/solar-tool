@@ -825,14 +825,19 @@
         await new Promise(resolve => requestAnimationFrame(resolve));
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Screenshot von temporärem Element (isoliert)
+        // Screenshot von temporärem Element (isoliert) mit korrekten Dimensionen
+        const actualGridWidth = cols * finalCellWidth + (cols - 1) * finalGap + 4;
+        const actualGridHeight = rows * finalCellHeight + (rows - 1) * finalGap + 4;
+        
         const canvas = await this.html2canvas(gridEl, {
           backgroundColor: '#ffffff',
-          width: cols * (cellSize + cellGap) - cellGap + 4, // +4 für padding
-          height: rows * (cellSize + cellGap) - cellGap + 4,
+          width: actualGridWidth,
+          height: actualGridHeight,
           scale: 2, // Höhere Auflösung
           logging: false,
-          useCORS: true
+          useCORS: true,
+          allowTaint: true,
+          removeContainer: true // Verhindert Abschneiden
         });
 
         // Cleanup - Element sofort entfernen
