@@ -1167,15 +1167,10 @@
         this.solarGrid.holz.checked = config.wood;
       }
 
-      // Erstelle neue Auswahl-Matrix mit angepasster Größe
+      // Erstelle LEERE Auswahl-Matrix für SmartConfig
+      // SmartConfig soll IMMER mit leerer Auswahl starten, außer wenn explizit gewünscht
       const newSelection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
-        Array.from({ length: this.solarGrid.cols }, (_, x) => {
-          // Behalte bestehende Auswahl bei, falls sie existiert und im neuen Grid passt
-          if (oldSelection && y < oldSelection.length && x < oldSelection[y].length) {
-            return oldSelection[y][x];
-          }
-          return false;
-        })
+        Array.from({ length: this.solarGrid.cols }, (_, x) => false)
       );
       
       this.solarGrid.selection = newSelection;
@@ -1190,8 +1185,8 @@
       if (config.rowConfig) {
         this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
       }
-      // Wenn Module-Anzahl angegeben, automatisch auswählen (nur bei neuen Grids)
-      else if (config.moduleCount && (!oldSelection || oldSelection.flat().every(cell => !cell))) {
+      // Wenn Module-Anzahl angegeben, automatisch auswählen
+      else if (config.moduleCount) {
         this.autoSelectModules(config.moduleCount);
       }
       
@@ -3460,24 +3455,40 @@
       };
     }
 
-    // Hole alle Konfigurationsdaten für PDF
+    // Hole alle Konfigurationsdaten für PDF - VOLLSTÄNDIG ISOLIERT
     getAllConfigsData() {
       // Auto-Save der aktuellen Konfiguration falls nötig
       if (this.currentConfig !== null) {
         this.updateConfig();
       }
       
-      return this.configs.map((config, index) => ({
-        name: config.name || `Konfiguration ${index + 1}`,
-        cols: config.cols,
-        rows: config.rows,
-        selection: config.selection.map(row => [...row]), // Deep copy
-        orientation: config.orientation,
-        includeModules: config.incM,
-        mc4: config.mc4,
-        cable: config.solarkabel,
-        wood: config.holz
-      }));
+      // ZUSÄTZLICHE SICHERHEIT: Warte kurz für asynchrone Operationen
+      return this.configs.map((config, index) => {
+        // ROBUSTE Deep Copy mit Validierung
+        const safeSelection = config.selection || [];
+        const normalizedSelection = Array.from({ length: config.rows || 5 }, (_, y) =>
+          Array.from({ length: config.cols || 5 }, (_, x) => {
+            if (safeSelection[y] && Array.isArray(safeSelection[y]) && x < safeSelection[y].length) {
+              return safeSelection[y][x] === true;
+            }
+            return false;
+          })
+        );
+
+        return {
+          name: config.name || `Konfiguration ${index + 1}`,
+          cols: config.cols || 5,
+          rows: config.rows || 5,
+          selection: normalizedSelection, // Normalisierte Selection
+          cellWidth: config.cellWidth || 179,
+          cellHeight: config.cellHeight || 113,
+          orientation: config.orientation || 'horizontal',
+          includeModules: config.incM !== false, // Default true
+          mc4: config.mc4 || false,
+          cable: config.solarkabel || false,
+          wood: config.holz || false
+        };
+      });
     }
   }
 
