@@ -566,11 +566,26 @@
         gridEl.style.border = '1px solid #000000'; // 1px schwarze Border
         gridEl.style.borderRadius = '1rem'; // 1rem border-radius
 
+        // Debug: Log der Konfiguration um Probleme zu identifizieren
+        console.log('Grid Debug - Config:', {
+          rows: rows,
+          cols: cols,
+          selectionLength: selection.length,
+          selection: selection
+        });
+
         // Erstelle alle Grid-Zellen
         for (let y = 0; y < rows; y++) {
           for (let x = 0; x < cols; x++) {
             const cell = document.createElement('div');
-            const isSelected = selection[y] && selection[y][x];
+            
+            // Robuste Prüfung: Behandle undefined/null Reihen korrekt
+            const isSelected = selection[y] && Array.isArray(selection[y]) && selection[y][x] === true;
+            
+            // Debug: Log für problematische Bereiche
+            if (y >= rows - 2) { // Letzten 2 Reihen debuggen
+              console.log(`Cell [${y}][${x}]: selection[${y}] =`, selection[y], 'isSelected =', isSelected);
+            }
             
             // Basis-Styles für alle Zellen
             cell.style.width = `${cellSize}px`;
