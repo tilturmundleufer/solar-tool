@@ -779,19 +779,33 @@
         tempContainer.style.zIndex = '-1000'; // Sicherstellen dass es nicht sichtbar wird
         document.body.appendChild(tempContainer);
 
-        // Erstelle Grid HTML mit kompaktem Design
-        const cellSize = 50; // Zellgröße beibehalten
-        const cellGap = 2; // Maximal 2px Abstand
+        // Erstelle Grid HTML mit verbesserter Orientation-Darstellung
+        const isVertical = config.orientation === 'vertical';
+        
+        // Verwende Zellen-Größenverhältnis um Orientation zu zeigen
+        const baseCellSize = 40; // Reduzierte Grundgröße
+        const cellWidth = isVertical ? baseCellSize * 0.6 : baseCellSize; // Schmalere Zellen für vertikal
+        const cellHeight = isVertical ? baseCellSize : baseCellSize * 0.6; // Niedrigere Zellen für horizontal
+        const cellGap = 1; // Minimaler Abstand
+        
+        // Berechne PDF-konforme Größe (max 170mm breit für PDF mit 20mm padding)
+        const maxPDFWidth = 170; // mm
+        const totalGridWidth = cols * cellWidth + (cols - 1) * cellGap + 4; // +4 für padding
+        const scaleFactor = totalGridWidth > (maxPDFWidth * 3.78) ? (maxPDFWidth * 3.78) / totalGridWidth : 1; // 3.78 px per mm
+        
+        const finalCellWidth = cellWidth * scaleFactor;
+        const finalCellHeight = cellHeight * scaleFactor;
+        const finalGap = cellGap * scaleFactor;
         
         const gridEl = document.createElement('div');
         gridEl.style.display = 'grid';
-        gridEl.style.gap = `${cellGap}px`;
-        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
-        gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
-        gridEl.style.padding = '2px'; // Kompakter äußerer Abstand
+        gridEl.style.gap = `${finalGap}px`;
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${finalCellWidth}px)`;
+        gridEl.style.gridTemplateRows = `repeat(${rows}, ${finalCellHeight}px)`;
+        gridEl.style.padding = '2px';
         gridEl.style.backgroundColor = '#ffffff';
-        gridEl.style.border = '1px solid #000000'; // 1px schwarze Border
-        gridEl.style.borderRadius = '1rem'; // 1rem border-radius
+        gridEl.style.border = '1px solid #000000';
+        gridEl.style.borderRadius = '3px'; // Stark reduzierter border-radius
 
         // Erstelle alle Grid-Zellen direkt aus Snapshot-Selection
         for (let y = 0; y < rows; y++) {
@@ -801,11 +815,11 @@
             // Verwende direkt die Snapshot-Selection (bereits normalisiert)
             const isSelected = selection[y] && selection[y][x] === true;
             
-            // Basis-Styles für alle Zellen
-            cell.style.width = `${cellSize}px`;
-            cell.style.height = `${cellSize}px`;
-            cell.style.borderRadius = '1rem'; // 1rem border-radius
-            cell.style.border = '1px solid #000000'; // 1px schwarze Border
+            // Basis-Styles für alle Zellen mit Orientation-bewussten Dimensionen
+            cell.style.width = `${finalCellWidth}px`;
+            cell.style.height = `${finalCellHeight}px`;
+            cell.style.borderRadius = '2px'; // Stark reduzierter border-radius
+            cell.style.border = '0.5px solid #000000'; // Dünnere Border
             
             if (isSelected) {
               // Ausgewählte Zelle - Dunkelblaue Farbe
