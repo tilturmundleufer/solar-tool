@@ -502,8 +502,11 @@
       pdf.text(`Module: ${moduleCount} Stück`, 20, positionRef.y);
       positionRef.y += 15;
 
-      // Grid-Screenshot hinzufügen
+      // Grid-Screenshot hinzufügen  
       try {
+        // Längere Wartezeit für komplexere Konfigurationen
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         const gridImage = await this.captureGridVisualization(config);
         if (gridImage) {
           const imgWidth = 120;  // Größeres Bild für bessere Sichtbarkeit
@@ -522,7 +525,8 @@
         positionRef.y += 10;
       }
 
-      // Produkttabelle
+      // Produkttabelle - warte zwischen Berechnungen für korrekte Verarbeitung
+      await new Promise(resolve => setTimeout(resolve, 100));
       checkPageBreak(50); // Prüfe ob genug Platz für Tabelle
       positionRef.y = await this.addProductTable(pdf, config, positionRef.y, checkPageBreak);
 
@@ -748,14 +752,24 @@
         return {};
       }
 
-      // Verwende die gleiche Logik wie _buildPartsFor für Konsistenz
+      // Sichere ALLE relevanten Originalwerte
       const originalSelection = this.solarGrid.selection.map(r => [...r]);
+      const originalRows = this.solarGrid.rows;
+      const originalCols = this.solarGrid.cols;
+      const originalWinValue = this.solarGrid.wIn.value;
+      const originalHinValue = this.solarGrid.hIn.value;
+      const originalOrientationV = this.solarGrid.orV.checked;
       
       try {
-        // Temporär die Konfiguration setzen
+        // Temporär ALLE Konfigurationswerte setzen
         this.solarGrid.selection = config.selection;
+        this.solarGrid.rows = config.rows;
+        this.solarGrid.cols = config.cols;
+        this.solarGrid.wIn.value = config.cellWidth || parseInt(originalWinValue, 10) || 179;
+        this.solarGrid.hIn.value = config.cellHeight || parseInt(originalHinValue, 10) || 113;
+        this.solarGrid.orV.checked = config.orientation === 'vertical';
         
-        // Berechne alle strukturellen Teile
+        // Berechne alle strukturellen Teile mit den korrekten Parametern
         let parts = await this.solarGrid.calculateParts();
         
         // Entferne Module wenn nicht ausgewählt
@@ -779,8 +793,13 @@
 
         return parts;
       } finally {
-        // Ursprüngliche Auswahl wiederherstellen
+        // ALLE ursprünglichen Werte wiederherstellen
         this.solarGrid.selection = originalSelection;
+        this.solarGrid.rows = originalRows;
+        this.solarGrid.cols = originalCols;
+        this.solarGrid.wIn.value = originalWinValue;
+        this.solarGrid.hIn.value = originalHinValue;
+        this.solarGrid.orV.checked = originalOrientationV;
       }
     }
 
