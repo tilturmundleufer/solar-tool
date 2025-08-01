@@ -2959,22 +2959,31 @@
     }
 
     async renderProductSummary() {
+  		// VOLLSTÄNDIG ISOLIERTE Berechnung - NIEMALS Grid-Eigenschaften berühren!
   		const bundles = this.configs.map((c, idx) => {
   			// Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
   			if (idx === this.currentConfig) {
   				return {
-    				selection:   this.selection,
+    				selection:   this.selection.map(row => [...row]), // Deep copy
+    				rows:        this.rows,
+    				cols:        this.cols,
+    				cellWidth:   parseInt(this.wIn.value, 10) || 179,
+    				cellHeight:  parseInt(this.hIn.value, 10) || 113,
     				orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    				incM:        this.incM.checked,        // Aktuelle UI-Werte nur für current config
+    				incM:        this.incM.checked,
     				mc4:         this.mc4.checked,
     				solarkabel:  this.solarkabel.checked,
     				holz:        this.holz.checked
   				};
   			} else {
   				return {
-    				selection:   c.selection,
+    				selection:   c.selection.map(row => [...row]), // Deep copy
+    				rows:        c.rows,
+    				cols:        c.cols,
+    				cellWidth:   c.cellWidth,
+    				cellHeight:  c.cellHeight,
     				orientation: c.orientation,
-    				incM:        c.incM,                   // Gespeicherte Werte für andere Configs
+    				incM:        c.incM,
     				mc4:         c.mc4,
     				solarkabel:  c.solarkabel,
     				holz:        c.holz
@@ -2984,77 +2993,64 @@
 
   		if (this.currentConfig === null) {
   			bundles.push({
-    			selection:   this.selection,
+    			selection:   this.selection.map(row => [...row]), // Deep copy
+    			rows:        this.rows,
+    			cols:        this.cols,
+    			cellWidth:   parseInt(this.wIn.value, 10) || 179,
+    			cellHeight:  parseInt(this.hIn.value, 10) || 113,
     			orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    			incM:        this.incM.checked,            // Aktuelle UI-Werte für neue Config
+    			incM:        this.incM.checked,
     			mc4:         this.mc4.checked,
     			solarkabel:  this.solarkabel.checked,
     			holz:        this.holz.checked
   			});
 			}
-
-  		// Speichere aktuelle Werte
-  		const currentOrientation = this.orV.checked;
-  		const currentSelection = this.selection.map(r => [...r]);
   		
   		const total = {};
   		
-  		// Verwende Promise.all für parallele Berechnungen
-  		const calculations = bundles.map(async (b) => {
-    		// Temporär ALLE relevanten Eigenschaften für korrekte Berechnung setzen
-    		const originalRows = this.rows;
-    		const originalCols = this.cols;
-    		const originalWValue = this.wIn.value;
-    		const originalHValue = this.hIn.value;
-    		const originalOrientation = this.orV.checked;
-    		const originalSelection = this.selection;
-
-    		try {
-      		// Setze ALLE Konfigurationsparameter für diese Berechnung
-      		this.rows = b.rows || this.rows;
-      		this.cols = b.cols || this.cols;
-      		this.wIn.value = b.cellWidth || parseInt(this.wIn.value, 10);
-      		this.hIn.value = b.cellHeight || parseInt(this.hIn.value, 10);
-      		this.orV.checked = b.orientation === 'vertical';
-      		this.orH.checked = !this.orV.checked;
-      		this.selection = b.selection;
-      		this.updateSize();
-
-      		let parts = await this.calculateParts();
-      		if (!b.incM) delete parts.Solarmodul;
-      		if (b.mc4) {
-      			const panelCount = b.selection.flat().filter(v => v).length;
-      			parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-      		}
-      		if (b.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      		if (b.holz)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
-
-      		return parts;
-    		} finally {
-      		// Stelle ursprüngliche Werte wieder her
-      		this.rows = originalRows;
-      		this.cols = originalCols;
-      		this.wIn.value = originalWValue;
-      		this.hIn.value = originalHValue;
-      		this.orV.checked = originalOrientation;
-      		this.orH.checked = !originalOrientation;
-      		this.selection = originalSelection;
-      		this.updateSize();
-    		}
-  		});
-  		
+  		// ISOLIERTE Berechnungen mit calculationManager - KEINE Grid-Eigenschaften berühren!
   		try {
-  			const allParts = await Promise.all(calculations);
+  			const allParts = await Promise.all(bundles.map(async (b) => {
+  				// Direkte Berechnung mit calculationManager ohne Grid-Modification
+  				const calculationData = {
+  					selection: b.selection,
+  					rows: b.rows,
+  					cols: b.cols,
+  					cellWidth: b.cellWidth,
+  					cellHeight: b.cellHeight,
+  					orientation: b.orientation
+  				};
+
+  				let parts;
+  				try {
+  					parts = await calculationManager.calculate('calculateParts', calculationData);
+  				} catch (error) {
+  					// Fallback zu synchroner Berechnung
+  					parts = this.calculatePartsDirectly(calculationData);
+  				}
+
+  				// Checkbox-basierte Modifikationen
+    		if (!b.incM) delete parts.Solarmodul;
+    		if (b.mc4) {
+    			const panelCount = b.selection.flat().filter(v => v).length;
+  					parts.MC4_Stecker = Math.ceil(panelCount / 30);
+    		}
+  				if (b.solarkabel) parts.Solarkabel = 1;
+  				if (b.holz) parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+
+  				return parts;
+  			}));
+
+  			// Summiere alle Parts
   			allParts.forEach(parts => {
     		Object.entries(parts).forEach(([k, v]) => {
       		total[k] = (total[k] || 0) + v;
     		});
   		});
   		} catch (error) {
+  			console.error('Error in renderProductSummary:', error);
   			// Fallback: Verwende leeres total
   		}
-  		
-  		// Ursprüngliche Werte sind bereits in jedem finally-Block wiederhergestellt
 
   		const entries = Object.entries(total).filter(([, v]) => v > 0);
   		const itemsPerColumn = 4;
@@ -3087,6 +3083,71 @@
 
   		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
   		this.summaryList.style.display = entries.length ? 'flex' : 'none';
+		}
+
+		// ISOLIERTE synchrone Berechnung für Fallback
+		calculatePartsDirectly(data) {
+			const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
+			const parts = {
+				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+			};
+
+			for (let y = 0; y < rows; y++) {
+				if (!Array.isArray(selection[y])) continue;
+				let run = 0;
+
+				for (let x = 0; x < cols; x++) {
+					if (selection[y]?.[x]) run++;
+					else if (run) { 
+						this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation); 
+						run = 0; 
+					}
+				}
+				if (run) this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation);
+			}
+
+			return parts;
+		}
+
+		// ISOLIERTE processGroup für Fallback
+		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation) {
+			const isVertical = orientation === 'vertical';
+			const actualCellWidth = isVertical ? cellHeight : cellWidth;
+			
+			const totalLen = len * actualCellWidth;
+			const floor360 = Math.floor(totalLen / 360);
+			const rem360 = totalLen - floor360 * 360;
+			const floor240 = Math.ceil(rem360 / 240);
+			const pure360 = Math.ceil(totalLen / 360);
+			const pure240 = Math.ceil(totalLen / 240);
+			
+			const variants = [
+				{cnt360: floor360, cnt240: floor240},
+				{cnt360: pure360,  cnt240: 0},
+				{cnt360: 0,        cnt240: pure240}
+			].map(v => ({
+				...v,
+				rails: v.cnt360 + v.cnt240,
+				waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+			}));
+			
+			const minRails = Math.min(...variants.map(v => v.rails));
+			const best = variants
+				.filter(v => v.rails === minRails)
+				.reduce((a, b) => a.waste <= b.waste ? a : b);
+			
+			const {cnt360, cnt240} = best;
+			parts.Schiene_360_cm     += cnt360 * 2;
+			parts.Schiene_240_cm     += cnt240 * 2;
+			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+			parts.Endklemmen         += 4;
+			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+			parts.Dachhaken          += len > 1 ? len * 3 : 4;
+			parts.Endkappen          += parts.Endklemmen;
+			parts.Solarmodul         += len;
+			parts.Schrauben          += parts.Dachhaken * 2;
 		}
 
     generateContinueLink() {
