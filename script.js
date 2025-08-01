@@ -1167,11 +1167,30 @@
         this.solarGrid.holz.checked = config.wood;
       }
 
-      // Erstelle LEERE Auswahl-Matrix für SmartConfig
-      // SmartConfig soll IMMER mit leerer Auswahl starten, außer wenn explizit gewünscht
-      const newSelection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
-        Array.from({ length: this.solarGrid.cols }, (_, x) => false)
-      );
+      // INTELLIGENTE Selection-Matrix-Erstellung
+      // NUR bei Grid-Größen-Änderung → Selection anpassen/löschen
+      // Bei reinen Checkbox-Änderungen → Selection beibehalten
+      const gridSizeChanged = (config.cols && config.cols !== oldCols) || 
+                             (config.rows && config.rows !== oldRows);
+      
+      let newSelection;
+      if (gridSizeChanged) {
+        // Grid-Größe geändert: Erstelle neue Matrix, behalte was möglich ist
+        newSelection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
+          Array.from({ length: this.solarGrid.cols }, (_, x) => {
+            // Behalte bestehende Auswahl bei, falls sie im neuen Grid passt
+            if (oldSelection && y < oldSelection.length && x < oldSelection[y].length) {
+              return oldSelection[y][x];
+            }
+            return false;
+          })
+        );
+      } else {
+        // Keine Grid-Änderung: Behalte bestehende Selection komplett
+        newSelection = oldSelection || Array.from({ length: this.solarGrid.rows }, () =>
+          Array.from({ length: this.solarGrid.cols }, () => false)
+        );
+      }
       
       this.solarGrid.selection = newSelection;
 
