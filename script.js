@@ -3412,17 +3412,18 @@
         return;
       }
       
-      // Sende alle Konfigurationen an Webhook
-      this.sendAllConfigsToWebhook().then(success => {
-        if (success) {
-        } else {
-        }
-      });
+      // Sende alle Konfigurationen an Webhook - SEQUENZIELL vor PDF!
+      const webhookSuccess = await this.sendAllConfigsToWebhook();
+      if (webhookSuccess) {
+        // Success handling if needed
+      } else {
+        // Error handling if needed  
+      }
       
       this.addPartsListToCart(total);
       this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
         
-        // PDF für alle Konfigurationen generieren
+        // PDF für alle Konfigurationen generieren - NACH Webhook!
         if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
           setTimeout(() => {
             this.pdfGenerator.generatePDF('all');
