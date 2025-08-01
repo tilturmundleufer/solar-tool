@@ -839,24 +839,28 @@
         await new Promise(resolve => requestAnimationFrame(resolve));
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Screenshot von temporärem Element (isoliert) mit korrekten Dimensionen
-        const actualGridWidth = Math.ceil(cols * finalCellWidth + (cols - 1) * finalGap + 6); // +6 für border + padding
-        const actualGridHeight = Math.ceil(rows * finalCellHeight + (rows - 1) * finalGap + 6);
+        // Screenshot von temporärem Element (isoliert) mit großzügigem Padding
+        const paddingX = 20; // Großzügiges horizontales Padding
+        const paddingY = 20; // Großzügiges vertikales Padding
+        const actualGridWidth = Math.ceil(cols * finalCellWidth + (cols - 1) * finalGap + paddingX);
+        const actualGridHeight = Math.ceil(rows * finalCellHeight + (rows - 1) * finalGap + paddingY);
         
         console.log('Grid Screenshot Debug:', {
           cols, rows, finalCellWidth, finalCellHeight, finalGap,
           calculatedWidth: actualGridWidth,
-          calculatedHeight: actualGridHeight
+          calculatedHeight: actualGridHeight,
+          paddingX, paddingY
         });
         
         const canvas = await this.html2canvas(gridEl, {
           backgroundColor: '#ffffff',
-          width: actualGridWidth + 10, // Extra padding um Abschneiden zu verhindern
-          height: actualGridHeight + 10,
-          scale: 1.5, // Reduzierte Scale für bessere Performance
+          width: actualGridWidth,
+          height: actualGridHeight,
+          scale: 2, // Höhere Scale für schärferes Bild
           logging: false,
           useCORS: true,
           allowTaint: true,
+          foreignObjectRendering: false,
           removeContainer: false // Behält Container für korrektes Rendering
         });
 
@@ -942,7 +946,7 @@
               pdf.setFont('helvetica', 'normal');
             }
 
-            const productName = this.getProductDisplayName(productKey);
+            const productName = productKey.replace(/_/g, ' ');
             const packsNeeded = Math.ceil(quantity / (VE[productKey] || 1));
             const pricePerPack = PRICE_MAP[productKey] || 0;
             const totalForProduct = packsNeeded * pricePerPack;
