@@ -1438,20 +1438,31 @@
             spacingRows = parseInt(spacingMatch[1]);
           }
           
-          // Wenn Abstand bei Grid-Größe, erstelle äquivalente rowConfig
-          if (spacingRows > 0) {
-            // Berechne wie viele "echte" Reihen wir brauchen
-            const actualRows = Math.ceil(config.rows / (1 + spacingRows));
-            const totalCells = config.cols * actualRows;
+          // Wenn Abstand bei Grid-Größe, prüfe ob bereits Module vorhanden sind
+          if (spacingRows >= 0) { // >= 0 um auch "ohne abstand" zu unterstützen
+            // Überprüfe ob bereits eine Auswahl existiert (dynamische Anpassung)
+            const hasExistingSelection = this.solarGrid.selection && 
+              this.solarGrid.selection.some(row => row && row.some(cell => cell === true));
             
-            config.rowConfig = {
-              rows: actualRows,
-              modulesPerRow: config.cols,
-              spacing: spacingRows,
-              totalModules: totalCells
-            };
-            
-            // Grid-Größe bleibt wie angegeben (bereits mit Abstand berechnet)
+            if (hasExistingSelection) {
+              // Dynamische Abstand-Anpassung auf bestehendes Grid
+              config.adjustSpacing = {
+                spacing: spacingRows,
+                targetCols: config.cols,
+                targetRows: config.rows
+              };
+            } else {
+              // Neue Grid-Erstellung mit Abstand (wie bisher)
+              const actualRows = Math.ceil(config.rows / (1 + Math.max(spacingRows, 1)));
+              const totalCells = config.cols * actualRows;
+              
+              config.rowConfig = {
+                rows: actualRows,
+                modulesPerRow: config.cols,
+                spacing: spacingRows,
+                totalModules: totalCells
+              };
+            }
           }
         }
       }
@@ -1720,8 +1731,12 @@
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
 
+      // NEUE: Dynamische Abstand-Anpassung auf bestehendes Grid
+      if (config.adjustSpacing) {
+        this.adjustGridSpacing(config.adjustSpacing);
+      }
       // Wenn Reihen-Konfiguration angegeben, verwende spezielle Selektion
-      if (config.rowConfig) {
+      else if (config.rowConfig) {
         this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
       }
       // Wenn Module-Anzahl angegeben, automatisch auswählen
@@ -1864,6 +1879,82 @@
       
       // Grid neu aufbauen
       this.solarGrid.updateSize();
+    }
+    
+    // NEUE METHODE: Dynamische Abstand-Anpassung für bestehende Grids
+    adjustGridSpacing(spacingConfig) {
+      const { spacing, targetCols, targetRows } = spacingConfig;
+      
+      // 1. Identifiziere alle belegten Reihen im aktuellen Grid
+      const occupiedRows = [];
+      for (let y = 0; y < this.solarGrid.rows; y++) {
+        if (this.solarGrid.selection[y] && this.solarGrid.selection[y].some(cell => cell === true)) {
+          // Sammle alle Module in dieser Reihe
+          const modules = [];
+          for (let x = 0; x < this.solarGrid.cols; x++) {
+            if (this.solarGrid.selection[y][x] === true) {
+              modules.push(x);
+            }
+          }
+          occupiedRows.push({ originalRow: y, modules: modules });
+        }
+      }
+      
+      if (occupiedRows.length === 0) return; // Keine Module vorhanden
+      
+      // 2. Berechne neue Grid-Größe basierend auf gewünschtem Abstand
+      let newRows;
+      if (spacing === 0) {
+        // "ohne abstand" - nur die belegten Reihen
+        newRows = occupiedRows.length;
+      } else {
+        // "mit X reihen abstand" - belegte Reihen + Abstände dazwischen
+        newRows = occupiedRows.length + (occupiedRows.length - 1) * spacing;
+      }
+      
+      const newCols = Math.max(targetCols || this.solarGrid.cols, 
+        Math.max(...occupiedRows.map(row => Math.max(...row.modules))) + 1);
+      
+      // 3. Passe Grid-Größe an
+      this.solarGrid.cols = newCols;
+      this.solarGrid.rows = newRows;
+      
+      // 4. Erstelle neue Selection-Matrix
+      const newSelection = Array.from({ length: newRows }, () =>
+        Array.from({ length: newCols }, () => false)
+      );
+      
+      // 5. Platziere Module an neuen Positionen mit korrektem Abstand
+      let currentTargetRow = 0;
+      for (let i = 0; i < occupiedRows.length; i++) {
+        const occupiedRow = occupiedRows[i];
+        
+        // Platziere alle Module dieser Reihe
+        for (const moduleX of occupiedRow.modules) {
+          if (moduleX < newCols) {
+            newSelection[currentTargetRow][moduleX] = true;
+          }
+        }
+        
+        // Springe zum nächsten verfügbaren Slot (mit Abstand)
+        if (i < occupiedRows.length - 1) { // Nicht beim letzten Element
+          currentTargetRow += 1 + spacing;
+        }
+      }
+      
+      // 6. Aktualisiere Selection und Grid
+      this.solarGrid.selection = newSelection;
+      this.solarGrid.updateSize();
+      this.solarGrid.buildGrid();
+      this.solarGrid.buildList();
+      this.solarGrid.updateSummaryOnChange();
+      
+      // 7. Erfolgsmeldung
+      if (spacing === 0) {
+        this.solarGrid.showToast(`🔧 Abstände entfernt - ${occupiedRows.length} Reihen kompakt`, 2000);
+      } else {
+        this.solarGrid.showToast(`📏 ${spacing} Reihen Abstand hinzugefügt - ${newRows} Reihen total`, 2000);
+      }
     }
     
     applyRowConfiguration(rowConfig, intelligentDistribution = null) {
