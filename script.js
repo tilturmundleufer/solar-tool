@@ -840,18 +840,24 @@
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Screenshot von temporärem Element (isoliert) mit korrekten Dimensionen
-        const actualGridWidth = cols * finalCellWidth + (cols - 1) * finalGap + 4;
-        const actualGridHeight = rows * finalCellHeight + (rows - 1) * finalGap + 4;
+        const actualGridWidth = Math.ceil(cols * finalCellWidth + (cols - 1) * finalGap + 6); // +6 für border + padding
+        const actualGridHeight = Math.ceil(rows * finalCellHeight + (rows - 1) * finalGap + 6);
+        
+        console.log('Grid Screenshot Debug:', {
+          cols, rows, finalCellWidth, finalCellHeight, finalGap,
+          calculatedWidth: actualGridWidth,
+          calculatedHeight: actualGridHeight
+        });
         
         const canvas = await this.html2canvas(gridEl, {
           backgroundColor: '#ffffff',
-          width: actualGridWidth,
-          height: actualGridHeight,
-          scale: 2, // Höhere Auflösung
+          width: actualGridWidth + 10, // Extra padding um Abschneiden zu verhindern
+          height: actualGridHeight + 10,
+          scale: 1.5, // Reduzierte Scale für bessere Performance
           logging: false,
           useCORS: true,
           allowTaint: true,
-          removeContainer: true // Verhindert Abschneiden
+          removeContainer: false // Behält Container für korrektes Rendering
         });
 
         // Cleanup - Element sofort entfernen
@@ -869,10 +875,15 @@
     // NEUE ISOLIERTE Produkttabelle aus Snapshot
     async addProductTableFromSnapshot(pdf, config, yPosition, checkPageBreak) {
       try {
+        console.log('addProductTableFromSnapshot called for:', config.name);
+        
         // Berechne Produkte aus Snapshot-Daten (isoliert)
         const parts = await this.calculatePartsFromSnapshot(config);
         
+        console.log('Received parts:', parts, 'Keys count:', Object.keys(parts || {}).length);
+        
         if (!parts || Object.keys(parts).length === 0) {
+          console.log('No parts calculated, returning early');
           return yPosition;
         }
 
@@ -963,6 +974,13 @@
     // Isolierte Produktberechnung aus Snapshot
     async calculatePartsFromSnapshot(config) {
       try {
+        console.log('Calculating parts for config:', config.name, {
+          selectedCells: config.selectedCells,
+          rows: config.rows,
+          cols: config.cols,
+          includeModules: config.includeModules
+        });
+
         // Erstelle isolierte Calculation-Data aus Snapshot
         const calculationData = {
           selection: config.selection.map(row => [...row]), // Deep copy
@@ -983,6 +1001,8 @@
           parts = this.calculatePartsDirectly(calculationData);
         }
 
+        console.log('Parts calculated:', parts);
+
         // Entferne Module wenn nicht ausgewählt
         if (!config.includeModules) {
           delete parts.Solarmodul;
@@ -1002,6 +1022,7 @@
           parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
         }
 
+        console.log('Final parts after processing:', parts);
         return parts;
 
       } catch (error) {
