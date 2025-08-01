@@ -412,8 +412,8 @@
       return !!(this.jsPDF && this.html2canvas);
     }
 
-    // Generiere PDF für aktuelle oder alle Konfigurationen
-    async generatePDF(type = 'current') {
+    // NEUE ISOLIERTE PDF-Generation mit Snapshot (KEINE Grid-Interaktion!)
+    async generatePDFFromSnapshot(snapshot) {
       if (!this.isAvailable()) {
         console.warn('PDF Libraries nicht verfügbar');
         this.solarGrid.showToast('PDF-Generierung nicht verfügbar', 3000);
@@ -421,13 +421,18 @@
       }
 
       try {
-        this.solarGrid.showToast('PDF wird erstellt...', 2000);
+        console.log('PDF-Generation startet mit Snapshot:', {
+          totalConfigs: snapshot.totalConfigs,
+          timestamp: snapshot.timestamp,
+          configs: snapshot.configs.map(c => ({
+            name: c.name,
+            dimensions: `${c.cols}x${c.rows}`,
+            selectedCells: c.selectedCells,
+            totalCells: c.totalCells
+          }))
+        });
         
-        const configs = type === 'current' ? 
-          [this.solarGrid.getCurrentConfigData()] : 
-          this.solarGrid.getAllConfigsData();
-
-        if (!configs || configs.length === 0) {
+        if (!snapshot.configs || snapshot.configs.length === 0) {
           this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
           return;
         }
@@ -435,24 +440,44 @@
         const pdf = new this.jsPDF('p', 'mm', 'a4');
         let isFirstPage = true;
 
-        for (const config of configs) {
+        // Generiere PDF für jede Konfiguration aus dem Snapshot
+        for (const config of snapshot.configs) {
           if (!isFirstPage) {
             pdf.addPage();
           }
-          await this.addConfigurationToPDF(pdf, config, isFirstPage);
+          await this.addConfigurationToPDFFromSnapshot(pdf, config, isFirstPage);
           isFirstPage = false;
         }
 
         // Generiere Dateinamen
-        const fileName = this.generateFileName(configs);
+        const fileName = this.generateFileName(snapshot.configs);
         
         // PDF herunterladen
         pdf.save(fileName);
-        this.solarGrid.showToast('PDF erfolgreich erstellt ✅', 3000);
+        
+        console.log('PDF erfolgreich generiert:', fileName);
 
       } catch (error) {
         console.error('PDF-Generierung fehlgeschlagen:', error);
         this.solarGrid.showToast('PDF-Erstellung fehlgeschlagen', 3000);
+        throw error; // Re-throw für debugging
+      }
+    }
+
+    // DEPRECATED: Alte PDF-Generation für Backward Compatibility
+    async generatePDF(type = 'current') {
+      if (type === 'current') {
+        // Für einzelne Config verwende alte Methode
+        const configs = [this.solarGrid.getCurrentConfigData()];
+        const pdf = new this.jsPDF('p', 'mm', 'a4');
+        await this.addConfigurationToPDF(pdf, configs[0], true);
+        const fileName = this.generateFileName(configs);
+        pdf.save(fileName);
+        this.solarGrid.showToast('PDF erfolgreich erstellt ✅', 3000);
+      } else {
+        // Für alle Configs verwende neuen Snapshot-Approach
+        const snapshot = this.solarGrid.createConfigSnapshot();
+        await this.generatePDFFromSnapshot(snapshot);
       }
     }
 
@@ -533,6 +558,91 @@
       // Produkte pro Modul Informationen
       checkPageBreak(60); // Prüfe ob genug Platz für Zusatzinfos
       positionRef.y = this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
+    }
+
+    // NEUE ISOLIERTE Konfiguration zu PDF hinzufügen (aus Snapshot)
+    async addConfigurationToPDFFromSnapshot(pdf, config, isFirstPage) {
+      const pageWidth = 210;
+      const positionRef = { y: 20 };
+      
+      // Helper function für automatische Seitenumbrüche
+      const checkPageBreak = (neededHeight) => {
+        if (positionRef.y + neededHeight > 277) { // A4 height minus margins
+          pdf.addPage();
+          positionRef.y = 20;
+          return true; // Neue Seite wurde erstellt
+        }
+        return false;
+      };
+
+      console.log(`PDF-Seite für Konfiguration: ${config.name}`, {
+        dimensions: `${config.cols}x${config.rows}`,
+        selectedCells: config.selectedCells,
+        totalCells: config.totalCells
+      });
+
+      // Titel
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Solar-Konfiguration', 20, positionRef.y);
+      
+      // Datum
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      const today = new Date().toLocaleDateString('de-DE');
+      const dateWidth = pdf.getTextWidth(today);
+      pdf.text(today, pageWidth - 20 - dateWidth, positionRef.y);
+      
+      positionRef.y += 20;
+
+      // Konfigurationsdetails
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Konfiguration: ${config.name}`, 20, positionRef.y);
+      positionRef.y += 15;
+
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      
+      // Grid-Informationen in zwei Spalten
+      const leftColumn = 20;
+      const rightColumn = 120;
+      
+      pdf.text(`Grid-Größe: ${config.cols} x ${config.rows}`, leftColumn, positionRef.y);
+      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, rightColumn, positionRef.y);
+      positionRef.y += 10;
+      
+      pdf.text(`Module: ${config.selectedCells} Stück`, leftColumn, positionRef.y);
+
+      positionRef.y += 15;
+
+      // Grid-Screenshot hinzufügen (ISOLIERT mit Snapshot-Daten)
+      try {
+        const gridImage = await this.captureGridVisualizationFromSnapshot(config);
+        if (gridImage) {
+          const imgWidth = 120;
+          const imgHeight = 90;
+          
+          // Prüfe ob genug Platz für das Bild
+          checkPageBreak(imgHeight + 10);
+          
+          // Horizontal zentrieren: (210mm - imgWidth) / 2
+          const centerX = (pageWidth - imgWidth) / 2;
+          pdf.addImage(gridImage, 'PNG', centerX, positionRef.y, imgWidth, imgHeight);
+          positionRef.y += imgHeight + 10;
+        }
+      } catch (error) {
+        console.warn('Grid-Screenshot fehlgeschlagen:', error);
+        positionRef.y += 10;
+      }
+
+      // Produkttabelle (ISOLIERT mit Snapshot-Daten)
+      checkPageBreak(50);
+      positionRef.y = await this.addProductTableFromSnapshot(pdf, config, positionRef.y, checkPageBreak);
+
+      // Produkte pro Modul Informationen
+      checkPageBreak(60);
+      positionRef.y = await this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
     }
 
     // Erfasse Grid-Visualisierung als Bild
@@ -643,6 +753,241 @@
       } catch (error) {
         console.warn('Grid-Screenshot fehlgeschlagen:', error);
         return null;
+      }
+    }
+
+    // NEUE ISOLIERTE Grid-Capture aus Snapshot (KEINE Live-Grid-Interaktion!)
+    async captureGridVisualizationFromSnapshot(config) {
+      try {
+        console.log(`Grid-Capture für ${config.name}:`, {
+          dimensions: `${config.cols}x${config.rows}`,
+          selectedCells: config.selectedCells,
+          selection: config.selection.slice(0, 3).map(row => row.slice(0, 5)) // Log first 3 rows, 5 cols
+        });
+        
+        const selection = config.selection || [];
+        const cols = config.cols || 5;
+        const rows = config.rows || 5;
+        
+        // Erstelle temporäres Container Element (komplett isoliert)
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-10000px';
+        tempContainer.style.top = '-10000px';
+        tempContainer.style.padding = '20px';
+        tempContainer.style.backgroundColor = '#ffffff';
+        tempContainer.style.zIndex = '-1000'; // Sicherstellen dass es nicht sichtbar wird
+        document.body.appendChild(tempContainer);
+
+        // Erstelle Grid HTML mit kompaktem Design
+        const cellSize = 50; // Zellgröße beibehalten
+        const cellGap = 2; // Maximal 2px Abstand
+        
+        const gridEl = document.createElement('div');
+        gridEl.style.display = 'grid';
+        gridEl.style.gap = `${cellGap}px`;
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+        gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+        gridEl.style.padding = '2px'; // Kompakter äußerer Abstand
+        gridEl.style.backgroundColor = '#ffffff';
+        gridEl.style.border = '1px solid #000000'; // 1px schwarze Border
+        gridEl.style.borderRadius = '1rem'; // 1rem border-radius
+
+        // Erstelle alle Grid-Zellen direkt aus Snapshot-Selection
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const cell = document.createElement('div');
+            
+            // Verwende direkt die Snapshot-Selection (bereits normalisiert)
+            const isSelected = selection[y] && selection[y][x] === true;
+            
+            // Basis-Styles für alle Zellen
+            cell.style.width = `${cellSize}px`;
+            cell.style.height = `${cellSize}px`;
+            cell.style.borderRadius = '1rem'; // 1rem border-radius
+            cell.style.border = '1px solid #000000'; // 1px schwarze Border
+            
+            if (isSelected) {
+              // Ausgewählte Zelle - Dunkelblaue Farbe
+              cell.style.backgroundColor = '#072544';
+            } else {
+              // Nicht-ausgewählte Zelle - hell-grau
+              cell.style.backgroundColor = '#f3f4f6';
+            }
+            
+            gridEl.appendChild(cell);
+          }
+        }
+        
+        tempContainer.appendChild(gridEl);
+
+        // Warte auf Rendering
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Screenshot von temporärem Element (isoliert)
+        const canvas = await this.html2canvas(gridEl, {
+          backgroundColor: '#ffffff',
+          width: cols * (cellSize + cellGap) - cellGap + 4, // +4 für padding
+          height: rows * (cellSize + cellGap) - cellGap + 4,
+          scale: 2, // Höhere Auflösung
+          logging: false,
+          useCORS: true
+        });
+
+        // Cleanup - Element sofort entfernen
+        document.body.removeChild(tempContainer);
+
+        // Canvas zu Data URL konvertieren
+        return canvas.toDataURL('image/png');
+
+      } catch (error) {
+        console.error('Grid-Screenshot fehlgeschlagen:', error);
+        return null;
+      }
+    }
+
+    // NEUE ISOLIERTE Produkttabelle aus Snapshot
+    async addProductTableFromSnapshot(pdf, config, yPosition, checkPageBreak) {
+      try {
+        // Berechne Produkte aus Snapshot-Daten (isoliert)
+        const parts = await this.calculatePartsFromSnapshot(config);
+        
+        if (!parts || Object.keys(parts).length === 0) {
+          return yPosition;
+        }
+
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        
+        // Prüfe Seitenumbruch vor Tabellentitel
+        if (checkPageBreak(15)) {
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+        }
+        
+        pdf.text('Benötigte Produkte:', 20, yPosition);
+        yPosition += 10;
+
+        // Tabellen-Header
+        if (checkPageBreak(25)) {
+          // Wiederhole Header auf neuer Seite
+          pdf.setFontSize(14);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Benötigte Produkte:', 20, yPosition);
+          yPosition += 10;
+        }
+
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Produkt', 20, yPosition);
+        pdf.text('Benötigt', 80, yPosition);
+        pdf.text('Packungen', 120, yPosition);
+        pdf.text('Preis/Pack', 160, yPosition);
+        pdf.text('Gesamt', 190, yPosition);
+        yPosition += 8;
+
+        // Tabellen-Linie
+        pdf.line(20, yPosition - 2, 200, yPosition - 2);
+        yPosition += 5;
+
+        let totalPrice = 0;
+        pdf.setFont('helvetica', 'normal');
+
+        Object.entries(parts).forEach(([productKey, quantity]) => {
+          if (quantity > 0) {
+            // Prüfe Seitenumbruch vor jeder Zeile
+            if (checkPageBreak(8)) {
+              // Wiederhole Header auf neuer Seite
+              pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Produkt', 20, yPosition);
+              pdf.text('Benötigt', 80, yPosition);
+              pdf.text('Packungen', 120, yPosition);
+              pdf.text('Preis/Pack', 160, yPosition);
+              pdf.text('Gesamt', 190, yPosition);
+              yPosition += 8;
+              pdf.line(20, yPosition - 2, 200, yPosition - 2);
+              yPosition += 5;
+              pdf.setFont('helvetica', 'normal');
+            }
+
+            const productName = this.getProductDisplayName(productKey);
+            const packsNeeded = Math.ceil(quantity / (VE[productKey] || 1));
+            const pricePerPack = PRICE_MAP[productKey] || 0;
+            const totalForProduct = packsNeeded * pricePerPack;
+            totalPrice += totalForProduct;
+
+            pdf.text(productName, 20, yPosition);
+            pdf.text(quantity.toString(), 80, yPosition);
+            pdf.text(`${packsNeeded}x`, 120, yPosition);
+            pdf.text(`${pricePerPack.toFixed(2)} €`, 160, yPosition);
+            pdf.text(`${totalForProduct.toFixed(2)} €`, 190, yPosition);
+            yPosition += 8;
+          }
+        });
+
+        // Gesamt-Linie und Preis
+        yPosition += 5;
+        pdf.line(160, yPosition - 2, 200, yPosition - 2);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Gesamtpreis: ${totalPrice.toFixed(2)} €`, 160, yPosition + 5);
+
+        return yPosition + 15;
+
+      } catch (error) {
+        console.error('Produkttabelle fehlgeschlagen:', error);
+        return yPosition;
+      }
+    }
+
+    // Isolierte Produktberechnung aus Snapshot
+    async calculatePartsFromSnapshot(config) {
+      try {
+        // Erstelle isolierte Calculation-Data aus Snapshot
+        const calculationData = {
+          selection: config.selection.map(row => [...row]), // Deep copy
+          rows: config.rows,
+          cols: config.cols,
+          cellWidth: config.cellWidth || 179,
+          cellHeight: config.cellHeight || 113,
+          orientation: config.orientation || 'horizontal'
+        };
+
+        let parts;
+        try {
+          // Versuche Web Worker calculation
+          parts = await calculationManager.calculate('calculateParts', calculationData);
+        } catch (error) {
+          console.warn('calculationManager failed, using fallback:', error);
+          // Fallback zu direkter Berechnung
+          parts = this.calculatePartsDirectly(calculationData);
+        }
+
+        // Entferne Module wenn nicht ausgewählt
+        if (!config.includeModules) {
+          delete parts.Solarmodul;
+        }
+
+        // Füge optionale Komponenten hinzu wenn ausgewählt
+        if (config.mc4) {
+          const moduleCount = config.selectedCells;
+          parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+        }
+
+        if (config.cable) {
+          parts.Solarkabel = 1;
+        }
+
+        if (config.wood) {
+          parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+        }
+
+        return parts;
+
+      } catch (error) {
+        console.error('Part calculation from snapshot failed:', error);
+        return {};
       }
     }
 
@@ -3378,58 +3723,65 @@
 
     async addAllToCart() {
       try {
-      // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
-      if (this.currentConfig !== null) {
-        this.updateConfig();
-      }
-      
-        const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
-        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
-        if (idx === this.currentConfig) {
-            return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
-        } else {
-            return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
+        // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
+        if (this.currentConfig !== null) {
+          this.updateConfig();
         }
-        }));
-      
-      // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
-      if (this.currentConfig === null && this.configs.length === 0) {
-          const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
-          allBundles.push(currentParts);
-      }
-      
-      const total = {};
-      allBundles.forEach(parts => {
-        Object.entries(parts).forEach(([k, v]) => {
-          total[k] = (total[k] || 0) + v;
-        });
-      });
-      
-      const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
-      
-      if (totalItemCount === 0) {
-        this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
-        return;
-      }
-      
-      // Sende alle Konfigurationen an Webhook - SEQUENZIELL vor PDF!
-      const webhookSuccess = await this.sendAllConfigsToWebhook();
-      if (webhookSuccess) {
-        // Success handling if needed
-      } else {
-        // Error handling if needed  
-      }
-      
-      this.addPartsListToCart(total);
-      this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
         
-        // PDF für alle Konfigurationen generieren - NACH Webhook!
+        // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
+        const configSnapshot = this.createConfigSnapshot();
+        
+        // SCHRITT 2: PDF ZUERST mit isolierten Daten erstellen
         if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
-          setTimeout(() => {
-            this.pdfGenerator.generatePDF('all');
-          }, 500); // Kurze Verzögerung damit Warenkorb-Toast zuerst angezeigt wird
+          this.showToast('PDF wird erstellt...', 2000);
+          await this.pdfGenerator.generatePDFFromSnapshot(configSnapshot);
+          this.showToast('PDF erfolgreich erstellt ✅', 1500);
         }
+        
+        // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
+        const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
+          // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+          if (idx === this.currentConfig) {
+              return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+          } else {
+              return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
+          }
+        }));
+        
+        // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
+        if (this.currentConfig === null && this.configs.length === 0) {
+            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+            allBundles.push(currentParts);
+        }
+        
+        const total = {};
+        allBundles.forEach(parts => {
+          Object.entries(parts).forEach(([k, v]) => {
+            total[k] = (total[k] || 0) + v;
+          });
+        });
+        
+        const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
+        
+        if (totalItemCount === 0) {
+          this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
+          return;
+        }
+        
+        // SCHRITT 4: Sende alle Konfigurationen an Webhook (NACH PDF)
+        const webhookSuccess = await this.sendAllConfigsToWebhook();
+        if (webhookSuccess) {
+          // Success handling if needed
+        } else {
+          // Error handling if needed  
+        }
+        
+        // SCHRITT 5: Füge zum Warenkorb hinzu
+        this.addPartsListToCart(total);
+        this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
+        
       } catch (error) {
+        console.error('Fehler in addAllToCart:', error);
         this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
       }
     }
@@ -3486,22 +3838,32 @@
       };
     }
 
-    // Hole alle Konfigurationsdaten für PDF - VOLLSTÄNDIG ISOLIERT
-    getAllConfigsData() {
+    // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF
+    createConfigSnapshot() {
       // Auto-Save der aktuellen Konfiguration falls nötig
       if (this.currentConfig !== null) {
         this.updateConfig();
       }
       
-      // ZUSÄTZLICHE SICHERHEIT: Warte kurz für asynchrone Operationen
-      return this.configs.map((config, index) => {
-        // KRITISCHER FIX: Für aktuelle Konfiguration verwende DIREKT this.selection!
+      // Erstelle KOMPLETT ISOLIERTE Kopie aller Konfigurationsdaten
+      const snapshot = {
+        timestamp: new Date().toISOString(),
+        totalConfigs: this.configs.length,
+        currentConfigIndex: this.currentConfig,
+        configs: []
+      };
+      
+      // Durchlaufe alle Konfigurationen und erstelle Deep Copies
+      for (let index = 0; index < this.configs.length; index++) {
+        const config = this.configs[index];
+        
+        // Hole Daten - für aktuelle Config verwende Live-Daten
         let targetSelection, targetCols, targetRows, targetOrientation;
-        let targetIncM, targetMc4, targetCable, targetWood;
+        let targetIncM, targetMc4, targetCable, targetWood, targetCellWidth, targetCellHeight;
         
         if (index === this.currentConfig) {
-          // Aktuelle Konfiguration: Verwende LIVE-Daten direkt aus this.*
-          targetSelection = this.selection || [];
+          // Aktuelle Konfiguration: MOMENTAUFNAHME der Live-Daten
+          targetSelection = this.selection ? this.selection.map(row => [...row]) : [];
           targetCols = this.cols;
           targetRows = this.rows;
           targetOrientation = this.orV.checked ? 'vertical' : 'horizontal';
@@ -3509,9 +3871,11 @@
           targetMc4 = this.mc4.checked;
           targetCable = this.solarkabel.checked;
           targetWood = this.holz.checked;
+          targetCellWidth = parseInt(this.wIn.value, 10);
+          targetCellHeight = parseInt(this.hIn.value, 10);
         } else {
-          // Andere Konfigurationen: Verwende gespeicherte Daten
-          targetSelection = config.selection || [];
+          // Andere Konfigurationen: Deep Copy der gespeicherten Daten
+          targetSelection = config.selection ? config.selection.map(row => [...row]) : [];
           targetCols = config.cols;
           targetRows = config.rows;
           targetOrientation = config.orientation;
@@ -3519,9 +3883,11 @@
           targetMc4 = config.mc4;
           targetCable = config.solarkabel;
           targetWood = config.holz;
+          targetCellWidth = config.cellWidth;
+          targetCellHeight = config.cellHeight;
         }
         
-        // ROBUSTE Deep Copy mit Validierung
+        // Normalisiere Selection für die Zieldimensionen
         const normalizedSelection = Array.from({ length: targetRows || 5 }, (_, y) =>
           Array.from({ length: targetCols || 5 }, (_, x) => {
             if (targetSelection[y] && Array.isArray(targetSelection[y]) && x < targetSelection[y].length) {
@@ -3530,21 +3896,36 @@
             return false;
           })
         );
-
-        return {
+        
+        // Erstelle isolierte Config-Kopie
+        const isolatedConfig = {
           name: config.name || `Konfiguration ${index + 1}`,
+          index: index,
           cols: targetCols || 5,
           rows: targetRows || 5,
-          selection: normalizedSelection, // Normalisierte Selection
-          cellWidth: config.cellWidth || 179,
-          cellHeight: config.cellHeight || 113,
+          selection: normalizedSelection,
+          cellWidth: targetCellWidth || 179,
+          cellHeight: targetCellHeight || 113,
           orientation: targetOrientation || 'horizontal',
-          includeModules: targetIncM !== false, // Default true
+          includeModules: targetIncM !== false,
           mc4: targetMc4 || false,
           cable: targetCable || false,
-          wood: targetWood || false
+          wood: targetWood || false,
+          // Zusätzliche Metadaten für Debugging
+          selectedCells: normalizedSelection.flat().filter(v => v).length,
+          totalCells: (targetCols || 5) * (targetRows || 5)
         };
-      });
+        
+        snapshot.configs.push(isolatedConfig);
+      }
+      
+      return snapshot;
+    }
+
+    // DEPRECATED: Alte Methode für Backward Compatibility
+    getAllConfigsData() {
+      const snapshot = this.createConfigSnapshot();
+      return snapshot.configs;
     }
   }
 
