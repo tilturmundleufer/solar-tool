@@ -2741,32 +2741,6 @@
 				}
 			}, 500);
 		}
-		
-		showConfigPreview(config) {
-			// Optional: Zeige eine kleine Vorschau der erkannten Konfiguration
-			const preview = document.getElementById('config-preview');
-			if (preview && (config.cols || config.moduleCount)) {
-				let previewText = '';
-				if (config.cols && config.rows) {
-					previewText += `${config.cols}×${config.rows} Grid`;
-				}
-				if (config.moduleCount) {
-					previewText += ` (${config.moduleCount} Module)`;
-				}
-				if (config.orientation !== 'horizontal') {
-					previewText += `, ${config.orientation}`;
-				}
-				if (config.mc4 || config.cable || config.wood) {
-					const extras = [];
-					if (config.mc4) extras.push('MC4');
-					if (config.cable) extras.push('Kabel');
-					if (config.wood) extras.push('Holz');
-					previewText += ` + ${extras.join(', ')}`;
-				}
-				preview.textContent = previewText;
-				preview.style.display = previewText ? 'block' : 'none';
-			}
-		}
 
 		initQuickConfigInterface() {
 			// Warte kurz, damit das DOM vollständig geladen ist
@@ -2811,6 +2785,9 @@
 					
 				} else {
 				}
+				
+				// Smart Config Help Dropdown Event-Handler initialisieren
+				this.initializeSmartConfigHelp();
 			}, 500);
 		}
 		
@@ -2838,6 +2815,54 @@
 				preview.textContent = previewText;
 				preview.style.display = previewText ? 'block' : 'none';
 			}
+		}
+		
+		// Smart Config Help Dropdown Initialisierung
+		initializeSmartConfigHelp() {
+			// Trigger wird auch in setupSmartConfig aufgerufen
+			const trigger = document.getElementById('smart-help-trigger');
+			const dropdown = document.getElementById('smart-help-dropdown');
+			
+			if (!trigger || !dropdown) return; // Falls die Elemente nicht existieren
+			
+			// Verhindere dass Dropdown schließt wenn darauf geklickt wird
+			dropdown.addEventListener('click', (e) => {
+				e.stopPropagation();
+			});
+			
+			// Schließe Dropdown bei Klick außerhalb
+			document.addEventListener('click', (e) => {
+				if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+					dropdown.style.opacity = '0';
+					dropdown.style.visibility = 'hidden';
+					dropdown.style.transform = 'translateY(-10px)';
+				}
+			});
+			
+			// Beispiel-Click Handler für sofortige Anwendung (ohne Ctrl+Click Tipp)
+			document.querySelectorAll('.example').forEach(example => {
+				example.addEventListener('click', () => {
+					const quickInput = document.getElementById('quick-config-input');
+					if (quickInput) {
+						// Entferne Anführungszeichen und setze Wert
+						quickInput.value = example.textContent.replace(/"/g, '');
+						quickInput.focus();
+						
+						// Zeige Vorschau
+						if (quickInput.value.length > 3) {
+							try {
+								const config = this.smartParser.parseInput(quickInput.value);
+								this.showConfigPreview(config);
+							} catch (error) {
+								// Ignoriere Parsing-Fehler
+							}
+						}
+						
+						// Optional: Scroll zur Smart Config Section
+						quickInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					}
+				});
+			});
 		}
     
     setup() {
