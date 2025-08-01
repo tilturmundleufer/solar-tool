@@ -1175,16 +1175,23 @@
       
       let newSelection;
       if (gridSizeChanged) {
-        // Grid-Größe geändert: Erstelle neue Matrix, behalte was möglich ist
-        newSelection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
-          Array.from({ length: this.solarGrid.cols }, (_, x) => {
-            // Behalte bestehende Auswahl bei, falls sie im neuen Grid passt
-            if (oldSelection && y < oldSelection.length && x < oldSelection[y].length) {
-              return oldSelection[y][x];
-            }
-            return false;
-          })
-        );
+        // Grid-Größe geändert: Verhalten hängt davon ab ob moduleCount/rowConfig folgt
+        if (config.moduleCount || config.rowConfig) {
+          // Wenn moduleCount oder rowConfig folgt: LEERE Matrix (autoSelect übernimmt)
+          newSelection = Array.from({ length: this.solarGrid.rows }, () =>
+            Array.from({ length: this.solarGrid.cols }, () => false)
+          );
+        } else {
+          // Nur Grid-Größe ohne Auto-Selection: Behalte was möglich ist
+          newSelection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
+            Array.from({ length: this.solarGrid.cols }, (_, x) => {
+              if (oldSelection && y < oldSelection.length && x < oldSelection[y].length) {
+                return oldSelection[y][x];
+              }
+              return false;
+            })
+          );
+        }
       } else {
         // Keine Grid-Änderung: Behalte bestehende Selection komplett
         newSelection = oldSelection || Array.from({ length: this.solarGrid.rows }, () =>
