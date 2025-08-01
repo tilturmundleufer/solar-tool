@@ -2825,6 +2825,49 @@
 			
 			if (!trigger || !dropdown) return; // Falls die Elemente nicht existieren
 			
+			let isHovered = false;
+			let hoverTimeout = null;
+			
+			// JavaScript-basierte Hover-Funktionalität (überschreibt CSS)
+			const showDropdown = () => {
+				dropdown.style.opacity = '1';
+				dropdown.style.visibility = 'visible';
+				dropdown.style.transform = 'translateY(0)';
+			};
+			
+			const hideDropdown = () => {
+				dropdown.style.opacity = '0';
+				dropdown.style.visibility = 'hidden';
+				dropdown.style.transform = 'translateY(-10px)';
+			};
+			
+			// Hover Events für Trigger
+			trigger.addEventListener('mouseenter', () => {
+				isHovered = true;
+				if (hoverTimeout) clearTimeout(hoverTimeout);
+				showDropdown();
+			});
+			
+			trigger.addEventListener('mouseleave', () => {
+				isHovered = false;
+				hoverTimeout = setTimeout(() => {
+					if (!isHovered) hideDropdown();
+				}, 100); // Kleine Verzögerung für sanfteren Übergang
+			});
+			
+			// Hover Events für Dropdown selbst
+			dropdown.addEventListener('mouseenter', () => {
+				isHovered = true;
+				if (hoverTimeout) clearTimeout(hoverTimeout);
+			});
+			
+			dropdown.addEventListener('mouseleave', () => {
+				isHovered = false;
+				hoverTimeout = setTimeout(() => {
+					if (!isHovered) hideDropdown();
+				}, 100);
+			});
+			
 			// Verhindere dass Dropdown schließt wenn darauf geklickt wird
 			dropdown.addEventListener('click', (e) => {
 				e.stopPropagation();
@@ -2833,15 +2876,16 @@
 			// Schließe Dropdown bei Klick außerhalb
 			document.addEventListener('click', (e) => {
 				if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
-					dropdown.style.opacity = '0';
-					dropdown.style.visibility = 'hidden';
-					dropdown.style.transform = 'translateY(-10px)';
+					isHovered = false;
+					hideDropdown();
 				}
 			});
 			
 			// Beispiel-Click Handler für sofortige Anwendung (ohne Ctrl+Click Tipp)
 			document.querySelectorAll('.example').forEach(example => {
-				example.addEventListener('click', () => {
+				example.addEventListener('click', (e) => {
+					e.stopPropagation(); // Verhindere Click-Outside-Handler
+					
 					const quickInput = document.getElementById('quick-config-input');
 					if (quickInput) {
 						// Entferne Anführungszeichen und setze Wert
@@ -2858,8 +2902,14 @@
 							}
 						}
 						
+						// Schließe Dropdown nach Beispiel-Auswahl
+						isHovered = false;
+						hideDropdown();
+						
 						// Optional: Scroll zur Smart Config Section
-						quickInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						setTimeout(() => {
+							quickInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						}, 100);
 					}
 				});
 			});
