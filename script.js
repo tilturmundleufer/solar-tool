@@ -3001,22 +3001,46 @@
   		
   		// Verwende Promise.all für parallele Berechnungen
   		const calculations = bundles.map(async (b) => {
-    		// Temporär setzen für Berechnung
-    		this.orV.checked = b.orientation === 'vertical';
-    		this.orH.checked = !this.orV.checked;
-    		this.selection = b.selection;
-    		this.updateSize();
+    		// Temporär ALLE relevanten Eigenschaften für korrekte Berechnung setzen
+    		const originalRows = this.rows;
+    		const originalCols = this.cols;
+    		const originalWValue = this.wIn.value;
+    		const originalHValue = this.hIn.value;
+    		const originalOrientation = this.orV.checked;
+    		const originalSelection = this.selection;
 
-    		let parts = await this.calculateParts();
-    		if (!b.incM) delete parts.Solarmodul;
-    		if (b.mc4) {
-    			const panelCount = b.selection.flat().filter(v => v).length;
-    			parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+    		try {
+      		// Setze ALLE Konfigurationsparameter für diese Berechnung
+      		this.rows = b.rows || this.rows;
+      		this.cols = b.cols || this.cols;
+      		this.wIn.value = b.cellWidth || parseInt(this.wIn.value, 10);
+      		this.hIn.value = b.cellHeight || parseInt(this.hIn.value, 10);
+      		this.orV.checked = b.orientation === 'vertical';
+      		this.orH.checked = !this.orV.checked;
+      		this.selection = b.selection;
+      		this.updateSize();
+
+      		let parts = await this.calculateParts();
+      		if (!b.incM) delete parts.Solarmodul;
+      		if (b.mc4) {
+      			const panelCount = b.selection.flat().filter(v => v).length;
+      			parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      		}
+      		if (b.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      		if (b.holz)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+
+      		return parts;
+    		} finally {
+      		// Stelle ursprüngliche Werte wieder her
+      		this.rows = originalRows;
+      		this.cols = originalCols;
+      		this.wIn.value = originalWValue;
+      		this.hIn.value = originalHValue;
+      		this.orV.checked = originalOrientation;
+      		this.orH.checked = !originalOrientation;
+      		this.selection = originalSelection;
+      		this.updateSize();
     		}
-    		if (b.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-    		if (b.holz)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
-
-    		return parts;
   		});
   		
   		try {
@@ -3030,11 +3054,7 @@
   			// Fallback: Verwende leeres total
   		}
   		
-  		// Stelle ursprüngliche Werte wieder her
-  		this.orV.checked = currentOrientation;
-  		this.orH.checked = !currentOrientation;
-  		this.selection = currentSelection;
-  		this.updateSize();
+  		// Ursprüngliche Werte sind bereits in jedem finally-Block wiederhergestellt
 
   		const entries = Object.entries(total).filter(([, v]) => v > 0);
   		const itemsPerColumn = 4;
