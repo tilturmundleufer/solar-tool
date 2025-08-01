@@ -3494,12 +3494,37 @@
       
       // ZUSÄTZLICHE SICHERHEIT: Warte kurz für asynchrone Operationen
       return this.configs.map((config, index) => {
+        // KRITISCHER FIX: Für aktuelle Konfiguration verwende DIREKT this.selection!
+        let targetSelection, targetCols, targetRows, targetOrientation;
+        let targetIncM, targetMc4, targetCable, targetWood;
+        
+        if (index === this.currentConfig) {
+          // Aktuelle Konfiguration: Verwende LIVE-Daten direkt aus this.*
+          targetSelection = this.selection || [];
+          targetCols = this.cols;
+          targetRows = this.rows;
+          targetOrientation = this.orV.checked ? 'vertical' : 'horizontal';
+          targetIncM = this.incM.checked;
+          targetMc4 = this.mc4.checked;
+          targetCable = this.solarkabel.checked;
+          targetWood = this.holz.checked;
+        } else {
+          // Andere Konfigurationen: Verwende gespeicherte Daten
+          targetSelection = config.selection || [];
+          targetCols = config.cols;
+          targetRows = config.rows;
+          targetOrientation = config.orientation;
+          targetIncM = config.incM;
+          targetMc4 = config.mc4;
+          targetCable = config.solarkabel;
+          targetWood = config.holz;
+        }
+        
         // ROBUSTE Deep Copy mit Validierung
-        const safeSelection = config.selection || [];
-        const normalizedSelection = Array.from({ length: config.rows || 5 }, (_, y) =>
-          Array.from({ length: config.cols || 5 }, (_, x) => {
-            if (safeSelection[y] && Array.isArray(safeSelection[y]) && x < safeSelection[y].length) {
-              return safeSelection[y][x] === true;
+        const normalizedSelection = Array.from({ length: targetRows || 5 }, (_, y) =>
+          Array.from({ length: targetCols || 5 }, (_, x) => {
+            if (targetSelection[y] && Array.isArray(targetSelection[y]) && x < targetSelection[y].length) {
+              return targetSelection[y][x] === true;
             }
             return false;
           })
@@ -3507,16 +3532,16 @@
 
         return {
           name: config.name || `Konfiguration ${index + 1}`,
-          cols: config.cols || 5,
-          rows: config.rows || 5,
+          cols: targetCols || 5,
+          rows: targetRows || 5,
           selection: normalizedSelection, // Normalisierte Selection
           cellWidth: config.cellWidth || 179,
           cellHeight: config.cellHeight || 113,
-          orientation: config.orientation || 'horizontal',
-          includeModules: config.incM !== false, // Default true
-          mc4: config.mc4 || false,
-          cable: config.solarkabel || false,
-          wood: config.holz || false
+          orientation: targetOrientation || 'horizontal',
+          includeModules: targetIncM !== false, // Default true
+          mc4: targetMc4 || false,
+          cable: targetCable || false,
+          wood: targetWood || false
         };
       });
     }
