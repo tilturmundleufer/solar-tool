@@ -774,61 +774,52 @@
       return yPosition + 10;
     }
 
-    // Berechne Teile für eine spezifische Konfiguration
+    // Berechne Teile für eine spezifische Konfiguration - VOLLSTÄNDIG ISOLIERT
     async calculateConfigParts(config) {
       if (!config.selection || !config.cols || !config.rows) {
         return {};
       }
 
-      // Sichere ALLE relevanten Originalwerte
-      const originalSelection = this.solarGrid.selection.map(r => [...r]);
-      const originalRows = this.solarGrid.rows;
-      const originalCols = this.solarGrid.cols;
-      const originalWinValue = this.solarGrid.wIn.value;
-      const originalHinValue = this.solarGrid.hIn.value;
-      const originalOrientationV = this.solarGrid.orV.checked;
-      
-      try {
-        // Temporär ALLE Konfigurationswerte setzen
-        this.solarGrid.selection = config.selection;
-        this.solarGrid.rows = config.rows;
-        this.solarGrid.cols = config.cols;
-        this.solarGrid.wIn.value = config.cellWidth || parseInt(originalWinValue, 10) || 179;
-        this.solarGrid.hIn.value = config.cellHeight || parseInt(originalHinValue, 10) || 113;
-        this.solarGrid.orV.checked = config.orientation === 'vertical';
-        
-        // Berechne alle strukturellen Teile mit den korrekten Parametern
-        let parts = await this.solarGrid.calculateParts();
-        
-        // Entferne Module wenn nicht ausgewählt
-        if (!config.includeModules) {
-          delete parts.Solarmodul;
-        }
-        
-        // Füge optionale Komponenten nur hinzu wenn ausgewählt
-        if (config.mc4) {
-          const moduleCount = config.selection.flat().filter(v => v).length;
-          parts.MC4_Stecker = Math.ceil(moduleCount / 30);
-        }
-        
-        if (config.cable) {
-          parts.Solarkabel = 1;
-        }
-        
-        if (config.wood) {
-          parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
-        }
+      // ISOLIERTE Berechnung ohne Grid-Eigenschaften zu berühren!
+      const calculationData = {
+        selection: config.selection.map(row => [...row]), // Deep copy
+        rows: config.rows,
+        cols: config.cols,
+        cellWidth: config.cellWidth || 179,
+        cellHeight: config.cellHeight || 113,
+        orientation: config.orientation
+      };
 
-        return parts;
-      } finally {
-        // ALLE ursprünglichen Werte wiederherstellen
-        this.solarGrid.selection = originalSelection;
-        this.solarGrid.rows = originalRows;
-        this.solarGrid.cols = originalCols;
-        this.solarGrid.wIn.value = originalWinValue;
-        this.solarGrid.hIn.value = originalHinValue;
-        this.solarGrid.orV.checked = originalOrientationV;
+      let parts;
+      try {
+        // Direkte Berechnung mit calculationManager - KEINE Grid-Modification!
+        parts = await calculationManager.calculate('calculateParts', calculationData);
+      } catch (error) {
+        console.warn('calculationManager failed, using fallback:', error);
+        // Fallback zu isolierter Berechnung
+        parts = this.calculatePartsDirectly(calculationData);
       }
+      
+      // Entferne Module wenn nicht ausgewählt
+      if (!config.includeModules) {
+        delete parts.Solarmodul;
+      }
+      
+      // Füge optionale Komponenten nur hinzu wenn ausgewählt
+      if (config.mc4) {
+        const moduleCount = config.selection.flat().filter(v => v).length;
+        parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+      }
+      
+      if (config.cable) {
+        parts.Solarkabel = 1;
+      }
+      
+      if (config.wood) {
+        parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+      }
+
+      return parts;
     }
 
     // Hilfsfunktion für Gruppenverarbeitung (aus CalculationManager übernommen)
@@ -1297,10 +1288,14 @@
         this.expandGridForRowConfig(neededCols, neededRows);
       }
       
-      // Lösche bestehende Auswahl
+      // ROBUSTE Selection-Array-Initialisierung für ALLE Dimensionen
+      // Stelle sicher, dass selection[][] für die aktuellen Dimensionen existiert
       for (let y = 0; y < this.solarGrid.rows; y++) {
+        if (!this.solarGrid.selection[y]) {
+          this.solarGrid.selection[y] = [];
+        }
+        // Stelle sicher, dass alle X-Positionen existieren
         for (let x = 0; x < this.solarGrid.cols; x++) {
-          if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
           this.solarGrid.selection[y][x] = false;
         }
       }
@@ -1321,9 +1316,13 @@
           modulesInThisRow = Math.min(modulesPerRow, totalModules - modulesPlaced);
         }
         
-        // Selektiere Module in dieser Reihe
+        // Selektiere Module in dieser Reihe - VERWENDE AKTUELLE GRID-DIMENSIONEN
         for (let x = 0; x < modulesInThisRow && x < this.solarGrid.cols; x++) {
           if (currentRow < this.solarGrid.rows) {
+            // Stelle sicher, dass die Position existiert
+            if (!this.solarGrid.selection[currentRow]) {
+              this.solarGrid.selection[currentRow] = [];
+            }
             this.solarGrid.selection[currentRow][x] = true;
             modulesPlaced++;
           }
