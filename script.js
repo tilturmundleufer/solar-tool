@@ -1238,11 +1238,15 @@
         this.expandGridForModules(count);
       }
       
+      // ROBUST: Initialisiere das komplette Selection-Array für alle Dimensionen
+      this.solarGrid.selection = Array.from({ length: this.solarGrid.rows }, () =>
+        Array.from({ length: this.solarGrid.cols }, () => false)
+      );
+      
       // Selektiere Module von links nach rechts, oben nach unten
       let selected = 0;
       for (let y = 0; y < this.solarGrid.rows && selected < count; y++) {
         for (let x = 0; x < this.solarGrid.cols && selected < count; x++) {
-          if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
           this.solarGrid.selection[y][x] = true;
           selected++;
         }
