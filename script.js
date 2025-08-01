@@ -1426,6 +1426,34 @@
       if (gridMatch) {
         config.cols = parseInt(gridMatch[1]);
         config.rows = parseInt(gridMatch[2]);
+        
+        // Prüfe auf Abstand auch bei Grid-Größen-Angaben
+        const spacingMatch = input.match(this.patterns.spacing);
+        let spacingRows = 0;
+        
+        if (spacingMatch) {
+          if (spacingMatch[0].toLowerCase().includes('mit') && !spacingMatch[1]) {
+            spacingRows = 1; // Standard-Abstand
+          } else if (spacingMatch[1]) {
+            spacingRows = parseInt(spacingMatch[1]);
+          }
+          
+          // Wenn Abstand bei Grid-Größe, erstelle äquivalente rowConfig
+          if (spacingRows > 0) {
+            // Berechne wie viele "echte" Reihen wir brauchen
+            const actualRows = Math.ceil(config.rows / (1 + spacingRows));
+            const totalCells = config.cols * actualRows;
+            
+            config.rowConfig = {
+              rows: actualRows,
+              modulesPerRow: config.cols,
+              spacing: spacingRows,
+              totalModules: totalCells
+            };
+            
+            // Grid-Größe bleibt wie angegeben (bereits mit Abstand berechnet)
+          }
+        }
       }
 
       // Reihen-Pattern parsen (hat Priorität vor einfacher moduleCount)
@@ -1485,10 +1513,40 @@
         const moduleMatch = input.match(this.patterns.moduleCount);
         if (moduleMatch && !gridMatch) {
           config.moduleCount = parseInt(moduleMatch[1]);
+          
+          // Prüfe auf Abstand auch bei einfacher Module-Anzahl
+          const spacingMatch = input.match(this.patterns.spacing);
+          let spacingRows = 0;
+          
+          if (spacingMatch) {
+            if (spacingMatch[0].toLowerCase().includes('mit') && !spacingMatch[1]) {
+              spacingRows = 1; // Standard-Abstand
+            } else if (spacingMatch[1]) {
+              spacingRows = parseInt(spacingMatch[1]);
+            }
+          }
+          
           // Automatisch optimale Grid-Größe berechnen
           const gridSize = this.calculateOptimalGrid(config.moduleCount);
           config.cols = gridSize.cols;
           config.rows = gridSize.rows;
+          
+          // Wenn Abstand gewünscht, erstelle rowConfig für gleichmäßige Verteilung
+          if (spacingRows > 0) {
+            const optimalRows = Math.ceil(Math.sqrt(config.moduleCount / gridSize.cols));
+            const modulesPerRow = Math.ceil(config.moduleCount / optimalRows);
+            
+            config.rowConfig = {
+              rows: optimalRows,
+              modulesPerRow: modulesPerRow,
+              spacing: spacingRows,
+              totalModules: config.moduleCount
+            };
+            
+            // Angepasste Grid-Größe mit Abstand
+            config.rows = optimalRows + (optimalRows - 1) * spacingRows;
+            config.cols = Math.max(config.cols, modulesPerRow);
+          }
         }
       }
 
