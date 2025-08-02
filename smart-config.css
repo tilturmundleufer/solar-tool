@@ -173,7 +173,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #7f7f7f;
+  background: #000000;
   opacity: 0.3;
   border-radius: 6px;
   z-index: 1;
@@ -186,7 +186,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000000;
+  background: #7f7f7f;
   opacity: 0.3;
   border-radius: 6px;
   z-index: 1;
