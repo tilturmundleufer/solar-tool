@@ -2218,7 +2218,7 @@
         
         newCell.addEventListener('mouseenter', (e) => {
           if (this.mousePressed && this.dragStart) {
-            // Drag-to-Select: Live-Preview des Bereichs
+            // Drag-to-Select: Live-Preview des Bereichs mit intelligenter Vorschau
             this.isDragging = true;
             this.highlightRange(this.dragStart, { x, y });
           } else if (this.bulkMode && this.firstClick) {
@@ -2332,19 +2332,35 @@
 
       const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
       
+      // Ermittle ob wir im Auswahl- oder Abwahl-Modus sind
+      const isSelectMode = start.wasSelected !== undefined ? !start.wasSelected : true;
+      
       for (let y = minY; y <= maxY; y++) {
         for (let x = minX; x <= maxX; x++) {
           const index = y * this.solarGrid.cols + x;
           if (cells[index]) {
+            // Basis-Highlight (gelber Rahmen)
             cells[index].classList.add('bulk-highlight');
+            
+            // Intelligente Preview je nach Modus
+            if (isSelectMode) {
+              // Auswahl-Modus: Zeige Solarpanel-Preview mit 30% Opacity
+              cells[index].classList.add('drag-preview-select');
+            } else {
+              // Abwahl-Modus: Zeige Unselected-Preview mit 30% Opacity
+              cells[index].classList.add('drag-preview-deselect');
+            }
           }
         }
       }
     }
 
     clearHighlight() {
-      const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight');
-      highlighted.forEach(cell => cell.classList.remove('bulk-highlight'));
+      // Entferne alle Highlight- und Preview-Klassen
+      const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight, .drag-preview-select, .drag-preview-deselect');
+      highlighted.forEach(cell => {
+        cell.classList.remove('bulk-highlight', 'drag-preview-select', 'drag-preview-deselect');
+      });
       
       // Entferne auch alle Drag-Marker
       const dragMarkers = this.solarGrid.gridEl.querySelectorAll('.drag-start-marker, .drag-select-mode, .drag-deselect-mode');

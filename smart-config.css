@@ -145,11 +145,59 @@
 
 /* Bulk Highlight für Grid-Zellen */
 .bulk-highlight {
-  background-color: rgba(245, 166, 35, 0.3) !important;
   border: 2px dashed #f5a623 !important;
   transform: scale(0.95);
   transition: all 0.1s ease;
   box-shadow: 0 0 8px rgba(245, 166, 35, 0.4);
+  z-index: 15;
+}
+
+/* NEUE: Intelligente Live-Preview mit 30% Opacity */
+.grid-cell.drag-preview-select {
+  /* Vorschau: Ausgewählte Zelle (hellgrauer Hintergrund) mit 30% Opacity */
+  background: rgba(127, 127, 127, 0.3) !important;
+  position: relative;
+}
+
+.grid-cell.drag-preview-deselect {
+  /* Vorschau: Unausgewählte Zelle (schwarzer Hintergrund) mit 30% Opacity */
+  background: rgba(0, 0, 0, 0.3) !important;
+  position: relative;
+}
+
+/* Preview-Overlay um die Vorschau über den bestehenden Hintergrund zu legen */
+.grid-cell.drag-preview-select::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #7f7f7f;
+  opacity: 0.3;
+  border-radius: 6px;
+  z-index: 1;
+}
+
+.grid-cell.drag-preview-deselect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000000;
+  opacity: 0.3;
+  border-radius: 6px;
+  z-index: 1;
+}
+
+/* Kombination: Bulk-Highlight + Preview */
+.grid-cell.bulk-highlight.drag-preview-select,
+.grid-cell.bulk-highlight.drag-preview-deselect {
+  /* Gelber Rahmen bleibt sichtbar, Inhalt mit 30% Opacity */
+  border: 2px dashed #f5a623 !important;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.6) !important;
 }
 
 /* NEUE: Drag-to-Select Marker */
