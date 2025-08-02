@@ -2095,7 +2095,14 @@
       this.firstClick = null;
       this.isSelecting = false;
       this.bulkMode = false; // Neuer Toggle-Modus für Shift
+      
+      // NEUE: Drag-to-Select Properties
+      this.isDragging = false;
+      this.dragStart = null;
+      this.mousePressed = false;
+      
       this.setupKeyListener();
+      this.setupGlobalMouseEvents();
     }
 
     setupKeyListener() {
@@ -2185,8 +2192,56 @@
         const newCell = cell.cloneNode(true);
         cell.parentNode.replaceChild(newCell, cell);
         
+        // NEUE: Drag-to-Select Event Listeners
+        newCell.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // Verhindert Textauswahl während Drag
+          
+          // Starte Drag-to-Select Modus
+          this.mousePressed = true;
+          this.isDragging = false; // Wird erst bei mousemove aktiviert
+          this.dragStart = { x, y };
+          
+          // Visuelle Markierung der Start-Zelle
+          this.clearHighlight();
+          newCell.classList.add('drag-start-marker');
+        });
+        
+        newCell.addEventListener('mouseenter', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            // Drag-to-Select: Live-Preview des Bereichs
+            this.isDragging = true;
+            this.highlightRange(this.dragStart, { x, y });
+          } else if (this.bulkMode && this.firstClick) {
+            // Alter Bulk-Modus: Hover-Preview zwischen Clicks
+            this.highlightRange(this.firstClick, { x, y });
+          }
+        });
+        
+        newCell.addEventListener('mouseup', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            e.preventDefault();
+            
+            if (this.isDragging || (this.dragStart.x === x && this.dragStart.y === y)) {
+              // Drag beendet ODER Single-Click (gleiche Zelle)
+              this.selectRange(this.dragStart, { x, y });
+              
+              // Toast-Nachricht für Drag-Auswahl
+              const selectedCount = this.calculateRangeSize(this.dragStart, { x, y });
+              this.solarGrid.showToast(`🖱️ Drag-Auswahl: ${selectedCount} Zellen`, 1500);
+            }
+            
+            // Reset Drag-Zustand
+            this.resetDragState();
+          }
+        });
+
         // Füge neue Event Listener hinzu
         newCell.addEventListener('click', (e) => {
+          // Verhindere Click-Verarbeitung wenn gerade ein Drag beendet wurde
+          if (this.isDragging || (this.mousePressed && this.dragStart)) {
+            return;
+          }
+          
           if (this.bulkMode) {
             // Bulk-Modus aktiv
             if (!this.firstClick) {
@@ -2223,15 +2278,11 @@
           }
         });
 
-        // Visuelle Feedback für Bereich-Auswahl
-        newCell.addEventListener('mouseenter', (e) => {
-          if (this.bulkMode && this.firstClick) {
-            this.highlightRange(this.firstClick, { x, y });
-          }
-        });
-
         newCell.addEventListener('mouseleave', () => {
-          this.clearHighlight();
+          // Nur Highlight löschen wenn nicht gerade gedraggt wird
+          if (!this.mousePressed) {
+            this.clearHighlight();
+          }
         });
       });
     }
@@ -2282,11 +2333,58 @@
     clearHighlight() {
       const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight');
       highlighted.forEach(cell => cell.classList.remove('bulk-highlight'));
+      
+      // Entferne auch Drag-Start-Marker
+      const dragMarkers = this.solarGrid.gridEl.querySelectorAll('.drag-start-marker');
+      dragMarkers.forEach(cell => cell.classList.remove('drag-start-marker'));
+    }
+    
+    // NEUE METHODEN für Drag-to-Select
+    resetDragState() {
+      this.mousePressed = false;
+      this.isDragging = false;
+      this.dragStart = null;
+      this.clearHighlight();
+    }
+    
+    calculateRangeSize(start, end) {
+      const minX = Math.min(start.x, end.x);
+      const maxX = Math.max(start.x, end.x);
+      const minY = Math.min(start.y, end.y);  
+      const maxY = Math.max(start.y, end.y);
+      
+      return (maxX - minX + 1) * (maxY - minY + 1);
     }
 
     clearFirstClickMarker() {
       const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
       cells.forEach(cell => cell.classList.remove('first-click-marker'));
+    }
+    
+    // NEUE METHODE: Globale Mouse-Events für Drag-to-Select
+    setupGlobalMouseEvents() {
+      // Globaler Mouse-Up Event um Drag-Operations außerhalb des Grids zu beenden
+      document.addEventListener('mouseup', (e) => {
+        if (this.mousePressed) {
+          // Drag wurde außerhalb des Grids beendet - ohne Auswahl
+          this.resetDragState();
+        }
+      });
+      
+      // Grid-Leave Event um Drag-Preview zu stoppen
+      this.solarGrid.gridEl.addEventListener('mouseleave', () => {
+        if (this.mousePressed && !this.isDragging) {
+          // Mouse verlässt Grid während Drag-Start - Reset ohne Auswahl
+          this.resetDragState();
+        }
+      });
+      
+      // Verhindere Kontext-Menu während Drag-Operationen
+      this.solarGrid.gridEl.addEventListener('contextmenu', (e) => {
+        if (this.isDragging || this.mousePressed) {
+          e.preventDefault();
+        }
+      });
     }
   }
 

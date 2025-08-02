@@ -152,6 +152,42 @@
   box-shadow: 0 0 8px rgba(245, 166, 35, 0.4);
 }
 
+/* NEUE: Drag-to-Select Marker */
+.grid-cell.drag-start-marker {
+  background: rgba(33, 150, 243, 0.8) !important;
+  border: 3px solid #2196f3 !important;
+  box-shadow: 0 0 15px rgba(33, 150, 243, 0.6);
+  animation: dragStartPulse 1s ease-in-out infinite;
+  z-index: 10;
+}
+
+.grid-cell.drag-start-marker::after {
+  content: "🖱️";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  z-index: 11;
+  animation: dragIconBounce 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes dragStartPulse {
+  0%, 100% { 
+    transform: scale(1); 
+    box-shadow: 0 0 15px rgba(33, 150, 243, 0.6);
+  }
+  50% { 
+    transform: scale(1.05); 
+    box-shadow: 0 0 25px rgba(33, 150, 243, 0.8);
+  }
+}
+
+@keyframes dragIconBounce {
+  0% { transform: translate(-50%, -50%) scale(0.8); }
+  100% { transform: translate(-50%, -50%) scale(1.2); }
+}
+
 /* Grid Cell Hover Verbesserungen */
 .grid-cell {
   position: relative;
