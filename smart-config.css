@@ -188,6 +188,63 @@
   100% { transform: translate(-50%, -50%) scale(1.2); }
 }
 
+/* NEUE: Intelligente Toggle-Modi für Drag-to-Select */
+.grid-cell.drag-select-mode {
+  background: rgba(76, 175, 80, 0.8) !important;
+  border: 3px solid #4caf50 !important;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+}
+
+.grid-cell.drag-select-mode::after {
+  content: "✅";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  z-index: 11;
+  animation: selectIconPulse 1s ease-in-out infinite;
+}
+
+.grid-cell.drag-deselect-mode {
+  background: rgba(244, 67, 54, 0.8) !important;
+  border: 3px solid #f44336 !important; 
+  box-shadow: 0 0 15px rgba(244, 67, 54, 0.6);
+}
+
+.grid-cell.drag-deselect-mode::after {
+  content: "❌";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  z-index: 11;
+  animation: deselectIconPulse 1s ease-in-out infinite;
+}
+
+@keyframes selectIconPulse {
+  0%, 100% { 
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(1);
+  }
+  50% { 
+    transform: translate(-50%, -50%) scale(1.1);
+    filter: brightness(1.3);
+  }
+}
+
+@keyframes deselectIconPulse {
+  0%, 100% { 
+    transform: translate(-50%, -50%) scale(1);  
+    filter: brightness(1);
+  }
+  50% { 
+    transform: translate(-50%, -50%) scale(1.1);
+    filter: brightness(1.2);
+  }
+}
+
 /* Grid Cell Hover Verbesserungen */
 .grid-cell {
   position: relative;

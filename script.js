@@ -2196,14 +2196,24 @@
         newCell.addEventListener('mousedown', (e) => {
           e.preventDefault(); // Verhindert Textauswahl während Drag
           
+          // Erfasse aktuellen Status der Start-Zelle für intelligentes Toggle
+          const isCurrentlySelected = this.solarGrid.selection[y]?.[x] || false;
+          
           // Starte Drag-to-Select Modus
           this.mousePressed = true;
           this.isDragging = false; // Wird erst bei mousemove aktiviert
-          this.dragStart = { x, y };
+          this.dragStart = { x, y, wasSelected: isCurrentlySelected };
           
           // Visuelle Markierung der Start-Zelle
           this.clearHighlight();
           newCell.classList.add('drag-start-marker');
+          
+          // Visueller Hinweis auf Toggle-Modus
+          if (isCurrentlySelected) {
+            newCell.classList.add('drag-deselect-mode');
+          } else {
+            newCell.classList.add('drag-select-mode');
+          }
         });
         
         newCell.addEventListener('mouseenter', (e) => {
@@ -2225,9 +2235,11 @@
               // Drag beendet ODER Single-Click (gleiche Zelle)
               this.selectRange(this.dragStart, { x, y });
               
-              // Toast-Nachricht für Drag-Auswahl
+              // Toast-Nachricht mit intelligenter Beschreibung
               const selectedCount = this.calculateRangeSize(this.dragStart, { x, y });
-              this.solarGrid.showToast(`🖱️ Drag-Auswahl: ${selectedCount} Zellen`, 1500);
+              const action = this.dragStart.wasSelected ? "abgewählt" : "ausgewählt";
+              const emoji = this.dragStart.wasSelected ? "❌" : "✅";
+              this.solarGrid.showToast(`${emoji} Drag-${action}: ${selectedCount} Zellen`, 1500);
             }
             
             // Reset Drag-Zustand
@@ -2334,9 +2346,11 @@
       const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight');
       highlighted.forEach(cell => cell.classList.remove('bulk-highlight'));
       
-      // Entferne auch Drag-Start-Marker
-      const dragMarkers = this.solarGrid.gridEl.querySelectorAll('.drag-start-marker');
-      dragMarkers.forEach(cell => cell.classList.remove('drag-start-marker'));
+      // Entferne auch alle Drag-Marker
+      const dragMarkers = this.solarGrid.gridEl.querySelectorAll('.drag-start-marker, .drag-select-mode, .drag-deselect-mode');
+      dragMarkers.forEach(cell => {
+        cell.classList.remove('drag-start-marker', 'drag-select-mode', 'drag-deselect-mode');
+      });
     }
     
     // NEUE METHODEN für Drag-to-Select
