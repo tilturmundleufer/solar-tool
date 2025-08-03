@@ -466,134 +466,9 @@
 
     // DEPRECATED: Alte PDF-Generation für Backward Compatibility
     async generatePDF(type = 'current') {
-      if (type === 'current') {
-        // Für einzelne Config verwende alte Methode
-        const configs = [this.solarGrid.getCurrentConfigData()];
-        const pdf = new this.jsPDF('p', 'mm', 'a4');
-        await this.addConfigurationToPDF(pdf, configs[0], true);
-        const fileName = this.generateFileName(configs);
-        pdf.save(fileName);
-        this.solarGrid.showToast('PDF erfolgreich erstellt ✅', 3000);
-      } else {
-        // Für alle Configs verwende neuen Snapshot-Approach
-        const snapshot = this.solarGrid.createConfigSnapshot();
-        await this.generatePDFFromSnapshot(snapshot);
-      }
-    }
-
-    // Füge eine Konfiguration zum PDF hinzu
-    async addConfigurationToPDF(pdf, config, isFirstPage) {
-      const pageWidth = 210; // A4 Breite in mm
-      const pageHeight = 297; // A4 Höhe in mm
-      const bottomMargin = 30; // Erhöhter Rand für Footer
-      
-      // Verwende Objekt für yPosition damit es von checkPageBreak geändert werden kann
-      const positionRef = { y: 25 };
-
-      // Hilfsfunktion für Seitenumbruch-Prüfung mit mehr Platz
-      const checkPageBreak = (neededSpace = 20) => {
-        if (positionRef.y + neededSpace > pageHeight - bottomMargin) {
-          pdf.addPage();
-          positionRef.y = 25;
-          return true;
-        }
-        return false;
-      };
-
-      // NEUES DESIGN: Header mit dunkelblauem Hintergrund
-      pdf.setFillColor(14, 30, 52); // #0e1e34
-      pdf.rect(0, 0, pageWidth, 35, 'F');
-      
-      // Header Text
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(18);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Ihre Konfiguration', 20, 22);
-      
-      // Datum rechts
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, 22);
-      
-      // Zurück zu schwarzem Text
-      pdf.setTextColor(0, 0, 0);
-      positionRef.y = 45;
-
-      // Projekt-Info Sektion
-      checkPageBreak(25);
-      pdf.setFillColor(245, 166, 35); // #f5a623
-      pdf.rect(15, positionRef.y - 5, pageWidth - 30, 20, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 10);
-      
-      pdf.setTextColor(0, 0, 0);
-      positionRef.y += 30;
-
-      // Grid-Informationen
-      checkPageBreak(20);
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      const moduleCount = config.selection ? config.selection.flat().filter(v => v).length : 0;
-      pdf.text(`Grid: ${config.cols} × ${config.rows} Module (${moduleCount} ausgewählt)`, 20, positionRef.y);
-      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 20, positionRef.y + 8);
-      positionRef.y += 20;
-
-      // Grid-Screenshot hinzufügen  
-      try {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        const gridImage = await this.captureGridVisualization(config);
-        if (gridImage) {
-          const imgWidth = 140;  // Größeres Bild
-          const imgHeight = 105;
-          
-          checkPageBreak(imgHeight + 15);
-          
-                  // Rahmen um das Bild - zentriert mit gleichem Abstand
-        pdf.setDrawColor(14, 30, 52);
-        pdf.setLineWidth(2);
-        const centerX = (pageWidth - imgWidth) / 2;
-        const centerY = positionRef.y;
-        pdf.rect(centerX - 2, centerY - 2, imgWidth + 4, imgHeight + 4);
-        
-        pdf.addImage(gridImage, 'PNG', centerX, centerY, imgWidth, imgHeight);
-          positionRef.y += imgHeight + 10;
-        }
-      } catch (error) {
-        console.warn('Grid-Screenshot fehlgeschlagen:', error);
-        positionRef.y += 10;
-      }
-
-      // Produkttabelle
-      await new Promise(resolve => setTimeout(resolve, 100));
-      checkPageBreak(60);
-      positionRef.y = await this.addProductTable(pdf, config, positionRef.y, checkPageBreak);
-
-      // Gesamtpreis hervorgehoben
-      checkPageBreak(25);
-      const totalPrice = await this.calculateTotalPrice(config);
-      pdf.setFillColor(14, 30, 52);
-      pdf.rect(15, positionRef.y - 5, pageWidth - 30, 20, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('GESAMTPREIS:', 20, positionRef.y + 8);
-      pdf.text(`${totalPrice.toFixed(2)} €`, 170, positionRef.y + 8);
-      
-      pdf.setTextColor(0, 0, 0);
-      positionRef.y += 30;
-
-      // Produkte pro Modul Informationen
-      checkPageBreak(80);
-      positionRef.y = this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
-
-      // Footer mit Logo auf jeder Seite
-      checkPageBreak(40);
-      this.addFooter(pdf, pageWidth, pageHeight);
+      // Für alle Configs verwende neuen Snapshot-Approach
+      const snapshot = this.solarGrid.createConfigSnapshot();
+      await this.generatePDFFromSnapshot(snapshot);
     }
 
     // Hilfsmethode für Gesamtpreis-Berechnung
@@ -2961,7 +2836,7 @@
         Solarkabel: parts.Solarkabel || 0,
         Holzunterleger: parts.Holzunterleger || 0
       };
-
+      
       return {
         timestamp: new Date().toISOString(),
         sessionId: this.sessionId,
