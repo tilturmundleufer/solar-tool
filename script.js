@@ -562,6 +562,10 @@
       // Hilfsfunktion für Seitenumbruch-Prüfung mit mehr Platz
       const checkPageBreak = (neededSpace = 20) => {
         if (positionRef.y + neededSpace > pageHeight - bottomMargin) {
+          // Footer auf aktueller Seite hinzufügen
+          this.addFooter(pdf, pageWidth, pageHeight);
+          
+          // Neue Seite hinzufügen
           pdf.addPage();
           positionRef.y = 25;
           return true;
@@ -662,8 +666,7 @@
       checkPageBreak(80);
       positionRef.y = this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
 
-      // Footer mit Logo auf jeder Seite
-      checkPageBreak(40);
+      // Footer mit Logo auf der letzten Seite
       this.addFooter(pdf, pageWidth, pageHeight);
     }
 
