@@ -520,7 +520,7 @@
         
         // Logo als Bild hinzufügen - proportional skaliert
         const logoHeight = 15; // Feste Höhe
-        const logoWidth = logoHeight * 2.5; // Proportional zur Höhe (2.5:1 Verhältnis)
+        const logoWidth = logoHeight * 3.1338028169; // Exaktes Verhältnis 3.1338028169:1
         const logoX = pageWidth - logoWidth - 20; // 20px Abstand vom rechten Rand
         const logoY = footerY + 5; // 5px Abstand vom oberen Footer-Rand
 
