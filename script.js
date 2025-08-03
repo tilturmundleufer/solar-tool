@@ -923,6 +923,13 @@
         // Canvas zu Base64 konvertieren
         const base64Image = canvas.toDataURL('image/png');
         
+        console.log('Canvas generated:', {
+          canvasWidth: canvas.width,
+          canvasHeight: canvas.height,
+          dataURLLength: base64Image.length,
+          dataURLStart: base64Image.substring(0, 50) + '...'
+        });
+        
         // Cleanup
         document.body.removeChild(tempContainer);
         
@@ -2806,12 +2813,25 @@
         // NEUE: Füge Grid-Bild zu Webhook-Daten hinzu
         const gridImage = await this.pdfGenerator.captureGridImageForWebhook(configData);
         if (gridImage) {
-          // Erstelle kompletten Data-URL mit allen Metadaten für Google Drive
-          const width = configData.cols * 60 + (configData.cols - 1) * 2 + 40;
-          const height = configData.rows * 60 + (configData.rows - 1) * 2 + 40;
+          // Berechne die tatsächlichen Canvas-Dimensionen
+          const cols = configData.cols || 5;
+          const rows = configData.rows || 5;
+          const cellWidth = 60;
+          const cellHeight = 60;
+          const cellGap = 2;
+          const padding = 40;
+          
+          const width = cols * cellWidth + (cols - 1) * cellGap + padding;
+          const height = rows * cellHeight + (rows - 1) * cellGap + padding;
+          
+          console.log('Grid Image Dimensions:', { cols, rows, width, height });
+          
+          // Erstelle sowohl Data-URL als auch reinen Base64-String für Kompatibilität
+          const base64Only = gridImage.split(',')[1];
           
           configData.gridImage = {
             data: gridImage, // Vollständiger Data-URL: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...
+            base64: base64Only, // Reiner Base64-String für Fallback
             format: 'data-url',
             mimeType: 'image/png',
             width: width,
