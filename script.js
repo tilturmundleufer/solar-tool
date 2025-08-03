@@ -2806,15 +2806,16 @@
         // NEUE: Füge Grid-Bild zu Webhook-Daten hinzu
         const gridImage = await this.pdfGenerator.captureGridImageForWebhook(configData);
         if (gridImage) {
-          // Extrahiere nur den Base64-Teil aus dem Data-URL
-          const base64Data = gridImage.split(',')[1];
+          // Erstelle kompletten Data-URL mit allen Metadaten für Google Drive
+          const width = configData.cols * 60 + (configData.cols - 1) * 2 + 40;
+          const height = configData.rows * 60 + (configData.rows - 1) * 2 + 40;
           
           configData.gridImage = {
-            data: base64Data, // Nur der Base64-String ohne Data-URL-Prefix
-            format: 'base64',
+            data: gridImage, // Vollständiger Data-URL: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...
+            format: 'data-url',
             mimeType: 'image/png',
-            width: configData.cols * 60 + (configData.cols - 1) * 2 + 40, // Ungefähre Bildbreite
-            height: configData.rows * 60 + (configData.rows - 1) * 2 + 40   // Ungefähre Bildhöhe
+            width: width,
+            height: height
           };
         }
 
