@@ -2806,9 +2806,12 @@
         // NEUE: Füge Grid-Bild zu Webhook-Daten hinzu
         const gridImage = await this.pdfGenerator.captureGridImageForWebhook(configData);
         if (gridImage) {
+          // Extrahiere nur den Base64-Teil aus dem Data-URL
+          const base64Data = gridImage.split(',')[1];
+          
           configData.gridImage = {
-            data: gridImage, // Vollständiger Data-URL: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...
-            format: 'data-url',
+            data: base64Data, // Nur der Base64-String ohne Data-URL-Prefix
+            format: 'base64',
             mimeType: 'image/png',
             width: configData.cols * 60 + (configData.cols - 1) * 2 + 40, // Ungefähre Bildbreite
             height: configData.rows * 60 + (configData.rows - 1) * 2 + 40   // Ungefähre Bildhöhe
