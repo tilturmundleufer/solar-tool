@@ -651,17 +651,37 @@
       }
     }
 
+    // Hilfsmethode für Gesamtpreis-Berechnung aus Snapshot
+    async calculateTotalPriceFromSnapshot(config) {
+      const parts = await this.calculatePartsFromSnapshot(config);
+      
+      let totalPrice = 0;
+      Object.entries(parts).forEach(([key, value]) => {
+        if (value > 0) {
+          const packs = Math.ceil(value / (VE[key] || 1));
+          const price = getPriceFromCache(key);
+          totalPrice += packs * price;
+        }
+      });
+
+      return totalPrice;
+    }
+
     // NEUE ISOLIERTE Konfiguration zu PDF hinzufügen (aus Snapshot)
     async addConfigurationToPDFFromSnapshot(pdf, config, isFirstPage) {
-      const pageWidth = 210;
-      const positionRef = { y: 20 };
+      const pageWidth = 210; // A4 Breite in mm
+      const pageHeight = 297; // A4 Höhe in mm
+      const bottomMargin = 30; // Erhöhter Rand für Footer
       
-      // Helper function für automatische Seitenumbrüche
-      const checkPageBreak = (neededHeight) => {
-        if (positionRef.y + neededHeight > 277) { // A4 height minus margins
+      // Verwende Objekt für yPosition damit es von checkPageBreak geändert werden kann
+      const positionRef = { y: 25 };
+
+      // Hilfsfunktion für Seitenumbruch-Prüfung mit mehr Platz
+      const checkPageBreak = (neededSpace = 20) => {
+        if (positionRef.y + neededSpace > pageHeight - bottomMargin) {
           pdf.addPage();
-          positionRef.y = 20;
-          return true; // Neue Seite wurde erstellt
+          positionRef.y = 25;
+          return true;
         }
         return false;
       };
@@ -672,53 +692,62 @@
         totalCells: config.totalCells
       });
 
-      // Titel
-      pdf.setFontSize(20);
+      // NEUES DESIGN: Header mit dunkelblauem Hintergrund
+      pdf.setFillColor(14, 30, 52); // #0e1e34
+      pdf.rect(0, 0, pageWidth, 35, 'F');
+      
+      // Header Text
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Solar-Konfiguration', 20, positionRef.y);
+      pdf.text('SOLAR-TOOL KONFIGURATION', 20, 22);
       
-      // Datum
-      pdf.setFontSize(12);
+      // Datum rechts
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      const today = new Date().toLocaleDateString('de-DE');
-      const dateWidth = pdf.getTextWidth(today);
-      pdf.text(today, pageWidth - 20 - dateWidth, positionRef.y);
+      pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, 22);
       
+      // Zurück zu schwarzem Text
+      pdf.setTextColor(0, 0, 0);
+      positionRef.y = 45;
+
+      // Projekt-Info Sektion
+      checkPageBreak(25);
+      pdf.setFillColor(245, 166, 35); // #f5a623
+      pdf.rect(15, positionRef.y - 5, pageWidth - 30, 20, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`📋 Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 5);
+      pdf.text(`📅 Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, positionRef.y + 15);
+      
+      pdf.setTextColor(0, 0, 0);
+      positionRef.y += 30;
+
+      // Grid-Informationen
+      checkPageBreak(20);
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`🔧 Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt)`, 20, positionRef.y);
+      pdf.text(`📐 Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 20, positionRef.y + 8);
       positionRef.y += 20;
-
-      // Konfigurationsdetails
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Konfiguration: ${config.name}`, 20, positionRef.y);
-      positionRef.y += 15;
-
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      
-      // Grid-Informationen in zwei Spalten
-      const leftColumn = 20;
-      const rightColumn = 120;
-      
-      pdf.text(`Grid-Größe: ${config.cols} x ${config.rows}`, leftColumn, positionRef.y);
-      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, rightColumn, positionRef.y);
-      positionRef.y += 10;
-      
-      pdf.text(`Module: ${config.selectedCells} Stück`, leftColumn, positionRef.y);
-
-      positionRef.y += 15;
 
       // Grid-Screenshot hinzufügen (ISOLIERT mit Snapshot-Daten)
       try {
         const gridImage = await this.captureGridVisualizationFromSnapshot(config);
         if (gridImage) {
-          const imgWidth = 120;
-          const imgHeight = 90;
+          const imgWidth = 140;  // Größeres Bild
+          const imgHeight = 105;
           
-          // Prüfe ob genug Platz für das Bild
-          checkPageBreak(imgHeight + 10);
+          checkPageBreak(imgHeight + 15);
           
-          // Horizontal zentrieren: (210mm - imgWidth) / 2
+          // Rahmen um das Bild
+          pdf.setDrawColor(14, 30, 52);
+          pdf.setLineWidth(2);
           const centerX = (pageWidth - imgWidth) / 2;
+          pdf.rect(centerX - 2, positionRef.y - 2, imgWidth + 4, imgHeight + 4);
+          
           pdf.addImage(gridImage, 'PNG', centerX, positionRef.y, imgWidth, imgHeight);
           positionRef.y += imgHeight + 10;
         }
@@ -728,12 +757,26 @@
       }
 
       // Produkttabelle (ISOLIERT mit Snapshot-Daten)
-      checkPageBreak(50);
+      checkPageBreak(60);
       positionRef.y = await this.addProductTableFromSnapshot(pdf, config, positionRef.y, checkPageBreak);
 
-      // Produkte pro Modul Informationen
-      checkPageBreak(60);
-      positionRef.y = await this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
+      // Gesamtpreis hervorgehoben
+      checkPageBreak(25);
+      const totalPrice = await this.calculateTotalPriceFromSnapshot(config);
+      pdf.setFillColor(14, 30, 52);
+      pdf.rect(15, positionRef.y - 5, pageWidth - 30, 20, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`💰 GESAMTPREIS: ${totalPrice.toFixed(2)} €`, 20, positionRef.y + 8);
+      
+      pdf.setTextColor(0, 0, 0);
+      positionRef.y += 30;
+
+      // Footer mit Logo
+      checkPageBreak(40);
+      this.addFooter(pdf, pageWidth, pageHeight);
     }
 
     // Erfasse Grid-Visualisierung als Bild
@@ -1193,83 +1236,79 @@
           return yPosition;
         }
 
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
+        // NEUES DESIGN: Produkttabelle mit Header
+        checkPageBreak(30);
         
-        // Prüfe Seitenumbruch vor Tabellentitel
-        if (checkPageBreak(15)) {
-          pdf.setFontSize(14);
-          pdf.setFont('helvetica', 'bold');
-        }
+        // Header mit orange Hintergrund
+        pdf.setFillColor(245, 166, 35);
+        pdf.rect(15, yPosition - 5, 180, 15, 'F');
         
-        pdf.text('Benötigte Produkte:', 20, yPosition);
-        yPosition += 10;
-
-        // Tabellen-Header
-        if (checkPageBreak(25)) {
-          // Wiederhole Header auf neuer Seite
-          pdf.setFontSize(14);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Benötigte Produkte:', 20, yPosition);
-          yPosition += 10;
-        }
-
-        pdf.setFontSize(10);
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(12);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Produkt', 20, yPosition);
-        pdf.text('Benötigt', 80, yPosition);
-        pdf.text('Packungen', 120, yPosition);
-        pdf.text('Preis/Pack', 160, yPosition);
-        pdf.text('Gesamt', 190, yPosition);
-        yPosition += 8;
+        pdf.text('📦 PRODUKT-LISTE', 20, yPosition + 5);
+        
+        pdf.setTextColor(0, 0, 0);
+        yPosition += 20;
 
-        // Tabellen-Linie
-        pdf.line(20, yPosition - 2, 200, yPosition - 2);
-        yPosition += 5;
+        // Tabellen-Header mit dunkelblauem Hintergrund
+        checkPageBreak(15);
+        pdf.setFillColor(14, 30, 52);
+        pdf.rect(15, yPosition - 3, 180, 12, 'F');
+        
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Produkt', 20, yPosition + 3);
+        pdf.text('Menge', 70, yPosition + 3);
+        pdf.text('Pack', 100, yPosition + 3);
+        pdf.text('Preis/Pack', 130, yPosition + 3);
+        pdf.text('Gesamt', 170, yPosition + 3);
+        
+        pdf.setTextColor(0, 0, 0);
+        yPosition += 15;
 
-        let totalPrice = 0;
+        // Tabellen-Inhalt mit alternierenden Zeilen
         pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        let totalPrice = 0;
+        let rowCount = 0;
 
         Object.entries(parts).forEach(([productKey, quantity]) => {
           if (quantity > 0) {
-            // Prüfe Seitenumbruch vor jeder Zeile
-            if (checkPageBreak(8)) {
-              // Wiederhole Header auf neuer Seite
-              pdf.setFontSize(10);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('Produkt', 20, yPosition);
-              pdf.text('Benötigt', 80, yPosition);
-              pdf.text('Packungen', 120, yPosition);
-              pdf.text('Preis/Pack', 160, yPosition);
-              pdf.text('Gesamt', 190, yPosition);
-              yPosition += 8;
-              pdf.line(20, yPosition - 2, 200, yPosition - 2);
-              yPosition += 5;
-              pdf.setFont('helvetica', 'normal');
+            checkPageBreak(12);
+            
+            // Alternierende Zeilen-Hintergründe
+            if (rowCount % 2 === 1) {
+              pdf.setFillColor(248, 249, 250);
+              pdf.rect(15, yPosition - 2, 180, 10, 'F');
             }
-
+            
             const productName = productKey.replace(/_/g, ' ');
             const packsNeeded = Math.ceil(quantity / (VE[productKey] || 1));
             const pricePerPack = getPriceFromCache(productKey);
             const totalForProduct = packsNeeded * pricePerPack;
             totalPrice += totalForProduct;
 
-            pdf.text(productName, 20, yPosition);
-            pdf.text(quantity.toString(), 80, yPosition);
-            pdf.text(`${packsNeeded}x`, 120, yPosition);
-            pdf.text(`${pricePerPack.toFixed(2)} €`, 160, yPosition);
-            pdf.text(`${totalForProduct.toFixed(2)} €`, 190, yPosition);
-            yPosition += 8;
+            pdf.text(productName, 20, yPosition + 2);
+            pdf.text(quantity.toString(), 70, yPosition + 2);
+            pdf.text(`${packsNeeded}x`, 100, yPosition + 2);
+            pdf.text(`${pricePerPack.toFixed(2)} €`, 130, yPosition + 2);
+            pdf.text(`${totalForProduct.toFixed(2)} €`, 170, yPosition + 2);
+            
+            yPosition += 10;
+            rowCount++;
           }
         });
 
-        // Gesamt-Linie und Preis
+        // Gesamt-Linie
+        checkPageBreak(15);
+        pdf.setDrawColor(14, 30, 52);
+        pdf.setLineWidth(1);
+        pdf.line(15, yPosition, 195, yPosition);
         yPosition += 5;
-        pdf.line(160, yPosition - 2, 200, yPosition - 2);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`Gesamtpreis: ${totalPrice.toFixed(2)} €`, 160, yPosition + 5);
 
-        return yPosition + 15;
+        return yPosition;
 
       } catch (error) {
         console.error('Produkttabelle fehlgeschlagen:', error);
