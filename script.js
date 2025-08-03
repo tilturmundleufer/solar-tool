@@ -2814,12 +2814,17 @@
         summary: summary,
         productQuantities: {
           Solarmodul: parts.Solarmodul || 0,
-          MC4Stecker: parts.MC4Stecker || 0,
-          Holzunterleger: parts.Holzunterleger || 0,
-          Solarkabel: parts.Solarkabel || 0,
           Endklemmen: parts.Endklemmen || 0,
+          Schrauben: parts.Schrauben || 0,
+          Dachhaken: parts.Dachhaken || 0,
           Mittelklemmen: parts.Mittelklemmen || 0,
-          Dachhaken: parts.Dachhaken || 0
+          Endkappen: parts.Endkappen || 0,
+          Schienenverbinder: parts.Schienenverbinder || 0,
+          Schiene240cm: parts.Schiene240cm || 0,
+          Schiene360cm: parts.Schiene360cm || 0,
+          MC4Stecker: parts.MC4Stecker || 0,
+          Solarkabel: parts.Solarkabel || 0,
+          Holzunterleger: parts.Holzunterleger || 0
         },
         analytics: {
           totalCells: targetConfig.cols * targetConfig.rows,
