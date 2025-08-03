@@ -2714,7 +2714,6 @@
       });
         
         return {
-        productQuantities,
         totalPrice 
       };
     }
@@ -2779,7 +2778,7 @@
         targetConfig.cellHeight
       );
       
-      // Berechne Produkt-Quantitäten für Webhook
+      // Berechne Produkt-Quantitäten für Webhook - ALLE Produkte, auch mit 0
       const parts = this.calculatePartsDirectly({
         selection: targetConfig.selection,
         cols: targetConfig.cols,
@@ -2792,6 +2791,22 @@
         solarkabel: targetConfig.solarkabel,
         holz: targetConfig.holz
       });
+
+      // Stelle sicher, dass alle 12 Produkte übertragen werden, auch mit 0
+      const allProductQuantities = {
+        Solarmodul: parts.Solarmodul || 0,
+        Endklemmen: parts.Endklemmen || 0,
+        Schrauben: parts.Schrauben || 0,
+        Dachhaken: parts.Dachhaken || 0,
+        Mittelklemmen: parts.Mittelklemmen || 0,
+        Endkappen: parts.Endkappen || 0,
+        Schienenverbinder: parts.Schienenverbinder || 0,
+        Schiene240cm: parts.Schiene240cm || 0,
+        Schiene360cm: parts.Schiene360cm || 0,
+        MC4Stecker: parts.MC4Stecker || 0,
+        Solarkabel: parts.Solarkabel || 0,
+        Holzunterleger: parts.Holzunterleger || 0
+      };
 
       return {
         timestamp: new Date().toISOString(),
@@ -2812,20 +2827,7 @@
           }
         },
         summary: summary,
-        productQuantities: {
-          Solarmodul: parts.Solarmodul || 0,
-          Endklemmen: parts.Endklemmen || 0,
-          Schrauben: parts.Schrauben || 0,
-          Dachhaken: parts.Dachhaken || 0,
-          Mittelklemmen: parts.Mittelklemmen || 0,
-          Endkappen: parts.Endkappen || 0,
-          Schienenverbinder: parts.Schienenverbinder || 0,
-          Schiene240cm: parts.Schiene240cm || 0,
-          Schiene360cm: parts.Schiene360cm || 0,
-          MC4Stecker: parts.MC4Stecker || 0,
-          Solarkabel: parts.Solarkabel || 0,
-          Holzunterleger: parts.Holzunterleger || 0
-        },
+        productQuantities: allProductQuantities,
         analytics: {
           totalCells: targetConfig.cols * targetConfig.rows,
           selectedCells: targetConfig.selection.flat().filter(v => v).length,
