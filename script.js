@@ -508,7 +508,7 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('SOLAR-TOOL KONFIGURATION', 20, 22);
+      pdf.text('Ihre Konfiguration', 20, 22);
       
       // Datum rechts
       pdf.setFontSize(10);
@@ -527,8 +527,8 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`📋 Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 5);
-      pdf.text(`📅 Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, positionRef.y + 15);
+      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 5);
+      pdf.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, positionRef.y + 15);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
@@ -538,8 +538,8 @@
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
       const moduleCount = config.selection ? config.selection.flat().filter(v => v).length : 0;
-      pdf.text(`🔧 Grid: ${config.cols} × ${config.rows} Module (${moduleCount} ausgewählt)`, 20, positionRef.y);
-      pdf.text(`📐 Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 20, positionRef.y + 8);
+      pdf.text(`Grid: ${config.cols} × ${config.rows} Module (${moduleCount} ausgewählt)`, 20, positionRef.y);
+      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 20, positionRef.y + 8);
       positionRef.y += 20;
 
       // Grid-Screenshot hinzufügen  
@@ -553,13 +553,14 @@
           
           checkPageBreak(imgHeight + 15);
           
-          // Rahmen um das Bild
-          pdf.setDrawColor(14, 30, 52);
-          pdf.setLineWidth(2);
-          const centerX = (pageWidth - imgWidth) / 2;
-          pdf.rect(centerX - 2, positionRef.y - 2, imgWidth + 4, imgHeight + 4);
-          
-          pdf.addImage(gridImage, 'PNG', centerX, positionRef.y, imgWidth, imgHeight);
+                  // Rahmen um das Bild - zentriert mit gleichem Abstand
+        pdf.setDrawColor(14, 30, 52);
+        pdf.setLineWidth(2);
+        const centerX = (pageWidth - imgWidth) / 2;
+        const centerY = positionRef.y;
+        pdf.rect(centerX - 2, centerY - 2, imgWidth + 4, imgHeight + 4);
+        
+        pdf.addImage(gridImage, 'PNG', centerX, centerY, imgWidth, imgHeight);
           positionRef.y += imgHeight + 10;
         }
       } catch (error) {
@@ -581,12 +582,12 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`💰 GESAMTPREIS: ${totalPrice.toFixed(2)} €`, 20, positionRef.y + 8);
+      pdf.text(`GESAMTPREIS: ${totalPrice.toFixed(2)} €`, 20, positionRef.y + 8);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
 
-      // Footer mit Logo
+      // Footer mit Logo auf jeder Seite
       checkPageBreak(40);
       this.addFooter(pdf, pageWidth, pageHeight);
     }
@@ -630,24 +631,23 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('Solar-Tool - Professionelle Solar-Konfiguration', 20, footerY + 8);
-      pdf.text('www.solar-tool.de', 20, footerY + 15);
+      pdf.text('Schneider Unterkonstruktion - Solar Konfigurator', 20, footerY + 8);
+      pdf.text('unterkonstruktion.de', 20, footerY + 15);
       
-      // Logo rechts
+      // Logo rechts - neues PNG Logo
       try {
-        // Logo von der bereitgestellten URL laden
-        const logoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68498993f8a68ca0349da47b_Gruppe%208.svg';
+        // Logo von der neuen URL laden
+        const logoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/688f3fff157b70cefcaa97df_Schneider%20logo.png';
         
-        // Für SVG müssen wir es als PNG konvertieren oder eine Alternative verwenden
-        // Hier verwenden wir ein einfaches Text-Logo als Fallback
+        // Für PNG können wir es direkt verwenden
         pdf.setFontSize(12);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('☀️ SOLAR-TOOL', pageWidth - 60, footerY + 12);
+        pdf.text('SCHNEIDER', pageWidth - 60, footerY + 12);
       } catch (error) {
         console.warn('Logo konnte nicht geladen werden:', error);
         pdf.setFontSize(12);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('☀️ SOLAR-TOOL', pageWidth - 60, footerY + 12);
+        pdf.text('SCHNEIDER', pageWidth - 60, footerY + 12);
       }
     }
 
@@ -700,7 +700,7 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('SOLAR-TOOL KONFIGURATION', 20, 22);
+      pdf.text('Ihre Konfiguration', 20, 22);
       
       // Datum rechts
       pdf.setFontSize(10);
@@ -719,8 +719,8 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`📋 Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 5);
-      pdf.text(`📅 Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, positionRef.y + 15);
+      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 5);
+      pdf.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, positionRef.y + 15);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
@@ -729,8 +729,8 @@
       checkPageBreak(20);
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`🔧 Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt)`, 20, positionRef.y);
-      pdf.text(`📐 Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 20, positionRef.y + 8);
+      pdf.text(`Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt)`, 20, positionRef.y);
+      pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 20, positionRef.y + 8);
       positionRef.y += 20;
 
       // Grid-Screenshot hinzufügen (ISOLIERT mit Snapshot-Daten)
@@ -742,13 +742,14 @@
           
           checkPageBreak(imgHeight + 15);
           
-          // Rahmen um das Bild
+          // Rahmen um das Bild - zentriert mit gleichem Abstand
           pdf.setDrawColor(14, 30, 52);
           pdf.setLineWidth(2);
           const centerX = (pageWidth - imgWidth) / 2;
-          pdf.rect(centerX - 2, positionRef.y - 2, imgWidth + 4, imgHeight + 4);
+          const centerY = positionRef.y;
+          pdf.rect(centerX - 2, centerY - 2, imgWidth + 4, imgHeight + 4);
           
-          pdf.addImage(gridImage, 'PNG', centerX, positionRef.y, imgWidth, imgHeight);
+          pdf.addImage(gridImage, 'PNG', centerX, centerY, imgWidth, imgHeight);
           positionRef.y += imgHeight + 10;
         }
       } catch (error) {
@@ -769,12 +770,12 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`💰 GESAMTPREIS: ${totalPrice.toFixed(2)} €`, 20, positionRef.y + 8);
+      pdf.text(`GESAMTPREIS: ${totalPrice.toFixed(2)} €`, 20, positionRef.y + 8);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
 
-      // Footer mit Logo
+      // Footer mit Logo auf jeder Seite
       checkPageBreak(40);
       this.addFooter(pdf, pageWidth, pageHeight);
     }
@@ -1246,7 +1247,7 @@
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(12);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('📦 PRODUKT-LISTE', 20, yPosition + 5);
+        pdf.text('PRODUKT-LISTE', 20, yPosition + 5);
         
         pdf.setTextColor(0, 0, 0);
         yPosition += 20;
@@ -1381,14 +1382,14 @@
       // NEUES DESIGN: Produkttabelle mit Header
       checkPageBreak(30);
       
-      // Header mit orange Hintergrund
-      pdf.setFillColor(245, 166, 35);
-      pdf.rect(15, yPosition - 5, 180, 15, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('📦 PRODUKT-LISTE', 20, yPosition + 5);
+              // Header mit orange Hintergrund
+        pdf.setFillColor(245, 166, 35);
+        pdf.rect(15, yPosition - 5, 180, 15, 'F');
+        
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('PRODUKT-LISTE', 20, yPosition + 5);
       
       pdf.setTextColor(0, 0, 0);
       yPosition += 20;
