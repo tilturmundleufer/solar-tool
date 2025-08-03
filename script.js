@@ -921,7 +921,7 @@
         ctx.strokeRect(10, 10, totalWidth - 20, totalHeight - 20);
         
         // Canvas zu Base64 konvertieren
-        const base64Image = canvas.toDataURL('image/png').split(',')[1];
+        const base64Image = canvas.toDataURL('image/png');
         
         // Cleanup
         document.body.removeChild(tempContainer);
@@ -2807,8 +2807,8 @@
         const gridImage = await this.pdfGenerator.captureGridImageForWebhook(configData);
         if (gridImage) {
           configData.gridImage = {
-            data: gridImage,
-            format: 'base64',
+            data: gridImage, // Vollständiger Data-URL: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...
+            format: 'data-url',
             mimeType: 'image/png',
             width: configData.cols * 60 + (configData.cols - 1) * 2 + 40, // Ungefähre Bildbreite
             height: configData.rows * 60 + (configData.rows - 1) * 2 + 40   // Ungefähre Bildhöhe
