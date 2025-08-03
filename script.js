@@ -2793,6 +2793,11 @@
       });
 
       // Stelle sicher, dass alle 12 Produkte übertragen werden, auch mit 0
+      // Zusätzliche Berechnungen basierend auf Checkbox-Einstellungen
+      if (targetConfig.mc4) parts.MC4_Stecker = targetConfig.selection.flat().filter(v => v).length;
+      if (targetConfig.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (targetConfig.holz) parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+      
       const allProductQuantities = {
         Solarmodul: parts.Solarmodul || 0,
         Endklemmen: parts.Endklemmen || 0,
@@ -2801,9 +2806,9 @@
         Mittelklemmen: parts.Mittelklemmen || 0,
         Endkappen: parts.Endkappen || 0,
         Schienenverbinder: parts.Schienenverbinder || 0,
-        Schiene240cm: parts.Schiene240cm || 0,
-        Schiene360cm: parts.Schiene360cm || 0,
-        MC4Stecker: parts.MC4Stecker || 0,
+        Schiene240cm: parts.Schiene_240_cm || 0,
+        Schiene360cm: parts.Schiene_360_cm || 0,
+        MC4Stecker: parts.MC4_Stecker || 0,
         Solarkabel: parts.Solarkabel || 0,
         Holzunterleger: parts.Holzunterleger || 0
       };
