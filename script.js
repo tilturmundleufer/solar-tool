@@ -527,8 +527,7 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 5);
-      pdf.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, positionRef.y + 15);
+      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 10);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
@@ -582,10 +581,15 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`GESAMTPREIS: ${totalPrice.toFixed(2)} €`, 20, positionRef.y + 8);
+      pdf.text('GESAMTPREIS:', 20, positionRef.y + 8);
+      pdf.text(`${totalPrice.toFixed(2)} €`, 170, positionRef.y + 8);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
+
+      // Produkte pro Modul Informationen
+      checkPageBreak(80);
+      positionRef.y = this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
 
       // Footer mit Logo auf jeder Seite
       checkPageBreak(40);
@@ -642,12 +646,12 @@
         // Für PNG können wir es direkt verwenden
         pdf.setFontSize(12);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('SCHNEIDER', pageWidth - 60, footerY + 12);
+        pdf.text('Schneider Unterkonstruktion', pageWidth - 120, footerY + 12);
       } catch (error) {
         console.warn('Logo konnte nicht geladen werden:', error);
         pdf.setFontSize(12);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('SCHNEIDER', pageWidth - 60, footerY + 12);
+        pdf.text('Schneider Unterkonstruktion', pageWidth - 120, footerY + 12);
       }
     }
 
@@ -719,8 +723,7 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 5);
-      pdf.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, 20, positionRef.y + 15);
+      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 10);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
@@ -770,10 +773,15 @@
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`GESAMTPREIS: ${totalPrice.toFixed(2)} €`, 20, positionRef.y + 8);
+      pdf.text('GESAMTPREIS:', 20, positionRef.y + 8);
+      pdf.text(`${totalPrice.toFixed(2)} €`, 170, positionRef.y + 8);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
+
+      // Produkte pro Modul Informationen
+      checkPageBreak(80);
+      positionRef.y = this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
 
       // Footer mit Logo auf jeder Seite
       checkPageBreak(40);
