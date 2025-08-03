@@ -2779,6 +2779,20 @@
         targetConfig.cellHeight
       );
       
+      // Berechne Produkt-Quantitäten für Webhook
+      const parts = this.calculatePartsDirectly({
+        selection: targetConfig.selection,
+        cols: targetConfig.cols,
+        rows: targetConfig.rows,
+        cellWidth: targetConfig.cellWidth,
+        cellHeight: targetConfig.cellHeight,
+        orientation: targetConfig.orientation,
+        incM: targetConfig.incM,
+        mc4: targetConfig.mc4,
+        solarkabel: targetConfig.solarkabel,
+        holz: targetConfig.holz
+      });
+
       return {
         timestamp: new Date().toISOString(),
         sessionId: this.sessionId,
@@ -2798,6 +2812,15 @@
           }
         },
         summary: summary,
+        productQuantities: {
+          Solarmodul: parts.Solarmodul || 0,
+          MC4Stecker: parts.MC4Stecker || 0,
+          Holzunterleger: parts.Holzunterleger || 0,
+          Solarkabel: parts.Solarkabel || 0,
+          Endklemmen: parts.Endklemmen || 0,
+          Mittelklemmen: parts.Mittelklemmen || 0,
+          Dachhaken: parts.Dachhaken || 0
+        },
         analytics: {
           totalCells: targetConfig.cols * targetConfig.rows,
           selectedCells: targetConfig.selection.flat().filter(v => v).length,
