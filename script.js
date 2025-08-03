@@ -2804,7 +2804,7 @@
     async sendConfigToWebhook(configData) {
       try {
         // NEUE: Füge Grid-Bild zu Webhook-Daten hinzu
-        const gridImage = await this.captureGridImageForWebhook(configData);
+        const gridImage = await this.pdfGenerator.captureGridImageForWebhook(configData);
         if (gridImage) {
           configData.gridImage = {
             data: gridImage,
