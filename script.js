@@ -756,6 +756,184 @@
       }
     }
 
+    // NEUE METHODE: Grid-Bild für Webhook generieren
+    async captureGridImageForWebhook(configData) {
+      try {
+        const selection = configData.selection || [];
+        const cols = configData.cols || 5;
+        const rows = configData.rows || 5;
+        
+        // Erstelle temporäres Container Element
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-10000px';
+        tempContainer.style.top = '-10000px';
+        tempContainer.style.padding = '20px';
+        tempContainer.style.backgroundColor = '#ffffff';
+        document.body.appendChild(tempContainer);
+
+        // Grid-Eigenschaften für Webhook-optimierte Darstellung
+        const isVertical = configData.orientation === 'vertical';
+        const baseCellSize = 60; // Größere Zellen für bessere Sichtbarkeit
+        const cellWidth = isVertical ? baseCellSize * 0.6 : baseCellSize;
+        const cellHeight = isVertical ? baseCellSize : baseCellSize * 0.6;
+        const cellGap = 2;
+        
+        const gridEl = document.createElement('div');
+        gridEl.style.display = 'grid';
+        gridEl.style.gap = `${cellGap}px`;
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellWidth}px)`;
+        gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellHeight}px)`;
+        gridEl.style.padding = '20px';
+        gridEl.style.backgroundColor = '#ffffff';
+        gridEl.style.border = '2px solid #072544';
+        gridEl.style.borderRadius = '12px';
+        gridEl.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+
+        // Grid-Zellen erstellen
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const cell = document.createElement('div');
+            const isSelected = selection[y] && selection[y][x] === true;
+            
+            cell.style.width = `${cellWidth}px`;
+            cell.style.height = `${cellHeight}px`;
+            cell.style.borderRadius = '6px';
+            cell.style.border = '1px solid #ddd';
+            cell.style.transition = 'all 0.2s ease';
+            
+            if (isSelected) {
+              // Ausgewählte Zelle - Solar-Panel-Design
+              cell.style.backgroundColor = '#072544';
+              cell.style.border = '2px solid #0a4d75';
+              cell.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.2)';
+              
+              // Solar-Panel-Pattern hinzufügen
+              const pattern = document.createElement('div');
+              pattern.style.width = '100%';
+              pattern.style.height = '100%';
+              pattern.style.background = `linear-gradient(135deg, 
+                #072544 0%, #0a4d75 50%, #072544 100%)`;
+              pattern.style.borderRadius = '4px';
+              pattern.style.position = 'relative';
+              
+              // Grid-Linien für Solarpanel-Look
+              const gridLines = document.createElement('div');
+              gridLines.style.position = 'absolute';
+              gridLines.style.top = '2px';
+              gridLines.style.left = '2px';
+              gridLines.style.right = '2px';
+              gridLines.style.bottom = '2px';
+              gridLines.style.backgroundImage = `
+                linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
+              `;
+              gridLines.style.backgroundSize = '33% 50%';
+              
+              pattern.appendChild(gridLines);
+              cell.appendChild(pattern);
+            } else {
+              // Unausgewählte Zelle - Neutral grau
+              cell.style.backgroundColor = '#f8f9fa';
+              cell.style.border = '1px solid #e9ecef';
+            }
+            
+            gridEl.appendChild(cell);
+          }
+        }
+        
+        tempContainer.appendChild(gridEl);
+        
+        // Warte auf Rendering
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 150));
+
+        // Canvas für Screenshot erstellen
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Canvas-Größe berechnen
+        const totalWidth = cols * cellWidth + (cols - 1) * cellGap + 40; // +40 für padding
+        const totalHeight = rows * cellHeight + (rows - 1) * cellGap + 40;
+        
+        canvas.width = totalWidth;
+        canvas.height = totalHeight;
+        
+        // Weißer Hintergrund
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Grid manuell auf Canvas zeichnen
+        const startX = 20; // Padding
+        const startY = 20; // Padding
+        
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const cellX = startX + x * (cellWidth + cellGap);
+            const cellY = startY + y * (cellHeight + cellGap);
+            const isSelected = selection[y] && selection[y][x] === true;
+            
+            if (isSelected) {
+              // Ausgewählte Zelle - Dunkelblau
+              ctx.fillStyle = '#072544';
+              ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
+              
+              // Border
+              ctx.strokeStyle = '#0a4d75';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(cellX, cellY, cellWidth, cellHeight);
+              
+              // Solar-Panel-Grid
+              ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+              ctx.lineWidth = 1;
+              
+              // Vertikale Linien
+              for (let i = 1; i < 3; i++) {
+                const lineX = cellX + (cellWidth / 3) * i;
+                ctx.beginPath();
+                ctx.moveTo(lineX, cellY + 2);
+                ctx.lineTo(lineX, cellY + cellHeight - 2);
+                ctx.stroke();
+              }
+              
+              // Horizontale Linie
+              const lineY = cellY + cellHeight / 2;
+              ctx.beginPath();
+              ctx.moveTo(cellX + 2, lineY);
+              ctx.lineTo(cellX + cellWidth - 2, lineY);
+              ctx.stroke();
+            } else {
+              // Unausgewählte Zelle - Hell grau
+              ctx.fillStyle = '#f8f9fa';
+              ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
+              
+              // Border
+              ctx.strokeStyle = '#e9ecef';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(cellX, cellY, cellWidth, cellHeight);
+            }
+          }
+        }
+        
+        // Grid-Rahmen zeichnen
+        ctx.strokeStyle = '#072544';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(10, 10, totalWidth - 20, totalHeight - 20);
+        
+        // Canvas zu Base64 konvertieren
+        const base64Image = canvas.toDataURL('image/png').split(',')[1];
+        
+        // Cleanup
+        document.body.removeChild(tempContainer);
+        
+        return base64Image;
+        
+      } catch (error) {
+        console.error('Grid-Bild-Generierung fehlgeschlagen:', error);
+        return null;
+      }
+    }
+
     // NEUE ISOLIERTE Grid-Capture aus Snapshot (KEINE Live-Grid-Interaktion!)
     async captureGridVisualizationFromSnapshot(config) {
       try {
@@ -2625,6 +2803,18 @@
 
     async sendConfigToWebhook(configData) {
       try {
+        // NEUE: Füge Grid-Bild zu Webhook-Daten hinzu
+        const gridImage = await this.captureGridImageForWebhook(configData);
+        if (gridImage) {
+          configData.gridImage = {
+            data: gridImage,
+            format: 'base64',
+            mimeType: 'image/png',
+            width: configData.cols * 60 + (configData.cols - 1) * 2 + 40, // Ungefähre Bildbreite
+            height: configData.rows * 60 + (configData.rows - 1) * 2 + 40   // Ungefähre Bildhöhe
+          };
+        }
+
         const response = await fetch(this.webhookUrl, {
           method: 'POST',
           headers: {
@@ -2639,6 +2829,7 @@
           return false;
         }
       } catch (error) {
+        console.error('Webhook send error:', error);
         return false;
       }
     }
