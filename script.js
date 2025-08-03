@@ -2833,6 +2833,7 @@
         },
         summary: summary,
         productQuantities: allProductQuantities,
+        totalPrice: summary.totalPrice, // Verwende den korrekten Gesamtpreis aus getProductSummary
         analytics: {
           totalCells: targetConfig.cols * targetConfig.rows,
           selectedCells: targetConfig.selection.flat().filter(v => v).length,
