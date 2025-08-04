@@ -3378,51 +3378,7 @@
 			}, 600);
 		}
 
-		initQuickConfigInterface() {
-			// Warte kurz, damit das DOM vollständig geladen ist
-			setTimeout(() => {
-				const quickInput = document.getElementById('quick-config-input');
-				const applyButton = document.getElementById('apply-quick-config');
-				
-				if (quickInput && applyButton) {
-					applyButton.addEventListener('click', () => {
-						const input = quickInput.value.trim();
-						if (input) {
-							try {
-								const config = this.smartParser.parseInput(input);
-								this.smartParser.applyConfiguration(config);
-								this.showToast(`Konfiguration "${input}" angewendet ✅`, 2000);
-								quickInput.value = ''; // Input leeren
-							} catch (error) {
-								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
-							}
-						}
-					});
-					
-					// Enter-Taste Support
-					quickInput.addEventListener('keypress', (e) => {
-						if (e.key === 'Enter') {
-							applyButton.click();
-						}
-					});
-					
-					// Live-Vorschau beim Tippen (optional)
-					quickInput.addEventListener('input', (e) => {
-						const input = e.target.value.trim();
-						if (input.length > 3) {
-							try {
-								const config = this.smartParser.parseInput(input);
-								this.showConfigPreview(config);
-							} catch (error) {
-								// Ignoriere Parsing-Fehler während des Tippens
-							}
-						}
-					});
-					
-				} else {
-				}
-			}, 500);
-		}
+
 
 		initQuickConfigInterface() {
 			// Warte kurz, damit das DOM vollständig geladen ist
@@ -3452,15 +3408,26 @@
 						}
 					});
 					
-					// Live-Vorschau beim Tippen (optional)
+					// Live-Grid-Preview beim Tippen
 					quickInput.addEventListener('input', (e) => {
 						const input = e.target.value.trim();
-						if (input.length > 3) {
+						
+						// Clear previous timeout
+						if (this.previewTimeout) {
+							clearTimeout(this.previewTimeout);
+						}
+						
+						if (input.length > 2) {
 							try {
 								const config = this.smartParser.parseInput(input);
 								this.showConfigPreview(config);
 							} catch (error) {
 								// Ignoriere Parsing-Fehler während des Tippens
+							}
+						} else {
+							// Clear preview if input is too short
+							if (this.clearGridPreview) {
+								this.clearGridPreview();
 							}
 						}
 					});
@@ -3474,28 +3441,105 @@
 		}
 		
 		showConfigPreview(config) {
-			// Optional: Zeige eine kleine Vorschau der erkannten Konfiguration
-			const preview = document.getElementById('config-preview');
-			if (preview && (config.cols || config.moduleCount)) {
-				let previewText = '';
-				if (config.cols && config.rows) {
-					previewText += `${config.cols}×${config.rows} Grid`;
+			// Grid-Preview anstelle von Text-Preview
+			if (config.cols || config.moduleCount) {
+				this.showGridPreview(config);
+			}
+		}
+		
+		showGridPreview(config) {
+			// Speichere aktuellen Zustand
+			const originalSelection = this.solarGrid.selection ? this.solarGrid.selection.map(row => [...row]) : null;
+			const originalCols = this.solarGrid.cols;
+			const originalRows = this.solarGrid.rows;
+			const originalOrientation = this.solarGrid.orV ? this.solarGrid.orV.checked : false;
+			
+			// Temporäre Konfiguration anwenden
+			if (config.cols && config.rows) {
+				this.solarGrid.cols = config.cols;
+				this.solarGrid.rows = config.rows;
+			}
+			
+			// Orientierung setzen
+			if (config.orientation && this.solarGrid.orV && this.solarGrid.orH) {
+				this.solarGrid.orV.checked = config.orientation === 'vertical';
+				this.solarGrid.orH.checked = config.orientation === 'horizontal';
+			}
+			
+			// Grid-Größe anpassen
+			this.solarGrid.updateSize();
+			
+			// Temporäre Selection erstellen
+			let previewSelection;
+			if (config.moduleCount) {
+				// Automatische Modul-Auswahl für Preview
+				previewSelection = this.createModuleSelection(config.moduleCount, config.cols, config.rows);
+			} else {
+				// Leere Selection für Grid-Preview
+				previewSelection = Array.from({ length: this.solarGrid.rows }, () =>
+					Array.from({ length: this.solarGrid.cols }, () => false)
+				);
+			}
+			
+			// Temporäre Selection anwenden
+			this.solarGrid.selection = previewSelection;
+			
+			// Grid mit Preview-Styling neu aufbauen
+			this.solarGrid.buildGrid();
+			this.addPreviewStyling();
+			
+			// Nach 3 Sekunden zurücksetzen (wenn keine weitere Eingabe)
+			this.previewTimeout = setTimeout(() => {
+				this.clearGridPreview(originalSelection, originalCols, originalRows, originalOrientation);
+			}, 3000);
+		}
+		
+		createModuleSelection(moduleCount, cols, rows) {
+			const selection = Array.from({ length: rows }, () =>
+				Array.from({ length: cols }, () => false)
+			);
+			
+			// Automatische Modul-Auswahl (von links nach rechts, oben nach unten)
+			let modulesPlaced = 0;
+			for (let row = 0; row < rows && modulesPlaced < moduleCount; row++) {
+				for (let col = 0; col < cols && modulesPlaced < moduleCount; col++) {
+					selection[row][col] = true;
+					modulesPlaced++;
 				}
-				if (config.moduleCount) {
-					previewText += ` (${config.moduleCount} Module)`;
+			}
+			
+			return selection;
+		}
+		
+		addPreviewStyling() {
+			// Füge Preview-Styling zu Grid-Zellen hinzu
+			const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+			cells.forEach(cell => {
+				cell.classList.add('preview-mode');
+			});
+		}
+		
+		clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
+			// Entferne Preview-Styling
+			const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+			cells.forEach(cell => {
+				cell.classList.remove('preview-mode');
+			});
+			
+			// Nur wiederherstellen wenn Parameter übergeben wurden
+			if (originalSelection !== null && originalCols !== null && originalRows !== null) {
+				this.solarGrid.selection = originalSelection;
+				this.solarGrid.cols = originalCols;
+				this.solarGrid.rows = originalRows;
+				
+				if (this.solarGrid.orV && this.solarGrid.orH && originalOrientation !== null) {
+					this.solarGrid.orV.checked = originalOrientation;
+					this.solarGrid.orH.checked = !originalOrientation;
 				}
-				if (config.orientation !== 'horizontal') {
-					previewText += `, ${config.orientation}`;
-				}
-				if (config.mc4 || config.cable || config.wood) {
-					const extras = [];
-					if (config.mc4) extras.push('MC4');
-					if (config.cable) extras.push('Kabel');
-					if (config.wood) extras.push('Holz');
-					previewText += ` + ${extras.join(', ')}`;
-				}
-				preview.textContent = previewText;
-				preview.style.display = previewText ? 'block' : 'none';
+				
+				// Grid wiederherstellen
+				this.solarGrid.updateSize();
+				this.solarGrid.buildGrid();
 			}
 		}
 		
