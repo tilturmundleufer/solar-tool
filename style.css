@@ -665,7 +665,7 @@ body {
 
 .config-sidebar {
   position: fixed;
-  right: -30px;
+  right: -350px;
   top: 0;
   height: 100vh;
   background: #072544;
@@ -740,7 +740,8 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 350px;
+  min-width: 175px;
+  max-width: 200px;
 }
 
 /* Side-Section für Produktliste */
@@ -896,14 +897,14 @@ body {
 
 /* Produkt-Optionen */
 .product-options {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .checkbox-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 0;
+  gap: 6px;
+  padding: 3px 0;
   color: white;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -914,13 +915,13 @@ body {
 }
 
 .checkbox-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   accent-color: #ffb101;
 }
 
 .checkbox-item span {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 /* Moderne Config-Items */
