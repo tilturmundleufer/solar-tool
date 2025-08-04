@@ -3462,8 +3462,9 @@
 		}
 		
 		showConfigPreview(config) {
-			// Grid-Preview anstelle von Text-Preview
-			if (config.cols || config.moduleCount) {
+			// Grid-Preview für alle Konfigurationen die das Grid beeinflussen
+			if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
+				console.log('Preview config:', config); // Debug
 				this.solarGrid.showGridPreview(config);
 			}
 		}
@@ -4843,6 +4844,8 @@
     // ===== GRID PREVIEW METHODS =====
     
     showGridPreview(config) {
+      console.log('showGridPreview called with:', config); // Debug
+      
       // Speichere aktuellen Zustand
       const originalSelection = this.selection ? this.selection.map(row => [...row]) : null;
       const originalCols = this.cols;
@@ -4851,12 +4854,14 @@
       
       // Temporäre Konfiguration anwenden
       if (config.cols && config.rows) {
+        console.log('Setting grid size to:', config.cols, 'x', config.rows);
         this.cols = config.cols;
         this.rows = config.rows;
       }
       
       // Orientierung setzen
       if (config.orientation && this.orV && this.orH) {
+        console.log('Setting orientation to:', config.orientation);
         this.orV.checked = config.orientation === 'vertical';
         this.orH.checked = config.orientation === 'horizontal';
       }
@@ -4867,9 +4872,11 @@
       // Temporäre Selection erstellen
       let previewSelection;
       if (config.moduleCount) {
+        console.log('Creating module selection for', config.moduleCount, 'modules');
         // Automatische Modul-Auswahl für Preview
-        previewSelection = this.createModuleSelection(config.moduleCount, config.cols, config.rows);
+        previewSelection = this.createModuleSelection(config.moduleCount, this.cols, this.rows);
       } else {
+        console.log('Creating empty selection for preview');
         // Leere Selection für Grid-Preview
         previewSelection = Array.from({ length: this.rows }, () =>
           Array.from({ length: this.cols }, () => false)
@@ -4888,6 +4895,7 @@
         clearTimeout(this.previewTimeout);
       }
       this.previewTimeout = setTimeout(() => {
+        console.log('Clearing preview after timeout');
         this.clearGridPreview(originalSelection, originalCols, originalRows, originalOrientation);
       }, 3000);
     }
