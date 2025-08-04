@@ -4129,15 +4129,15 @@
       return {
         name:        configName,
         selection:   this.selection.map(r => [...r]),
-        orientation: this.orV.checked ? 'vertical' : 'horizontal',
-        incM:        this.incM.checked,
-        mc4:         this.mc4.checked,
-        solarkabel:  this.solarkabel.checked,
-        holz:        this.holz.checked,
+        orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
+        incM:        this.incM ? this.incM.checked : false,
+        mc4:         this.mc4 ? this.mc4.checked : false,
+        solarkabel:  this.solarkabel ? this.solarkabel.checked : false,
+        holz:        this.holz ? this.holz.checked : false,
         cols:        this.cols,
         rows:        this.rows,
-        cellWidth:   parseInt(this.wIn.value, 10),
-        cellHeight:  parseInt(this.hIn.value, 10)
+        cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+        cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10)
       };
     }
 
@@ -4266,13 +4266,13 @@
     				selection:   this.selection.map(row => [...row]), // Deep copy
     				rows:        this.rows,
     				cols:        this.cols,
-    				cellWidth:   parseInt(this.wIn.value, 10) || 179,
-    				cellHeight:  parseInt(this.hIn.value, 10) || 113,
-    				orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    				incM:        this.incM.checked,
-    				mc4:         this.mc4.checked,
-    				solarkabel:  this.solarkabel.checked,
-    				holz:        this.holz.checked
+    				cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10) || 179,
+    				cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10) || 113,
+    				orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
+    				incM:        this.incM ? this.incM.checked : false,
+    				mc4:         this.mc4 ? this.mc4.checked : false,
+    				solarkabel:  this.solarkabel ? this.solarkabel.checked : false,
+    				holz:        this.holz ? this.holz.checked : false
   				};
   			} else {
   				return {
@@ -4295,13 +4295,13 @@
     			selection:   this.selection.map(row => [...row]), // Deep copy
     			rows:        this.rows,
     			cols:        this.cols,
-    			cellWidth:   parseInt(this.wIn.value, 10) || 179,
-    			cellHeight:  parseInt(this.hIn.value, 10) || 113,
-    			orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    			incM:        this.incM.checked,
-    			mc4:         this.mc4.checked,
-    			solarkabel:  this.solarkabel.checked,
-    			holz:        this.holz.checked
+    			cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10) || 179,
+    			cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10) || 113,
+    			orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
+    			incM:        this.incM ? this.incM.checked : false,
+    			mc4:         this.mc4 ? this.mc4.checked : false,
+    			solarkabel:  this.solarkabel ? this.solarkabel.checked : false,
+    			holz:        this.holz ? this.holz.checked : false
   			});
 			}
   		
