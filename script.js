@@ -3465,15 +3465,16 @@
 			// Grid-Preview für alle Konfigurationen die das Grid beeinflussen
 			if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
 				console.log('Preview config:', config); // Debug
-				console.log('this.solarGrid:', this.solarGrid); // Debug
-				// this.solarGrid ist die SolarGrid Instanz selbst
-				if (this.solarGrid && this.solarGrid.showGridPreview) {
+				console.log('this:', this); // Debug - this ist die SolarGrid Instanz
+				// this ist die SolarGrid Instanz selbst, also können wir direkt auf ihre Methoden zugreifen
+				if (this && typeof this.showGridPreview === 'function') {
 					console.log('Calling showGridPreview...'); // Debug
-					this.solarGrid.showGridPreview(config);
+					this.showGridPreview(config);
 				} else {
-					console.error('solarGrid or showGridPreview not available!'); // Debug
-					console.log('this.solarGrid type:', typeof this.solarGrid); // Debug
-					console.log('this.solarGrid methods:', Object.getOwnPropertyNames(this.solarGrid || {})); // Debug
+					console.error('showGridPreview not available!'); // Debug
+					console.log('this type:', typeof this); // Debug
+					console.log('this methods:', Object.getOwnPropertyNames(this || {})); // Debug
+					console.log('showGridPreview exists:', this && typeof this.showGridPreview); // Debug
 				}
 			} else {
 				console.log('No preview conditions met for config:', config); // Debug
