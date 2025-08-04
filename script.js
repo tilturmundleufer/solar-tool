@@ -3220,11 +3220,17 @@
 		// Sidebar standardmäßig öffnen
 		configSidebar.classList.add('open');
 		
-		// Initiale Position setzen (geschlossen)
-		const sidebarWidth = configSidebar.offsetWidth;
-		const visibleWidth = 30; // 30px sichtbar
-		const hiddenWidth = sidebarWidth - visibleWidth;
-		configSidebar.style.right = `-${hiddenWidth}px`;
+		// Initiale Position basierend auf Status setzen
+		setTimeout(() => {
+			if (configSidebar.classList.contains('open')) {
+				configSidebar.style.right = '0';
+			} else {
+				const sidebarWidth = configSidebar.offsetWidth;
+				const visibleWidth = 30; // 30px sichtbar
+				const hiddenWidth = sidebarWidth - visibleWidth;
+				configSidebar.style.right = `-${hiddenWidth}px`;
+			}
+		}, 100); // Kurze Verzögerung für korrekte Breitenberechnung
 
 		sidebarToggle.addEventListener('click', () => {
 			this.trackInteraction();
