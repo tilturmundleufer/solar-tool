@@ -3208,10 +3208,32 @@
   			this.trackInteraction();
   			this.resetGridToDefault();
   		});
-  		this.continueLaterBtn.addEventListener('click', () => {
-  			this.trackInteraction();
-  			this.generateContinueLink();
-  		});
+  				this.continueLaterBtn.addEventListener('click', () => {
+			this.trackInteraction();
+			this.generateContinueLink();
+		});
+
+		// Sidebar Toggle Funktionalität
+		const sidebarToggle = document.getElementById('sidebar-toggle');
+		const configSidebar = document.getElementById('config-sidebar');
+		const sidebarClose = document.getElementById('sidebar-close');
+
+		sidebarToggle.addEventListener('click', () => {
+			this.trackInteraction();
+			configSidebar.classList.add('open');
+		});
+
+		sidebarClose.addEventListener('click', () => {
+			this.trackInteraction();
+			configSidebar.classList.remove('open');
+		});
+
+		// Schließen beim Klick außerhalb der Sidebar
+		document.addEventListener('click', (e) => {
+			if (!configSidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+				configSidebar.classList.remove('open');
+			}
+		});
 
   		window.addEventListener('resize', () => {
     		this.updateSize();

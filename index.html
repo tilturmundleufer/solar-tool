@@ -147,10 +147,24 @@
       <button id="summary-add-cart-btn">Gesamte Auswahl in den Warenkorb</button>
     </div>
 
-    <div class="produktliste-holder-2">
-      <button id="save-config-btn" class="btn primary">Konfiguration speichern</button>
-      <button id="continue-later-btn" class="btn secondary">Später weitermachen</button>
-      <div id="config-list"></div>
+    <!-- Sidebar Toggle Button -->
+    <button id="sidebar-toggle" class="sidebar-toggle-btn">
+      <span class="toggle-icon">📋</span>
+    </button>
+
+    <!-- Sidebar für Konfigurationen -->
+    <div id="config-sidebar" class="config-sidebar">
+      <div class="sidebar-header">
+        <h3>Konfigurationen</h3>
+        <button id="sidebar-close" class="sidebar-close-btn">×</button>
+      </div>
+      <div class="sidebar-content">
+        <div id="config-list"></div>
+        <div class="sidebar-buttons">
+          <button id="save-config-btn" class="btn primary">Neue Konfiguration speichern</button>
+          <button id="continue-later-btn" class="btn secondary">Später weitermachen</button>
+        </div>
+      </div>
     </div>
 
 
