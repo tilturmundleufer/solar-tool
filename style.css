@@ -156,6 +156,31 @@ body {
   background: #7f7f7f;
 }
 
+/* Grid Preview Styling */
+.cell.preview-mode {
+  background-color: rgba(245, 166, 35, 0.2) !important;
+  border: 2px solid rgba(245, 166, 35, 0.6) !important;
+  box-shadow: 0 0 8px rgba(245, 166, 35, 0.4) !important;
+  animation: previewPulse 1.5s ease-in-out infinite;
+}
+
+.cell.preview-mode.selected {
+  background-color: rgba(245, 166, 35, 0.4) !important;
+  border: 2px solid rgba(245, 166, 35, 0.8) !important;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.6) !important;
+}
+
+@keyframes previewPulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
 /* CONTROLS */
 .controls {
   margin-top: 10px;

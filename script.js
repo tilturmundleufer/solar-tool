@@ -4912,7 +4912,7 @@
     addPreviewStyling() {
       // Füge Preview-Styling zu Grid-Zellen hinzu
       if (this.gridEl) {
-        const cells = this.gridEl.querySelectorAll('.grid-cell');
+        const cells = this.gridEl.querySelectorAll('.cell');
         cells.forEach(cell => {
           cell.classList.add('preview-mode');
         });
@@ -4922,7 +4922,7 @@
     clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
       // Entferne Preview-Styling
       if (this.gridEl) {
-        const cells = this.gridEl.querySelectorAll('.grid-cell');
+        const cells = this.gridEl.querySelectorAll('.cell');
         cells.forEach(cell => {
           cell.classList.remove('preview-mode');
         });
