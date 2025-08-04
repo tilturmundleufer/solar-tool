@@ -3225,6 +3225,16 @@
 			configSidebar.classList.toggle('open');
 		});
 
+		// Produktliste Toggle Funktionalität
+		const productToggle = document.getElementById('product-toggle');
+		const productContent = document.getElementById('product-content');
+
+		productToggle.addEventListener('click', () => {
+			this.trackInteraction();
+			productContent.classList.toggle('collapsed');
+			productToggle.textContent = productContent.classList.contains('collapsed') ? '▶' : '▼';
+		});
+
   		window.addEventListener('resize', () => {
     		this.updateSize();
     		this.buildGrid();

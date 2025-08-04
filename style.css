@@ -731,6 +731,124 @@ body {
   border-top: 1px solid rgba(255,255,255,0.1);
 }
 
+/* Sidebar Sektionen */
+.product-section,
+.config-section {
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 15px;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #ffb101;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.section-toggle-btn {
+  background: none;
+  border: none;
+  color: #ffb101;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.section-toggle-btn:hover {
+  background: rgba(255, 177, 1, 0.2);
+}
+
+.section-content {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.section-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Produktliste */
+.produktliste {
+  margin-bottom: 15px;
+}
+
+.produkt-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0.5rem;
+  margin-bottom: 8px;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.produkt-item:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.produkt-item img {
+  width: 32px;
+  height: 32px;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+.produkt-item span:first-child {
+  font-weight: bold;
+  color: #ffb101;
+  min-width: 30px;
+}
+
+.produkt-item span:last-child {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+/* Produkt-Optionen */
+.product-options {
+  margin-bottom: 15px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkbox-item:hover {
+  color: #ffb101;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #ffb101;
+}
+
+.checkbox-item span {
+  font-size: 0.9rem;
+}
+
 /* Moderne Config-Items */
 #config-list {
   display: flex;
