@@ -3712,20 +3712,20 @@
   		const RAIL_GAP = 2; // Immer 2cm für Schienen-Berechnungen
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
-  		// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
-  		const inputW = parseInt(this.wIn.value, 10) || 179;
-  		const inputH = parseInt(this.hIn.value, 10) || 113;
+  				// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
+		const inputW = parseInt(this.wIn ? this.wIn.value : '179', 10) || 179;
+		const inputH = parseInt(this.hIn ? this.hIn.value : '113', 10) || 113;
   		
-  		// Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
-  		const isVertical = this.orV.checked;
+  				// Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
+		const isVertical = this.orV ? this.orV.checked : false;
   		const originalCellW = isVertical ? inputH : inputW;
   		const originalCellH = isVertical ? inputW : inputH;
   		
-  		// Maximale verfügbare Größe
-  		// 50px Abstand auf allen Seiten: links, rechts, oben, unten
-  		// Insgesamt 100px für Breite (50px links + 50px rechts) und 100px für Höhe (50px oben + 50px unten)
-  		const maxWidth = this.wrapper.clientWidth - 100; // grid-wrapper Breite - 100px (50px links + 50px rechts)
-  		const maxHeight = this.wrapper.clientHeight - 100; // grid-wrapper Höhe - 100px (50px oben + 50px unten)
+  				// Maximale verfügbare Größe
+		// 50px Abstand auf allen Seiten: links, rechts, oben, unten
+		// Insgesamt 100px für Breite (50px links + 50px rechts) und 100px für Höhe (50px oben + 50px unten)
+		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 100 : 800; // grid-wrapper Breite - 100px (50px links + 50px rechts)
+		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 100 : 600; // grid-wrapper Höhe - 100px (50px oben + 50px unten)
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
   		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * RAIL_GAP;
@@ -3758,8 +3758,10 @@
   		const finalWidth = Math.min(this.cols * w + (this.cols - 1) * visualGap, maxWidth);
   		const finalHeight = Math.min(this.rows * h + (this.rows - 1) * visualGap, maxHeight);
   		
-  		this.gridEl.style.width = finalWidth + 'px';
-  		this.gridEl.style.height = finalHeight + 'px';
+  				if (this.gridEl) {
+			this.gridEl.style.width = finalWidth + 'px';
+			this.gridEl.style.height = finalHeight + 'px';
+		}
 		}
 
     buildGrid() {
