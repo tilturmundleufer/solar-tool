@@ -3466,11 +3466,14 @@
 			if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
 				console.log('Preview config:', config); // Debug
 				console.log('this.solarGrid:', this.solarGrid); // Debug
+				// this.solarGrid ist die SolarGrid Instanz selbst
 				if (this.solarGrid && this.solarGrid.showGridPreview) {
 					console.log('Calling showGridPreview...'); // Debug
 					this.solarGrid.showGridPreview(config);
 				} else {
 					console.error('solarGrid or showGridPreview not available!'); // Debug
+					console.log('this.solarGrid type:', typeof this.solarGrid); // Debug
+					console.log('this.solarGrid methods:', Object.getOwnPropertyNames(this.solarGrid || {})); // Debug
 				}
 			} else {
 				console.log('No preview conditions met for config:', config); // Debug
