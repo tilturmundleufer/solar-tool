@@ -3469,6 +3469,12 @@
 		}
 		
 		showGridPreview(config) {
+			// Prüfe ob solarGrid verfügbar ist
+			if (!this.solarGrid) {
+				console.warn('solarGrid not available for preview');
+				return;
+			}
+			
 			// Speichere aktuellen Zustand
 			const originalSelection = this.solarGrid.selection ? this.solarGrid.selection.map(row => [...row]) : null;
 			const originalCols = this.solarGrid.cols;
@@ -3534,21 +3540,25 @@
 		
 		addPreviewStyling() {
 			// Füge Preview-Styling zu Grid-Zellen hinzu
-			const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
-			cells.forEach(cell => {
-				cell.classList.add('preview-mode');
-			});
+			if (this.solarGrid && this.solarGrid.gridEl) {
+				const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+				cells.forEach(cell => {
+					cell.classList.add('preview-mode');
+				});
+			}
 		}
 		
 		clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
 			// Entferne Preview-Styling
-			const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
-			cells.forEach(cell => {
-				cell.classList.remove('preview-mode');
-			});
+			if (this.solarGrid && this.solarGrid.gridEl) {
+				const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+				cells.forEach(cell => {
+					cell.classList.remove('preview-mode');
+				});
+			}
 			
 			// Nur wiederherstellen wenn Parameter übergeben wurden
-			if (originalSelection !== null && originalCols !== null && originalRows !== null) {
+			if (originalSelection !== null && originalCols !== null && originalRows !== null && this.solarGrid) {
 				this.solarGrid.selection = originalSelection;
 				this.solarGrid.cols = originalCols;
 				this.solarGrid.rows = originalRows;
