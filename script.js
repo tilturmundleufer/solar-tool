@@ -2970,19 +2970,19 @@
 
         // Temporär setzen für Berechnung
         const originalSelection = this.selection;
-        const originalOrientation = this.orV.checked;
-        const originalSolarkabel = this.solarkabel.checked;
-        const originalIncM = this.incM.checked;
-        const originalMc4 = this.mc4.checked;
-        const originalHolz = this.holz.checked;
+        const originalOrientation = this.orV ? this.orV.checked : false;
+        const originalSolarkabel = this.solarkabel ? this.solarkabel.checked : false;
+        const originalIncM = this.incM ? this.incM.checked : false;
+        const originalMc4 = this.mc4 ? this.mc4.checked : false;
+        const originalHolz = this.holz ? this.holz.checked : false;
         
         this.selection = currentConfig.selection;
-        this.orV.checked = currentConfig.orientation === 'vertical';
-        this.orH.checked = !this.orV.checked;
-        this.solarkabel.checked = currentConfig.solarkabel;
-        this.incM.checked = currentConfig.incM;
-        this.mc4.checked = currentConfig.mc4;
-        this.holz.checked = currentConfig.holz;
+        if (this.orV) this.orV.checked = currentConfig.orientation === 'vertical';
+        if (this.orH) this.orH.checked = !(currentConfig.orientation === 'vertical');
+        if (this.solarkabel) this.solarkabel.checked = currentConfig.solarkabel;
+        if (this.incM) this.incM.checked = currentConfig.incM;
+        if (this.mc4) this.mc4.checked = currentConfig.mc4;
+        if (this.holz) this.holz.checked = currentConfig.holz;
 
         // Erstelle individuelle Konfigurationsdaten mit getConfigData
         const configData = this.getConfigData(currentConfig);
@@ -2994,12 +2994,12 @@
 
         // Ursprüngliche Werte wiederherstellen
         this.selection = originalSelection;
-        this.orV.checked = originalOrientation;
-        this.orH.checked = !originalOrientation;
-        this.solarkabel.checked = originalSolarkabel;
-        this.incM.checked = originalIncM;
-        this.mc4.checked = originalMc4;
-        this.holz.checked = originalHolz;
+        if (this.orV) this.orV.checked = originalOrientation;
+        if (this.orH) this.orH.checked = !originalOrientation;
+        if (this.solarkabel) this.solarkabel.checked = originalSolarkabel;
+        if (this.incM) this.incM.checked = originalIncM;
+        if (this.mc4) this.mc4.checked = originalMc4;
+        if (this.holz) this.holz.checked = originalHolz;
 
         // Sende einzelne Konfiguration
         try {
@@ -3157,8 +3157,8 @@
 					
 					// Synchronisiere mit den Haupt-Radio-Buttons
 					const isVertical = el === orientVSetup;
-					this.orV.checked = isVertical;
-					this.orH.checked = !isVertical;
+					if (this.orV) this.orV.checked = isVertical;
+					if (this.orH) this.orH.checked = !isVertical;
 					
 					// Aktualisiere das Grid
 					this.trackInteraction();
