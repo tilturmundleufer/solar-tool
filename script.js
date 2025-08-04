@@ -3102,34 +3102,65 @@
       
       let lastOrientation = this.orH.checked ? 'horizontal' : 'vertical';
 
-			[this.orH, this.orV].forEach(el =>
-  			el.addEventListener('change', () => {
+					[this.orH, this.orV].forEach(el =>
+			el.addEventListener('change', () => {
 
-    			if (!el.checked) return;
+				if (!el.checked) return;
 
-    			const currentOrientation = el === this.orH ? 'horizontal' : 'vertical';
+				const currentOrientation = el === this.orH ? 'horizontal' : 'vertical';
 
-    			if (currentOrientation === lastOrientation) return;
+				if (currentOrientation === lastOrientation) return;
 
-    			// KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
-    			// Nur das Grid und die Liste aktualisieren
-    			this.trackInteraction();
-    			this.updateSize();
-    			this.buildList();
-    			this.updateSummaryOnChange();
+				// Synchronisiere mit Setup-Container Radio-Buttons
+				const orientHSetup = document.getElementById('orient-h-setup');
+				const orientVSetup = document.getElementById('orient-v-setup');
+				if (orientHSetup && orientVSetup) {
+					orientHSetup.checked = el === this.orH;
+					orientVSetup.checked = el === this.orV;
+				}
 
-    			lastOrientation = currentOrientation;
-  			})
+				// KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
+				// Nur das Grid und die Liste aktualisieren
+				this.trackInteraction();
+				this.updateSize();
+				this.buildList();
+				this.updateSummaryOnChange();
+
+				lastOrientation = currentOrientation;
+			})
+		);
+
+  				[this.incM, this.mc4, this.solarkabel, this.holz].forEach(el =>
+			el.addEventListener('change', () => {
+				this.trackInteraction();
+				this.buildList();
+				this.updateSummaryOnChange();
+				this.renderProductSummary(); // Aktualisiere auch die Summary aller Konfigurationen
+			})
+		);
+		
+		// Event-Listener für Setup-Container Radio-Buttons
+		const orientHSetup = document.getElementById('orient-h-setup');
+		const orientVSetup = document.getElementById('orient-v-setup');
+		
+		if (orientHSetup && orientVSetup) {
+			[orientHSetup, orientVSetup].forEach(el =>
+				el.addEventListener('change', () => {
+					if (!el.checked) return;
+					
+					// Synchronisiere mit den Haupt-Radio-Buttons
+					const isVertical = el === orientVSetup;
+					this.orV.checked = isVertical;
+					this.orH.checked = !isVertical;
+					
+					// Aktualisiere das Grid
+					this.trackInteraction();
+					this.updateSize();
+					this.buildList();
+					this.updateSummaryOnChange();
+				})
 			);
-
-  		[this.incM, this.mc4, this.solarkabel, this.holz].forEach(el =>
-    		el.addEventListener('change', () => {
-      		this.trackInteraction();
-      		this.buildList();
-      		this.updateSummaryOnChange();
-      		this.renderProductSummary(); // Aktualisiere auch die Summary aller Konfigurationen
-    		})
-  		);
+		}
       
       // Event-Listener für die Grid-Expansion-Buttons (neue Struktur)
 			// Spalten-Buttons - rechts (fügt am Ende hinzu)
@@ -3301,7 +3332,7 @@
 				// Stelle sicher, dass Smart Config Container permanent sichtbar sind
 				const smartConfigContainers = document.querySelectorAll('.smart-config-container');
 				smartConfigContainers.forEach(container => {
-					container.style.display = 'block';
+					container.style.display = 'flex';
 					container.classList.remove('hidden');
 				});
 				
@@ -3811,10 +3842,18 @@
   		this.wIn.value = width;
   		this.hIn.value = height;
   		
-  		// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
-  		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
-  		this.orH.checked = !defaultVertical;
-  		this.orV.checked = defaultVertical;
+  				// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
+		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
+		this.orH.checked = !defaultVertical;
+		this.orV.checked = defaultVertical;
+		
+		// Synchronisiere Setup-Container Radio-Buttons
+		const orientHSetup = document.getElementById('orient-h-setup');
+		const orientVSetup = document.getElementById('orient-v-setup');
+		if (orientHSetup && orientVSetup) {
+			orientHSetup.checked = !defaultVertical;
+			orientVSetup.checked = defaultVertical;
+		}
 
 		// Setze alle Checkboxen zurück für neue Konfiguration
 		this.incM.checked = false;
