@@ -1919,8 +1919,8 @@
 
       // Orientierung setzen (nur wenn angegeben)
       if (config.orientation) {
-        this.solarGrid.orV.checked = config.orientation === 'vertical';
-        this.solarGrid.orH.checked = config.orientation === 'horizontal';
+        if (this.solarGrid.orV) this.solarGrid.orV.checked = config.orientation === 'vertical';
+        if (this.solarGrid.orH) this.solarGrid.orH.checked = config.orientation === 'horizontal';
       }
 
       // NEUE ACTION PATTERNS HANDHABEN (höchste Priorität)
@@ -1931,16 +1931,16 @@
 
       // Optionen setzen (nur die angegebenen)
       if (config.hasOwnProperty('includeModules')) {
-        this.solarGrid.incM.checked = config.includeModules;
+        if (this.solarGrid.incM) this.solarGrid.incM.checked = config.includeModules;
       }
       if (config.hasOwnProperty('mc4')) {
-        this.solarGrid.mc4.checked = config.mc4;
+        if (this.solarGrid.mc4) this.solarGrid.mc4.checked = config.mc4;
       }
       if (config.hasOwnProperty('cable')) {
-        this.solarGrid.solarkabel.checked = config.cable;
+        if (this.solarGrid.solarkabel) this.solarGrid.solarkabel.checked = config.cable;
       }
       if (config.hasOwnProperty('wood')) {
-        this.solarGrid.holz.checked = config.wood;
+        if (this.solarGrid.holz) this.solarGrid.holz.checked = config.wood;
       }
 
       // INTELLIGENTE Selection-Matrix-Erstellung
@@ -2723,10 +2723,10 @@
 
     getProductSummary() {
       const parts = this.calculateParts();
-      if (!this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
-      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (!this.incM || !this.incM.checked) delete parts.Solarmodul;
+      if (this.mc4 && this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
+      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       let totalPrice = 0;
@@ -2792,12 +2792,12 @@
         rows: this.rows,
         cellWidth: parseInt(this.wIn.value, 10),
         cellHeight: parseInt(this.hIn.value, 10),
-        orientation: this.orV.checked ? 'vertical' : 'horizontal',
+        orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
         selection: this.selection,
-        incM: this.incM.checked,
-        mc4: this.mc4.checked,
-        solarkabel: this.solarkabel.checked,
-        holz: this.holz.checked
+        incM: this.incM ? this.incM.checked : false,
+        mc4: this.mc4 ? this.mc4.checked : false,
+        solarkabel: this.solarkabel ? this.solarkabel.checked : false,
+        holz: this.holz ? this.holz.checked : false
       };
 
       const summary = this.getProductSummary();
@@ -3806,13 +3806,13 @@
     async buildList() {
       try {
         const parts = await this.calculateParts();
-      if (!this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4.checked) {
+      if (!this.incM || !this.incM.checked) delete parts.Solarmodul;
+      if (this.mc4 && this.mc4.checked) {
         const panelCount = this.selection.flat().filter(v => v).length;
         parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
       }
-      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
@@ -3852,9 +3852,9 @@
   		this.hIn.value = height;
   		
   				// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
-		const defaultVertical = document.getElementById('orient-v').hasAttribute('checked');
-		this.orH.checked = !defaultVertical;
-		this.orV.checked = defaultVertical;
+		const defaultVertical = document.getElementById('orient-v') ? document.getElementById('orient-v').hasAttribute('checked') : false;
+		if (this.orH) this.orH.checked = !defaultVertical;
+		if (this.orV) this.orV.checked = defaultVertical;
 		
 		// Synchronisiere Setup-Container Radio-Buttons
 		const orientHSetup = document.getElementById('orient-h-setup');
@@ -3865,10 +3865,10 @@
 		}
 
 		// Setze alle Checkboxen zurück für neue Konfiguration
-		this.incM.checked = false;
-		this.mc4.checked = false;
-		this.solarkabel.checked = false;
-		this.holz.checked = false;
+		if (this.incM) this.incM.checked = false;
+		if (this.mc4) this.mc4.checked = false;
+		if (this.solarkabel) this.solarkabel.checked = false;
+		if (this.holz) this.holz.checked = false;
 
   		this.cols = cols;
   		this.rows = rows;
@@ -3881,13 +3881,13 @@
   		this.updateSummaryOnChange();
 		}
     
-    resetToDefaultGrid() {
-  		this.colsIn.value = this.default.cols;
-  		this.rowsIn.value = this.default.rows;
-  		this.wIn.value    = this.default.width;
-  		this.hIn.value    = this.default.height;
-  		this.orH.checked  = true;
-  		this.orV.checked  = false;
+    	resetToDefaultGrid() {
+		if (this.colsIn) this.colsIn.value = this.default.cols;
+		if (this.rowsIn) this.rowsIn.value = this.default.rows;
+		if (this.wIn) this.wIn.value = this.default.width;
+		if (this.hIn) this.hIn.value = this.default.height;
+		if (this.orH) this.orH.checked = true;
+		if (this.orV) this.orV.checked = false;
 
   		// Setze cols/rows synchron
   		this.cols = this.default.cols;
@@ -4003,15 +4003,15 @@
   		const cfg = this.configs[idx];
   		this.currentConfig = idx;
 
-  		// Input-Werte setzen
-  		this.wIn.value    = cfg.cellWidth;
-  		this.hIn.value    = cfg.cellHeight;
-  		this.orV.checked  = cfg.orientation === 'vertical';
-  		this.orH.checked  = !this.orV.checked;
-  		this.incM.checked = cfg.incM;
-  		this.mc4.checked  = cfg.mc4;
-  		this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
-  		this.holz.checked = cfg.holz;
+  				// Input-Werte setzen (mit Null-Checks)
+		if (this.wIn) this.wIn.value = cfg.cellWidth;
+		if (this.hIn) this.hIn.value = cfg.cellHeight;
+		if (this.orV) this.orV.checked = cfg.orientation === 'vertical';
+		if (this.orH) this.orH.checked = !(cfg.orientation === 'vertical');
+		if (this.incM) this.incM.checked = cfg.incM;
+		if (this.mc4) this.mc4.checked = cfg.mc4;
+		if (this.solarkabel) this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
+		if (this.holz) this.holz.checked = cfg.holz;
 
   		// STATE Werte setzen - WICHTIG: Vor setup() setzen
   		this.cols = cfg.cols;
