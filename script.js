@@ -3131,61 +3131,65 @@
     		})
   		);
       
-      // Event-Listener für die Grid-Expansion-Buttons
+      // Event-Listener für die Grid-Expansion-Buttons (neue Struktur)
 			// Spalten-Buttons - rechts (fügt am Ende hinzu)
-			document.querySelectorAll('.btn-add-col-right').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.addColumnRight();
-				});
-			});
-			document.querySelectorAll('.btn-remove-col-right').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.removeColumnRight();
-				});
+			document.querySelectorAll('[data-dir="right"]').forEach(btn => {
+				if (btn.classList.contains('plus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.addColumnRight();
+					});
+				} else if (btn.classList.contains('minus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.removeColumnRight();
+					});
+				}
 			});
 			
 			// Spalten-Buttons - links (fügt am Anfang hinzu)
-			document.querySelectorAll('.btn-add-col-left').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.addColumnLeft();
-				});
-			});
-			document.querySelectorAll('.btn-remove-col-left').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.removeColumnLeft();
-				});
+			document.querySelectorAll('[data-dir="left"]').forEach(btn => {
+				if (btn.classList.contains('plus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.addColumnLeft();
+					});
+				} else if (btn.classList.contains('minus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.removeColumnLeft();
+					});
+				}
 			});
 			
 			// Zeilen-Buttons - unten (fügt am Ende hinzu)
-			document.querySelectorAll('.btn-add-row-bottom').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.addRowBottom();
-				});
-			});
-			document.querySelectorAll('.btn-remove-row-bottom').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.removeRowBottom();
-				});
+			document.querySelectorAll('[data-dir="bottom"]').forEach(btn => {
+				if (btn.classList.contains('plus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.addRowBottom();
+					});
+				} else if (btn.classList.contains('minus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.removeRowBottom();
+					});
+				}
 			});
 			
 			// Zeilen-Buttons - oben (fügt am Anfang hinzu)
-			document.querySelectorAll('.btn-add-row-top').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.addRowTop();
-				});
-			});
-			document.querySelectorAll('.btn-remove-row-top').forEach(btn => {
-				btn.addEventListener('click', () => {
-					this.trackInteraction();
-					this.removeRowTop();
-				});
+			document.querySelectorAll('[data-dir="top"]').forEach(btn => {
+				if (btn.classList.contains('plus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.addRowTop();
+					});
+				} else if (btn.classList.contains('minus-btn')) {
+					btn.addEventListener('click', () => {
+						this.trackInteraction();
+						this.removeRowTop();
+					});
+				}
 			});
 
   		this.saveBtn.addEventListener('click', () => {
