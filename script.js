@@ -3227,12 +3227,13 @@
 
 		// Produktliste Toggle Funktionalität
 		const productToggle = document.getElementById('product-toggle');
-		const productContent = document.getElementById('product-content');
+		const productSection = document.querySelector('.product-section');
 
 		productToggle.addEventListener('click', () => {
 			this.trackInteraction();
-			productContent.classList.toggle('collapsed');
-			productToggle.textContent = productContent.classList.contains('collapsed') ? '▶' : '▼';
+			productSection.classList.toggle('collapsed');
+			configSidebar.classList.toggle('product-expanded');
+			productToggle.textContent = productSection.classList.contains('collapsed') ? '▶' : '◀';
 		});
 
   		window.addEventListener('resize', () => {

@@ -156,42 +156,44 @@
         <h3>Konfigurationen</h3>
       </div>
       <div class="sidebar-content">
-        <!-- Produktliste Sektion -->
-        <div class="product-section">
-          <div class="section-header">
-            <h4>Produktliste</h4>
-            <button id="product-toggle" class="section-toggle-btn">▼</button>
-          </div>
-          <div id="product-content" class="section-content">
-            <div id="produktliste" class="produktliste"></div>
-            <div class="product-options">
-              <label class="checkbox-item">
-                <input type="checkbox" id="include-modules">
-                <span>Module hinzufügen</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="mc4">
-                <span>MC4 Stecker</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="solarkabel">
-                <span>Solarkabel</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" id="holz">
-                <span>Holzunterleger</span>
-              </label>
+        <div class="sidebar-sections">
+          <!-- Produktliste Sektion -->
+          <div class="product-section">
+            <div class="section-header">
+              <h4>Produktliste</h4>
+              <button id="product-toggle" class="section-toggle-btn">◀</button>
             </div>
-            <button id="add-to-cart-btn" class="btn primary">Aktuelle Auswahl in den Warenkorb</button>
+            <div id="product-content" class="section-content">
+              <div id="produktliste" class="produktliste"></div>
+              <div class="product-options">
+                <label class="checkbox-item">
+                  <input type="checkbox" id="include-modules">
+                  <span>Module hinzufügen</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="mc4">
+                  <span>MC4 Stecker</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="solarkabel">
+                  <span>Solarkabel</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="holz">
+                  <span>Holzunterleger</span>
+                </label>
+              </div>
+              <button id="add-to-cart-btn" class="btn primary">Aktuelle Auswahl in den Warenkorb</button>
+            </div>
           </div>
-        </div>
 
-        <!-- Konfigurationen Sektion -->
-        <div class="config-section">
-          <div class="section-header">
-            <h4>Konfigurationen</h4>
+          <!-- Konfigurationen Sektion -->
+          <div class="config-section">
+            <div class="section-header">
+              <h4>Konfigurationen</h4>
+            </div>
+            <div id="config-list"></div>
           </div>
-          <div id="config-list"></div>
         </div>
 
         <div class="sidebar-buttons">
