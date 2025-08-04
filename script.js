@@ -3217,16 +3217,12 @@
 		const sidebarToggle = document.getElementById('sidebar-toggle');
 		const configSidebar = document.getElementById('config-sidebar');
 
+		// Sidebar standardmäßig öffnen
+		configSidebar.classList.add('open');
+
 		sidebarToggle.addEventListener('click', () => {
 			this.trackInteraction();
 			configSidebar.classList.toggle('open');
-		});
-
-		// Schließen beim Klick außerhalb der Sidebar
-		document.addEventListener('click', (e) => {
-			if (!configSidebar.contains(e.target)) {
-				configSidebar.classList.remove('open');
-			}
 		});
 
   		window.addEventListener('resize', () => {

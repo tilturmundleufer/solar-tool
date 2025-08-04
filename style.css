@@ -713,13 +713,20 @@ body {
 .sidebar-content {
   flex: 1;
   padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+#config-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding-right: 10px;
 }
 
 .sidebar-buttons {
-  margin-top: auto;
+  flex-shrink: 0;
   padding-top: 20px;
   border-top: 1px solid rgba(255,255,255,0.1);
 }
