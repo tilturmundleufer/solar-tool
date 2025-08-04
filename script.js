@@ -2374,8 +2374,12 @@
             to { transform: translateX(0); opacity: 1; }
           }
         `;
-        document.head.appendChild(style);
-        document.body.appendChild(indicator);
+        if (document.head) {
+          document.head.appendChild(style);
+        }
+        if (document.body) {
+          document.body.appendChild(indicator);
+        }
       }
     }
 
@@ -3681,7 +3685,9 @@
     		);
   		}
 
-  		this.listHolder.style.display = 'block';
+  		if (this.listHolder) {
+  			this.listHolder.style.display = 'block';
+  		}
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
@@ -3691,7 +3697,9 @@
 
     updateSaveButtons() {
   		// Immer den "Neue Konfiguration speichern" Button anzeigen
-  		this.saveBtn.style.display = 'inline-block';
+  		if (this.saveBtn) {
+  			this.saveBtn.style.display = 'inline-block';
+  		}
 		}
     
 
