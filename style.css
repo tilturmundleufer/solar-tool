@@ -653,6 +653,15 @@ body {
   transform: translateY(-50%) scale(1.1);
 }
 
+/* Pfeil-Rotation für Toggle-Button */
+.sidebar-toggle-btn .toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.config-sidebar.open .sidebar-toggle-btn .toggle-icon {
+  transform: rotate(180deg);
+}
+
 .config-sidebar {
   position: fixed;
   right: -320px;
@@ -670,6 +679,20 @@ body {
 
 .config-sidebar.open {
   right: 0;
+}
+
+/* Verstecke Sidebar-Inhalt wenn geschlossen */
+.config-sidebar .sidebar-header,
+.config-sidebar .sidebar-content {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.config-sidebar.open .sidebar-header,
+.config-sidebar.open .sidebar-content {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .sidebar-header {
