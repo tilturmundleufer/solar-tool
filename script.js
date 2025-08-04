@@ -3876,32 +3876,40 @@
     async buildList() {
       try {
         const parts = await this.calculateParts();
-      if (!this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4.checked) {
+      if (this.incM && !this.incM.checked) delete parts.Solarmodul;
+      if (this.mc4 && this.mc4.checked) {
         const panelCount = this.selection.flat().filter(v => v).length;
         parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
       }
-      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
-        this.listHolder.style.display = 'none';
+        if (this.listHolder) {
+          this.listHolder.style.display = 'none';
+        }
         return;
       }
-      this.listHolder.style.display = 'block';
-      this.prodList.innerHTML = entries.map(([k,v]) => {
-        const packs = Math.ceil(v / VE[k]);
-        return `<div class="produkt-item">
-          <span>${packs}×</span>
-          <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
-          <span>${k.replace(/_/g,' ')} (${v})</span>
-        </div>`;
-      }).join('');
-      this.prodList.style.display = 'block';
+      if (this.listHolder) {
+        this.listHolder.style.display = 'block';
+      }
+      if (this.prodList) {
+        this.prodList.innerHTML = entries.map(([k,v]) => {
+          const packs = Math.ceil(v / VE[k]);
+          return `<div class="produkt-item">
+            <span>${packs}×</span>
+            <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
+            <span>${k.replace(/_/g,' ')} (${v})</span>
+          </div>`;
+        }).join('');
+        this.prodList.style.display = 'block';
+      }
       } catch (error) {
         // Fallback: Verstecke Liste bei Fehler
-        this.listHolder.style.display = 'none';
+        if (this.listHolder) {
+          this.listHolder.style.display = 'none';
+        }
       }
     }
     
@@ -4199,11 +4207,11 @@
       return {
         name:        configName,
         selection:   this.selection.map(r => [...r]),
-        orientation: this.orV.checked ? 'vertical' : 'horizontal',
-        incM:        this.incM.checked,
-        mc4:         this.mc4.checked,
-        solarkabel:  this.solarkabel.checked,
-        holz:        this.holz.checked,
+        orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+        incM:        this.incM && this.incM.checked,
+        mc4:         this.mc4 && this.mc4.checked,
+        solarkabel:  this.solarkabel && this.solarkabel.checked,
+        holz:        this.holz && this.holz.checked,
         cols:        this.cols,
         rows:        this.rows,
         cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
@@ -4336,13 +4344,13 @@
             selection:   this.selection.map(row => [...row]), // Deep copy
             rows:        this.rows,
             cols:        this.cols,
-            cellWidth:   parseInt(this.wIn.value, 10),
-            cellHeight:  parseInt(this.hIn.value, 10),
-            orientation: this.orV.checked ? 'vertical' : 'horizontal',
-            incM:        this.incM.checked,
-            mc4:         this.mc4.checked,
-            solarkabel:  this.solarkabel.checked,
-            holz:        this.holz.checked
+            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+            incM:        this.incM && this.incM.checked,
+            mc4:         this.mc4 && this.mc4.checked,
+            solarkabel:  this.solarkabel && this.solarkabel.checked,
+            holz:        this.holz && this.holz.checked
           };
         } else {
   				return {
@@ -4365,13 +4373,13 @@
     			selection:   this.selection.map(row => [...row]), // Deep copy
     			rows:        this.rows,
     			cols:        this.cols,
-    			cellWidth:   parseInt(this.wIn.value, 10),
-    			cellHeight:  parseInt(this.hIn.value, 10),
-    			orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    			incM:        this.incM.checked,
-    			mc4:         this.mc4.checked,
-    			solarkabel:  this.solarkabel.checked,
-    			holz:        this.holz.checked
+    			cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+    			cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+    			orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+    			incM:        this.incM && this.incM.checked,
+    			mc4:         this.mc4 && this.mc4.checked,
+    			solarkabel:  this.solarkabel && this.solarkabel.checked,
+    			holz:        this.holz && this.holz.checked
   			});
 			}
   		
