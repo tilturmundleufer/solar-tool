@@ -3753,7 +3753,7 @@
 
     		for (let x = 0; x < this.cols; x++) {
       		const cell = document.createElement('div');
-      		cell.className = 'cell animate-in';
+      		cell.className = 'grid-cell animate-in';
       		if (this.selection[y]?.[x]) cell.classList.add('selected');
 
       		cell.addEventListener('click', () => {
@@ -4912,7 +4912,7 @@
     addPreviewStyling() {
       // Füge Preview-Styling zu Grid-Zellen hinzu
       if (this.gridEl) {
-        const cells = this.gridEl.querySelectorAll('.cell, .grid-cell');
+        const cells = this.gridEl.querySelectorAll('.grid-cell');
         cells.forEach(cell => {
           cell.classList.add('preview-mode');
         });
@@ -4922,7 +4922,7 @@
     clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
       // Entferne Preview-Styling
       if (this.gridEl) {
-        const cells = this.gridEl.querySelectorAll('.cell, .grid-cell');
+        const cells = this.gridEl.querySelectorAll('.grid-cell');
         cells.forEach(cell => {
           cell.classList.remove('preview-mode');
         });

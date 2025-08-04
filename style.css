@@ -157,14 +157,14 @@ body {
 }
 
 /* Grid Preview Styling */
-.cell.preview-mode {
+.grid-cell.preview-mode {
   background-color: rgba(245, 166, 35, 0.2) !important;
   border: 2px solid rgba(245, 166, 35, 0.6) !important;
   box-shadow: 0 0 8px rgba(245, 166, 35, 0.4) !important;
   animation: previewPulse 1.5s ease-in-out infinite;
 }
 
-.cell.preview-mode.selected {
+.grid-cell.preview-mode.selected {
   background-color: rgba(245, 166, 35, 0.4) !important;
   border: 2px solid rgba(245, 166, 35, 0.8) !important;
   box-shadow: 0 0 12px rgba(245, 166, 35, 0.6) !important;
