@@ -2646,15 +2646,15 @@
       this.mc4           = document.getElementById('mc4');
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
-      		this.listHolder    = document.querySelector('.product-section');
-		this.prodList      = document.getElementById('produktliste');
+      this.listHolder    = document.querySelector('.product-section');
+      this.prodList      = document.getElementById('produktliste');
       this.summaryHolder = document.getElementById('summary-list-holder');
       this.summaryList   = document.getElementById('summary-list');
       this.saveBtn       = document.getElementById('save-config-btn');
       this.addBtn        = document.getElementById('add-to-cart-btn');
       this.summaryBtn    = document.getElementById('summary-add-cart-btn');
       this.configListEl  = document.getElementById('config-list');
-      this.resetBtn 		 = document.getElementById('reset-btn');
+      this.resetBtn      = document.getElementById('reset-btn');
       this.continueLaterBtn = document.getElementById('continue-later-btn');
 
       this.selection     = [];
@@ -2723,10 +2723,10 @@
 
     getProductSummary() {
       const parts = this.calculateParts();
-      if (!this.incM || !this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4 && this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
-      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (!this.incM.checked) delete parts.Solarmodul;
+      if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
+      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       let totalPrice = 0;
@@ -2792,12 +2792,12 @@
         rows: this.rows,
         cellWidth: parseInt(this.wIn.value, 10),
         cellHeight: parseInt(this.hIn.value, 10),
-        orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
+        orientation: this.orV.checked ? 'vertical' : 'horizontal',
         selection: this.selection,
-        incM: this.incM ? this.incM.checked : false,
-        mc4: this.mc4 ? this.mc4.checked : false,
-        solarkabel: this.solarkabel ? this.solarkabel.checked : false,
-        holz: this.holz ? this.holz.checked : false
+        incM: this.incM.checked,
+        mc4: this.mc4.checked,
+        solarkabel: this.solarkabel.checked,
+        holz: this.holz.checked
       };
 
       const summary = this.getProductSummary();
@@ -3806,13 +3806,13 @@
     async buildList() {
       try {
         const parts = await this.calculateParts();
-      if (!this.incM || !this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4 && this.mc4.checked) {
+      if (!this.incM.checked) delete parts.Solarmodul;
+      if (this.mc4.checked) {
         const panelCount = this.selection.flat().filter(v => v).length;
         parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
       }
-      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
@@ -4003,15 +4003,15 @@
   		const cfg = this.configs[idx];
   		this.currentConfig = idx;
 
-  				// Input-Werte setzen (mit Null-Checks)
-		if (this.wIn) this.wIn.value = cfg.cellWidth;
-		if (this.hIn) this.hIn.value = cfg.cellHeight;
-		if (this.orV) this.orV.checked = cfg.orientation === 'vertical';
-		if (this.orH) this.orH.checked = !(cfg.orientation === 'vertical');
-		if (this.incM) this.incM.checked = cfg.incM;
-		if (this.mc4) this.mc4.checked = cfg.mc4;
-		if (this.solarkabel) this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
-		if (this.holz) this.holz.checked = cfg.holz;
+  				// Input-Werte setzen
+		this.wIn.value = cfg.cellWidth;
+		this.hIn.value = cfg.cellHeight;
+		this.orV.checked = cfg.orientation === 'vertical';
+		this.orH.checked = !this.orV.checked;
+		this.incM.checked = cfg.incM;
+		this.mc4.checked = cfg.mc4;
+		this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
+		this.holz.checked = cfg.holz;
 
   		// STATE Werte setzen - WICHTIG: Vor setup() setzen
   		this.cols = cfg.cols;
@@ -4129,11 +4129,11 @@
       return {
         name:        configName,
         selection:   this.selection.map(r => [...r]),
-        orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
-        incM:        this.incM ? this.incM.checked : false,
-        mc4:         this.mc4 ? this.mc4.checked : false,
-        solarkabel:  this.solarkabel ? this.solarkabel.checked : false,
-        holz:        this.holz ? this.holz.checked : false,
+        orientation: this.orV.checked ? 'vertical' : 'horizontal',
+        incM:        this.incM.checked,
+        mc4:         this.mc4.checked,
+        solarkabel:  this.solarkabel.checked,
+        holz:        this.holz.checked,
         cols:        this.cols,
         rows:        this.rows,
         cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
@@ -4267,12 +4267,12 @@
     				rows:        this.rows,
     				cols:        this.cols,
     				cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10) || 179,
-    				cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10) || 113,
-    				orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
-    				incM:        this.incM ? this.incM.checked : false,
-    				mc4:         this.mc4 ? this.mc4.checked : false,
-    				solarkabel:  this.solarkabel ? this.solarkabel.checked : false,
-    				holz:        this.holz ? this.holz.checked : false
+    				cellHeight:  parseInt(this.hIn.value, 10),
+    				orientation: this.orV.checked ? 'vertical' : 'horizontal',
+    				incM:        this.incM.checked,
+    				mc4:         this.mc4.checked,
+    				solarkabel:  this.solarkabel.checked,
+    				holz:        this.holz.checked
   				};
   			} else {
   				return {
@@ -4295,13 +4295,13 @@
     			selection:   this.selection.map(row => [...row]), // Deep copy
     			rows:        this.rows,
     			cols:        this.cols,
-    			cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10) || 179,
-    			cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10) || 113,
-    			orientation: this.orV ? (this.orV.checked ? 'vertical' : 'horizontal') : 'horizontal',
-    			incM:        this.incM ? this.incM.checked : false,
-    			mc4:         this.mc4 ? this.mc4.checked : false,
-    			solarkabel:  this.solarkabel ? this.solarkabel.checked : false,
-    			holz:        this.holz ? this.holz.checked : false
+    			cellWidth:   parseInt(this.wIn.value, 10),
+    			cellHeight:  parseInt(this.hIn.value, 10),
+    			orientation: this.orV.checked ? 'vertical' : 'horizontal',
+    			incM:        this.incM.checked,
+    			mc4:         this.mc4.checked,
+    			solarkabel:  this.solarkabel.checked,
+    			holz:        this.holz.checked
   			});
 			}
   		
