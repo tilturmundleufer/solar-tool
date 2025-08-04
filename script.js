@@ -3447,8 +3447,8 @@
 							}
 						} else {
 							// Clear preview if input is too short
-							if (this.clearGridPreview) {
-								this.clearGridPreview();
+							if (this.solarGrid && this.solarGrid.clearGridPreview) {
+								this.solarGrid.clearGridPreview();
 							}
 						}
 					});
@@ -3464,113 +3464,7 @@
 		showConfigPreview(config) {
 			// Grid-Preview anstelle von Text-Preview
 			if (config.cols || config.moduleCount) {
-				this.showGridPreview(config);
-			}
-		}
-		
-		showGridPreview(config) {
-			// Prüfe ob solarGrid verfügbar ist
-			if (!this.solarGrid) {
-				console.warn('solarGrid not available for preview');
-				return;
-			}
-			
-			// Speichere aktuellen Zustand
-			const originalSelection = this.solarGrid.selection ? this.solarGrid.selection.map(row => [...row]) : null;
-			const originalCols = this.solarGrid.cols;
-			const originalRows = this.solarGrid.rows;
-			const originalOrientation = this.solarGrid.orV ? this.solarGrid.orV.checked : false;
-			
-			// Temporäre Konfiguration anwenden
-			if (config.cols && config.rows) {
-				this.solarGrid.cols = config.cols;
-				this.solarGrid.rows = config.rows;
-			}
-			
-			// Orientierung setzen
-			if (config.orientation && this.solarGrid.orV && this.solarGrid.orH) {
-				this.solarGrid.orV.checked = config.orientation === 'vertical';
-				this.solarGrid.orH.checked = config.orientation === 'horizontal';
-			}
-			
-			// Grid-Größe anpassen
-			this.solarGrid.updateSize();
-			
-			// Temporäre Selection erstellen
-			let previewSelection;
-			if (config.moduleCount) {
-				// Automatische Modul-Auswahl für Preview
-				previewSelection = this.createModuleSelection(config.moduleCount, config.cols, config.rows);
-			} else {
-				// Leere Selection für Grid-Preview
-				previewSelection = Array.from({ length: this.solarGrid.rows }, () =>
-					Array.from({ length: this.solarGrid.cols }, () => false)
-				);
-			}
-			
-			// Temporäre Selection anwenden
-			this.solarGrid.selection = previewSelection;
-			
-			// Grid mit Preview-Styling neu aufbauen
-			this.solarGrid.buildGrid();
-			this.addPreviewStyling();
-			
-			// Nach 3 Sekunden zurücksetzen (wenn keine weitere Eingabe)
-			this.previewTimeout = setTimeout(() => {
-				this.clearGridPreview(originalSelection, originalCols, originalRows, originalOrientation);
-			}, 3000);
-		}
-		
-		createModuleSelection(moduleCount, cols, rows) {
-			const selection = Array.from({ length: rows }, () =>
-				Array.from({ length: cols }, () => false)
-			);
-			
-			// Automatische Modul-Auswahl (von links nach rechts, oben nach unten)
-			let modulesPlaced = 0;
-			for (let row = 0; row < rows && modulesPlaced < moduleCount; row++) {
-				for (let col = 0; col < cols && modulesPlaced < moduleCount; col++) {
-					selection[row][col] = true;
-					modulesPlaced++;
-				}
-			}
-			
-			return selection;
-		}
-		
-		addPreviewStyling() {
-			// Füge Preview-Styling zu Grid-Zellen hinzu
-			if (this.solarGrid && this.solarGrid.gridEl) {
-				const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
-				cells.forEach(cell => {
-					cell.classList.add('preview-mode');
-				});
-			}
-		}
-		
-		clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
-			// Entferne Preview-Styling
-			if (this.solarGrid && this.solarGrid.gridEl) {
-				const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
-				cells.forEach(cell => {
-					cell.classList.remove('preview-mode');
-				});
-			}
-			
-			// Nur wiederherstellen wenn Parameter übergeben wurden
-			if (originalSelection !== null && originalCols !== null && originalRows !== null && this.solarGrid) {
-				this.solarGrid.selection = originalSelection;
-				this.solarGrid.cols = originalCols;
-				this.solarGrid.rows = originalRows;
-				
-				if (this.solarGrid.orV && this.solarGrid.orH && originalOrientation !== null) {
-					this.solarGrid.orV.checked = originalOrientation;
-					this.solarGrid.orH.checked = !originalOrientation;
-				}
-				
-				// Grid wiederherstellen
-				this.solarGrid.updateSize();
-				this.solarGrid.buildGrid();
+				this.solarGrid.showGridPreview(config);
 			}
 		}
 		
@@ -4944,6 +4838,111 @@
     getAllConfigsData() {
       const snapshot = this.createConfigSnapshot();
       return snapshot.configs;
+    }
+    
+    // ===== GRID PREVIEW METHODS =====
+    
+    showGridPreview(config) {
+      // Speichere aktuellen Zustand
+      const originalSelection = this.selection ? this.selection.map(row => [...row]) : null;
+      const originalCols = this.cols;
+      const originalRows = this.rows;
+      const originalOrientation = this.orV ? this.orV.checked : false;
+      
+      // Temporäre Konfiguration anwenden
+      if (config.cols && config.rows) {
+        this.cols = config.cols;
+        this.rows = config.rows;
+      }
+      
+      // Orientierung setzen
+      if (config.orientation && this.orV && this.orH) {
+        this.orV.checked = config.orientation === 'vertical';
+        this.orH.checked = config.orientation === 'horizontal';
+      }
+      
+      // Grid-Größe anpassen
+      this.updateSize();
+      
+      // Temporäre Selection erstellen
+      let previewSelection;
+      if (config.moduleCount) {
+        // Automatische Modul-Auswahl für Preview
+        previewSelection = this.createModuleSelection(config.moduleCount, config.cols, config.rows);
+      } else {
+        // Leere Selection für Grid-Preview
+        previewSelection = Array.from({ length: this.rows }, () =>
+          Array.from({ length: this.cols }, () => false)
+        );
+      }
+      
+      // Temporäre Selection anwenden
+      this.selection = previewSelection;
+      
+      // Grid mit Preview-Styling neu aufbauen
+      this.buildGrid();
+      this.addPreviewStyling();
+      
+      // Nach 3 Sekunden zurücksetzen (wenn keine weitere Eingabe)
+      if (this.previewTimeout) {
+        clearTimeout(this.previewTimeout);
+      }
+      this.previewTimeout = setTimeout(() => {
+        this.clearGridPreview(originalSelection, originalCols, originalRows, originalOrientation);
+      }, 3000);
+    }
+    
+    createModuleSelection(moduleCount, cols, rows) {
+      const selection = Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => false)
+      );
+      
+      // Automatische Modul-Auswahl (von links nach rechts, oben nach unten)
+      let modulesPlaced = 0;
+      for (let row = 0; row < rows && modulesPlaced < moduleCount; row++) {
+        for (let col = 0; col < cols && modulesPlaced < moduleCount; col++) {
+          selection[row][col] = true;
+          modulesPlaced++;
+        }
+      }
+      
+      return selection;
+    }
+    
+    addPreviewStyling() {
+      // Füge Preview-Styling zu Grid-Zellen hinzu
+      if (this.gridEl) {
+        const cells = this.gridEl.querySelectorAll('.grid-cell');
+        cells.forEach(cell => {
+          cell.classList.add('preview-mode');
+        });
+      }
+    }
+    
+    clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
+      // Entferne Preview-Styling
+      if (this.gridEl) {
+        const cells = this.gridEl.querySelectorAll('.grid-cell');
+        cells.forEach(cell => {
+          cell.classList.remove('preview-mode');
+        });
+      }
+      
+      // Nur wiederherstellen wenn Parameter übergeben wurden
+      if (originalSelection !== null && originalCols !== null && originalRows !== null) {
+        this.selection = originalSelection;
+        this.cols = originalCols;
+        this.rows = originalRows;
+        
+        if (this.orV && this.orH && originalOrientation !== null) {
+          this.orV.checked = originalOrientation;
+          this.orH.checked = !originalOrientation;
+        }
+        
+        // Grid wiederherstellen
+        this.updateSize();
+        this.buildGrid();
+      }
     }
   }
 
