@@ -190,6 +190,10 @@
   border-radius: 12px;
   padding: 16px;
   margin-top: 16px;
+  color: #666666;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .bulk-selection-help strong {
@@ -199,11 +203,11 @@
   margin-bottom: 8px;
 }
 
-.bulk-selection-help {
+.bulk-selection-help p {
+  margin: 0;
   color: #666666;
   font-size: 14px;
   line-height: 1.6;
-  margin: 0;
 }
 
 .bulk-selection-help kbd {
