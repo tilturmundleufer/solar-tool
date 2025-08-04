@@ -3219,10 +3219,26 @@
 
 		// Sidebar standardmäßig öffnen
 		configSidebar.classList.add('open');
+		
+		// Initiale Position setzen (geschlossen)
+		const sidebarWidth = configSidebar.offsetWidth;
+		const visibleWidth = 30; // 30px sichtbar
+		const hiddenWidth = sidebarWidth - visibleWidth;
+		configSidebar.style.right = `-${hiddenWidth}px`;
 
 		sidebarToggle.addEventListener('click', () => {
 			this.trackInteraction();
 			configSidebar.classList.toggle('open');
+			
+			// Dynamische Position berechnen
+			if (!configSidebar.classList.contains('open')) {
+				const sidebarWidth = configSidebar.offsetWidth;
+				const visibleWidth = 30; // 30px sichtbar
+				const hiddenWidth = sidebarWidth - visibleWidth;
+				configSidebar.style.right = `-${hiddenWidth}px`;
+			} else {
+				configSidebar.style.right = '0';
+			}
 		});
 
 		// Side-Section Toggle Funktionalität

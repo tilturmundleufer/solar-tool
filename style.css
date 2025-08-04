@@ -665,7 +665,7 @@ body {
 
 .config-sidebar {
   position: fixed;
-  right: -350px;
+  right: 0;
   top: 0;
   height: 100vh;
   background: #072544;
@@ -677,10 +677,6 @@ body {
   flex-direction: row;
   width: auto;
   min-width: 30px;
-}
-
-.config-sidebar.open {
-  right: 0;
 }
 
 
