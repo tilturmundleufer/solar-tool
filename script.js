@@ -4257,24 +4257,30 @@
       this.renderProductSummary();
     }
 
-    async renderProductSummary() {
-  		// VOLLSTÄNDIG ISOLIERTE Berechnung - NIEMALS Grid-Eigenschaften berühren!
-  		const bundles = this.configs.map((c, idx) => {
-  			// Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
-  			if (idx === this.currentConfig) {
-  				return {
-    				selection:   this.selection.map(row => [...row]), // Deep copy
-    				rows:        this.rows,
-    				cols:        this.cols,
-    				cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10) || 179,
-    				cellHeight:  parseInt(this.hIn.value, 10),
-    				orientation: this.orV.checked ? 'vertical' : 'horizontal',
-    				incM:        this.incM.checked,
-    				mc4:         this.mc4.checked,
-    				solarkabel:  this.solarkabel.checked,
-    				holz:        this.holz.checked
-  				};
-  			} else {
+        async renderProductSummary() {
+      // Prüfe ob DOM-Elemente geladen sind
+      if (!this.orV || !this.orH || !this.incM || !this.mc4 || !this.solarkabel || !this.holz || !this.wIn || !this.hIn) {
+        console.warn('DOM elements not ready for renderProductSummary');
+        return;
+      }
+      
+      // VOLLSTÄNDIG ISOLIERTE Berechnung - NIEMALS Grid-Eigenschaften berühren!
+      const bundles = this.configs.map((c, idx) => {
+        // Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
+        if (idx === this.currentConfig) {
+          return {
+            selection:   this.selection.map(row => [...row]), // Deep copy
+            rows:        this.rows,
+            cols:        this.cols,
+            cellWidth:   parseInt(this.wIn.value, 10),
+            cellHeight:  parseInt(this.hIn.value, 10),
+            orientation: this.orV.checked ? 'vertical' : 'horizontal',
+            incM:        this.incM.checked,
+            mc4:         this.mc4.checked,
+            solarkabel:  this.solarkabel.checked,
+            holz:        this.holz.checked
+          };
+        } else {
   				return {
     				selection:   c.selection.map(row => [...row]), // Deep copy
     				rows:        c.rows,
