@@ -3123,10 +3123,10 @@
               orientVSetup.checked = el === this.orV;
             }
 
-            // KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
-            // Nur das Grid und die Liste aktualisieren
+            // Vollständige Grid-Neuinitialisierung wie bei Smart Config
             this.trackInteraction();
             this.updateSize();
+            this.buildGrid(); // Vollständige Grid-Neuinitialisierung für Animation
             this.buildList();
             this.updateSummaryOnChange();
 
@@ -3160,9 +3160,10 @@
 					if (this.orV) this.orV.checked = isVertical;
 					if (this.orH) this.orH.checked = !isVertical;
 					
-					// Aktualisiere das Grid
+					// Vollständige Grid-Neuinitialisierung wie bei Smart Config
 					this.trackInteraction();
 					this.updateSize();
+					this.buildGrid(); // Vollständige Grid-Neuinitialisierung für Animation
 					this.buildList();
 					this.updateSummaryOnChange();
 				})
@@ -4258,12 +4259,6 @@
     }
 
         async renderProductSummary() {
-      // Prüfe ob DOM-Elemente geladen sind
-      if (!this.orV || !this.orH || !this.incM || !this.mc4 || !this.solarkabel || !this.holz || !this.wIn || !this.hIn) {
-        console.warn('DOM elements not ready for renderProductSummary');
-        return;
-      }
-      
       // VOLLSTÄNDIG ISOLIERTE Berechnung - NIEMALS Grid-Eigenschaften berühren!
       const bundles = this.configs.map((c, idx) => {
         // Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
