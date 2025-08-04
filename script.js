@@ -3465,7 +3465,15 @@
 			// Grid-Preview für alle Konfigurationen die das Grid beeinflussen
 			if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
 				console.log('Preview config:', config); // Debug
-				this.solarGrid.showGridPreview(config);
+				console.log('this.solarGrid:', this.solarGrid); // Debug
+				if (this.solarGrid && this.solarGrid.showGridPreview) {
+					console.log('Calling showGridPreview...'); // Debug
+					this.solarGrid.showGridPreview(config);
+				} else {
+					console.error('solarGrid or showGridPreview not available!'); // Debug
+				}
+			} else {
+				console.log('No preview conditions met for config:', config); // Debug
 			}
 		}
 		
