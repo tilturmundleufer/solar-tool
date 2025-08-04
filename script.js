@@ -4930,26 +4930,39 @@
     }
     
     addPreviewStyling() {
-      // Füge Preview-Styling zu Grid-Zellen hinzu
+      // Füge Bulk-Select-Styling zu Grid-Zellen hinzu (wie im Bulk-Select)
       if (this.gridEl) {
         const cells = this.gridEl.querySelectorAll('.grid-cell');
-        cells.forEach(cell => {
-          cell.classList.add('preview-mode');
+        cells.forEach((cell, index) => {
+          const row = Math.floor(index / this.cols);
+          const col = index % this.cols;
+          
+          // Prüfe ob Zelle in der Selection ist
+          if (this.selection && this.selection[row] && this.selection[row][col]) {
+            // Selected cells: Dunkelblau mit gelbem gestrichelten Rand (wie Bulk-Select)
+            cell.classList.add('bulk-highlight', 'drag-preview-select');
+          } else {
+            // Unselected cells: Hellgrau mit gelbem Rand
+            cell.classList.add('preview-mode');
+          }
         });
       }
     }
     
     clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
+      console.log('clearGridPreview called with:', { originalSelection, originalCols, originalRows, originalOrientation }); // Debug
+      
       // Entferne Preview-Styling
       if (this.gridEl) {
         const cells = this.gridEl.querySelectorAll('.grid-cell');
         cells.forEach(cell => {
-          cell.classList.remove('preview-mode');
+          cell.classList.remove('preview-mode', 'bulk-highlight', 'drag-preview-select', 'drag-preview-deselect');
         });
       }
       
       // Nur wiederherstellen wenn Parameter übergeben wurden
       if (originalSelection !== null && originalCols !== null && originalRows !== null) {
+        console.log('Restoring original state...'); // Debug
         this.selection = originalSelection;
         this.cols = originalCols;
         this.rows = originalRows;
@@ -4962,6 +4975,9 @@
         // Grid wiederherstellen
         this.updateSize();
         this.buildGrid();
+        console.log('Original state restored'); // Debug
+      } else {
+        console.log('No original state provided, only clearing styling'); // Debug
       }
     }
   }
