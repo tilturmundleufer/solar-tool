@@ -102,27 +102,42 @@
       
       <!-- Smart Config Interface -->
       <div class="smart-config-container">
-        <div class="quick-input-section">
-          <label for="quick-config-input">🧠 Smart Konfiguration</label>
-          <input 
-            type="text" 
-            id="quick-config-input" 
-            placeholder="z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen, ohne holz • 6x3 vertikal • mit mc4 und kabel • ohne module, ohne mc4 • 4x5 horizontal mit modulen"
-          />
-          <div id="config-preview" style="display: none;"></div>
-          <button id="apply-quick-config">Konfiguration anwenden</button>
+        <div class="smart-config-left">
+          <div class="quick-input-section">
+            <label for="quick-config-input">🧠 Smart Konfiguration</label>
+            <input 
+              type="text" 
+              id="quick-config-input" 
+              placeholder="z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen, ohne holz • 6x3 vertikal • mit mc4 und kabel • ohne module, ohne mc4 • 4x5 horizontal mit modulen"
+            />
+            <div id="config-preview" style="display: none;"></div>
+            <button id="apply-quick-config">Konfiguration anwenden</button>
+          </div>
+          
+          <div class="bulk-selection-help">
+            <strong>💡 Mögliche Eingaben:</strong>
+            <p>
+              <strong>Grid:</strong> "5x4", "6x3" • 
+              <strong>Module:</strong> "20 module", "mit modulen", "ohne module" • 
+              <strong>Reihen:</strong> "3 reihen mit 5 modulen" • 
+              <strong>Optionen:</strong> "mit/ohne mc4", "mit/ohne kabel", "mit/ohne holz" • 
+              <strong>Orientierung:</strong> "vertikal", "horizontal" • 
+              <strong>Kombiniert:</strong> "5x4 vertikal mit module, ohne mc4"
+            </p>
+          </div>
         </div>
         
-        <div class="bulk-selection-help">
-          <strong>💡 Mögliche Eingaben:</strong>
-          <p>
-            <strong>Grid:</strong> "5x4", "6x3" • 
-            <strong>Module:</strong> "20 module", "mit modulen", "ohne module" • 
-            <strong>Reihen:</strong> "3 reihen mit 5 modulen" • 
-            <strong>Optionen:</strong> "mit/ohne mc4", "mit/ohne kabel", "mit/ohne holz" • 
-            <strong>Orientierung:</strong> "vertikal", "horizontal" • 
-            <strong>Kombiniert:</strong> "5x4 vertikal mit module, ohne mc4"
-          </p>
+        <div class="setup-container">
+          <div class="setup-row">
+            <label>Breite (in cm):<input type="number" id="width-input" min="1" value="176"></label>
+            <label>Höhe (in cm):<input type="number" id="height-input" min="1" value="113"></label>
+          </div>
+          <div class="setup-row">
+            <label>Horizontal/Vertikal:<input type="radio" name="orientation" id="orient-h"><input type="radio" name="orientation" id="orient-v" checked></label>
+          </div>
+          <div class="setup-row">
+            <button id="reset-btn" class="btn">Zurücksetzen</button>
+          </div>
         </div>
       </div>
 
