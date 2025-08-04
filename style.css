@@ -665,7 +665,7 @@ body {
 
 .config-sidebar {
   position: fixed;
-  right: -350px;
+  right: -320px;
   top: 0;
   width: 350px;
   height: 100vh;
@@ -682,9 +682,7 @@ body {
   right: 0;
 }
 
-.config-sidebar.product-expanded {
-  width: 650px;
-}
+
 
 /* Verstecke Sidebar-Inhalt wenn geschlossen */
 .config-sidebar .sidebar-header,
@@ -744,6 +742,69 @@ body {
   overflow: hidden;
 }
 
+/* Side-Section für Produktliste */
+.side-section {
+  position: relative;
+  width: 300px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  background: rgba(255,255,255,0.02);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.side-section.collapsed {
+  width: 60px;
+  overflow: hidden;
+}
+
+.side-section.collapsed .side-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Side-Toggle-Button */
+.side-toggle-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 40px;
+  height: 40px;
+  background: #ffb101;
+  color: #072544;
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 1002;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.side-toggle-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.side-toggle-btn .toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.side-section.collapsed .side-toggle-btn .toggle-icon {
+  transform: rotate(180deg);
+}
+
+/* Side-Content */
+.side-content {
+  padding: 60px 15px 15px 15px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
 /* Sidebar Sektionen */
 .product-section,
 .config-section {
@@ -751,20 +812,8 @@ body {
 }
 
 .product-section {
-  width: 300px;
-  flex-shrink: 0;
+  width: 100%;
   transition: all 0.3s ease;
-  position: relative;
-}
-
-.product-section.collapsed {
-  width: 50px;
-  overflow: hidden;
-}
-
-.product-section.collapsed .section-content {
-  opacity: 0;
-  pointer-events: none;
 }
 
 .config-section {
@@ -781,10 +830,7 @@ body {
   margin-bottom: 15px;
 }
 
-.product-section .section-header {
-  justify-content: flex-start;
-  gap: 10px;
-}
+
 
 .section-header h4 {
   margin: 0;

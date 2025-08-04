@@ -3225,15 +3225,15 @@
 			configSidebar.classList.toggle('open');
 		});
 
-		// Produktliste Toggle Funktionalität
-		const productToggle = document.getElementById('product-toggle');
-		const productSection = document.querySelector('.product-section');
+		// Side-Section Toggle Funktionalität
+		const sideToggle = document.getElementById('side-toggle');
+		const sideSection = document.querySelector('.side-section');
 
-		productToggle.addEventListener('click', () => {
+		sideToggle.addEventListener('click', () => {
 			this.trackInteraction();
-			productSection.classList.toggle('collapsed');
-			configSidebar.classList.toggle('product-expanded');
-			productToggle.textContent = productSection.classList.contains('collapsed') ? '▶' : '◀';
+			sideSection.classList.toggle('collapsed');
+			sideToggle.querySelector('.toggle-icon').textContent = 
+				sideSection.classList.contains('collapsed') ? '▶' : '◀';
 		});
 
   		window.addEventListener('resize', () => {
