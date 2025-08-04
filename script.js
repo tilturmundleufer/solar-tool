@@ -3216,21 +3216,15 @@
 		// Sidebar Toggle Funktionalität
 		const sidebarToggle = document.getElementById('sidebar-toggle');
 		const configSidebar = document.getElementById('config-sidebar');
-		const sidebarClose = document.getElementById('sidebar-close');
 
 		sidebarToggle.addEventListener('click', () => {
 			this.trackInteraction();
-			configSidebar.classList.add('open');
-		});
-
-		sidebarClose.addEventListener('click', () => {
-			this.trackInteraction();
-			configSidebar.classList.remove('open');
+			configSidebar.classList.toggle('open');
 		});
 
 		// Schließen beim Klick außerhalb der Sidebar
 		document.addEventListener('click', (e) => {
-			if (!configSidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+			if (!configSidebar.contains(e.target)) {
 				configSidebar.classList.remove('open');
 			}
 		});
