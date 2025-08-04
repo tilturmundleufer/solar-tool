@@ -3231,64 +3231,81 @@
 				}
 			});
 
-  		this.saveBtn.addEventListener('click', () => {
-  			this.trackInteraction();
-  			this.saveNewConfig();
-  		});
-  		this.addBtn.addEventListener('click', () => {
-  			this.trackInteraction();
-  			this.addCurrentToCart();
-  		});
-  		this.summaryBtn.addEventListener('click', () => {
-  			this.trackInteraction();
-  			this.addAllToCart();
-  		});
-  		this.resetBtn.addEventListener('click', () => {
-  			this.trackInteraction();
-  			this.resetGridToDefault();
-  		});
-  				this.continueLaterBtn.addEventListener('click', () => {
-			this.trackInteraction();
-			this.generateContinueLink();
-		});
+  		// Prüfe ob Buttons existieren bevor Event-Listener hinzugefügt werden
+  		if (this.saveBtn) {
+  			this.saveBtn.addEventListener('click', () => {
+  				this.trackInteraction();
+  				this.saveNewConfig();
+  			});
+  		}
+  		if (this.addBtn) {
+  			this.addBtn.addEventListener('click', () => {
+  				this.trackInteraction();
+  				this.addCurrentToCart();
+  			});
+  		}
+  		if (this.summaryBtn) {
+  			this.summaryBtn.addEventListener('click', () => {
+  				this.trackInteraction();
+  				this.addAllToCart();
+  			});
+  		}
+  		if (this.resetBtn) {
+  			this.resetBtn.addEventListener('click', () => {
+  				this.trackInteraction();
+  				this.resetGridToDefault();
+  			});
+  		}
+  		if (this.continueLaterBtn) {
+  			this.continueLaterBtn.addEventListener('click', () => {
+				this.trackInteraction();
+				this.generateContinueLink();
+			});
+		}
 
 		// Sidebar Toggle Funktionalität
 		const sidebarToggle = document.getElementById('sidebar-toggle');
 		const configSidebar = document.getElementById('config-sidebar');
 
-		// Sidebar standardmäßig öffnen
-		configSidebar.classList.add('open');
-		
-		// Initiale Position setzen
-		requestAnimationFrame(() => {
-			configSidebar.style.right = '0';
-		});
-
-		sidebarToggle.addEventListener('click', () => {
-			this.trackInteraction();
-			configSidebar.classList.toggle('open');
+		if (sidebarToggle && configSidebar) {
+			// Sidebar standardmäßig öffnen
+			configSidebar.classList.add('open');
 			
-			// Dynamische Position berechnen
-			if (!configSidebar.classList.contains('open')) {
-				const sidebarWidth = configSidebar.offsetWidth;
-				const visibleWidth = 30; // 30px sichtbar
-				const hiddenWidth = sidebarWidth - visibleWidth;
-				configSidebar.style.right = `-${hiddenWidth}px`;
-			} else {
+			// Initiale Position setzen
+			requestAnimationFrame(() => {
 				configSidebar.style.right = '0';
-			}
-		});
+			});
+
+			sidebarToggle.addEventListener('click', () => {
+				this.trackInteraction();
+				configSidebar.classList.toggle('open');
+				
+				// Dynamische Position berechnen
+				if (!configSidebar.classList.contains('open')) {
+					const sidebarWidth = configSidebar.offsetWidth;
+					const visibleWidth = 30; // 30px sichtbar
+					const hiddenWidth = sidebarWidth - visibleWidth;
+					configSidebar.style.right = `-${hiddenWidth}px`;
+				} else {
+					configSidebar.style.right = '0';
+				}
+			});
+		}
 
 		// Side-Section Toggle Funktionalität
 		const sideToggle = document.getElementById('side-toggle');
 		const sideSection = document.querySelector('.side-section');
 
-		sideToggle.addEventListener('click', () => {
-			this.trackInteraction();
-			sideSection.classList.toggle('collapsed');
-			sideToggle.querySelector('.toggle-icon').textContent = 
-				sideSection.classList.contains('collapsed') ? '▶' : '◀';
-		});
+		if (sideToggle && sideSection) {
+			sideToggle.addEventListener('click', () => {
+				this.trackInteraction();
+				sideSection.classList.toggle('collapsed');
+				const toggleIcon = sideToggle.querySelector('.toggle-icon');
+				if (toggleIcon) {
+					toggleIcon.textContent = sideSection.classList.contains('collapsed') ? '▶' : '◀';
+				}
+			});
+		}
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
