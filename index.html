@@ -146,62 +146,58 @@
 
     <!-- Sidebar für Konfigurationen -->
     <div id="config-sidebar" class="config-sidebar">
+      <!-- Side-Section für Produktliste -->
+      <div class="side-section">
+        <button id="side-toggle" class="side-toggle-btn">
+          <span class="toggle-icon">◀</span>
+        </button>
+        <div class="side-content">
+          <div class="product-section">
+            <div class="section-header">
+              <h4>Produktliste</h4>
+            </div>
+            <div id="product-content" class="section-content">
+              <div id="produktliste" class="produktliste"></div>
+              <div class="product-options">
+                <label class="checkbox-item">
+                  <input type="checkbox" id="include-modules">
+                  <span>Module hinzufügen</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="mc4">
+                  <span>MC4 Stecker</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="solarkabel">
+                  <span>Solarkabel</span>
+                </label>
+                <label class="checkbox-item">
+                  <input type="checkbox" id="holz">
+                  <span>Holzunterleger</span>
+                </label>
+              </div>
+              <button id="add-to-cart-btn" class="btn primary">Aktuelle Auswahl in den Warenkorb</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Haupt-Toggle-Button -->
       <button id="sidebar-toggle" class="sidebar-toggle-btn">
         <span class="toggle-icon">◀</span>
       </button>
-      <div class="sidebar-header">
-        <h3>Konfigurationen</h3>
-      </div>
-      <div class="sidebar-content">
-        <div class="sidebar-sections">
-          <!-- Side-Section für Produktliste -->
-          <div class="side-section">
-            <button id="side-toggle" class="side-toggle-btn">
-              <span class="toggle-icon">◀</span>
-            </button>
-            <div class="side-content">
-              <div class="product-section">
-                <div class="section-header">
-                  <h4>Produktliste</h4>
-                </div>
-                <div id="product-content" class="section-content">
-                  <div id="produktliste" class="produktliste"></div>
-                  <div class="product-options">
-                    <label class="checkbox-item">
-                      <input type="checkbox" id="include-modules">
-                      <span>Module hinzufügen</span>
-                    </label>
-                    <label class="checkbox-item">
-                      <input type="checkbox" id="mc4">
-                      <span>MC4 Stecker</span>
-                    </label>
-                    <label class="checkbox-item">
-                      <input type="checkbox" id="solarkabel">
-                      <span>Solarkabel</span>
-                    </label>
-                    <label class="checkbox-item">
-                      <input type="checkbox" id="holz">
-                      <span>Holzunterleger</span>
-                    </label>
-                  </div>
-                  <button id="add-to-cart-btn" class="btn primary">Aktuelle Auswahl in den Warenkorb</button>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Konfigurationen Sektion -->
-          <div class="config-section">
-            <div class="section-header">
-              <h4>Konfigurationen</h4>
-            </div>
-            <div id="config-list"></div>
-          </div>
+      <!-- Sidebar-Content -->
+      <div class="sidebar-main">
+        <div class="sidebar-header">
+          <h3>Konfigurationen</h3>
         </div>
-
-        <div class="sidebar-buttons">
-          <button id="save-config-btn" class="btn primary">Neue Konfiguration speichern</button>
-          <button id="continue-later-btn" class="btn secondary">Später weitermachen</button>
+        <div class="sidebar-content">
+          <div id="config-list"></div>
+          <div class="sidebar-buttons">
+            <button id="save-config-btn" class="btn primary">Neue Konfiguration speichern</button>
+            <button id="continue-later-btn" class="btn secondary">Später weitermachen</button>
+          </div>
         </div>
       </div>
     </div>

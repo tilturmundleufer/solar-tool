@@ -667,7 +667,6 @@ body {
   position: fixed;
   right: -320px;
   top: 0;
-  width: 350px;
   height: 100vh;
   background: #072544;
   color: white;
@@ -675,25 +674,28 @@ body {
   transition: right 0.3s ease, width 0.3s ease;
   box-shadow: -2px 0 10px rgba(0,0,0,0.3);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  width: 350px;
 }
 
 .config-sidebar.open {
   right: 0;
 }
 
+.config-sidebar.side-expanded {
+  width: 650px;
+}
+
 
 
 /* Verstecke Sidebar-Inhalt wenn geschlossen */
-.config-sidebar .sidebar-header,
-.config-sidebar .sidebar-content {
+.config-sidebar .sidebar-main {
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
 }
 
-.config-sidebar.open .sidebar-header,
-.config-sidebar.open .sidebar-content {
+.config-sidebar.open .sidebar-main {
   opacity: 1;
   pointer-events: auto;
 }
@@ -734,12 +736,12 @@ body {
   border-top: 1px solid rgba(255,255,255,0.1);
 }
 
-/* Sidebar Layout */
-.sidebar-sections {
-  display: flex;
-  gap: 20px;
+/* Sidebar Main Content */
+.sidebar-main {
   flex: 1;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 /* Side-Section für Produktliste */
@@ -749,8 +751,10 @@ body {
   flex-shrink: 0;
   transition: all 0.3s ease;
   background: rgba(255,255,255,0.02);
-  border-radius: 0.5rem;
+  border-radius: 0.5rem 0 0 0.5rem;
   border: 1px solid rgba(255,255,255,0.1);
+  border-right: none;
+  height: 100vh;
 }
 
 .side-section.collapsed {
@@ -803,22 +807,13 @@ body {
   padding: 60px 15px 15px 15px;
   transition: all 0.3s ease;
   overflow: hidden;
+  height: 100%;
 }
 
-/* Sidebar Sektionen */
-.product-section,
-.config-section {
-  margin-bottom: 20px;
-}
-
+/* Product Section */
 .product-section {
   width: 100%;
   transition: all 0.3s ease;
-}
-
-.config-section {
-  flex: 1;
-  min-width: 0;
 }
 
 .section-header {
