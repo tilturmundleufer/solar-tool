@@ -644,6 +644,7 @@ body {
   z-index: 1001;
   transition: all 0.3s ease;
   display: flex;
+}
   align-items: center;
   justify-content: center;
 }
@@ -664,7 +665,7 @@ body {
 
 .config-sidebar {
   position: fixed;
-  right: -320px;
+  right: -350px;
   top: 0;
   width: 350px;
   height: 100vh;
@@ -753,12 +754,17 @@ body {
   width: 300px;
   flex-shrink: 0;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .product-section.collapsed {
-  width: 0;
+  width: 50px;
   overflow: hidden;
+}
+
+.product-section.collapsed .section-content {
   opacity: 0;
+  pointer-events: none;
 }
 
 .config-section {
@@ -773,6 +779,11 @@ body {
   padding: 10px 0;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   margin-bottom: 15px;
+}
+
+.product-section .section-header {
+  justify-content: flex-start;
+  gap: 10px;
 }
 
 .section-header h4 {

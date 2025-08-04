@@ -2646,8 +2646,8 @@
       this.mc4           = document.getElementById('mc4');
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
-      this.listHolder    = document.querySelector('.produktliste-holder');
-      this.prodList      = document.getElementById('produktliste');
+      		this.listHolder    = document.querySelector('.product-section');
+		this.prodList      = document.getElementById('produktliste');
       this.summaryHolder = document.getElementById('summary-list-holder');
       this.summaryList   = document.getElementById('summary-list');
       this.saveBtn       = document.getElementById('save-config-btn');
