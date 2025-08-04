@@ -4858,11 +4858,15 @@
     showGridPreview(config) {
       console.log('showGridPreview called with:', config); // Debug
       
-      // Speichere aktuellen Zustand
-      const originalSelection = this.selection ? this.selection.map(row => [...row]) : null;
-      const originalCols = this.cols;
-      const originalRows = this.rows;
-      const originalOrientation = this.orV ? this.orV.checked : false;
+      // Speichere aktuellen Zustand für späteres Zurücksetzen
+      this.originalPreviewState = {
+        selection: this.selection ? this.selection.map(row => [...row]) : null,
+        cols: this.cols,
+        rows: this.rows,
+        orientation: this.orV ? this.orV.checked : false
+      };
+      
+      console.log('Saved original state:', this.originalPreviewState); // Debug
       
       // Temporäre Konfiguration anwenden
       if (config.cols && config.rows) {
@@ -4902,14 +4906,9 @@
       this.buildGrid();
       this.addPreviewStyling();
       
-      // Nach 3 Sekunden zurücksetzen (wenn keine weitere Eingabe)
-      if (this.previewTimeout) {
-        clearTimeout(this.previewTimeout);
-      }
-      this.previewTimeout = setTimeout(() => {
-        console.log('Clearing preview after timeout');
-        this.clearGridPreview(originalSelection, originalCols, originalRows, originalOrientation);
-      }, 3000);
+      // Preview bleibt bestehen bis das Eingabefeld geleert wird
+      // Kein automatisches Zurücksetzen nach 3 Sekunden
+      console.log('Preview applied - will clear when input is cleared');
     }
     
     createModuleSelection(moduleCount, cols, rows) {
@@ -4949,8 +4948,8 @@
       }
     }
     
-    clearGridPreview(originalSelection = null, originalCols = null, originalRows = null, originalOrientation = null) {
-      console.log('clearGridPreview called with:', { originalSelection, originalCols, originalRows, originalOrientation }); // Debug
+    clearGridPreview() {
+      console.log('clearGridPreview called'); // Debug
       
       // Entferne Preview-Styling
       if (this.gridEl) {
@@ -4960,24 +4959,27 @@
         });
       }
       
-      // Nur wiederherstellen wenn Parameter übergeben wurden
-      if (originalSelection !== null && originalCols !== null && originalRows !== null) {
-        console.log('Restoring original state...'); // Debug
-        this.selection = originalSelection;
-        this.cols = originalCols;
-        this.rows = originalRows;
+      // Verwende gespeicherten ursprünglichen Zustand
+      if (this.originalPreviewState) {
+        console.log('Restoring original state from saved state:', this.originalPreviewState); // Debug
+        this.selection = this.originalPreviewState.selection;
+        this.cols = this.originalPreviewState.cols;
+        this.rows = this.originalPreviewState.rows;
         
-        if (this.orV && this.orH && originalOrientation !== null) {
-          this.orV.checked = originalOrientation;
-          this.orH.checked = !originalOrientation;
+        if (this.orV && this.orH && this.originalPreviewState.orientation !== null) {
+          this.orV.checked = this.originalPreviewState.orientation;
+          this.orH.checked = !this.originalPreviewState.orientation;
         }
         
         // Grid wiederherstellen
         this.updateSize();
         this.buildGrid();
         console.log('Original state restored'); // Debug
+        
+        // Gespeicherten Zustand löschen
+        this.originalPreviewState = null;
       } else {
-        console.log('No original state provided, only clearing styling'); // Debug
+        console.log('No saved original state found'); // Debug
       }
     }
   }
