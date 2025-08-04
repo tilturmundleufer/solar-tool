@@ -3232,7 +3232,6 @@
 		sideToggle.addEventListener('click', () => {
 			this.trackInteraction();
 			sideSection.classList.toggle('collapsed');
-			configSidebar.classList.toggle('side-expanded');
 			sideToggle.querySelector('.toggle-icon').textContent = 
 				sideSection.classList.contains('collapsed') ? '▶' : '◀';
 		});
