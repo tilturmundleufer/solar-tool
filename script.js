@@ -3091,46 +3091,53 @@
     		}
   		}
 
-  		[this.wIn, this.hIn].forEach(el =>
-    		el.addEventListener('change', () => {
-      		this.trackInteraction();
-      		this.updateSize();
-      		this.buildList();
-      		this.updateSummaryOnChange();
-    		})
-  		);
-      
-      let lastOrientation = this.orH.checked ? 'horizontal' : 'vertical';
-
-					[this.orH, this.orV].forEach(el =>
+  				// Prüfe ob Input-Elemente existieren bevor Event-Listener hinzugefügt werden
+		const inputs = [this.wIn, this.hIn].filter(el => el);
+		inputs.forEach(el =>
 			el.addEventListener('change', () => {
-
-				if (!el.checked) return;
-
-				const currentOrientation = el === this.orH ? 'horizontal' : 'vertical';
-
-				if (currentOrientation === lastOrientation) return;
-
-				// Synchronisiere mit Setup-Container Radio-Buttons
-				const orientHSetup = document.getElementById('orient-h-setup');
-				const orientVSetup = document.getElementById('orient-v-setup');
-				if (orientHSetup && orientVSetup) {
-					orientHSetup.checked = el === this.orH;
-					orientVSetup.checked = el === this.orV;
-				}
-
-				// KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
-				// Nur das Grid und die Liste aktualisieren
 				this.trackInteraction();
 				this.updateSize();
 				this.buildList();
 				this.updateSummaryOnChange();
-
-				lastOrientation = currentOrientation;
 			})
 		);
+      
+            // Prüfe ob Radio-Buttons existieren bevor auf sie zugegriffen wird
+      if (this.orH && this.orV) {
+        let lastOrientation = this.orH.checked ? 'horizontal' : 'vertical';
 
-  				[this.incM, this.mc4, this.solarkabel, this.holz].forEach(el =>
+        [this.orH, this.orV].forEach(el =>
+          el.addEventListener('change', () => {
+
+            if (!el.checked) return;
+
+            const currentOrientation = el === this.orH ? 'horizontal' : 'vertical';
+
+            if (currentOrientation === lastOrientation) return;
+
+            // Synchronisiere mit Setup-Container Radio-Buttons
+            const orientHSetup = document.getElementById('orient-h-setup');
+            const orientVSetup = document.getElementById('orient-v-setup');
+            if (orientHSetup && orientVSetup) {
+              orientHSetup.checked = el === this.orH;
+              orientVSetup.checked = el === this.orV;
+            }
+
+            // KEINE Input-Werte mehr tauschen - sie bleiben wie sie sind
+            // Nur das Grid und die Liste aktualisieren
+            this.trackInteraction();
+            this.updateSize();
+            this.buildList();
+            this.updateSummaryOnChange();
+
+            lastOrientation = currentOrientation;
+          })
+        );
+      }
+
+  		// Prüfe ob Checkboxen existieren bevor Event-Listener hinzugefügt werden
+		const checkboxes = [this.incM, this.mc4, this.solarkabel, this.holz].filter(el => el);
+		checkboxes.forEach(el =>
 			el.addEventListener('change', () => {
 				this.trackInteraction();
 				this.buildList();
