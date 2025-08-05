@@ -169,6 +169,9 @@ body {
   right: 0;
   bottom: 0;
   margin: auto;
+  place-content: center;
+  justify-content: center;
+  align-items: center;
   z-index: 10;
 }
 
