@@ -2851,6 +2851,31 @@
       this.mc4           = document.getElementById('mc4');
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
+      
+      // Debug: Prüfe ob Checkbox-Elemente gefunden wurden
+      console.log('Checkbox-Elemente Debug:', {
+        incM: this.incM,
+        mc4: this.mc4,
+        solarkabel: this.solarkabel,
+        holz: this.holz
+      });
+      
+      // Manuelle Initialisierung der Checkbox-Elemente falls sie nicht gefunden wurden
+      if (!this.incM) {
+        console.warn('Checkbox-Elemente nicht gefunden, versuche erneut zu laden...');
+        setTimeout(() => {
+          this.incM = document.getElementById('include-modules');
+          this.mc4 = document.getElementById('mc4');
+          this.solarkabel = document.getElementById('solarkabel');
+          this.holz = document.getElementById('holz');
+          console.log('Checkbox-Elemente nach Timeout:', {
+            incM: this.incM,
+            mc4: this.mc4,
+            solarkabel: this.solarkabel,
+            holz: this.holz
+          });
+        }, 1000);
+      }
       this.listHolder    = document.querySelector('.product-section');
       this.prodList      = document.getElementById('produktliste');
       this.summaryHolder = document.getElementById('summary-list-holder');
@@ -4745,15 +4770,27 @@
   		html += `<div class="summary-total">Gesamtpreis: ${totalPrice.toFixed(2)} €</div>`;
   		this.summaryList.innerHTML = html;
 
-  		// DEBUG: Zeige Summary-List immer an wenn Produkte vorhanden sind
-  		console.log('Summary-List Debug:', {
-  			entries: entries.length,
-  			totalPrice: totalPrice,
-  			html: html.substring(0, 200) + '...'
-  		});
+  				// DEBUG: Zeige Summary-List immer an wenn Produkte vorhanden sind
+		console.log('Summary-List Debug:', {
+			entries: entries.length,
+			totalPrice: totalPrice,
+			html: html.substring(0, 200) + '...',
+			totalObject: total
+		});
 
-  		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
-  		this.summaryList.style.display = entries.length ? 'flex' : 'none';
+		// Zeige Summary List auch wenn keine Produkte vorhanden sind (für Debugging)
+		this.summaryHolder.style.display = 'block';
+		this.summaryList.style.display = entries.length ? 'flex' : 'none';
+		
+		// Wenn keine Produkte vorhanden sind, zeige eine Nachricht
+		if (entries.length === 0) {
+			this.summaryList.innerHTML = '<div class="summary-total">Keine Produkte berechnet. Bitte wählen Sie Module aus.</div>';
+			this.summaryList.style.display = 'flex';
+		} else {
+			// Zeige die berechneten Produkte an
+			this.summaryList.innerHTML = html;
+			this.summaryList.style.display = 'flex';
+		}
 		}
 
 		// ISOLIERTE synchrone Berechnung für Fallback
