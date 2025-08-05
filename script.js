@@ -4119,6 +4119,7 @@
       if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
       if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
 
+
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
         if (this.listHolder) {
@@ -4217,21 +4218,8 @@
 
 
     async calculateParts() {
-      try {
-        const calculationData = {
-          selection: this.selection,
-          rows: this.rows,
-          cols: this.cols,
-          cellWidth: parseInt(this.wIn.value, 10) || 179,
-          cellHeight: parseInt(this.hIn.value, 10) || 113,
-          orientation: this.orV.checked ? 'vertical' : 'horizontal'
-        };
-
-        const parts = await calculationManager.calculate('calculateParts', calculationData);
-        return parts;
-      } catch (error) {
-        return this.calculatePartsSync();
-      }
+      // Verwende immer den Fallback für Tellerkopfschraube-Berechnung
+      return this.calculatePartsSync();
     }
 
     // Fallback synchrone Berechnung (ursprüngliche Methode)
