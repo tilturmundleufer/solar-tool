@@ -188,7 +188,7 @@
         const parts = {
           Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
           Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
         };
 
         // Verwende die korrekte Schienenlogik (wie im Worker)
@@ -212,7 +212,7 @@
         return {
           Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
           Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
         };
       }
     }
@@ -251,10 +251,10 @@
       parts.Endklemmen         += 4;
       parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
       parts.Dachhaken          += len > 1 ? len * 3 : 4;
-      parts.Endkappen          += parts.Endklemmen;
+      parts.Endkappen          += 4; // Gleich wie Endklemmen
       parts.Solarmodul         += len;
-      parts.Schrauben          += parts.Dachhaken * 1; // M10x25: 1 pro Dachhaken (vorher 3)
-      parts.Tellerkopfschraube += parts.Dachhaken * 2; // Tellerkopfschraube: 2 pro Dachhaken (neu)
+      parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
+      parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
     }
 
     calculateExtendedPartsSync(data) {
@@ -275,7 +275,7 @@
       }
       
       if (options.woodUnderlay) {
-        parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+        parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
       }
       
       return parts;
@@ -1342,7 +1342,7 @@
         }
 
         if (config.wood) {
-          parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+          parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
         }
 
         console.log('Final parts after processing:', parts);
@@ -1488,7 +1488,7 @@
       }
       
       if (config.wood) {
-        parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
+        parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
       }
 
       return parts;
@@ -4116,7 +4116,7 @@
         parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
       }
       if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (this.holz && this.holz.checked)  parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
       if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
 
 
@@ -4255,10 +4255,10 @@
       p.Endklemmen         += 4;
       p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
       p.Dachhaken          += len > 1 ? len * 3 : 4;
-      p.Endkappen          += p.Endklemmen;
+      p.Endkappen          += 4; // Gleich wie Endklemmen
       p.Solarmodul         += len;
-      p.Schrauben          += p.Dachhaken * 1; // M10x25: 1 pro Dachhaken
-      p.Tellerkopfschraube += p.Dachhaken * 2; // Tellerkopfschraube: 2 pro Dachhaken
+      p.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
+      p.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
     }
 
     mapImage(key) {
@@ -4745,7 +4745,7 @@
 			const parts = {
 				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
 				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
 			};
 
 			for (let y = 0; y < rows; y++) {
@@ -4804,12 +4804,11 @@
 			parts.Endklemmen         += 4;
 			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
 			parts.Dachhaken          += len > 1 ? len * 3 : 4;
-			parts.Endkappen          += 4;  // Fix: Direkt 4 statt parts.Endklemmen
+			parts.Endkappen          += 4;  // Gleich wie Endklemmen
 			parts.Solarmodul         += len;
-			// Schrauben basierend auf Dachhaken für diese Gruppe berechnen
-			const dachhakenForGroup = len > 1 ? len * 3 : 4;
-			parts.Schrauben          += dachhakenForGroup * 1; // M10x25: 1 pro Dachhaken (vorher 3)
-			parts.Tellerkopfschraube += dachhakenForGroup * 2; // Tellerkopfschraube: 2 pro Dachhaken (neu)
+			// Schrauben basierend auf Dachhaken berechnen
+			parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
+			parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
 		}
 
     generateContinueLink() {
