@@ -4631,17 +4631,25 @@
 					console.log('DEBUG: Worker input data:', calculationData);
 					console.log('DEBUG: Worker input selection:', calculationData.selection);
 					
-					// DEBUG: Prüfe ob ausgewählte Zellen vorhanden sind
-					let selectedCells = 0;
-					for (let y = 0; y < calculationData.rows; y++) {
-						for (let x = 0; x < calculationData.cols; x++) {
-							if (calculationData.selection[y]?.[x]) {
-								selectedCells++;
-								console.log(`DEBUG: Found selected cell at [${y}][${x}]`);
-							}
+									// DEBUG: Prüfe ob ausgewählte Zellen vorhanden sind
+				let selectedCells = 0;
+				console.log('DEBUG: Selection matrix structure:', calculationData.selection);
+				console.log('DEBUG: Selection matrix length:', calculationData.selection?.length);
+				
+				for (let y = 0; y < calculationData.rows; y++) {
+					console.log(`DEBUG: Row ${y}:`, calculationData.selection[y]);
+					for (let x = 0; x < calculationData.cols; x++) {
+						if (calculationData.selection[y]?.[x]) {
+							selectedCells++;
+							console.log(`DEBUG: Found selected cell at [${y}][${x}]`);
 						}
 					}
-					console.log(`DEBUG: Total selected cells: ${selectedCells}`);
+				}
+				console.log(`DEBUG: Total selected cells: ${selectedCells}`);
+				
+				// DEBUG: Prüfe this.selection direkt
+				console.log('DEBUG: this.selection:', this.selection);
+				console.log('DEBUG: this.selection length:', this.selection?.length);
 					
 				} catch (error) {
 					console.log('DEBUG: Worker failed, using fallback:', error);
