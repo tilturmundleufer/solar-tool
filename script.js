@@ -3445,20 +3445,28 @@
 					quickInput.addEventListener('input', (e) => {
 						const input = e.target.value.trim();
 						
+						console.log('Input changed:', input); // Debug
+						
 						// Clear previous timeout
 						if (this.previewTimeout) {
 							clearTimeout(this.previewTimeout);
 						}
 						
-						if (input.length > 2) {
+						if (input.length > 0) {
 							try {
 								const config = this.smartParser.parseInput(input);
+								console.log('Parsed config:', config); // Debug
 								this.showConfigPreview(config);
 							} catch (error) {
-								// Ignoriere Parsing-Fehler während des Tippens
+								console.log('Parsing error, clearing preview'); // Debug
+								// Bei Parsing-Fehler Preview löschen
+								if (this.solarGrid && this.solarGrid.clearGridPreview) {
+									this.solarGrid.clearGridPreview();
+								}
 							}
 						} else {
-							// Clear preview if input is too short
+							console.log('Input empty, clearing preview'); // Debug
+							// Clear preview if input is empty
 							if (this.solarGrid && this.solarGrid.clearGridPreview) {
 								this.solarGrid.clearGridPreview();
 							}
@@ -4926,11 +4934,11 @@
     buildPreviewGrid(previewGrid, selection, cols, rows) {
       console.log('Building preview grid:', cols, 'x', rows); // Debug
       
-      // Verwende die gleiche Zellgröße wie das Hauptgrid
-      const cellWidth = this.cellWidth || 40;
-      const cellHeight = this.cellHeight || 40;
+      // Verwende die gleiche Zellgröße wie das Hauptgrid (aus Input-Feldern)
+      const cellWidth = parseInt(this.wIn ? this.wIn.value : '179', 10);
+      const cellHeight = parseInt(this.hIn ? this.hIn.value : '113', 10);
       
-      console.log('Using cell size:', cellWidth, 'x', cellHeight); // Debug
+      console.log('Using cell size from inputs:', cellWidth, 'x', cellHeight); // Debug
       
       // Grid-Styling setzen
       previewGrid.style.gridTemplateColumns = `repeat(${cols}, ${cellWidth}px)`;
