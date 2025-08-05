@@ -4297,7 +4297,7 @@
       p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
       p.Endklemmen         += 4;
       p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-      p.Dachhaken          += len > 1 ? len * 3 : 4;
+      p.Dachhaken          += len > 1 ? len * 2 : 4; // FIX: 2 Schrauben pro Dachhaken
       p.Endkappen          += p.Endklemmen;
       p.Solarmodul         += len;
       p.Schrauben         += p.Dachhaken * 2;  // FIX: += statt =
@@ -4654,13 +4654,23 @@
   				}
 
   				// Checkbox-basierte Modifikationen
-    		if (!b.incM) delete parts.Solarmodul;
+    		if (!b.incM) {
+    			delete parts.Solarmodul;
+    			console.log('Module entfernt für Konfiguration');
+    		}
     		if (b.mc4) {
     			const panelCount = b.selection.flat().filter(v => v).length;
   					parts.MC4_Stecker = Math.ceil(panelCount / 30);
+    			console.log('MC4-Stecker hinzugefügt:', parts.MC4_Stecker, 'für', panelCount, 'Module');
     		}
-  				if (b.solarkabel) parts.Solarkabel = 1;
-  				if (b.holz) parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+  				if (b.solarkabel) {
+  					parts.Solarkabel = 1;
+  					console.log('Solarkabel hinzugefügt');
+  				}
+  				if (b.holz) {
+  					parts.Holzunterleger = 1; // NEU: Pauschal 1x statt basierend auf Schienen
+  					console.log('Unterlegholz hinzugefügt');
+  				}
 
   				return parts;
   			}));
@@ -4728,6 +4738,13 @@
 
   		html += `<div class="summary-total">Gesamtpreis: ${totalPrice.toFixed(2)} €</div>`;
   		this.summaryList.innerHTML = html;
+
+  		// DEBUG: Zeige Summary-List immer an wenn Produkte vorhanden sind
+  		console.log('Summary-List Debug:', {
+  			entries: entries.length,
+  			totalPrice: totalPrice,
+  			html: html.substring(0, 200) + '...'
+  		});
 
   		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
   		this.summaryList.style.display = entries.length ? 'flex' : 'none';
