@@ -4596,21 +4596,28 @@
         };
       });
 
-      // Füge aktuelle Konfiguration hinzu falls keine gespeichert
-      if (this.currentConfig === null) {
-        bundles.push({
-          selection:   this.selection.map(row => [...row]), // Deep copy
-          rows:        this.rows,
-          cols:        this.cols,
-          cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-          cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-          orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-          // GLOBALE Checkbox-Werte
-          incM:        this.incM && this.incM.checked,
-          mc4:         this.mc4 && this.mc4.checked,
-          solarkabel:  this.solarkabel && this.solarkabel.checked,
-          holz:        this.holz && this.holz.checked
-        });
+      // Füge aktuelle Konfiguration hinzu falls keine gespeichert ODER wenn aktuelle Konfiguration geändert wurde
+      if (this.currentConfig === null || (this.currentConfig !== null && this.configs[this.currentConfig])) {
+        // Prüfe ob sich die aktuelle Auswahl von der gespeicherten Konfiguration unterscheidet
+        const currentSelection = this.selection.map(row => [...row]);
+        const savedSelection = this.currentConfig !== null ? this.configs[this.currentConfig].selection : null;
+        const selectionChanged = !savedSelection || JSON.stringify(currentSelection) !== JSON.stringify(savedSelection);
+        
+        if (this.currentConfig === null || selectionChanged) {
+          bundles.push({
+            selection:   currentSelection, // Deep copy
+            rows:        this.rows,
+            cols:        this.cols,
+            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+            // GLOBALE Checkbox-Werte
+            incM:        this.incM && this.incM.checked,
+            mc4:         this.mc4 && this.mc4.checked,
+            solarkabel:  this.solarkabel && this.solarkabel.checked,
+            holz:        this.holz && this.holz.checked
+          });
+        }
       }
   		
   		const total = {};
