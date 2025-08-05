@@ -454,6 +454,26 @@
       localStorage.removeItem(priceCache.timestampKey);
       priceCache.cache.clear();
       priceCache.lastUpdate = null;
+    },
+    // NEUE Debug-Funktion für Quetschkabelschuhe
+    testQuetschkabelschuhe: () => {
+      console.log('Testing Quetschkabelschuhe price...');
+      console.log('PRICE_MAP:', PRICE_MAP.Quetschkabelschuhe);
+      console.log('Cache value:', priceCache.getPrice('Quetschkabelschuhe'));
+      console.log('Direct fallback:', PRICE_MAP['Quetschkabelschuhe'] || 0);
+      return {
+        priceMap: PRICE_MAP.Quetschkabelschuhe,
+        cacheValue: priceCache.getPrice('Quetschkabelschuhe'),
+        fallback: PRICE_MAP['Quetschkabelschuhe'] || 0
+      };
+    },
+    // Cache bereinigen und neu laden
+    resetAndReload: () => {
+      console.log('Resetting price cache...');
+      window.debugPriceCache.clearCache();
+      priceCache.loadFromStorage();
+      priceCache.forceUpdate();
+      console.log('Cache reset complete');
     }
   };
 
