@@ -2746,7 +2746,8 @@
         // Drag beendet ODER Single-Click (gleiche Zelle)
         this.selectRange(this.dragStart, { x, y });
         
-        // Toast-Nachricht entfernt - war störend
+        // KEINE Toast-Nachrichten mehr bei Drag-Operationen
+        // Alle Toast-Nachrichten für Drag-Operationen wurden entfernt
       }
       
       // Reset Drag-Zustand
