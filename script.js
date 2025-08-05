@@ -1519,7 +1519,7 @@
       this.solarGrid = solarGrid;
       this.patterns = {
         // "5x4" oder "5 x 4" → Grid-Größe
-        gridSize: /(\d+)\s*[x×]\s*(\d+)/i,
+        gridSize: /(\d+)\s*[x×]\s*(\d+)(?!\s*mal)/i,
         // "20 module" → Anzahl Module
         moduleCount: /(\d+)\s*modul[e]?[n]?/i,
         // "mit modulen" oder "ohne module" → Module-Checkbox
@@ -1532,8 +1532,8 @@
         cable: /(?:mit|ohne)[\s-]*(?:kabel|solarkabel)/i,
         // "mit holz" oder "ohne holz"
         wood: /(?:mit|ohne)[\s-]*holz(?:unterleger)?/i,
-        // "3 reihen mit 5 modulen" oder "drei reihen 5 module" oder "20 module in 4 reihen"
-        rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))/i,
+        // "3 reihen mit 5 modulen" oder "drei reihen 5 module" oder "20 module in 4 reihen" oder "3 mal 6 module"
+        rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))|(?:(\d+)\s*mal\s*(\d+)\s*modul[e]?[n]?)/i,
         // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
         spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
         // Kombinierte Checkbox-Logik mit "und" Verknüpfungen
@@ -1745,6 +1745,10 @@
             baseModulesPerRow: Math.floor(totalModules / numRows),
             extraModules: totalModules % numRows
           };
+        } else if (rowMatch[5] && rowMatch[6]) {
+          // "3 mal 6 module" Format
+          numRows = parseInt(rowMatch[5]);
+          modulesPerRow = parseInt(rowMatch[6]);
         }
         
         if (numRows && modulesPerRow) {
@@ -3427,6 +3431,12 @@
 						const input = quickInput.value.trim();
 						if (input) {
 							try {
+								// Clear preview timeout when applying configuration
+								if (this.previewTimeout) {
+									clearTimeout(this.previewTimeout);
+									this.previewTimeout = null;
+								}
+								
 								const config = this.smartParser.parseInput(input);
 								this.smartParser.applyPreviewToMainGrid(config);
 								quickInput.value = ''; // Input leeren
