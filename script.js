@@ -5431,6 +5431,8 @@
       const mainGrid = document.getElementById('grid');
       if (mainGrid) {
         mainGrid.style.display = 'none';
+        mainGrid.style.visibility = 'hidden';
+        mainGrid.style.opacity = '0';
       }
     }
     
@@ -5438,6 +5440,8 @@
       const previewGrid = document.getElementById('preview-grid');
       if (previewGrid) {
         previewGrid.style.display = 'grid';
+        previewGrid.style.visibility = 'visible';
+        previewGrid.style.opacity = '1';
       }
     }
     
@@ -5445,6 +5449,8 @@
       const previewGrid = document.getElementById('preview-grid');
       if (previewGrid) {
         previewGrid.style.display = 'none';
+        previewGrid.style.visibility = 'hidden';
+        previewGrid.style.opacity = '0';
       }
     }
     
@@ -5452,6 +5458,8 @@
       const mainGrid = document.getElementById('grid');
       if (mainGrid) {
         mainGrid.style.display = 'grid';
+        mainGrid.style.visibility = 'visible';
+        mainGrid.style.opacity = '1';
       }
     }
     
@@ -5524,6 +5532,14 @@
           // Gespeicherten Zustand löschen
           this.originalPreviewState = null;
         }
+        
+        // Sicherheitscheck: Stelle sicher, dass das Grid sichtbar ist
+        setTimeout(() => {
+          const mainGrid = document.getElementById('grid');
+          if (mainGrid && mainGrid.style.display === 'none') {
+            this.showMainGrid();
+          }
+        }, 100);
       }, 150); // Kurze Verzögerung für smooth Animation
     }
     
