@@ -3457,18 +3457,20 @@
 								const config = this.smartParser.parseInput(input);
 								console.log('Parsed config:', config); // Debug
 								
-								// Prüfe ob die Konfiguration gültig ist (mindestens eine Änderung)
+								// Zeige Preview für gültige Konfigurationen
 								if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
 									this.showConfigPreview(config);
-								} else {
-									console.log('No valid config changes, clearing preview'); // Debug
-									// Keine gültigen Änderungen, Preview löschen
-									if (this.solarGrid && this.solarGrid.clearGridPreview) {
-										this.solarGrid.clearGridPreview();
-									}
+									
+									// Preview nach 3 Sekunden automatisch löschen
+									this.previewTimeout = setTimeout(() => {
+										console.log('Auto-clearing preview after 3 seconds'); // Debug
+										if (this.solarGrid && this.solarGrid.clearGridPreview) {
+											this.solarGrid.clearGridPreview();
+										}
+									}, 3000);
 								}
 							} catch (error) {
-								console.log('Parsing error, clearing preview:', error.message); // Debug
+								console.log('Parsing error:', error.message); // Debug
 								// Bei Parsing-Fehler Preview löschen
 								if (this.solarGrid && this.solarGrid.clearGridPreview) {
 									this.solarGrid.clearGridPreview();
