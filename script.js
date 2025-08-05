@@ -210,7 +210,7 @@
       parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
       parts.Endklemmen         += 4;
       parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-      parts.Dachhaken          += len > 1 ? len * 3 : 4;
+      			parts.Dachhaken          += len > 1 ? len * 2 : 4;
       parts.Endkappen          += parts.Endklemmen;
       parts.Solarmodul         += len;
       parts.Schrauben          += parts.Dachhaken * 2;
@@ -4653,24 +4653,12 @@
   					parts = this.calculatePartsDirectly(calculationData);
   				}
 
-  				// Checkbox-basierte Modifikationen
+  				// Checkbox-basierte Modifikationen - NUR für Module
     		if (!b.incM) {
     			delete parts.Solarmodul;
     			console.log('Module entfernt für Konfiguration');
     		}
-    		if (b.mc4) {
-    			const panelCount = b.selection.flat().filter(v => v).length;
-  					parts.MC4_Stecker = Math.ceil(panelCount / 30);
-    			console.log('MC4-Stecker hinzugefügt:', parts.MC4_Stecker, 'für', panelCount, 'Module');
-    		}
-  				if (b.solarkabel) {
-  					parts.Solarkabel = 1;
-  					console.log('Solarkabel hinzugefügt');
-  				}
-  				if (b.holz) {
-  					parts.Holzunterleger = 1; // NEU: Pauschal 1x statt basierend auf Schienen
-  					console.log('Unterlegholz hinzugefügt');
-  				}
+  				// MC4, Solarkabel und Holz werden GLOBAL nach der Summierung hinzugefügt
 
   				return parts;
   			}));
@@ -4809,7 +4797,7 @@
 			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
 			parts.Endklemmen         += 4;
 			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-			parts.Dachhaken          += len > 1 ? len * 3 : 4;
+			parts.Dachhaken          += len > 1 ? len * 2 : 4;
 			parts.Endkappen          += parts.Endklemmen;
 			parts.Solarmodul         += len;
 			parts.Schrauben          += parts.Dachhaken * 2;
