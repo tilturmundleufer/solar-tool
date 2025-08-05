@@ -1973,6 +1973,15 @@
         config.action = 'saveConfig';
         return config;
       }
+      
+      // KURZE EINGABEN: Verwende aktuelles Grid als Basis
+      const isShortInput = input.length < 20 && !input.match(/\d/);
+      if (isShortInput) {
+        // Setze aktuelle Grid-Größe als Basis
+        config.cols = this.solarGrid.cols;
+        config.rows = this.solarGrid.rows;
+        config.useCurrentGrid = true;
+      }
 
       const deleteConfigMatch = input.match(this.patterns.deleteConfig);
       if (deleteConfigMatch) {
@@ -5086,8 +5095,15 @@
       let previewSelection = this.selection ? this.selection.map(row => [...row]) : 
         Array.from({ length: previewRows }, () => Array.from({ length: previewCols }, () => false));
       
-      // Wende Konfiguration auf Preview an
-      if (config.cols && config.rows) {
+            // Wende Konfiguration auf Preview an
+      if (config.useCurrentGrid) {
+        // Kurze Eingabe: Verwende aktuelles Grid als Basis
+        previewCols = config.cols;
+        previewRows = config.rows;
+        // Behalte aktuelle Selection
+        previewSelection = this.selection ? this.selection.map(row => [...row]) : 
+          Array.from({ length: previewRows }, () => Array.from({ length: previewCols }, () => false));
+      } else if (config.cols && config.rows) {
         // Neue Grid-Größe
         previewCols = config.cols;
         previewRows = config.rows;
@@ -5100,7 +5116,7 @@
             Array.from({ length: previewCols }, () => false)
           );
         }
-             } else if (config.moduleCount) {
+      } else if (config.moduleCount) {
          // Nur Modul-Anzahl geändert - behalte Grid-Größe
          const hasSpacing = config.adjustSpacing === 'withSpacing' || 
                            (config.rowConfig && config.rowConfig.spacing);
