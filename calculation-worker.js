@@ -19,6 +19,8 @@ const VE_VALUES = {
 
 // Berechne Teile für eine gegebene Auswahl
 function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientation) {
+  console.log('WORKER DEBUG: calculateParts input:', {selection, rows, cols, cellWidth, cellHeight, orientation});
+  
   const parts = {
     Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
     Dachhaken: 0, Schrauben: 0, Endkappen: 0,
@@ -30,19 +32,29 @@ function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientatio
     let run = 0;
 
     for (let x = 0; x < cols; x++) {
-      if (selection[y]?.[x]) run++;
+      if (selection[y]?.[x]) {
+        run++;
+        console.log(`WORKER DEBUG: Found selected cell at [${y}][${x}], run=${run}`);
+      }
       else if (run) { 
+        console.log(`WORKER DEBUG: Processing group with run=${run} at row ${y}`);
         processGroup(run, parts, cellWidth, cellHeight, orientation); 
         run = 0; 
       }
     }
-    if (run) processGroup(run, parts, cellWidth, cellHeight, orientation);
+    if (run) {
+      console.log(`WORKER DEBUG: Processing final group with run=${run} at row ${y}`);
+      processGroup(run, parts, cellWidth, cellHeight, orientation);
+    }
   }
 
+  console.log('WORKER DEBUG: calculateParts result:', parts);
   return parts;
 }
 
 function processGroup(len, parts, cellWidth, cellHeight, orientation) {
+  console.log(`WORKER DEBUG: processGroup called with len=${len}, cellWidth=${cellWidth}, cellHeight=${cellHeight}, orientation=${orientation}`);
+  
   // Verwende die tatsächliche Zellbreite basierend auf Orientierung
   const isVertical = orientation === 'vertical';
   const actualCellWidth = isVertical ? cellHeight : cellWidth;
@@ -53,6 +65,8 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   const floor240 = Math.ceil(rem360 / 240);
   const pure360 = Math.ceil(totalLen / 360);
   const pure240 = Math.ceil(totalLen / 240);
+  
+  console.log(`WORKER DEBUG: Rail calculation - totalLen=${totalLen}, floor360=${floor360}, floor240=${floor240}`);
   
   const variants = [
     {cnt360: floor360, cnt240: floor240},
@@ -70,6 +84,8 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
     .reduce((a, b) => a.waste <= b.waste ? a : b);
   
   const {cnt360, cnt240} = best;
+  console.log(`WORKER DEBUG: Best variant - cnt360=${cnt360}, cnt240=${cnt240}`);
+  
   parts.Schiene_360_cm     += cnt360 * 2;
   parts.Schiene_240_cm     += cnt240 * 2;
   parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
@@ -79,6 +95,8 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
                           parts.Endkappen          += parts.Endklemmen;
         parts.Solarmodul         += len;
         parts.Schrauben          += parts.Dachhaken * 2;
+        
+  console.log(`WORKER DEBUG: Parts after processing - Solarmodul=${parts.Solarmodul}, Dachhaken=${parts.Dachhaken}, Schrauben=${parts.Schrauben}`);
 }
 
 // Berechne erweiterte Teile mit zusätzlichen Optionen
