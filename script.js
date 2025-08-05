@@ -5252,12 +5252,14 @@
     // ===== GRID PREVIEW METHODS =====
     
     showGridPreview(config) {
-      // Speichere aktuellen Zustand für späteres Zurücksetzen
+      // Speichere aktuellen Zustand für späteres Zurücksetzen (immer, nicht nur beim ersten Mal)
       this.originalPreviewState = {
         selection: this.selection ? this.selection.map(row => [...row]) : null,
         cols: this.cols,
         rows: this.rows,
-        orientation: this.orV ? this.orV.checked : false
+        orientation: this.orV ? this.orV.checked : false,
+        cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+        cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10)
       };
       
       // Erstelle Preview-Grid
@@ -5523,6 +5525,14 @@
           if (this.orV && this.orH && this.originalPreviewState.orientation !== null) {
             this.orV.checked = this.originalPreviewState.orientation;
             this.orH.checked = !this.originalPreviewState.orientation;
+          }
+          
+          // Zusätzliche Eigenschaften wiederherstellen
+          if (this.wIn && this.originalPreviewState.cellWidth) {
+            this.wIn.value = this.originalPreviewState.cellWidth;
+          }
+          if (this.hIn && this.originalPreviewState.cellHeight) {
+            this.hIn.value = this.originalPreviewState.cellHeight;
           }
           
           // Grid wiederherstellen
