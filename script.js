@@ -4062,21 +4062,18 @@
         		this.selection[y][x] = !this.selection[y][x];
         		cell.classList.toggle('selected');
         		
-        		// DEBUG: Zeige Selection-Änderung
-        		
-        		
         		// FEATURE 6: Screen Reader Support - Update ARIA
         		cell.setAttribute('aria-pressed', this.selection[y][x] ? 'true' : 'false');
         		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
         		
-        		// FIX: Update aktuelle Konfiguration mit Selection-Daten
+        		// Performance: Update aktuelle Konfiguration ohne Deep Copy
         		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-        			this.configs[this.currentConfig].selection = JSON.parse(JSON.stringify(this.selection));
-        			
+        			// Direkte Referenz statt JSON.parse/stringify
+        			this.configs[this.currentConfig].selection = this.selection;
         		}
         		
         		this.trackInteraction();
-        		this.buildList();
+        		// Performance: Nur eine Update-Operation
         		this.updateSummaryOnChange();
       		});
        
@@ -4109,10 +4106,12 @@
     
     async buildList() {
       try {
+        // Performance: Cached panel count calculation
+        const panelCount = this.selection.flat().filter(v => v).length;
+        
         const parts = await this.calculateParts();
       if (this.incM && !this.incM.checked) delete parts.Solarmodul;
       if (this.mc4 && this.mc4.checked) {
-        const panelCount = this.selection.flat().filter(v => v).length;
         parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
       }
       if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
@@ -4131,14 +4130,21 @@
         this.listHolder.style.display = 'block';
       }
       if (this.prodList) {
-        this.prodList.innerHTML = entries.map(([k,v]) => {
+        // Performance: Reduziere DOM-Manipulation
+        const fragment = document.createDocumentFragment();
+        entries.forEach(([k,v]) => {
           const packs = Math.ceil(v / VE[k]);
-          return `<div class="produkt-item">
+          const div = document.createElement('div');
+          div.className = 'produkt-item';
+          div.innerHTML = `
             <span>${packs}×</span>
             <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
             <span>${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')} (${v})</span>
-          </div>`;
-        }).join('');
+          `;
+          fragment.appendChild(div);
+        });
+        this.prodList.innerHTML = '';
+        this.prodList.appendChild(fragment);
         this.prodList.style.display = 'block';
       }
       } catch (error) {
@@ -4540,16 +4546,32 @@
   		this.configListEl.appendChild(fragment);
 		}
 
+    // Performance: Schnellerer Array-Vergleich
+    arraysEqual(a, b) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i].length !== b[i].length) return false;
+        for (let j = 0; j < a[i].length; j++) {
+          if (a[i][j] !== b[i][j]) return false;
+        }
+      }
+      return true;
+    }
+
     updateSummaryOnChange() {
       // Performance: Debounced Updates
       if (this.updateTimeout) {
         clearTimeout(this.updateTimeout);
       }
       
-      this.updateTimeout = setTimeout(() => {
+      this.updateTimeout = setTimeout(async () => {
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
+        
+        // Performance: Kombiniere buildList und renderProductSummary
+        await this.buildList();
         this.renderProductSummary();
+        
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
       }, this.updateDelay);
@@ -4557,9 +4579,10 @@
 
         async renderProductSummary() {
       // NEUE GLOBALE LOGIK: Verwende aktuelle Checkbox-Werte für alle Konfigurationen
+      // Performance: Reduziere Deep Copies
       let bundles = this.configs.map((c, idx) => {
         return {
-          selection:   c.selection.map(row => [...row]), // Deep copy
+          selection:   c.selection, // Direkte Referenz statt Deep Copy
           rows:        c.rows,
           cols:        c.cols,
           cellWidth:   c.cellWidth,
@@ -4578,7 +4601,7 @@
       if (this.currentConfig === null) {
         // Keine gespeicherten Konfigurationen: Verwende aktuelle
         bundles.push({
-          selection:   this.selection.map(row => [...row]), // Deep copy
+          selection:   this.selection, // Direkte Referenz statt Deep Copy
           rows:        this.rows,
           cols:        this.cols,
           cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
@@ -4593,14 +4616,15 @@
         });
       } else {
         // Gespeicherte Konfigurationen vorhanden: Prüfe ob aktuelle sich unterscheidet
-        const currentSelection = this.selection.map(row => [...row]);
+        const currentSelection = this.selection;
         const savedSelection = this.configs[this.currentConfig].selection;
-        const selectionChanged = JSON.stringify(currentSelection) !== JSON.stringify(savedSelection);
+        // Performance: Schnellerer Vergleich statt JSON.stringify
+        const selectionChanged = this.arraysEqual(currentSelection, savedSelection);
         
         if (selectionChanged) {
           // Ersetze gespeicherte Konfigurationen durch aktuelle
           bundles = [{
-            selection:   currentSelection, // Deep copy
+            selection:   currentSelection, // Direkte Referenz
             rows:        this.rows,
             cols:        this.cols,
             cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
