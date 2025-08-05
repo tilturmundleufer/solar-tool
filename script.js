@@ -4096,6 +4096,12 @@
         		cell.setAttribute('aria-pressed', this.selection[y][x] ? 'true' : 'false');
         		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
         		
+        		// FIX: Update aktuelle Konfiguration mit Selection-Daten
+        		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+        			this.configs[this.currentConfig].selection = JSON.parse(JSON.stringify(this.selection));
+        			console.log(`DEBUG: Updated config ${this.currentConfig} with selection:`, this.configs[this.currentConfig].selection);
+        		}
+        		
         		this.trackInteraction();
         		this.buildList();
         		this.updateSummaryOnChange();
@@ -4640,32 +4646,16 @@
 				console.log('DEBUG: Selection matrix structure:', calculationData.selection);
 				console.log('DEBUG: Selection matrix length:', calculationData.selection?.length);
 				
-				// DEBUG: Zähle ausgewählte Zellen in calculationData.selection
+				// DEBUG: Zeige Selection-Status
+				let calculationSelectedCells = 0;
 				for (let y = 0; y < calculationData.rows; y++) {
-					console.log(`DEBUG: Row ${y}:`, calculationData.selection[y]);
 					for (let x = 0; x < calculationData.cols; x++) {
 						if (calculationData.selection[y]?.[x]) {
-							selectedCells++;
-							console.log(`DEBUG: Found selected cell at [${y}][${x}]`);
+							calculationSelectedCells++;
 						}
 					}
 				}
-				console.log(`DEBUG: Total selected cells in calculationData: ${selectedCells}`);
-				
-				// DEBUG: Zähle auch in this.selection
-				let thisSelectedCells = 0;
-				for (let y = 0; y < this.rows; y++) {
-					for (let x = 0; x < this.cols; x++) {
-						if (this.selection[y]?.[x]) {
-							thisSelectedCells++;
-						}
-					}
-				}
-				console.log(`DEBUG: Total selected cells in this.selection: ${thisSelectedCells}`);
-				
-				// DEBUG: Prüfe this.selection direkt
-				console.log('DEBUG: this.selection:', this.selection);
-				console.log('DEBUG: this.selection length:', this.selection?.length);
+				console.log(`DEBUG: Selected cells for calculation: ${calculationSelectedCells}`);
 					
 				} catch (error) {
 					console.log('DEBUG: Worker failed, using fallback:', error);
