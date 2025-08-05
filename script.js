@@ -71,7 +71,7 @@
     'Erdungsklemme': 'Erdungsklemme - ?? Stücl',
     'Quetschkabelschuhe': 'Quetschkabelschuhe - 100 Stück',
     'Erdungsband': 'Erdungsband',
-    'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück'
+    'Tellerkopfschraube': 'Tellerkopfschrauben 8x100 - 100 Stück'
   };
   
   const PRODUCT_IMAGES = {
@@ -1262,7 +1262,7 @@
               pdf.rect(15, yPosition - 2, 180, 10, 'F');
             }
             
-            const productName = productKey.replace(/_/g, ' ');
+            const productName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
             const packsNeeded = Math.ceil(quantity / (VE[productKey] || 1));
             const pricePerPack = getPriceFromCache(productKey);
             const totalForProduct = packsNeeded * pricePerPack;
@@ -1420,7 +1420,7 @@
           const totalProductPrice = packs * pricePerPack;
           totalPrice += totalProductPrice;
 
-          const productName = productKey.replace(/_/g, ' ');
+          const productName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
           
           pdf.text(productName, 20, yPosition + 2);
           pdf.text(needed.toString(), 70, yPosition + 2);
