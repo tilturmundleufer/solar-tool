@@ -4802,9 +4802,9 @@
 			parts.Endklemmen         += 4;
 			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
 			parts.Dachhaken          += len > 1 ? len * 3 : 4;
-			parts.Endkappen          += parts.Endklemmen;
+			parts.Endkappen          += 4;  // Fix: Direkt 4 statt parts.Endklemmen
 			parts.Solarmodul         += len;
-			parts.Schrauben          += parts.Dachhaken * 2;
+			parts.Schrauben          += (len > 1 ? len * 3 : 4) * 2;  // Fix: Direkt berechnen statt parts.Dachhaken * 2
 		}
 
     generateContinueLink() {

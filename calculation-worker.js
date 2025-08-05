@@ -108,10 +108,10 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
   parts.Endklemmen         += 4;
   parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-  			parts.Dachhaken          += len > 1 ? len * 3 : 4;
-                          parts.Endkappen          += parts.Endklemmen;
-        parts.Solarmodul         += len;
-        parts.Schrauben          += parts.Dachhaken * 2;
+  parts.Dachhaken          += len > 1 ? len * 3 : 4;
+  parts.Endkappen          += 4;  // Fix: Direkt 4 statt parts.Endklemmen
+  parts.Solarmodul         += len;
+  parts.Schrauben          += (len > 1 ? len * 3 : 4) * 2;  // Fix: Direkt berechnen statt parts.Dachhaken * 2
         
   workerLog(`WORKER DEBUG: Parts after processing - Solarmodul=${parts.Solarmodul}, Dachhaken=${parts.Dachhaken}, Schrauben=${parts.Schrauben}`);
 }
