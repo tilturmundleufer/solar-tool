@@ -213,7 +213,7 @@
       			parts.Dachhaken          += len > 1 ? len * 3 : 4;
       parts.Endkappen          += parts.Endklemmen;
       parts.Solarmodul         += len;
-      parts.Schrauben          += parts.Dachhaken * 2;
+      // Schrauben werden in der SolarGrid Klasse berechnet, nicht hier
     }
 
     calculateExtendedPartsSync(data) {
@@ -4300,7 +4300,7 @@
       p.Dachhaken          += len > 1 ? len * 3 : 4; // KORREKT: 3 Dachhaken pro Modul bei Reihen ≥2
       p.Endkappen          += p.Endklemmen;
       p.Solarmodul         += len;
-      p.Schrauben         += p.Dachhaken * 2;  // KORREKT: 2 Schrauben pro Dachhaken
+      // Schrauben werden in der SolarGrid Klasse berechnet, nicht hier
     }
 
     mapImage(key) {
