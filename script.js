@@ -1532,7 +1532,7 @@
         cable: /(?:mit|ohne)[\s-]*(?:kabel|solarkabel)/i,
         // "mit holz" oder "ohne holz"
         wood: /(?:mit|ohne)[\s-]*holz(?:unterleger)?/i,
-        // "3 reihen mit 5 modulen" oder "drei reihen 5 module"
+        // "3 reihen mit 5 modulen" oder "drei reihen 5 module" oder "20 module in 4 reihen"
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))/i,
         // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
         spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
@@ -1683,8 +1683,11 @@
         }
       }
 
-      // NEUE: Separate Abstand-Anpassung ohne Grid-Größe (z.B. nur "mit abstand")
-      if (!gridMatch) { // Nur wenn keine Grid-Größe angegeben wurde
+      // Separate Abstand-Anpassung nur wenn KEINE anderen Patterns gefunden wurden
+      // (z.B. nur "mit abstand" ohne Grid-Größe oder Module-Anzahl)
+      const hasOtherPatterns = gridMatch || rowMatch || input.match(this.patterns.moduleCount);
+      
+      if (!hasOtherPatterns) {
         const spacingOnlyMatch = input.match(this.patterns.spacing);
         if (spacingOnlyMatch) {
           let spacingRows = 0;
@@ -3426,7 +3429,6 @@
 							try {
 								const config = this.smartParser.parseInput(input);
 								this.smartParser.applyPreviewToMainGrid(config);
-								this.showToast(`Konfiguration "${input}" angewendet ✅`, 2000);
 								quickInput.value = ''; // Input leeren
 							} catch (error) {
 								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
