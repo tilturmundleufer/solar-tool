@@ -4580,7 +4580,7 @@
 
         async renderProductSummary() {
       // NEUE GLOBALE LOGIK: Verwende aktuelle Checkbox-Werte für alle Konfigurationen
-      const bundles = this.configs.map((c, idx) => {
+      let bundles = this.configs.map((c, idx) => {
         return {
           selection:   c.selection.map(row => [...row]), // Deep copy
           rows:        c.rows,
