@@ -4088,6 +4088,10 @@
         		this.selection[y][x] = !this.selection[y][x];
         		cell.classList.toggle('selected');
         		
+        		// DEBUG: Zeige Selection-Änderung
+        		console.log(`DEBUG: Cell clicked at [${y}][${x}], new value: ${this.selection[y][x]}`);
+        		console.log(`DEBUG: Current selection state:`, this.selection);
+        		
         		// FEATURE 6: Screen Reader Support - Update ARIA
         		cell.setAttribute('aria-pressed', this.selection[y][x] ? 'true' : 'false');
         		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
