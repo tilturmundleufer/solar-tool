@@ -4729,25 +4729,38 @@
 				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
 			};
 
+			console.log('DEBUG: calculatePartsDirectly input:', data);
+			console.log('DEBUG: Selection matrix:', selection);
+
 			for (let y = 0; y < rows; y++) {
 				if (!Array.isArray(selection[y])) continue;
 				let run = 0;
 
 				for (let x = 0; x < cols; x++) {
-					if (selection[y]?.[x]) run++;
+					if (selection[y]?.[x]) {
+						run++;
+						console.log(`DEBUG: Found selected cell at [${y}][${x}], run=${run}`);
+					}
 					else if (run) { 
+						console.log(`DEBUG: Processing group with run=${run} at row ${y}`);
 						this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation); 
 						run = 0; 
 					}
 				}
-				if (run) this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation);
+				if (run) {
+					console.log(`DEBUG: Processing final group with run=${run} at row ${y}`);
+					this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation);
+				}
 			}
 
+			console.log('DEBUG: calculatePartsDirectly result:', parts);
 			return parts;
 		}
 
 		// FALLBACK: Kopie der Worker-Berechnung
 		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation) {
+			console.log(`DEBUG: processGroupDirectly called with len=${len}, cellWidth=${cellWidth}, cellHeight=${cellHeight}, orientation=${orientation}`);
+			
 			const isVertical = orientation === 'vertical';
 			const actualCellWidth = isVertical ? cellHeight : cellWidth;
 			
@@ -4757,6 +4770,8 @@
 			const floor240 = Math.ceil(rem360 / 240);
 			const pure360 = Math.ceil(totalLen / 360);
 			const pure240 = Math.ceil(totalLen / 240);
+			
+			console.log(`DEBUG: Rail calculation - totalLen=${totalLen}, floor360=${floor360}, floor240=${floor240}`);
 			
 			const variants = [
 				{cnt360: floor360, cnt240: floor240},
@@ -4774,6 +4789,8 @@
 				.reduce((a, b) => a.waste <= b.waste ? a : b);
 			
 			const {cnt360, cnt240} = best;
+			console.log(`DEBUG: Best variant - cnt360=${cnt360}, cnt240=${cnt240}`);
+			
 			parts.Schiene_360_cm     += cnt360 * 2;
 			parts.Schiene_240_cm     += cnt240 * 2;
 			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
@@ -4783,6 +4800,8 @@
 			parts.Endkappen          += parts.Endklemmen;
 			parts.Solarmodul         += len;
 			parts.Schrauben          += parts.Dachhaken * 2;
+			
+			console.log(`DEBUG: Parts after processing - Solarmodul=${parts.Solarmodul}, Dachhaken=${parts.Dachhaken}, Schrauben=${parts.Schrauben}`);
 		}
 
     generateContinueLink() {
