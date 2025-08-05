@@ -2128,9 +2128,9 @@
       switch (action) {
         case 'saveConfig':
           if (config.configName) {
-            // Speichern mit benutzerdefiniertem Namen
-            this.solarGrid.saveNewConfig(config.configName);
-            this.solarGrid.showToast(`💾 Konfiguration "${config.configName}" gespeichert`, 2000);
+            // Name der aktuellen Konfiguration ändern
+            this.solarGrid.renameCurrentConfig(config.configName);
+            this.solarGrid.showToast(`💾 Konfiguration umbenannt zu "${config.configName}"`, 2000);
           } else {
             // Normales Speichern
             this.solarGrid.saveNewConfig();
@@ -4221,6 +4221,15 @@
   		this.updateSaveButtons();
   		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
 		}
+
+    renameCurrentConfig(newName) {
+      if (this.currentConfig !== null && this.currentConfig >= 0 && this.currentConfig < this.configs.length) {
+        // Aktuelle Konfiguration umbenennen
+        this.configs[this.currentConfig].name = newName;
+        this.renderConfigList();
+        this.updateSaveButtons();
+      }
+    }
 
     updateConfig() {
       const idx = this.currentConfig;
