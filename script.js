@@ -4614,12 +4614,18 @@
   					orientation: b.orientation
   				};
 
+  				console.log('DEBUG: Calculation Data:', calculationData);
+  				console.log('DEBUG: Bundle selection:', b.selection);
+
   				let parts;
   				try {
   					parts = await calculationManager.calculate('calculateParts', calculationData);
+  					console.log('DEBUG: Worker result:', parts);
   				} catch (error) {
+  					console.log('DEBUG: Worker failed, using fallback:', error);
   					// Fallback zu synchroner Berechnung
   					parts = this.calculatePartsDirectly(calculationData);
+  					console.log('DEBUG: Fallback result:', parts);
   				}
 
   				// Module werden NACH der Summierung entfernt (wie in buildList)
@@ -4629,11 +4635,14 @@
   			}));
 
   			// Summiere alle Parts
-  			allParts.forEach(parts => {
+  			console.log('DEBUG: All parts before summation:', allParts);
+  			allParts.forEach((parts, index) => {
+  				console.log(`DEBUG: Summing parts ${index}:`, parts);
     		Object.entries(parts).forEach(([k, v]) => {
       		total[k] = (total[k] || 0) + v;
     		});
   		});
+  		console.log('DEBUG: Total after summation:', total);
   		
   		// NEUE GLOBALE LOGIK: Füge pauschale Produkte zur Gesamtbestellung hinzu
   		const totalSelectedCells = bundles.reduce((sum, bundle) => {
