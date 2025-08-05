@@ -3459,22 +3459,26 @@
 								
 								// Zeige Preview für gültige Konfigurationen
 								if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
+									console.log('Showing config preview'); // Debug
 									this.showConfigPreview(config);
 									
 									// Preview nach 3 Sekunden automatisch löschen
+									console.log('Setting timeout for auto-clear in 3 seconds'); // Debug
 									this.previewTimeout = setTimeout(() => {
-										console.log('Auto-clearing preview after 3 seconds'); // Debug
+										console.log('Auto-clearing preview after 3 seconds - timeout triggered'); // Debug
 										if (this.solarGrid && this.solarGrid.clearGridPreview) {
+											console.log('Calling clearGridPreview from timeout'); // Debug
 											this.solarGrid.clearGridPreview();
+										} else {
+											console.log('clearGridPreview not available'); // Debug
 										}
 									}, 3000);
+								} else {
+									console.log('No valid config changes found'); // Debug
 								}
 							} catch (error) {
 								console.log('Parsing error:', error.message); // Debug
-								// Bei Parsing-Fehler Preview löschen
-								if (this.solarGrid && this.solarGrid.clearGridPreview) {
-									this.solarGrid.clearGridPreview();
-								}
+								// Bei Parsing-Fehler KEINE Preview löschen - nur loggen
 							}
 						} else {
 							console.log('Input empty, clearing preview'); // Debug
