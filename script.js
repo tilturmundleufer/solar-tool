@@ -4190,6 +4190,7 @@
 		if (this.mc4) this.mc4.checked = false;
 		if (this.solarkabel) this.solarkabel.checked = false;
 		if (this.holz) this.holz.checked = false;
+		if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
 
   		this.cols = cols;
   		this.rows = rows;
@@ -5081,7 +5082,7 @@
       
       // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
       if (this.currentConfig === null && this.configs.length === 0) {
-            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked);
             allBundles.push(currentParts);
       }
       
