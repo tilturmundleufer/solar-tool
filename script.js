@@ -4051,12 +4051,6 @@
 		}
 
     buildGrid() {
-  		// FIX: Lade Selection aus aktueller Konfiguration
-  		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-  			this.selection = JSON.parse(JSON.stringify(this.configs[this.currentConfig].selection));
-  			console.log(`DEBUG: Loaded selection from config ${this.currentConfig}:`, this.selection);
-  		}
-  		
   		if (!Array.isArray(this.selection)) return;
   		
   		// FEATURE 5: Performance-Monitoring - Start
