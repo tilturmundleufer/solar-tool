@@ -2851,6 +2851,7 @@
       this.mc4           = document.getElementById('mc4');
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
+      this.quetschkabelschuhe = document.getElementById('quetschkabelschuhe');
       
 
       this.listHolder    = document.querySelector('.product-section');
@@ -3386,7 +3387,7 @@
       }
 
   		// GLOBALE Checkbox-Event-Listener - gelten für alle Konfigurationen
-		const checkboxes = [this.incM, this.mc4, this.solarkabel, this.holz].filter(el => el);
+		const checkboxes = [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe].filter(el => el);
 		checkboxes.forEach(el =>
 			el.addEventListener('change', () => {
 				this.trackInteraction();
@@ -4304,6 +4305,7 @@
 		this.mc4.checked = cfg.mc4;
 		this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
 		this.holz.checked = cfg.holz;
+		this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
 
   		// STATE Werte setzen - WICHTIG: Vor setup() setzen
   		this.cols = cfg.cols;
@@ -4438,6 +4440,7 @@
         mc4:         this.mc4 && this.mc4.checked,
         solarkabel:  this.solarkabel && this.solarkabel.checked,
         holz:        this.holz && this.holz.checked,
+        quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked,
         cols:        this.cols,
         rows:        this.rows,
         cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
@@ -4592,7 +4595,8 @@
           incM:        this.incM && this.incM.checked,
           mc4:         this.mc4 && this.mc4.checked,
           solarkabel:  this.solarkabel && this.solarkabel.checked,
-          holz:        this.holz && this.holz.checked
+          holz:        this.holz && this.holz.checked,
+          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
         };
       });
 
@@ -4610,7 +4614,8 @@
           incM:        this.incM && this.incM.checked,
           mc4:         this.mc4 && this.mc4.checked,
           solarkabel:  this.solarkabel && this.solarkabel.checked,
-          holz:        this.holz && this.holz.checked
+          holz:        this.holz && this.holz.checked,
+          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
         });
       } else {
         // Gespeicherte Konfigurationen vorhanden: Prüfe ob aktuelle sich unterscheidet
@@ -4631,7 +4636,8 @@
             incM:        this.incM && this.incM.checked,
             mc4:         this.mc4 && this.mc4.checked,
             solarkabel:  this.solarkabel && this.solarkabel.checked,
-            holz:        this.holz && this.holz.checked
+            holz:        this.holz && this.holz.checked,
+            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
           }];
         }
         // Wenn keine Änderung, verwende gespeicherte Konfigurationen (bundles bleibt unverändert)
@@ -4698,6 +4704,11 @@
   		// Unterlegholz: Pauschal 1x zur Gesamtbestellung (NEU: VE von 50)
   		if (this.holz && this.holz.checked) {
   			total.Holzunterleger = 1; // Pauschal 1x statt basierend auf Schienen
+  		}
+  		
+  		// Quetschkabelschuhe: Pauschal 1x zur Gesamtbestellung
+  		if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) {
+  			total.Quetschkabelschuhe = 1; // Pauschal 1x zur Gesamtbestellung
   		}
   		
   		} catch (error) {
@@ -4999,7 +5010,7 @@
 
     async addCurrentToCart() {
       try {
-        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked);
       const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
       
       if (itemCount === 0) {
@@ -5049,9 +5060,9 @@
         const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
         // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
         if (idx === this.currentConfig) {
-              return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked);
+              return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked);
         } else {
-              return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz);
+                              return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz, cfg.quetschkabelschuhe);
         }
         }));
       
@@ -5093,7 +5104,7 @@
       }
     }
 
-    async _buildPartsFor(sel, incM, mc4, solarkabel, holz) {
+    async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe) {
       // Speichere aktuelle Auswahl
       const originalSelection = this.selection.map(r => [...r]);
       
@@ -5108,6 +5119,7 @@
       }
       if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
       if (holz)  parts.Holzunterleger = 1; // NEU: Pauschal 1x statt basierend auf Schienen
+      if (quetschkabelschuhe) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
       
         return parts;
       } finally {
@@ -5141,7 +5153,8 @@
         includeModules: this.incM.checked,
         mc4: this.mc4.checked,
         cable: this.solarkabel.checked,
-        wood: this.holz.checked
+        wood: this.holz.checked,
+        quetschkabelschuhe: this.quetschkabelschuhe.checked
       };
     }
 
@@ -5153,6 +5166,7 @@
         config.mc4 = this.mc4.checked;
         config.solarkabel = this.solarkabel.checked;
         config.holz = this.holz.checked;
+        config.quetschkabelschuhe = this.quetschkabelschuhe.checked;
       });
       
       // Aktualisiere Summary und Produktliste
@@ -5180,7 +5194,7 @@
         
         // Hole Daten - für aktuelle Config verwende Live-Daten
         let targetSelection, targetCols, targetRows, targetOrientation;
-        let targetIncM, targetMc4, targetCable, targetWood, targetCellWidth, targetCellHeight;
+        let targetIncM, targetMc4, targetCable, targetWood, targetQuetschkabelschuhe, targetCellWidth, targetCellHeight;
         
         if (index === this.currentConfig) {
           // Aktuelle Konfiguration: MOMENTAUFNAHME der Live-Daten
@@ -5192,6 +5206,7 @@
           targetMc4 = this.mc4.checked;
           targetCable = this.solarkabel.checked;
           targetWood = this.holz.checked;
+          targetQuetschkabelschuhe = this.quetschkabelschuhe.checked;
           targetCellWidth = parseInt(this.wIn.value, 10);
           targetCellHeight = parseInt(this.hIn.value, 10);
         } else {
@@ -5204,6 +5219,7 @@
           targetMc4 = config.mc4;
           targetCable = config.solarkabel;
           targetWood = config.holz;
+          targetQuetschkabelschuhe = config.quetschkabelschuhe;
           targetCellWidth = config.cellWidth;
           targetCellHeight = config.cellHeight;
         }
@@ -5232,6 +5248,7 @@
           mc4: targetMc4 || false,
           cable: targetCable || false,
           wood: targetWood || false,
+          quetschkabelschuhe: targetQuetschkabelschuhe || false,
           // Zusätzliche Metadaten für Debugging
           selectedCells: normalizedSelection.flat().filter(v => v).length,
           totalCells: (targetCols || 5) * (targetRows || 5)
