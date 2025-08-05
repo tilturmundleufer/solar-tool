@@ -4891,11 +4891,10 @@
     createPreviewGrid(config) {
       console.log('Creating preview grid with config:', config); // Debug
       
-      const previewContainer = document.getElementById('preview-grid-container');
       const previewGrid = document.getElementById('preview-grid');
       
-      if (!previewContainer || !previewGrid) {
-        console.error('Preview grid elements not found');
+      if (!previewGrid) {
+        console.error('Preview grid element not found');
         return;
       }
       
@@ -4960,18 +4959,16 @@
     }
     
     showPreviewGrid() {
-      const previewContainer = document.getElementById('preview-grid-container');
-      if (previewContainer) {
-        previewContainer.style.display = 'block';
-        previewContainer.classList.add('active');
+      const previewGrid = document.getElementById('preview-grid');
+      if (previewGrid) {
+        previewGrid.style.display = 'grid';
       }
     }
     
     hidePreviewGrid() {
-      const previewContainer = document.getElementById('preview-grid-container');
-      if (previewContainer) {
-        previewContainer.style.display = 'none';
-        previewContainer.classList.remove('active');
+      const previewGrid = document.getElementById('preview-grid');
+      if (previewGrid) {
+        previewGrid.style.display = 'none';
       }
     }
     
@@ -4997,26 +4994,6 @@
       }
       
       return selection;
-    }
-    
-    addPreviewStyling() {
-      // Füge Bulk-Select-Styling zu Grid-Zellen hinzu (wie im Bulk-Select)
-      if (this.gridEl) {
-        const cells = this.gridEl.querySelectorAll('.grid-cell');
-        cells.forEach((cell, index) => {
-          const row = Math.floor(index / this.cols);
-          const col = index % this.cols;
-          
-          // Prüfe ob Zelle in der Selection ist
-          if (this.selection && this.selection[row] && this.selection[row][col]) {
-            // Selected cells: Dunkelblau mit gelbem gestrichelten Rand (wie Bulk-Select)
-            cell.classList.add('bulk-highlight', 'drag-preview-select');
-          } else {
-            // Unselected cells: Hellgrau mit gelbem Rand
-            cell.classList.add('preview-mode');
-          }
-        });
-      }
     }
     
     clearGridPreview() {
