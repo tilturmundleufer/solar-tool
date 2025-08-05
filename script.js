@@ -64,14 +64,14 @@
   
   const PRODUCT_NAME_MAP = {
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
-    'Schrauben': 'Schraube M10x25 - 100 Stück',
+    'Schrauben': 'Schraube M10x25',
     'Solarkabel': 'Solarkabel 100M',
     'Holzunterleger': 'Unterlegholz für Dachhaken - 50 Stück',
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     'Erdungsklemme': 'Erdungsklemme - ?? Stücl',
     'Quetschkabelschuhe': 'Quetschkabelschuhe - 100 Stück',
     'Erdungsband': 'Erdungsband',
-    'Tellerkopfschraube': 'Tellerkopfschrauben 8x100 - 100 Stück'
+    'Tellerkopfschraube': 'Tellerkopfschraube 8x100'
   };
   
   const PRODUCT_IMAGES = {
@@ -4136,7 +4136,7 @@
           return `<div class="produkt-item">
             <span>${packs}×</span>
             <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
-            <span>${k.replace(/_/g,' ')} (${v})</span>
+            <span>${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')} (${v})</span>
           </div>`;
         }).join('');
         this.prodList.style.display = 'block';
