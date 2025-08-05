@@ -4597,11 +4597,7 @@
   					parts = this.calculatePartsDirectly(calculationData);
   				}
 
-  				// Checkbox-basierte Modifikationen - NUR für Module
-    		if (!b.incM) {
-    			delete parts.Solarmodul;
-    			console.log('Module entfernt für Konfiguration');
-    		}
+  				// Module werden NACH der Summierung entfernt (wie in buildList)
   				// MC4, Solarkabel und Holz werden GLOBAL nach der Summierung hinzugefügt
 
   				return parts;
@@ -4618,6 +4614,11 @@
   		const totalSelectedCells = bundles.reduce((sum, bundle) => {
   			return sum + bundle.selection.flat().filter(v => v).length;
   		}, 0);
+  		
+  		// Module NACH der Summierung entfernen (wie in buildList)
+  		if (this.incM && !this.incM.checked) {
+  			delete total.Solarmodul;
+  		}
   		
   		// MC4-Stecker: Berechne basierend auf Gesamt-Modulen aller Konfigurationen
   		if (this.mc4 && this.mc4.checked) {
