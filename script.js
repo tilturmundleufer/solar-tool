@@ -5073,8 +5073,6 @@
     }
     
     createPreviewGrid(config) {
-      console.log('Creating preview grid with config:', config); // Debug
-      
       const previewGrid = document.getElementById('preview-grid');
       
       if (!previewGrid) {
@@ -5082,25 +5080,68 @@
         return;
       }
       
-      // Berechne Preview-Grid-Größe
+      // Starte mit aktuellem Grid als Basis
       let previewCols = this.cols;
       let previewRows = this.rows;
+      let previewSelection = this.selection ? this.selection.map(row => [...row]) : 
+        Array.from({ length: previewRows }, () => Array.from({ length: previewCols }, () => false));
       
+      // Wende Konfiguration auf Preview an
       if (config.cols && config.rows) {
+        // Neue Grid-Größe
         previewCols = config.cols;
         previewRows = config.rows;
-      }
-      
-      // Erstelle Preview-Selection
-      let previewSelection;
-      if (config.moduleCount) {
-        console.log('Creating module selection for', config.moduleCount, 'modules');
-        previewSelection = this.createModuleSelection(config.moduleCount, previewCols, previewRows);
-      } else {
-        console.log('Creating empty selection for preview');
-        previewSelection = Array.from({ length: previewRows }, () =>
-          Array.from({ length: previewCols }, () => false)
+        
+        // Erstelle neue Selection basierend auf Modul-Anzahl oder leere Selection
+        if (config.moduleCount) {
+          previewSelection = this.createModuleSelection(config.moduleCount, previewCols, previewRows);
+        } else {
+          previewSelection = Array.from({ length: previewRows }, () =>
+            Array.from({ length: previewCols }, () => false)
+          );
+        }
+             } else if (config.moduleCount) {
+         // Nur Modul-Anzahl geändert - behalte Grid-Größe
+         const hasSpacing = config.adjustSpacing === 'withSpacing' || 
+                           (config.rowConfig && config.rowConfig.spacing);
+         previewSelection = this.createModuleSelection(config.moduleCount, previewCols, previewRows, hasSpacing);
+       } else if (config.rowConfig) {
+        // Reihen-Konfiguration anwenden
+        const { numRows, modulesPerRow, spacing } = config.rowConfig;
+        previewRows = numRows + (spacing ? 1 : 0); // +1 für Abstand
+        
+        // Erstelle Selection mit Abstand
+        previewSelection = Array.from({ length: previewRows }, (_, rowIndex) =>
+          Array.from({ length: previewCols }, (_, colIndex) => {
+            if (spacing && rowIndex === Math.floor(numRows / 2)) {
+              return false; // Abstand-Reihe
+            }
+            return rowIndex < numRows && colIndex < modulesPerRow;
+          })
         );
+      } else if (config.adjustSpacing) {
+        // Abstand-Konfiguration anwenden
+        if (config.adjustSpacing === 'withSpacing') {
+          // Füge Abstand zwischen Reihen hinzu
+          const newRows = previewRows + Math.ceil(previewRows / 2);
+          const newSelection = Array.from({ length: newRows }, () =>
+            Array.from({ length: previewCols }, () => false)
+          );
+          
+          // Kopiere Module mit Abstand
+          let newRowIndex = 0;
+          for (let oldRow = 0; oldRow < previewRows; oldRow++) {
+            for (let col = 0; col < previewCols; col++) {
+              if (previewSelection[oldRow] && previewSelection[oldRow][col]) {
+                newSelection[newRowIndex][col] = true;
+              }
+            }
+            newRowIndex += 2; // Überspringe Abstand-Reihe
+          }
+          
+          previewRows = newRows;
+          previewSelection = newSelection;
+        }
       }
       
       // Baue Preview-Grid
@@ -5205,17 +5246,37 @@
       }
     }
     
-    createModuleSelection(moduleCount, cols, rows) {
+    createModuleSelection(moduleCount, cols, rows, spacing = false) {
       const selection = Array.from({ length: rows }, () =>
         Array.from({ length: cols }, () => false)
       );
       
-      // Automatische Modul-Auswahl (von links nach rechts, oben nach unten)
-      let modulesPlaced = 0;
-      for (let row = 0; row < rows && modulesPlaced < moduleCount; row++) {
-        for (let col = 0; col < cols && modulesPlaced < moduleCount; col++) {
-          selection[row][col] = true;
+      if (spacing) {
+        // Mit Abstand: Module in erste und letzte Reihe
+        const modulesPerRow = Math.ceil(moduleCount / 2);
+        let modulesPlaced = 0;
+        
+        // Erste Reihe
+        for (let col = 0; col < Math.min(modulesPerRow, cols) && modulesPlaced < moduleCount; col++) {
+          selection[0][col] = true;
           modulesPlaced++;
+        }
+        
+        // Letzte Reihe (falls noch Module übrig)
+        if (modulesPlaced < moduleCount && rows > 2) {
+          for (let col = 0; col < Math.min(moduleCount - modulesPlaced, cols); col++) {
+            selection[rows - 1][col] = true;
+            modulesPlaced++;
+          }
+        }
+      } else {
+        // Ohne Abstand: Normale Auswahl von links nach rechts, oben nach unten
+        let modulesPlaced = 0;
+        for (let row = 0; row < rows && modulesPlaced < moduleCount; row++) {
+          for (let col = 0; col < cols && modulesPlaced < moduleCount; col++) {
+            selection[row][col] = true;
+            modulesPlaced++;
+          }
         }
       }
       
