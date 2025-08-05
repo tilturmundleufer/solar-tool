@@ -6,6 +6,18 @@ function workerLog(...args) {
   postMessage({ type: 'debug', data: args });
 }
 
+// Worker-Message-Handler hinzufügen
+self.onmessage = function(e) {
+  const { type, data, id } = e.data;
+  
+  if (type === 'calculateParts') {
+    workerLog('WORKER DEBUG: calculateParts called with data:', data);
+    const result = calculateParts(data.selection, data.rows, data.cols, data.cellWidth, data.cellHeight, data.orientation);
+    workerLog('WORKER DEBUG: calculateParts returning:', result);
+    self.postMessage({ type: 'result', id, data: result });
+  }
+};
+
 // VE-Werte für Berechnungen
 const VE_VALUES = {
   Endklemmen: 100,
