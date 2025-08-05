@@ -151,35 +151,79 @@
     }
 
     calculatePartsSync(data) {
-      // Korrekte Berechnung mit Schienenlogik (wie in der ursprünglichen processGroup Methode)
-      const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
-      const parts = {
-        Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
-        Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-        Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
-      };
+      // FALLBACK: Verwende Calculation Worker direkt
+      try {
+        // Simuliere Worker-Aufruf synchron
+        const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
+        const parts = {
+          Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+          Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+        };
 
-      // Verwende die korrekte Schienenlogik
-      for (let y = 0; y < rows; y++) {
-        if (!Array.isArray(selection[y])) continue;
-        let run = 0;
+        // Verwende die korrekte Schienenlogik (wie im Worker)
+        for (let y = 0; y < rows; y++) {
+          if (!Array.isArray(selection[y])) continue;
+          let run = 0;
 
-        for (let x = 0; x < cols; x++) {
-          if (selection[y]?.[x]) run++;
-          else if (run) { 
-            this.processGroupSync(run, parts, cellWidth, cellHeight, orientation); 
-            run = 0; 
+          for (let x = 0; x < cols; x++) {
+            if (selection[y]?.[x]) run++;
+            else if (run) { 
+              this.processGroupSync(run, parts, cellWidth, cellHeight, orientation); 
+              run = 0; 
+            }
           }
+          if (run) this.processGroupSync(run, parts, cellWidth, cellHeight, orientation);
         }
-        if (run) this.processGroupSync(run, parts, cellWidth, cellHeight, orientation);
-      }
 
-      return parts;
+        return parts;
+      } catch (error) {
+        console.error('calculatePartsSync error:', error);
+        return {
+          Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+          Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+        };
+      }
     }
 
     processGroupSync(len, parts, cellWidth, cellHeight, orientation) {
-      // Diese Methode wird nicht mehr verwendet
-      // Alle Berechnungen laufen über den Calculation Worker
+      // FALLBACK: Kopie der Worker-Berechnung
+      const isVertical = orientation === 'vertical';
+      const actualCellWidth = isVertical ? cellHeight : cellWidth;
+      
+      const totalLen = len * actualCellWidth;
+      const floor360 = Math.floor(totalLen / 360);
+      const rem360 = totalLen - floor360 * 360;
+      const floor240 = Math.ceil(rem360 / 240);
+      const pure360 = Math.ceil(totalLen / 360);
+      const pure240 = Math.ceil(totalLen / 240);
+      
+      const variants = [
+        {cnt360: floor360, cnt240: floor240},
+        {cnt360: pure360,  cnt240: 0},
+        {cnt360: 0,        cnt240: pure240}
+      ].map(v => ({
+        ...v,
+        rails: v.cnt360 + v.cnt240,
+        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+      }));
+      
+      const minRails = Math.min(...variants.map(v => v.rails));
+      const best = variants
+        .filter(v => v.rails === minRails)
+        .reduce((a, b) => a.waste <= b.waste ? a : b);
+      
+      const {cnt360, cnt240} = best;
+      parts.Schiene_360_cm     += cnt360 * 2;
+      parts.Schiene_240_cm     += cnt240 * 2;
+      parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+      parts.Endklemmen         += 4;
+      parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+      parts.Dachhaken          += len > 1 ? len * 3 : 4;
+      parts.Endkappen          += parts.Endklemmen;
+      parts.Solarmodul         += len;
+      parts.Schrauben          += parts.Dachhaken * 2;
     }
 
     calculateExtendedPartsSync(data) {
@@ -4667,10 +4711,43 @@
 			return parts;
 		}
 
-		// FALLBACK: Verwende Calculation Worker
+		// FALLBACK: Kopie der Worker-Berechnung
 		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation) {
-			// Diese Methode wird nicht mehr verwendet
-			// Alle Berechnungen laufen über den Calculation Worker
+			const isVertical = orientation === 'vertical';
+			const actualCellWidth = isVertical ? cellHeight : cellWidth;
+			
+			const totalLen = len * actualCellWidth;
+			const floor360 = Math.floor(totalLen / 360);
+			const rem360 = totalLen - floor360 * 360;
+			const floor240 = Math.ceil(rem360 / 240);
+			const pure360 = Math.ceil(totalLen / 360);
+			const pure240 = Math.ceil(totalLen / 240);
+			
+			const variants = [
+				{cnt360: floor360, cnt240: floor240},
+				{cnt360: pure360,  cnt240: 0},
+				{cnt360: 0,        cnt240: pure240}
+			].map(v => ({
+				...v,
+				rails: v.cnt360 + v.cnt240,
+				waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+			}));
+			
+			const minRails = Math.min(...variants.map(v => v.rails));
+			const best = variants
+				.filter(v => v.rails === minRails)
+				.reduce((a, b) => a.waste <= b.waste ? a : b);
+			
+			const {cnt360, cnt240} = best;
+			parts.Schiene_360_cm     += cnt360 * 2;
+			parts.Schiene_240_cm     += cnt240 * 2;
+			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+			parts.Endklemmen         += 4;
+			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+			parts.Dachhaken          += len > 1 ? len * 3 : 4;
+			parts.Endkappen          += parts.Endklemmen;
+			parts.Solarmodul         += len;
+			parts.Schrauben          += parts.Dachhaken * 2;
 		}
 
     generateContinueLink() {
