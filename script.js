@@ -2805,6 +2805,14 @@
       this.currentConfig = null;
       this.default       = { cols:5, rows:5, width:176, height:113 };
       
+      // Performance: Debouncing für häufige Updates
+      this.updateTimeout = null;
+      this.updateDelay = 100; // ms
+      
+      // Performance: Resize Observer für responsive Updates
+      this.resizeObserver = null;
+      this.resizeTimeout = null;
+      
       // Tracking für Session-Daten
       this.sessionId = this.generateSessionId();
       this.sessionStartTime = Date.now();
@@ -3468,6 +3476,9 @@
   			this.loadConfig(0);
 			}
 			
+			// Performance: Resize Observer für responsive Updates
+			this.setupResizeObserver();
+			
 			// Initialisiere Smart Config Features
 			this.initSmartConfigFeatures();
 		}
@@ -3943,7 +3954,11 @@
 
     buildGrid() {
   		if (!Array.isArray(this.selection)) return;
-  		this.gridEl.innerHTML = '';
+  		
+  		// Performance: Verwende DocumentFragment für bessere Performance
+  		const fragment = document.createDocumentFragment();
+  		
+  		// CSS-Variablen setzen
   		document.documentElement.style.setProperty('--cols', this.cols);
   		document.documentElement.style.setProperty('--rows', this.rows);
 
@@ -3951,6 +3966,7 @@
   		const centerY = (this.rows - 1) / 2;
   		const delayPerUnit = 60; // ms
 
+  		// Batch-Erstellung aller Zellen
   		for (let y = 0; y < this.rows; y++) {
     		if (!Array.isArray(this.selection[y])) continue;
 
@@ -3959,6 +3975,7 @@
       		cell.className = 'grid-cell animate-in';
       		if (this.selection[y]?.[x]) cell.classList.add('selected');
 
+      		// Event-Listener optimiert
       		cell.addEventListener('click', () => {
         		if (!this.selection[y]) this.selection[y] = [];
         		this.selection[y][x] = !this.selection[y][x];
@@ -3975,9 +3992,13 @@
       		cell.style.animationDelay = `${delay}ms`;
 
       		setTimeout(() => cell.classList.remove('animate-in'), 400);
-      		this.gridEl.appendChild(cell);
+      		fragment.appendChild(cell);
     		}
   		}
+  		
+  		// Einmalige DOM-Manipulation
+  		this.gridEl.innerHTML = '';
+  		this.gridEl.appendChild(fragment);
 		}
     
     async buildList() {
@@ -4339,7 +4360,9 @@
     }
 
     renderConfigList() {
-  		this.configListEl.innerHTML = '';
+  		// Performance: Verwende DocumentFragment für bessere Performance
+  		const fragment = document.createDocumentFragment();
+  		
   		this.configs.forEach((cfg, idx) => {
     		const div = document.createElement('div');
     		div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
@@ -4446,12 +4469,24 @@
     		div.appendChild(nameContainer);
     		if (deleteBtn) div.appendChild(deleteBtn); // Nur hinzufügen wenn vorhanden
     		div.appendChild(shareBtn);
-    		this.configListEl.appendChild(div);
+    		fragment.appendChild(div);
   		});
+  		
+  		// Einmalige DOM-Manipulation
+  		this.configListEl.innerHTML = '';
+  		this.configListEl.appendChild(fragment);
 		}
 
     updateSummaryOnChange() {
-      this.renderProductSummary();
+      // Performance: Debounced Updates
+      if (this.updateTimeout) {
+        clearTimeout(this.updateTimeout);
+      }
+      
+      this.updateTimeout = setTimeout(() => {
+        this.renderProductSummary();
+        this.updateTimeout = null;
+      }, this.updateDelay);
     }
 
         async renderProductSummary() {
@@ -5333,6 +5368,59 @@
         }
       }, 150); // Kurze Verzögerung für smooth Animation
     }
+    
+    setupResizeObserver() {
+      // Performance: Resize Observer für responsive Updates
+      if (this.wrapper && window.ResizeObserver) {
+        this.resizeObserver = new ResizeObserver((entries) => {
+          // Debounced resize updates
+          if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+          }
+          
+          this.resizeTimeout = setTimeout(() => {
+            this.updateSize();
+            this.resizeTimeout = null;
+          }, 150); // 150ms debounce
+        });
+        
+        this.resizeObserver.observe(this.wrapper);
+      }
+    }
+    
+    cleanup() {
+      // Memory-Leak Prävention: Timeouts löschen
+      if (this.updateTimeout) {
+        clearTimeout(this.updateTimeout);
+        this.updateTimeout = null;
+      }
+      
+      if (this.previewTimeout) {
+        clearTimeout(this.previewTimeout);
+        this.previewTimeout = null;
+      }
+      
+      if (this.resizeTimeout) {
+        clearTimeout(this.resizeTimeout);
+        this.resizeTimeout = null;
+      }
+      
+      // Resize Observer cleanup
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+        this.resizeObserver = null;
+      }
+      
+      // Event-Listener entfernen
+      if (this.gridEl) {
+        this.gridEl.innerHTML = '';
+      }
+      
+      // PDF Generator cleanup
+      if (this.pdfGenerator) {
+        this.pdfGenerator = null;
+      }
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -5345,6 +5433,11 @@
   window.addEventListener('beforeunload', () => {
     if (calculationManager) {
       calculationManager.destroy();
+    }
+    
+    // Memory-Leak Prävention: Event-Listener entfernen
+    if (window.solarGrid) {
+      window.solarGrid.cleanup();
     }
   });
 })();
