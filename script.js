@@ -1891,17 +1891,25 @@
       const checkboxWithAllMatch = input.match(this.patterns.checkboxWithAll);
       
       if (checkboxAllExceptMatch) {
-        // "alles außer holz" → Alle außer Holz
-        config.includeModules = true;
-        config.mc4 = true;
-        config.cable = true;
-        config.wood = false;
+        // "alles außer holz" → Alle außer das spezifische Wort
+        const exceptWord = input.toLowerCase().match(/(?:alles\s*außer|alle\s*außer)\s+(\w+)/);
+        if (exceptWord) {
+          const exceptItem = exceptWord[1];
+          config.includeModules = exceptItem !== 'module' && exceptItem !== 'modulen';
+          config.mc4 = exceptItem !== 'mc4';
+          config.cable = exceptItem !== 'kabel' && exceptItem !== 'solarkabel';
+          config.wood = exceptItem !== 'holz' && exceptItem !== 'holzunterleger';
+        }
       } else if (checkboxOnlyMatch) {
-        // "nur module und mc4" → Nur Module + MC4
-        config.includeModules = true;
-        config.mc4 = true;
-        config.cable = false;
-        config.wood = false;
+        // "nur module und mc4" → Nur die spezifischen Items
+        const onlyItems = input.toLowerCase().match(/(?:nur|only)\s+(.+?)(?:\s+und\s+(.+?))*(?:\s*$)/);
+        if (onlyItems) {
+          const items = [onlyItems[1], onlyItems[2]].filter(Boolean);
+          config.includeModules = items.some(item => item.includes('module'));
+          config.mc4 = items.some(item => item.includes('mc4'));
+          config.cable = items.some(item => item.includes('kabel') || item.includes('solarkabel'));
+          config.wood = items.some(item => item.includes('holz'));
+        }
       } else if (checkboxWithoutMatch) {
         // "ohne zubehör" → Nur Module
         config.includeModules = true;
@@ -2028,7 +2036,7 @@
 
       // NEUE ACTION PATTERNS HANDHABEN (höchste Priorität)
       if (config.action) {
-        this.handleAction(config.action);
+        this.handleAction(config.action, config);
         return; // Keine weitere Konfiguration anwenden
       }
 
@@ -2116,11 +2124,18 @@
     }
     
     // NEUE ACTION HANDLER METHODE
-    handleAction(action) {
+    handleAction(action, config = {}) {
       switch (action) {
         case 'saveConfig':
-          this.solarGrid.saveNewConfig();
-          this.solarGrid.showToast('💾 Konfiguration gespeichert', 2000);
+          if (config.configName) {
+            // Speichern mit benutzerdefiniertem Namen
+            this.solarGrid.saveNewConfig(config.configName);
+            this.solarGrid.showToast(`💾 Konfiguration "${config.configName}" gespeichert`, 2000);
+          } else {
+            // Normales Speichern
+            this.solarGrid.saveNewConfig();
+            this.solarGrid.showToast('💾 Konfiguration gespeichert', 2000);
+          }
           break;
           
         case 'deleteConfig':
@@ -4177,7 +4192,7 @@
   		}, duration);
 		}
 
-    saveNewConfig() {
+    saveNewConfig(customName = null) {
   		// 1. Aktuelle Auswahl in der vorherigen Konfiguration speichern
   		if (this.currentConfig !== null) {
   			this.updateConfig(); // Speichere aktuelle Änderungen in vorheriger Config
@@ -4195,7 +4210,7 @@
   		const originalSelection = this.selection;
   		this.selection = emptySelection;
   		
-  		const cfg = this._makeConfigObject();
+  		const cfg = this._makeConfigObject(customName);
   		this.configs.push(cfg);
   		
   		// 5. Neue Konfiguration auswählen und Grid neu aufbauen
@@ -4251,10 +4266,13 @@
   		this.updateSaveButtons();
 		}
 
-    _makeConfigObject() {
+    _makeConfigObject(customName = null) {
       // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
       let configName;
-      if (this.currentConfig !== null) {
+      if (customName) {
+        // Benutzerdefinierter Name
+        configName = customName;
+      } else if (this.currentConfig !== null) {
         // Bestehende Konfiguration: Behalte den Namen
         configName = this.configs[this.currentConfig].name;
       } else {
