@@ -2157,7 +2157,7 @@
     
     // Neue Methode: Preview-Grid verstecken und Konfiguration auf Hauptgrid anwenden
     applyPreviewToMainGrid(config) {
-      console.log('Applying preview configuration to main grid:', config); // Debug
+      
       
       // Verstecke Preview-Grid und zeige Hauptgrid
       this.solarGrid.hidePreviewGrid();
@@ -2852,30 +2852,7 @@
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
       
-      // Debug: Prüfe ob Checkbox-Elemente gefunden wurden
-      console.log('Checkbox-Elemente Debug:', {
-        incM: this.incM,
-        mc4: this.mc4,
-        solarkabel: this.solarkabel,
-        holz: this.holz
-      });
-      
-      // Manuelle Initialisierung der Checkbox-Elemente falls sie nicht gefunden wurden
-      if (!this.incM) {
-        console.warn('Checkbox-Elemente nicht gefunden, versuche erneut zu laden...');
-        setTimeout(() => {
-          this.incM = document.getElementById('include-modules');
-          this.mc4 = document.getElementById('mc4');
-          this.solarkabel = document.getElementById('solarkabel');
-          this.holz = document.getElementById('holz');
-          console.log('Checkbox-Elemente nach Timeout:', {
-            incM: this.incM,
-            mc4: this.mc4,
-            solarkabel: this.solarkabel,
-            holz: this.holz
-          });
-        }, 1000);
-      }
+
       this.listHolder    = document.querySelector('.product-section');
       this.prodList      = document.getElementById('produktliste');
       this.summaryHolder = document.getElementById('summary-list-holder');
@@ -3796,12 +3773,10 @@
 					this.showGridPreview(config);
 				} else {
 					console.error('showGridPreview not available!'); // Debug
-					console.log('this type:', typeof this); // Debug
-					console.log('this methods:', Object.getOwnPropertyNames(this || {})); // Debug
-					console.log('showGridPreview exists:', this && typeof this.showGridPreview); // Debug
+					
 				}
 			} else {
-				console.log('No preview conditions met for config:', config); // Debug
+		
 			}
 		}
 		
@@ -4114,8 +4089,7 @@
         		cell.classList.toggle('selected');
         		
         		// DEBUG: Zeige Selection-Änderung
-        		console.log(`DEBUG: Cell clicked at [${y}][${x}], new value: ${this.selection[y][x]}`);
-        		console.log(`DEBUG: Current selection state:`, this.selection);
+        		
         		
         		// FEATURE 6: Screen Reader Support - Update ARIA
         		cell.setAttribute('aria-pressed', this.selection[y][x] ? 'true' : 'false');
@@ -4124,7 +4098,7 @@
         		// FIX: Update aktuelle Konfiguration mit Selection-Daten
         		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
         			this.configs[this.currentConfig].selection = JSON.parse(JSON.stringify(this.selection));
-        			console.log(`DEBUG: Updated config ${this.currentConfig} with selection:`, this.configs[this.currentConfig].selection);
+        			
         		}
         		
         		this.trackInteraction();
@@ -4654,39 +4628,14 @@
   					orientation: b.orientation
   				};
 
-  				console.log('DEBUG: Calculation Data:', calculationData);
-  				console.log('DEBUG: Bundle selection:', b.selection);
+  				
 
   				let parts;
   								try {
 					parts = await calculationManager.calculate('calculateParts', calculationData);
-					console.log('DEBUG: Worker result:', parts);
-					
-					// DEBUG: Zeige die Eingabedaten an den Worker
-					console.log('DEBUG: Worker input data:', calculationData);
-					console.log('DEBUG: Worker input selection:', calculationData.selection);
-					
-									// DEBUG: Prüfe ob ausgewählte Zellen vorhanden sind
-				let selectedCells = 0;
-				console.log('DEBUG: Selection matrix structure:', calculationData.selection);
-				console.log('DEBUG: Selection matrix length:', calculationData.selection?.length);
-				
-				// DEBUG: Zeige Selection-Status
-				let calculationSelectedCells = 0;
-				for (let y = 0; y < calculationData.rows; y++) {
-					for (let x = 0; x < calculationData.cols; x++) {
-						if (calculationData.selection[y]?.[x]) {
-							calculationSelectedCells++;
-						}
-					}
-				}
-				console.log(`DEBUG: Selected cells for calculation: ${calculationSelectedCells}`);
-					
 				} catch (error) {
-					console.log('DEBUG: Worker failed, using fallback:', error);
 					// Fallback zu synchroner Berechnung
 					parts = this.calculatePartsDirectly(calculationData);
-					console.log('DEBUG: Fallback result:', parts);
 				}
 
   				// Module werden NACH der Summierung entfernt (wie in buildList)
@@ -4695,15 +4644,12 @@
   				return parts;
   			}));
 
-  			// Summiere alle Parts
-  			console.log('DEBUG: All parts before summation:', allParts);
-  			allParts.forEach((parts, index) => {
-  				console.log(`DEBUG: Summing parts ${index}:`, parts);
+  						// Summiere alle Parts
+			allParts.forEach((parts, index) => {
     		Object.entries(parts).forEach(([k, v]) => {
       		total[k] = (total[k] || 0) + v;
     		});
   		});
-  		console.log('DEBUG: Total after summation:', total);
   		
   		// NEUE GLOBALE LOGIK: Füge pauschale Produkte zur Gesamtbestellung hinzu
   		const totalSelectedCells = bundles.reduce((sum, bundle) => {
@@ -4735,10 +4681,7 @@
   			// Fallback: Verwende leeres total
   		}
 
-  		// DEBUG: Zeige total Objekt
-  		console.log('Total Object Debug:', total);
-  		const entries = Object.entries(total).filter(([, v]) => v > 0);
-  		console.log('Entries Debug:', entries);
+  				const entries = Object.entries(total).filter(([, v]) => v > 0);
   		const itemsPerColumn = 4;
   		const numColumns = Math.ceil(entries.length / itemsPerColumn);
 
@@ -4770,16 +4713,10 @@
   		html += `<div class="summary-total">Gesamtpreis: ${totalPrice.toFixed(2)} €</div>`;
   		this.summaryList.innerHTML = html;
 
-  				// DEBUG: Zeige Summary-List immer an wenn Produkte vorhanden sind
-		console.log('Summary-List Debug:', {
-			entries: entries.length,
-			totalPrice: totalPrice,
-			html: html.substring(0, 200) + '...',
-			totalObject: total
-		});
+  		
 
-		// Zeige Summary List auch wenn keine Produkte vorhanden sind (für Debugging)
-		this.summaryHolder.style.display = 'block';
+		// Zeige Summary List nur wenn Produkte vorhanden sind
+		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
 		this.summaryList.style.display = entries.length ? 'flex' : 'none';
 		
 		// Wenn keine Produkte vorhanden sind, zeige eine Nachricht
@@ -4802,9 +4739,6 @@
 				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
 			};
 
-			console.log('DEBUG: calculatePartsDirectly input:', data);
-			console.log('DEBUG: Selection matrix:', selection);
-
 			for (let y = 0; y < rows; y++) {
 				if (!Array.isArray(selection[y])) continue;
 				let run = 0;
@@ -4812,28 +4746,22 @@
 				for (let x = 0; x < cols; x++) {
 					if (selection[y]?.[x]) {
 						run++;
-						console.log(`DEBUG: Found selected cell at [${y}][${x}], run=${run}`);
 					}
 					else if (run) { 
-						console.log(`DEBUG: Processing group with run=${run} at row ${y}`);
 						this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation); 
 						run = 0; 
 					}
 				}
 				if (run) {
-					console.log(`DEBUG: Processing final group with run=${run} at row ${y}`);
 					this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation);
 				}
 			}
 
-			console.log('DEBUG: calculatePartsDirectly result:', parts);
 			return parts;
 		}
 
 		// FALLBACK: Kopie der Worker-Berechnung
 		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation) {
-			console.log(`DEBUG: processGroupDirectly called with len=${len}, cellWidth=${cellWidth}, cellHeight=${cellHeight}, orientation=${orientation}`);
-			
 			const isVertical = orientation === 'vertical';
 			const actualCellWidth = isVertical ? cellHeight : cellWidth;
 			
@@ -4843,8 +4771,6 @@
 			const floor240 = Math.ceil(rem360 / 240);
 			const pure360 = Math.ceil(totalLen / 360);
 			const pure240 = Math.ceil(totalLen / 240);
-			
-			console.log(`DEBUG: Rail calculation - totalLen=${totalLen}, floor360=${floor360}, floor240=${floor240}`);
 			
 			const variants = [
 				{cnt360: floor360, cnt240: floor240},
@@ -4862,7 +4788,6 @@
 				.reduce((a, b) => a.waste <= b.waste ? a : b);
 			
 			const {cnt360, cnt240} = best;
-			console.log(`DEBUG: Best variant - cnt360=${cnt360}, cnt240=${cnt240}`);
 			
 			parts.Schiene_360_cm     += cnt360 * 2;
 			parts.Schiene_240_cm     += cnt240 * 2;
@@ -4873,8 +4798,6 @@
 			parts.Endkappen          += parts.Endklemmen;
 			parts.Solarmodul         += len;
 			parts.Schrauben          += parts.Dachhaken * 2;
-			
-			console.log(`DEBUG: Parts after processing - Solarmodul=${parts.Solarmodul}, Dachhaken=${parts.Dachhaken}, Schrauben=${parts.Schrauben}`);
 		}
 
     generateContinueLink() {
@@ -5410,7 +5333,7 @@
     }
     
     buildPreviewGrid(previewGrid, selection, cols, rows) {
-      console.log('Building preview grid:', cols, 'x', rows); // Debug
+      
       
       // Verwende die gleiche Berechnungslogik wie das Hauptgrid
       const RAIL_GAP = 2;
@@ -5425,8 +5348,7 @@
       const originalCellW = isVertical ? inputH : inputW;
       const originalCellH = isVertical ? inputW : inputH;
       
-      console.log('Orientation:', isVertical ? 'vertical' : 'horizontal'); // Debug
-      console.log('Original cell size:', originalCellW, 'x', originalCellH); // Debug
+      
       
       // Maximale verfügbare Größe (wie im Hauptgrid)
       const maxWidth = this.wrapper ? this.wrapper.clientWidth - 100 : 800;
@@ -5447,7 +5369,7 @@
       const w = originalCellW * scale;
       const h = originalCellH * scale;
       
-      console.log('Final cell size:', w, 'x', h); // Debug
+      
       
       // Bestimme visuelle Gap: 0 wenn viele Spalten/Zeilen, sonst RAIL_GAP * scale
       const shouldHideGap = cols >= 15 || rows >= 10;
