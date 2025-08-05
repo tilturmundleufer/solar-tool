@@ -37,7 +37,7 @@
     Holzunterleger: 25.00,
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     Erdungsklemme: 25.00,
-    Quetschkabelschuh: 10.00,
+    Quetschkabelschuhe: 10.00,
     Erdungsband: 0.00,
     Tellerkopfschraube: 30.00
   };
@@ -57,7 +57,7 @@
     Holzunterleger: { productId:'688780821dbbf26153a85117', variantId:'688780ad795c82663cd6e69b' },
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     Erdungsklemme: { productId:'6887e8aaa6ca43c15254d224', variantId:'6887e8abb439562cbc88db5d' },
-    Quetschkabelschuh: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
+    Quetschkabelschuhe: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
     Erdungsband: { productId:'688760e01c9c7973ee287386', variantId:'688760e0835845affc493354' },
     Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' }
   };
@@ -69,7 +69,7 @@
     'Holzunterleger': 'Unterlegholz für Dachhaken - 50 Stück',
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     'Erdungsklemme': 'Erdungsklemme - ?? Stücl',
-    'Quetschkabelschuh': 'Quetschkabelschuh - 100 Stück',
+    'Quetschkabelschuhe': 'Quetschkabelschuhe - 100 Stück',
     'Erdungsband': 'Erdungsband',
     'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück'
   };
@@ -89,7 +89,7 @@
     Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     Erdungsklemme: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
-    Quetschkabelschuh: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    Quetschkabelschuhe: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6887614c64676f0b0c8d5037_Kabelschuh%20Platzhalter.jpg',
     Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Tellerkopfschraube: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
   };
