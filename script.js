@@ -4073,7 +4073,8 @@
         		}
         		
         		this.trackInteraction();
-        		// Performance: Nur eine Update-Operation
+        		// Performance: Sofortige Produktliste Update + Debounced Summary
+        		this.buildList();
         		this.updateSummaryOnChange();
       		});
        
@@ -4568,8 +4569,7 @@
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
         
-        // Performance: Kombiniere buildList und renderProductSummary
-        await this.buildList();
+        // Performance: Nur renderProductSummary, da es buildList Funktionalität enthält
         this.renderProductSummary();
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
