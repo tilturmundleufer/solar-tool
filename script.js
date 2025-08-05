@@ -3456,9 +3456,19 @@
 							try {
 								const config = this.smartParser.parseInput(input);
 								console.log('Parsed config:', config); // Debug
-								this.showConfigPreview(config);
+								
+								// Prüfe ob die Konfiguration gültig ist (mindestens eine Änderung)
+								if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
+									this.showConfigPreview(config);
+								} else {
+									console.log('No valid config changes, clearing preview'); // Debug
+									// Keine gültigen Änderungen, Preview löschen
+									if (this.solarGrid && this.solarGrid.clearGridPreview) {
+										this.solarGrid.clearGridPreview();
+									}
+								}
 							} catch (error) {
-								console.log('Parsing error, clearing preview'); // Debug
+								console.log('Parsing error, clearing preview:', error.message); // Debug
 								// Bei Parsing-Fehler Preview löschen
 								if (this.solarGrid && this.solarGrid.clearGridPreview) {
 									this.solarGrid.clearGridPreview();
@@ -4934,15 +4944,51 @@
     buildPreviewGrid(previewGrid, selection, cols, rows) {
       console.log('Building preview grid:', cols, 'x', rows); // Debug
       
-      // Verwende die gleiche Zellgröße wie das Hauptgrid (aus Input-Feldern)
-      const cellWidth = parseInt(this.wIn ? this.wIn.value : '179', 10);
-      const cellHeight = parseInt(this.hIn ? this.hIn.value : '113', 10);
+      // Verwende die gleiche Berechnungslogik wie das Hauptgrid
+      const RAIL_GAP = 2;
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
       
-      console.log('Using cell size from inputs:', cellWidth, 'x', cellHeight); // Debug
+      // Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
+      const inputW = parseInt(this.wIn ? this.wIn.value : '179', 10) || 179;
+      const inputH = parseInt(this.hIn ? this.hIn.value : '113', 10) || 113;
+      
+      // Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
+      const isVertical = this.orV ? this.orV.checked : false;
+      const originalCellW = isVertical ? inputH : inputW;
+      const originalCellH = isVertical ? inputW : inputH;
+      
+      console.log('Orientation:', isVertical ? 'vertical' : 'horizontal'); // Debug
+      console.log('Original cell size:', originalCellW, 'x', originalCellH); // Debug
+      
+      // Maximale verfügbare Größe (wie im Hauptgrid)
+      const maxWidth = this.wrapper ? this.wrapper.clientWidth - 100 : 800;
+      const maxHeight = this.wrapper ? this.wrapper.clientHeight - 100 : 600;
+      
+      // Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
+      const totalWidthWithRailGaps = cols * originalCellW + (cols - 1) * RAIL_GAP;
+      const totalHeightWithRailGaps = rows * originalCellH + (rows - 1) * RAIL_GAP;
+      
+      // Berechne Skalierungsfaktoren für beide Dimensionen
+      const scaleX = maxWidth / totalWidthWithRailGaps;
+      const scaleY = maxHeight / totalHeightWithRailGaps;
+      
+      // Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
+      const scale = Math.min(scaleX, scaleY, 1);
+      
+      // Berechne finale Zellgrößen
+      const w = originalCellW * scale;
+      const h = originalCellH * scale;
+      
+      console.log('Final cell size:', w, 'x', h); // Debug
+      
+      // Bestimme visuelle Gap: 0 wenn viele Spalten/Zeilen, sonst RAIL_GAP * scale
+      const shouldHideGap = cols >= 15 || rows >= 10;
+      const visualGap = shouldHideGap ? 0 : RAIL_GAP * scale;
       
       // Grid-Styling setzen
-      previewGrid.style.gridTemplateColumns = `repeat(${cols}, ${cellWidth}px)`;
-      previewGrid.style.gridTemplateRows = `repeat(${rows}, ${cellHeight}px)`;
+      previewGrid.style.gridTemplateColumns = `repeat(${cols}, ${w}px)`;
+      previewGrid.style.gridTemplateRows = `repeat(${rows}, ${h}px)`;
+      previewGrid.style.gap = `${visualGap}px`;
       
       // Grid leeren
       previewGrid.innerHTML = '';
