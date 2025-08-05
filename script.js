@@ -130,6 +130,11 @@
             this.pendingCalculations.delete(id);
             reject(new Error(error.message));
           }
+          
+          // Worker Debug-Logs an Haupt-Console weiterleiten
+          if (type === 'debug') {
+            console.log(...data);
+          }
         };
         
         this.worker.onerror = (error) => {
