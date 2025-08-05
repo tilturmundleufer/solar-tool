@@ -14,22 +14,32 @@
     Solarmodul: 1,
     MC4_Stecker: 1,
     Solarkabel: 1,
-    Holzunterleger: 50  // NEU: VE von 50
+    Holzunterleger: 50,
+    // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
+    Erdungsklemme: 1,
+    Quetschkabelschuh: 100,
+    Erdungsband: 1,
+    Tellerkopfschraube: 100
   };
   
   const PRICE_MAP = {
     Solarmodul: 59.00,
-    Endklemmen: 20.00,
-    Schrauben: 5.00,
-    Dachhaken: 15.00,
-    Mittelklemmen: 18.00,
+    Endklemmen: 9.99,
+    Schrauben: 9.99,
+    Dachhaken: 9.99,
+    Mittelklemmen: 4.99,
     Endkappen: 9.99,
     Schienenverbinder: 9.99,
     Schiene_240_cm: 8.99,
-    Schiene_360_cm: 40.00,
+    Schiene_360_cm: 9.99,
     MC4_Stecker: 99.00,
     Solarkabel: 29.99,
-    Holzunterleger: 0.50
+    Holzunterleger: 25.00,
+    // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
+    Erdungsklemme: 25.00,
+    Quetschkabelschuh: 10.00,
+    Erdungsband: 0.00,
+    Tellerkopfschraube: 30.00
   };
   
   const PRODUCT_MAP = {
@@ -44,14 +54,24 @@
     Schiene_360_cm: { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
     MC4_Stecker: { productId:'687fcc9f66078f7098826ccc', variantId:'687fcca02c6537b9a9493fa7' },
     Solarkabel: { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
-    Holzunterleger: { productId:'xxx-holz', variantId:'xxx-holz-v' }
+    Holzunterleger: { productId:'688780821dbbf26153a85117', variantId:'688780ad795c82663cd6e69b' },
+    // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
+    Erdungsklemme: { productId:'6887e8aaa6ca43c15254d224', variantId:'6887e8abb439562cbc88db5d' },
+    Quetschkabelschuh: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
+    Erdungsband: { productId:'688760e01c9c7973ee287386', variantId:'688760e0835845affc493354' },
+    Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' }
   };
   
   const PRODUCT_NAME_MAP = {
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
-    'Schrauben': 'Tellerkopfschrauben 8x100',
+    'Schrauben': 'Schraube M10x25 - 100 Stück',
     'Solarkabel': 'Solarkabel 100M',
-    'Holzunterleger': 'Unterlegholz für Dachhaken'
+    'Holzunterleger': 'Unterlegholz für Dachhaken - 50 Stück',
+    // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
+    'Erdungsklemme': 'Erdungsklemme - ?? Stücl',
+    'Quetschkabelschuh': 'Quetschkabelschuh - 100 Stück',
+    'Erdungsband': 'Erdungsband',
+    'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück'
   };
   
   const PRODUCT_IMAGES = {
@@ -66,7 +86,12 @@
     Schiene_360_cm: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bcd5726d1d33d4b86ba4_DSC04824-min.jpg',
     MC4_Stecker: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fcdab153f840ea15b5e7b_iStock-2186771695.jpg',
     Solarkabel: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
-    Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
+    Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
+    Erdungsklemme: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    Quetschkabelschuh: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    Tellerkopfschraube: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
   };
   
   // Zentrale Konfiguration ist jetzt direkt eingebettet
