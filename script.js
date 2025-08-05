@@ -1,6 +1,11 @@
 (function() {
   const ADD_TO_CART_DELAY = 400;
-  const VE = {
+  
+  // Importiere zentrale Produkt-Konfiguration
+  let VE, PRICE_MAP, PRODUCT_MAP, PRODUCT_NAME_MAP, PRODUCT_IMAGES;
+  
+  // Fallback falls Import fehlschlägt
+  const FALLBACK_VE = {
     Endklemmen: 100,
     Schrauben: 100,
     Dachhaken: 20,
@@ -12,23 +17,67 @@
     Solarmodul: 1,
     MC4_Stecker: 1,
     Solarkabel: 1,
-    Holzunterleger: 1
+    Holzunterleger: 50  // NEU: VE von 50
   };
   
-  const PRICE_MAP = {
-	Solarmodul: 59.00,
-	Endklemmen: 20.00,
-	Schrauben: 5.00,
-	Dachhaken: 15.00,
-	Mittelklemmen: 18.00,
-	Endkappen: 9.99,
-	Schienenverbinder: 9.99,
-	Schiene_240_cm: 8.99,
-	Schiene_360_cm: 40.00,
-	MC4_Stecker: 99.00,
-  	Solarkabel: 29.99,
-	Holzunterleger: 0.50
-};
+  const FALLBACK_PRICE_MAP = {
+    Solarmodul: 59.00,
+    Endklemmen: 20.00,
+    Schrauben: 5.00,
+    Dachhaken: 15.00,
+    Mittelklemmen: 18.00,
+    Endkappen: 9.99,
+    Schienenverbinder: 9.99,
+    Schiene_240_cm: 8.99,
+    Schiene_360_cm: 40.00,
+    MC4_Stecker: 99.00,
+    Solarkabel: 29.99,
+    Holzunterleger: 0.50
+  };
+  
+  const FALLBACK_PRODUCT_MAP = {
+    Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
+    Endklemmen: { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
+    Schrauben: { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
+    Dachhaken: { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
+    Mittelklemmen: { productId:'68531088654d1468dca962c', variantId:'6853c1084c04541622ba3e26' },
+    Endkappen: { productId:'6853be0895a5a578324f9682', variantId:'6853be0805e96b5a16c705cd' },
+    Schienenverbinder: { productId:'6853c2018bf6755ddde216a8', variantId:'6853c202c488ee61eb51a3dc' },
+    Schiene_240_cm: { productId:'6853bd882f00db0c9a42d653', variantId:'6853bd88c4173dbe72bab10f' },
+    Schiene_360_cm: { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
+    MC4_Stecker: { productId:'687fcc9f66078f7098826ccc', variantId:'687fcca02c6537b9a9493fa7' },
+    Solarkabel: { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
+    Holzunterleger: { productId:'xxx-holz', variantId:'xxx-holz-v' }
+  };
+  
+  const FALLBACK_PRODUCT_NAME_MAP = {
+    'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
+    'Schrauben': 'M10x25-Schraube',
+    'Solarkabel': 'Solarkabel 100M',
+    'Holzunterleger': 'Unterlegholz für Dachhaken'
+  };
+  
+  const FALLBACK_PRODUCT_IMAGES = {
+    Solarmodul: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    Endklemmen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c316b21cb7d04ba2ed22_DSC04815-min.jpg',
+    Schrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg',
+    Dachhaken: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c1c8a2835b7879f46811_DSC04760-min.jpg',
+    Mittelklemmen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c0d0c2d922d926976bd4_DSC04810-min.jpg',
+    Endkappen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bdfbe7cffc653f6a4605_DSC04788-min.jpg',
+    Schienenverbinder: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c21f0c39e927fce0db3b_DSC04780-min.jpg',
+    Schiene_240_cm: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bce018164af4b4a187f1_DSC04825-min.jpg',
+    Schiene_360_cm: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bcd5726d1d33d4b86ba4_DSC04824-min.jpg',
+    MC4_Stecker: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fcdab153f840ea15b5e7b_iStock-2186771695.jpg',
+    Solarkabel: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
+    Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
+  };
+
+  // Verwende Konfiguration oder Fallback
+  VE = VE || FALLBACK_VE;
+  PRICE_MAP = PRICE_MAP || FALLBACK_PRICE_MAP;
+  PRODUCT_MAP = PRODUCT_MAP || FALLBACK_PRODUCT_MAP;
+  PRODUCT_NAME_MAP = PRODUCT_NAME_MAP || FALLBACK_PRODUCT_NAME_MAP;
+  PRODUCT_IMAGES = PRODUCT_IMAGES || FALLBACK_PRODUCT_IMAGES;
 
   // ===== BACKGROUND CALCULATION MANAGER =====
   class CalculationManager {
@@ -353,20 +402,7 @@
     }
   }
 
-  const PRODUCT_MAP = {
-    Solarmodul:        { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
-    Endklemmen:        { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
-    Schrauben:         { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
-    Dachhaken:         { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
-    Mittelklemmen:     { productId:'68531088654d1468dca962c', variantId:'6853c1084c04541622ba3e26' },
-    Endkappen:         { productId:'6853be0895a5a578324f9682', variantId:'6853be0805e96b5a16c705cd' },
-    Schienenverbinder: { productId:'6853c2018bf6755ddde216a8', variantId:'6853c202c488ee61eb51a3dc' },
-    Schiene_240_cm:    { productId:'6853bd882f00db0c9a42d653', variantId:'6853bd88c4173dbe72bab10f' },
-    Schiene_360_cm:    { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
-    MC4_Stecker:       { productId:'687fcc9f66078f7098826ccc', variantId:'687fcca02c6537b9a9493fa7' },
-    Solarkabel:        { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
-    Holzunterleger:    { productId:'xxx-holz', variantId:'xxx-holz-v' }
-  };
+  // Entfernt - wird jetzt über zentrale Konfiguration verwaltet
 
   // Globale Price Cache Instanz (nach PRODUCT_MAP Definition)
   const priceCache = new PriceCache();
@@ -3348,14 +3384,12 @@
         );
       }
 
-  		// Prüfe ob Checkboxen existieren bevor Event-Listener hinzugefügt werden
+  		// GLOBALE Checkbox-Event-Listener - gelten für alle Konfigurationen
 		const checkboxes = [this.incM, this.mc4, this.solarkabel, this.holz].filter(el => el);
 		checkboxes.forEach(el =>
 			el.addEventListener('change', () => {
 				this.trackInteraction();
-				this.buildList();
-				this.updateSummaryOnChange();
-				this.renderProductSummary(); // Aktualisiere auch die Summary aller Konfigurationen
+				this.updateAllConfigurationsForCheckboxes(); // NEU: Globale Checkbox-Logik
 			})
 		);
 		
@@ -4278,21 +4312,8 @@
     }
 
     mapImage(key) {
-      const imgs = {
-        Solarmodul:        'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
-        Endklemmen:        'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c316b21cb7d04ba2ed22_DSC04815-min.jpg',
-        Schrauben:         'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg',
-        Dachhaken:         'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c1c8a2835b7879f46811_DSC04760-min.jpg',
-        Mittelklemmen:     'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c0d0c2d922d926976bd4_DSC04810-min.jpg',
-        Endkappen:         'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bdfbe7cffc653f6a4605_DSC04788-min.jpg',
-        Schienenverbinder: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c21f0c39e927fce0db3b_DSC04780-min.jpg',
-        Schiene_240_cm:    'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bce018164af4b4a187f1_DSC04825-min.jpg',
-        Schiene_360_cm:    'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bcd5726d1d33d4b86ba4_DSC04824-min.jpg',
-        MC4_Stecker:       'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fcdab153f840ea15b5e7b_iStock-2186771695.jpg',
-        Solarkabel:        'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
-        Holzunterleger:    'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
-      };
-      return imgs[key] || '';
+      // Verwende zentrale Produkt-Konfiguration oder Fallback
+      return PRODUCT_IMAGES[key] || '';
     }
     
     loadConfig(idx) {
@@ -4583,52 +4604,39 @@
     }
 
         async renderProductSummary() {
-      // VOLLSTÄNDIG ISOLIERTE Berechnung - NIEMALS Grid-Eigenschaften berühren!
+      // NEUE GLOBALE LOGIK: Verwende aktuelle Checkbox-Werte für alle Konfigurationen
       const bundles = this.configs.map((c, idx) => {
-        // Wenn dies die aktuell bearbeitete Konfiguration ist, verwende die aktuellen Checkbox-Werte
-        if (idx === this.currentConfig) {
-          return {
-            selection:   this.selection.map(row => [...row]), // Deep copy
-            rows:        this.rows,
-            cols:        this.cols,
-            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-            incM:        this.incM && this.incM.checked,
-            mc4:         this.mc4 && this.mc4.checked,
-            solarkabel:  this.solarkabel && this.solarkabel.checked,
-            holz:        this.holz && this.holz.checked
-          };
-        } else {
-  				return {
-    				selection:   c.selection.map(row => [...row]), // Deep copy
-    				rows:        c.rows,
-    				cols:        c.cols,
-    				cellWidth:   c.cellWidth,
-    				cellHeight:  c.cellHeight,
-    				orientation: c.orientation,
-    				incM:        c.incM,
-    				mc4:         c.mc4,
-    				solarkabel:  c.solarkabel,
-    				holz:        c.holz
-  				};
-  			}
-  		});
+        return {
+          selection:   c.selection.map(row => [...row]), // Deep copy
+          rows:        c.rows,
+          cols:        c.cols,
+          cellWidth:   c.cellWidth,
+          cellHeight:  c.cellHeight,
+          orientation: c.orientation,
+          // GLOBALE Checkbox-Werte für alle Konfigurationen
+          incM:        this.incM && this.incM.checked,
+          mc4:         this.mc4 && this.mc4.checked,
+          solarkabel:  this.solarkabel && this.solarkabel.checked,
+          holz:        this.holz && this.holz.checked
+        };
+      });
 
-  		if (this.currentConfig === null) {
-  			bundles.push({
-    			selection:   this.selection.map(row => [...row]), // Deep copy
-    			rows:        this.rows,
-    			cols:        this.cols,
-    			cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-    			cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-    			orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-    			incM:        this.incM && this.incM.checked,
-    			mc4:         this.mc4 && this.mc4.checked,
-    			solarkabel:  this.solarkabel && this.solarkabel.checked,
-    			holz:        this.holz && this.holz.checked
-  			});
-			}
+      // Füge aktuelle Konfiguration hinzu falls keine gespeichert
+      if (this.currentConfig === null) {
+        bundles.push({
+          selection:   this.selection.map(row => [...row]), // Deep copy
+          rows:        this.rows,
+          cols:        this.cols,
+          cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+          cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+          orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+          // GLOBALE Checkbox-Werte
+          incM:        this.incM && this.incM.checked,
+          mc4:         this.mc4 && this.mc4.checked,
+          solarkabel:  this.solarkabel && this.solarkabel.checked,
+          holz:        this.holz && this.holz.checked
+        });
+      }
   		
   		const total = {};
   		
@@ -4671,6 +4679,27 @@
       		total[k] = (total[k] || 0) + v;
     		});
   		});
+  		
+  		// NEUE GLOBALE LOGIK: Füge pauschale Produkte zur Gesamtbestellung hinzu
+  		const totalSelectedCells = bundles.reduce((sum, bundle) => {
+  			return sum + bundle.selection.flat().filter(v => v).length;
+  		}, 0);
+  		
+  		// MC4-Stecker: Berechne basierend auf Gesamt-Modulen aller Konfigurationen
+  		if (this.mc4 && this.mc4.checked) {
+  			total.MC4_Stecker = Math.ceil(totalSelectedCells / 30);
+  		}
+  		
+  		// Solarkabel: Pauschal 1x zur Gesamtbestellung
+  		if (this.solarkabel && this.solarkabel.checked) {
+  			total.Solarkabel = 1;
+  		}
+  		
+  		// Unterlegholz: Pauschal 1x zur Gesamtbestellung (NEU: VE von 50)
+  		if (this.holz && this.holz.checked) {
+  			total.Holzunterleger = 1; // Pauschal 1x statt basierend auf Schienen
+  		}
+  		
   		} catch (error) {
   			console.error('Error in renderProductSummary:', error);
   			// Fallback: Verwende leeres total
@@ -4691,10 +4720,13 @@
       		const itemTotal = packs * price;
       		totalPrice += itemTotal;
 
+      		// Verwende neue Produktnamen
+      		const displayName = PRODUCT_NAME_MAP[k] || k.replace(/_/g, ' ');
+      		
       		return `<div class="produkt-item">
         		<span>${packs}×</span>
-        		<img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
-        		<span>${k.replace(/_/g, ' ')} (${v})</span>
+        		<img src="${this.mapImage(k)}" alt="${displayName}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(displayName)}'">
+        		<span>${displayName} (${v})</span>
         		<span style="margin-left:auto; font-weight:bold;">${itemTotal.toFixed(2)} €</span>
       		</div>`;
     		}).join('');
@@ -5055,7 +5087,7 @@
         parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
       }
       if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (holz)  parts.Holzunterleger = (parts['Schiene_240_cm']||0) + (parts['Schiene_360_cm']||0);
+      if (holz)  parts.Holzunterleger = 1; // NEU: Pauschal 1x statt basierend auf Schienen
       
         return parts;
       } finally {
@@ -5091,6 +5123,20 @@
         cable: this.solarkabel.checked,
         wood: this.holz.checked
       };
+    }
+
+    // NEUE METHODE: Globale Checkbox-Logik - aktualisiert alle Konfigurationen
+    updateAllConfigurationsForCheckboxes() {
+      // Aktualisiere alle gespeicherten Konfigurationen mit aktuellen Checkbox-Werten
+      this.configs.forEach((config, index) => {
+        config.incM = this.incM.checked;
+        config.mc4 = this.mc4.checked;
+        config.solarkabel = this.solarkabel.checked;
+        config.holz = this.holz.checked;
+      });
+      
+      // Aktualisiere Summary und Produktliste
+      this.updateSummaryOnChange();
     }
 
     // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF

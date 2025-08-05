@@ -1,8 +1,11 @@
 // calculation-worker.js - Web Worker für Background-Berechnungen
 // Dieser Worker führt komplexe Berechnungen im Hintergrund aus
 
-// VE-Werte für Berechnungen
-const VE = {
+// Importiere zentrale Produkt-Konfiguration
+import { VE } from './product-config.js';
+
+// Fallback VE-Werte falls Import fehlschlägt
+const FALLBACK_VE = {
   Endklemmen: 100,
   Schrauben: 100,
   Dachhaken: 20,
@@ -14,8 +17,11 @@ const VE = {
   Solarmodul: 1,
   MC4_Stecker: 1,
   Solarkabel: 1,
-  Holzunterleger: 1
+  Holzunterleger: 50  // NEU: VE von 50
 };
+
+// Verwende VE aus Konfiguration oder Fallback
+const VE_VALUES = VE || FALLBACK_VE;
 
 // Berechne Teile für eine gegebene Auswahl
 function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientation) {
@@ -116,7 +122,7 @@ function calculateTotalCost(parts, prices) {
   
   Object.entries(parts).forEach(([key, quantity]) => {
     if (quantity > 0) {
-      const packs = Math.ceil(quantity / VE[key]);
+      const packs = Math.ceil(quantity / VE_VALUES[key]);
       const pricePerPack = prices[key] || 0;
       const itemTotal = packs * pricePerPack;
       
