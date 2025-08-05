@@ -2746,11 +2746,7 @@
         // Drag beendet ODER Single-Click (gleiche Zelle)
         this.selectRange(this.dragStart, { x, y });
         
-        // Toast-Nachricht mit intelligenter Beschreibung
-        const selectedCount = this.calculateRangeSize(this.dragStart, { x, y });
-        const action = this.dragStart.wasSelected ? "abgewählt" : "ausgewählt";
-        const emoji = this.dragStart.wasSelected ? "❌" : "✅";
-        this.solarGrid.showToast(`${emoji} Drag-${action}: ${selectedCount} Zellen`, 1500);
+        // Toast-Nachricht entfernt - war störend
       }
       
       // Reset Drag-Zustand
