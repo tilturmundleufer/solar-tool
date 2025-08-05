@@ -1,11 +1,8 @@
 (function() {
   const ADD_TO_CART_DELAY = 400;
   
-  // Importiere zentrale Produkt-Konfiguration
-  let VE, PRICE_MAP, PRODUCT_MAP, PRODUCT_NAME_MAP, PRODUCT_IMAGES;
-  
-  // Fallback falls Import fehlschlägt
-  const FALLBACK_VE = {
+  // Zentrale Produkt-Konfiguration (direkt eingebettet)
+  const VE = {
     Endklemmen: 100,
     Schrauben: 100,
     Dachhaken: 20,
@@ -20,7 +17,7 @@
     Holzunterleger: 50  // NEU: VE von 50
   };
   
-  const FALLBACK_PRICE_MAP = {
+  const PRICE_MAP = {
     Solarmodul: 59.00,
     Endklemmen: 20.00,
     Schrauben: 5.00,
@@ -35,7 +32,7 @@
     Holzunterleger: 0.50
   };
   
-  const FALLBACK_PRODUCT_MAP = {
+  const PRODUCT_MAP = {
     Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
     Endklemmen: { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
     Schrauben: { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
@@ -50,14 +47,14 @@
     Holzunterleger: { productId:'xxx-holz', variantId:'xxx-holz-v' }
   };
   
-  const FALLBACK_PRODUCT_NAME_MAP = {
+  const PRODUCT_NAME_MAP = {
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
     'Schrauben': 'M10x25-Schraube',
     'Solarkabel': 'Solarkabel 100M',
     'Holzunterleger': 'Unterlegholz für Dachhaken'
   };
   
-  const FALLBACK_PRODUCT_IMAGES = {
+  const PRODUCT_IMAGES = {
     Solarmodul: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Endklemmen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c316b21cb7d04ba2ed22_DSC04815-min.jpg',
     Schrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg',
@@ -71,13 +68,8 @@
     Solarkabel: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
     Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
   };
-
-  // Verwende Konfiguration oder Fallback
-  VE = VE || FALLBACK_VE;
-  PRICE_MAP = PRICE_MAP || FALLBACK_PRICE_MAP;
-  PRODUCT_MAP = PRODUCT_MAP || FALLBACK_PRODUCT_MAP;
-  PRODUCT_NAME_MAP = PRODUCT_NAME_MAP || FALLBACK_PRODUCT_NAME_MAP;
-  PRODUCT_IMAGES = PRODUCT_IMAGES || FALLBACK_PRODUCT_IMAGES;
+  
+  // Zentrale Konfiguration ist jetzt direkt eingebettet
 
   // ===== BACKGROUND CALCULATION MANAGER =====
   class CalculationManager {
