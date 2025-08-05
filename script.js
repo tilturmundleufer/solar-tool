@@ -4117,6 +4117,7 @@
       }
       if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
       if (this.holz && this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
@@ -4238,7 +4239,7 @@
   		const p = {
     		Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
     		Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-    		Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+    		Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
   		};
 
   		for (let y = 0; y < this.rows; y++) {
@@ -4256,8 +4257,20 @@
 		}
 
     processGroup(len, p) {
-      // Diese Methode wird nicht mehr verwendet
-      // Alle Berechnungen laufen über den Calculation Worker
+      // Fallback-Berechnung für Tellerkopfschraube
+      const cnt360 = Math.ceil(len * 3.6);
+      const cnt240 = Math.ceil(len * 2.4);
+      
+      p.Schiene_360_cm     += cnt360;
+      p.Schiene_240_cm     += cnt240 * 2;
+      p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+      p.Endklemmen         += 4;
+      p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+      p.Dachhaken          += len > 1 ? len * 3 : 4;
+      p.Endkappen          += p.Endklemmen;
+      p.Solarmodul         += len;
+      p.Schrauben          += p.Dachhaken * 1; // M10x25: 1 pro Dachhaken
+      p.Tellerkopfschraube += p.Dachhaken * 2; // Tellerkopfschraube: 2 pro Dachhaken
     }
 
     mapImage(key) {
