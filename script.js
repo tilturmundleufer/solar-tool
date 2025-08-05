@@ -49,7 +49,7 @@
   
   const PRODUCT_NAME_MAP = {
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
-    'Schrauben': 'M10x25-Schraube',
+    'Schrauben': 'Tellerkopfschrauben 8x100',
     'Solarkabel': 'Solarkabel 100M',
     'Holzunterleger': 'Unterlegholz für Dachhaken'
   };
