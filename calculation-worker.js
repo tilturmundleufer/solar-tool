@@ -111,7 +111,9 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   parts.Dachhaken          += len > 1 ? len * 3 : 4;
   parts.Endkappen          += 4;  // Fix: Direkt 4 statt parts.Endklemmen
   parts.Solarmodul         += len;
-  parts.Schrauben          += (len > 1 ? len * 3 : 4) * 2;  // Fix: Direkt berechnen statt parts.Dachhaken * 2
+  // Schrauben basierend auf Dachhaken für diese Gruppe berechnen
+  const dachhakenForGroup = len > 1 ? len * 3 : 4;
+  parts.Schrauben          += dachhakenForGroup * 2;
         
   workerLog(`WORKER DEBUG: Parts after processing - Solarmodul=${parts.Solarmodul}, Dachhaken=${parts.Dachhaken}, Schrauben=${parts.Schrauben}`);
 }
