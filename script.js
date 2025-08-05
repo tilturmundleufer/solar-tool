@@ -3564,52 +3564,45 @@
 						}
 					});
 					
-					// Live-Grid-Preview beim Tippen
+					// Live-Grid-Preview bei jedem Tastendruck
 					quickInput.addEventListener('input', (e) => {
 						const input = e.target.value.trim();
-						
-						console.log('Input changed:', input); // Debug
 						
 						// Clear previous timeout
 						if (this.previewTimeout) {
 							clearTimeout(this.previewTimeout);
+							this.previewTimeout = null;
 						}
+						
+						// Update input validation status
+						this.updateInputValidation(quickInput, input);
 						
 						if (input.length > 0) {
 							try {
 								const config = this.smartParser.parseInput(input);
-								console.log('Parsed config:', config); // Debug
 								
 								// Zeige Preview für gültige Konfigurationen
-								if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
-									console.log('Showing config preview'); // Debug
+								if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig || config.action) {
 									this.showConfigPreview(config);
 									
 									// Preview nach 3 Sekunden automatisch löschen
-									console.log('Setting timeout for auto-clear in 3 seconds'); // Debug
-									const self = this; // Referenz auf die SolarGrid Instanz selbst
+									const self = this;
 									this.previewTimeout = setTimeout(() => {
-										console.log('Auto-clearing preview after 3 seconds - timeout triggered'); // Debug
 										if (self && self.clearGridPreview) {
-											console.log('Calling clearGridPreview from timeout'); // Debug
 											self.clearGridPreview();
-										} else {
-											console.log('clearGridPreview not available, self:', self); // Debug
 										}
 									}, 3000);
 								} else {
-									console.log('No valid config changes found'); // Debug
+									// Keine gültige Konfiguration - Preview löschen
+									this.clearGridPreview();
 								}
 							} catch (error) {
-								console.log('Parsing error:', error.message); // Debug
-								// Bei Parsing-Fehler KEINE Preview löschen - nur loggen
+								// Bei Parsing-Fehler Preview löschen
+								this.clearGridPreview();
 							}
 						} else {
-							console.log('Input empty, clearing preview'); // Debug
-							// Clear preview if input is empty
-							if (this.solarGrid && this.solarGrid.clearGridPreview) {
-								this.solarGrid.clearGridPreview();
-							}
+							// Input leer - Preview löschen
+							this.clearGridPreview();
 						}
 					});
 					
@@ -3621,14 +3614,42 @@
 			}, 500);
 		}
 		
+		updateInputValidation(inputElement, input) {
+			// Entferne alle Validierungs-Klassen
+			inputElement.classList.remove('input-valid', 'input-invalid', 'input-loading');
+			
+			if (input.length === 0) {
+				return; // Keine Validierung für leere Eingabe
+			}
+			
+			// Zeige Loading-Status
+			inputElement.classList.add('input-loading');
+			
+			// Kurze Verzögerung für bessere UX
+			setTimeout(() => {
+				try {
+					const config = this.smartParser.parseInput(input);
+					
+					// Prüfe ob gültige Konfiguration
+					if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig || config.action) {
+						inputElement.classList.remove('input-loading');
+						inputElement.classList.add('input-valid');
+					} else {
+						inputElement.classList.remove('input-loading');
+						inputElement.classList.add('input-invalid');
+					}
+				} catch (error) {
+					inputElement.classList.remove('input-loading');
+					inputElement.classList.add('input-invalid');
+				}
+			}, 100);
+		}
+
 		showConfigPreview(config) {
 			// Grid-Preview für alle Konfigurationen die das Grid beeinflussen
 			if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
-				console.log('Preview config:', config); // Debug
-				console.log('this:', this); // Debug - this ist die SolarGrid Instanz
 				// this ist die SolarGrid Instanz selbst, also können wir direkt auf ihre Methoden zugreifen
 				if (this && typeof this.showGridPreview === 'function') {
-					console.log('Calling showGridPreview...'); // Debug
 					this.showGridPreview(config);
 				} else {
 					console.error('showGridPreview not available!'); // Debug
@@ -5028,8 +5049,6 @@
     // ===== GRID PREVIEW METHODS =====
     
     showGridPreview(config) {
-      console.log('showGridPreview called with:', config); // Debug
-      
       // Speichere aktuellen Zustand für späteres Zurücksetzen
       this.originalPreviewState = {
         selection: this.selection ? this.selection.map(row => [...row]) : null,
@@ -5038,14 +5057,19 @@
         orientation: this.orV ? this.orV.checked : false
       };
       
-      console.log('Saved original state:', this.originalPreviewState); // Debug
-      
       // Erstelle Preview-Grid
       this.createPreviewGrid(config);
       
-      // Verstecke Hauptgrid und zeige Preview-Grid
+      // Smooth Animation: Verstecke Hauptgrid und zeige Preview-Grid
       this.hideMainGrid();
       this.showPreviewGrid();
+      
+      // Füge Animation-Klassen hinzu
+      const mainGrid = document.getElementById('grid');
+      const previewGrid = document.getElementById('preview-grid');
+      
+      if (mainGrid) mainGrid.classList.add('grid-fade-out');
+      if (previewGrid) previewGrid.classList.add('grid-fade-in');
     }
     
     createPreviewGrid(config) {
@@ -5199,34 +5223,38 @@
     }
     
     clearGridPreview() {
-      console.log('clearGridPreview called'); // Debug
+      // Smooth Animation: Entferne Animation-Klassen
+      const mainGrid = document.getElementById('grid');
+      const previewGrid = document.getElementById('preview-grid');
       
-      // Verstecke Preview-Grid und zeige Hauptgrid
-      this.hidePreviewGrid();
-      this.showMainGrid();
+      if (mainGrid) mainGrid.classList.remove('grid-fade-out');
+      if (previewGrid) previewGrid.classList.remove('grid-fade-in');
       
-      // Verwende gespeicherten ursprünglichen Zustand
-      if (this.originalPreviewState) {
-        console.log('Restoring original state from saved state:', this.originalPreviewState); // Debug
-        this.selection = this.originalPreviewState.selection;
-        this.cols = this.originalPreviewState.cols;
-        this.rows = this.originalPreviewState.rows;
+      // Kurze Verzögerung für Animation
+      setTimeout(() => {
+        // Verstecke Preview-Grid und zeige Hauptgrid
+        this.hidePreviewGrid();
+        this.showMainGrid();
         
-        if (this.orV && this.orH && this.originalPreviewState.orientation !== null) {
-          this.orV.checked = this.originalPreviewState.orientation;
-          this.orH.checked = !this.originalPreviewState.orientation;
+        // Verwende gespeicherten ursprünglichen Zustand
+        if (this.originalPreviewState) {
+          this.selection = this.originalPreviewState.selection;
+          this.cols = this.originalPreviewState.cols;
+          this.rows = this.originalPreviewState.rows;
+          
+          if (this.orV && this.orH && this.originalPreviewState.orientation !== null) {
+            this.orV.checked = this.originalPreviewState.orientation;
+            this.orH.checked = !this.originalPreviewState.orientation;
+          }
+          
+          // Grid wiederherstellen
+          this.updateSize();
+          this.buildGrid();
+          
+          // Gespeicherten Zustand löschen
+          this.originalPreviewState = null;
         }
-        
-        // Grid wiederherstellen
-        this.updateSize();
-        this.buildGrid();
-        console.log('Original state restored'); // Debug
-        
-        // Gespeicherten Zustand löschen
-        this.originalPreviewState = null;
-      } else {
-        console.log('No saved original state found'); // Debug
-      }
+      }, 150); // Kurze Verzögerung für smooth Animation
     }
   }
 
