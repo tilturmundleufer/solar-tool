@@ -2000,6 +2000,18 @@
       this.hideHelpAfterFirstUse();
     }
     
+    // Neue Methode: Preview-Grid verstecken und Konfiguration auf Hauptgrid anwenden
+    applyPreviewToMainGrid(config) {
+      console.log('Applying preview configuration to main grid:', config); // Debug
+      
+      // Verstecke Preview-Grid und zeige Hauptgrid
+      this.solarGrid.hidePreviewGrid();
+      this.solarGrid.showMainGrid();
+      
+      // Wende Konfiguration auf Hauptgrid an
+      this.applyConfiguration(config);
+    }
+    
     // NEUE ACTION HANDLER METHODE
     handleAction(action) {
       switch (action) {
@@ -3413,7 +3425,7 @@
 						if (input) {
 							try {
 								const config = this.smartParser.parseInput(input);
-								this.smartParser.applyConfiguration(config);
+								this.smartParser.applyPreviewToMainGrid(config);
 								this.showToast(`Konfiguration "${input}" angewendet ✅`, 2000);
 								quickInput.value = ''; // Input leeren
 							} catch (error) {
@@ -4868,47 +4880,106 @@
       
       console.log('Saved original state:', this.originalPreviewState); // Debug
       
-      // Temporäre Konfiguration anwenden
+      // Erstelle Preview-Grid
+      this.createPreviewGrid(config);
+      
+      // Verstecke Hauptgrid und zeige Preview-Grid
+      this.hideMainGrid();
+      this.showPreviewGrid();
+    }
+    
+    createPreviewGrid(config) {
+      console.log('Creating preview grid with config:', config); // Debug
+      
+      const previewContainer = document.getElementById('preview-grid-container');
+      const previewGrid = document.getElementById('preview-grid');
+      
+      if (!previewContainer || !previewGrid) {
+        console.error('Preview grid elements not found');
+        return;
+      }
+      
+      // Berechne Preview-Grid-Größe
+      let previewCols = this.cols;
+      let previewRows = this.rows;
+      
       if (config.cols && config.rows) {
-        console.log('Setting grid size to:', config.cols, 'x', config.rows);
-        this.cols = config.cols;
-        this.rows = config.rows;
+        previewCols = config.cols;
+        previewRows = config.rows;
       }
       
-      // Orientierung setzen
-      if (config.orientation && this.orV && this.orH) {
-        console.log('Setting orientation to:', config.orientation);
-        this.orV.checked = config.orientation === 'vertical';
-        this.orH.checked = config.orientation === 'horizontal';
-      }
-      
-      // Grid-Größe anpassen
-      this.updateSize();
-      
-      // Temporäre Selection erstellen
+      // Erstelle Preview-Selection
       let previewSelection;
       if (config.moduleCount) {
         console.log('Creating module selection for', config.moduleCount, 'modules');
-        // Automatische Modul-Auswahl für Preview
-        previewSelection = this.createModuleSelection(config.moduleCount, this.cols, this.rows);
+        previewSelection = this.createModuleSelection(config.moduleCount, previewCols, previewRows);
       } else {
         console.log('Creating empty selection for preview');
-        // Leere Selection für Grid-Preview
-        previewSelection = Array.from({ length: this.rows }, () =>
-          Array.from({ length: this.cols }, () => false)
+        previewSelection = Array.from({ length: previewRows }, () =>
+          Array.from({ length: previewCols }, () => false)
         );
       }
       
-      // Temporäre Selection anwenden
-      this.selection = previewSelection;
+      // Baue Preview-Grid
+      this.buildPreviewGrid(previewGrid, previewSelection, previewCols, previewRows);
+    }
+    
+    buildPreviewGrid(previewGrid, selection, cols, rows) {
+      console.log('Building preview grid:', cols, 'x', rows); // Debug
       
-      // Grid mit Preview-Styling neu aufbauen
-      this.buildGrid();
-      this.addPreviewStyling();
+      // Grid-Styling setzen
+      previewGrid.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+      previewGrid.style.gridTemplateRows = `repeat(${rows}, 40px)`;
       
-      // Preview bleibt bestehen bis das Eingabefeld geleert wird
-      // Kein automatisches Zurücksetzen nach 3 Sekunden
-      console.log('Preview applied - will clear when input is cleared');
+      // Grid leeren
+      previewGrid.innerHTML = '';
+      
+      // Zellen erstellen
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'preview-grid-cell';
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          
+          // Selection anwenden
+          if (selection && selection[row] && selection[row][col]) {
+            cell.classList.add('selected');
+          }
+          
+          previewGrid.appendChild(cell);
+        }
+      }
+    }
+    
+    hideMainGrid() {
+      const mainGrid = document.getElementById('grid');
+      if (mainGrid) {
+        mainGrid.style.display = 'none';
+      }
+    }
+    
+    showPreviewGrid() {
+      const previewContainer = document.getElementById('preview-grid-container');
+      if (previewContainer) {
+        previewContainer.style.display = 'block';
+        previewContainer.classList.add('active');
+      }
+    }
+    
+    hidePreviewGrid() {
+      const previewContainer = document.getElementById('preview-grid-container');
+      if (previewContainer) {
+        previewContainer.style.display = 'none';
+        previewContainer.classList.remove('active');
+      }
+    }
+    
+    showMainGrid() {
+      const mainGrid = document.getElementById('grid');
+      if (mainGrid) {
+        mainGrid.style.display = 'grid';
+      }
     }
     
     createModuleSelection(moduleCount, cols, rows) {
@@ -4951,13 +5022,9 @@
     clearGridPreview() {
       console.log('clearGridPreview called'); // Debug
       
-      // Entferne Preview-Styling
-      if (this.gridEl) {
-        const cells = this.gridEl.querySelectorAll('.grid-cell');
-        cells.forEach(cell => {
-          cell.classList.remove('preview-mode', 'bulk-highlight', 'drag-preview-select', 'drag-preview-deselect');
-        });
-      }
+      // Verstecke Preview-Grid und zeige Hauptgrid
+      this.hidePreviewGrid();
+      this.showMainGrid();
       
       // Verwende gespeicherten ursprünglichen Zustand
       if (this.originalPreviewState) {

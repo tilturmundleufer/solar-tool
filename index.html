@@ -30,9 +30,7 @@
       <div class="header">
         <div class="controls controls--horizontal">
           <div class="aspect-ratio-controls">
-            <input type="number" id="width-input" class="aspect-input" value="176" min="1">
-            <span>:</span>
-            <input type="number" id="height-input" class="aspect-input" value="113" min="1" step="1">
+            <span>Grid-Konfiguration</span>
           </div>
         </div>
       </div>
@@ -42,6 +40,14 @@
             <div class="grid-wrapper">
               <div class="grid-overflow">
                 <div id="grid" class="grid"></div>
+              </div>
+            </div>
+            <!-- Preview Grid (wird bei Preview-Modus angezeigt) -->
+            <div id="preview-grid-container" class="preview-grid-container" style="display: none;">
+              <div class="preview-grid-wrapper">
+                <div class="preview-grid-overflow">
+                  <div id="preview-grid" class="preview-grid"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -88,16 +94,7 @@
         <button id="save-config-btn">Konfiguration speichern</button>
         <button id="add-to-cart-btn">Aktuelle Konfiguration zum Warenkorb</button>
         <button id="summary-add-cart-btn">Alle Konfigurationen zum Warenkorb</button>
-        <button id="reset-btn">Zurücksetzen</button>
         <button id="continue-later-btn">Später weitermachen</button>
-      </div>
-      <div class="checkbox-bar">
-        <label><input type="checkbox" id="include-modules" checked> Module</label>
-        <label><input type="checkbox" id="mc4"> MC4-Stecker</label>
-        <label><input type="checkbox" id="solarkabel"> Solarkabel</label>
-        <label><input type="checkbox" id="holz"> Holzunterleger</label>
-        <label><input type="radio" name="orient" id="orient-h" checked> Horizontal</label>
-        <label><input type="radio" name="orient" id="orient-v"> Vertikal</label>
       </div>
       
       <!-- Smart Config Interface -->
@@ -129,14 +126,14 @@
         
         <div class="setup-container">
           <div class="setup-row">
-            <label>Breite (in cm):<input type="number" id="width-input-setup" min="1" value="176"></label>
-            <label>Höhe (in cm):<input type="number" id="height-input-setup" min="1" value="113"></label>
+            <label>Breite (in cm):<input type="number" id="width-input" min="1" value="176"></label>
+            <label>Höhe (in cm):<input type="number" id="height-input" min="1" value="113"></label>
           </div>
           <div class="setup-row">
-            <label>Horizontal/Vertikal:<input type="radio" name="orient" id="orient-h-setup"><input type="radio" name="orient" id="orient-v-setup" checked></label>
+            <label>Horizontal/Vertikal:<input type="radio" name="orient" id="orient-h"><input type="radio" name="orient" id="orient-v" checked></label>
           </div>
           <div class="setup-row">
-            <button id="reset-btn-setup" class="btn">Zurücksetzen</button>
+            <button id="reset-btn" class="btn">Zurücksetzen</button>
           </div>
         </div>
       </div>
