@@ -213,7 +213,7 @@
       			parts.Dachhaken          += len > 1 ? len * 3 : 4;
       parts.Endkappen          += parts.Endklemmen;
       parts.Solarmodul         += len;
-      parts.Schrauben          += parts.Dachhaken * 2;
+      // Schrauben werden in der SolarPDFGenerator Klasse berechnet, nicht hier
     }
 
     calculateExtendedPartsSync(data) {
@@ -1510,8 +1510,8 @@
       parts.Solarmodul += len;
       parts.Endklemmen += 2;
       parts.Mittelklemmen += Math.max(0, len - 1);
-      parts.Dachhaken += len;
-      parts.Schrauben += parts.Dachhaken * 2;
+      parts.Dachhaken += len > 1 ? len * 3 : 4; // KORREKT: 3 Dachhaken pro Modul bei Reihen ≥2
+      parts.Schrauben += parts.Dachhaken * 2; // KORREKT: 2 Schrauben pro Dachhaken
       parts.Endkappen += parts.Endklemmen;
       
       const totalSchienen = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
@@ -4300,7 +4300,7 @@
       p.Dachhaken          += len > 1 ? len * 3 : 4; // KORREKT: 3 Dachhaken pro Modul bei Reihen ≥2
       p.Endkappen          += p.Endklemmen;
       p.Solarmodul         += len;
-      p.Schrauben         += p.Dachhaken * 2;
+      // Schrauben werden in der SolarPDFGenerator Klasse berechnet, nicht hier
     }
 
     mapImage(key) {
@@ -4695,7 +4695,10 @@
   			// Fallback: Verwende leeres total
   		}
 
+  		// DEBUG: Zeige total Objekt
+  		console.log('Total Object Debug:', total);
   		const entries = Object.entries(total).filter(([, v]) => v > 0);
+  		console.log('Entries Debug:', entries);
   		const itemsPerColumn = 4;
   		const numColumns = Math.ceil(entries.length / itemsPerColumn);
 
@@ -4800,7 +4803,7 @@
 			parts.Dachhaken          += len > 1 ? len * 3 : 4;
 			parts.Endkappen          += parts.Endklemmen;
 			parts.Solarmodul         += len;
-			parts.Schrauben          += parts.Dachhaken * 2;
+			// Schrauben werden in der SolarPDFGenerator Klasse berechnet, nicht hier
 		}
 
     generateContinueLink() {

@@ -76,9 +76,9 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   parts.Endklemmen         += 4;
   parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
   			parts.Dachhaken          += len > 1 ? len * 3 : 4;
-                 parts.Endkappen          += parts.Endklemmen;
-       parts.Solarmodul         += len;
-       parts.Schrauben          += parts.Dachhaken * 2;
+                          parts.Endkappen          += parts.Endklemmen;
+        parts.Solarmodul         += len;
+        // Schrauben werden in der SolarPDFGenerator Klasse berechnet, nicht hier
 }
 
 // Berechne erweiterte Teile mit zusätzlichen Optionen
