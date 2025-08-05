@@ -213,7 +213,7 @@
       			parts.Dachhaken          += len > 1 ? len * 3 : 4;
       parts.Endkappen          += parts.Endklemmen;
       parts.Solarmodul         += len;
-      // Schrauben werden in der SolarGrid Klasse berechnet, nicht hier
+      parts.Schrauben          += parts.Dachhaken * 2;
     }
 
     calculateExtendedPartsSync(data) {
@@ -1511,8 +1511,8 @@
       parts.Endklemmen += 2;
       parts.Mittelklemmen += Math.max(0, len - 1);
       parts.Dachhaken += len;
-      // Schrauben werden basierend auf Dachhaken berechnet, nicht hier
-      parts.Endkappen += 2;
+      parts.Schrauben += parts.Dachhaken * 2;
+      parts.Endkappen += parts.Endklemmen;
       
       const totalSchienen = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
       if (totalSchienen > 1) {
@@ -4300,7 +4300,7 @@
       p.Dachhaken          += len > 1 ? len * 3 : 4; // KORREKT: 3 Dachhaken pro Modul bei Reihen ≥2
       p.Endkappen          += p.Endklemmen;
       p.Solarmodul         += len;
-      // Schrauben werden in der SolarGrid Klasse berechnet, nicht hier
+      p.Schrauben         += p.Dachhaken * 2;
     }
 
     mapImage(key) {
