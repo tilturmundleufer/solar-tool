@@ -4926,9 +4926,15 @@
     buildPreviewGrid(previewGrid, selection, cols, rows) {
       console.log('Building preview grid:', cols, 'x', rows); // Debug
       
+      // Verwende die gleiche Zellgröße wie das Hauptgrid
+      const cellWidth = this.cellWidth || 40;
+      const cellHeight = this.cellHeight || 40;
+      
+      console.log('Using cell size:', cellWidth, 'x', cellHeight); // Debug
+      
       // Grid-Styling setzen
-      previewGrid.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
-      previewGrid.style.gridTemplateRows = `repeat(${rows}, 40px)`;
+      previewGrid.style.gridTemplateColumns = `repeat(${cols}, ${cellWidth}px)`;
+      previewGrid.style.gridTemplateRows = `repeat(${rows}, ${cellHeight}px)`;
       
       // Grid leeren
       previewGrid.innerHTML = '';
