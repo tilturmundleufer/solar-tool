@@ -1536,6 +1536,9 @@
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))|(?:(\d+)\s*mal\s*(\d+)\s*modul[e]?[n]?)/i,
         // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
         spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
+        // "kompakt" oder "mit lücken" für Grid-Syntax
+        gridCompact: /(?:kompakt|ohne\s*lücken)/i,
+        gridSpaced: /(?:mit\s*lücken|mit\s*abstand)/i,
         // Kombinierte Checkbox-Logik mit "und" Verknüpfungen
         checkboxCombination: /(?:^|\s)(?:mit|und)\s+(.+?)(?:\s+und\s+(.+?))*(?:\s*$)/i,
         // NEUE ACTION PATTERNS:
@@ -1546,7 +1549,23 @@
         // "module löschen" → Module-Auswahl löschen
         deleteModules: /^modul[e]?[n]?\s*löschen$/i,
         // "reset", "zurücksetzen" → Grid zurücksetzen
-        resetGrid: /^(?:reset|zurücksetzen|zurücksetzen)$/i
+        resetGrid: /^(?:reset|zurücksetzen|zurücksetzen)$/i,
+        // Intelligente Modul-Verteilung
+        distributionEqual: /(?:gleichmäßig|gleich|optimal)/i,
+        distributionRows: /(?:in\s*reihen|reihenweise)/i,
+        distributionColumns: /(?:in\s*spalten|spaltenweise)/i,
+        distributionRandom: /(?:zufällig|random)/i,
+        // Erweiterte Abstand-Logik
+        spacingDouble: /(?:doppelter|doppeltem)\s*abstand/i,
+        spacingRowsOnly: /(?:nur\s*)?(?:zwischen\s*)?reihen/i,
+        spacingColumnsOnly: /(?:nur\s*)?(?:zwischen\s*)?spalten/i,
+        // Kombinierte Checkbox-Syntax
+        checkboxAllExcept: /(?:alles\s*außer|alle\s*außer)/i,
+        checkboxOnly: /(?:nur|only)/i,
+        checkboxWithout: /(?:ohne\s*zubehör|ohne\s*extras)/i,
+        checkboxWithAll: /(?:mit\s*allem|alles\s*mit)/i,
+        // Speichern mit Namen
+        saveWithName: /(?:speichern\s*als\s*['"]?([^'"]+)['"]?)/i
       };
     }
 
@@ -1681,6 +1700,16 @@
             }
           }
         }
+        
+        // Prüfe auf Grid-Syntax-Modifikatoren (kompakt/with lücken)
+        const gridCompactMatch = input.match(this.patterns.gridCompact);
+        const gridSpacedMatch = input.match(this.patterns.gridSpaced);
+        
+        if (gridCompactMatch) {
+          config.gridCompact = true; // Keine Abstände
+        } else if (gridSpacedMatch) {
+          config.gridSpaced = true; // Mit Abständen
+        }
       }
 
       // Reihen-Pattern parsen (hat Priorität vor einfacher moduleCount)
@@ -1778,6 +1807,23 @@
           
         }
       }
+      
+      // Intelligente Modul-Verteilung parsen
+      const distributionEqualMatch = input.match(this.patterns.distributionEqual);
+      const distributionRowsMatch = input.match(this.patterns.distributionRows);
+      const distributionColumnsMatch = input.match(this.patterns.distributionColumns);
+      const distributionRandomMatch = input.match(this.patterns.distributionRandom);
+      
+      if (distributionEqualMatch) {
+        config.distribution = 'equal';
+      } else if (distributionRowsMatch) {
+        config.distribution = 'rows';
+      } else if (distributionColumnsMatch) {
+        config.distribution = 'columns';
+      } else if (distributionRandomMatch) {
+        config.distribution = 'random';
+      }
+      
       // Module-Anzahl parsen (nur wenn keine Reihen-Konfiguration)
       else {
         const moduleMatch = input.match(this.patterns.moduleCount);
@@ -1786,9 +1832,20 @@
           
           // Prüfe auf Abstand auch bei einfacher Module-Anzahl
           const spacingMatch = input.match(this.patterns.spacing);
+          const spacingDoubleMatch = input.match(this.patterns.spacingDouble);
+          const spacingRowsOnlyMatch = input.match(this.patterns.spacingRowsOnly);
+          const spacingColumnsOnlyMatch = input.match(this.patterns.spacingColumnsOnly);
           let spacingRows = 0;
           
-          if (spacingMatch) {
+          if (spacingDoubleMatch) {
+            spacingRows = 2; // Doppelter Abstand
+          } else if (spacingRowsOnlyMatch) {
+            spacingRows = 1; // Nur zwischen Reihen
+            config.spacingRowsOnly = true;
+          } else if (spacingColumnsOnlyMatch) {
+            spacingRows = 1; // Nur zwischen Spalten
+            config.spacingColumnsOnly = true;
+          } else if (spacingMatch) {
             if (spacingMatch[0].toLowerCase().includes('mit') && !spacingMatch[1]) {
               spacingRows = 1; // Standard-Abstand
             } else if (spacingMatch[1]) {
@@ -1827,43 +1884,82 @@
                             orientationMatch[0].toLowerCase().includes('vertical') ? 'vertical' : 'horizontal';
       }
 
-      // Checkbox-Kombinationen parsen (hat Priorität vor einzelnen Patterns)
-      const checkboxCombinations = this.parseCheckboxCombinations(input);
-      let hasCheckboxCombinations = Object.values(checkboxCombinations).some(value => value !== null);
-
-      if (hasCheckboxCombinations) {
-        // Setze nur die Werte, die explizit erkannt wurden (nicht null)
-        if (checkboxCombinations.modules !== null) config.includeModules = checkboxCombinations.modules;
-        if (checkboxCombinations.mc4 !== null) config.mc4 = checkboxCombinations.mc4;
-        if (checkboxCombinations.cable !== null) config.cable = checkboxCombinations.cable;
-        if (checkboxCombinations.wood !== null) config.wood = checkboxCombinations.wood;
+      // Erweiterte Checkbox-Syntax parsen
+      const checkboxAllExceptMatch = input.match(this.patterns.checkboxAllExcept);
+      const checkboxOnlyMatch = input.match(this.patterns.checkboxOnly);
+      const checkboxWithoutMatch = input.match(this.patterns.checkboxWithout);
+      const checkboxWithAllMatch = input.match(this.patterns.checkboxWithAll);
+      
+      if (checkboxAllExceptMatch) {
+        // "alles außer holz" → Alle außer Holz
+        config.includeModules = true;
+        config.mc4 = true;
+        config.cable = true;
+        config.wood = false;
+      } else if (checkboxOnlyMatch) {
+        // "nur module und mc4" → Nur Module + MC4
+        config.includeModules = true;
+        config.mc4 = true;
+        config.cable = false;
+        config.wood = false;
+      } else if (checkboxWithoutMatch) {
+        // "ohne zubehör" → Nur Module
+        config.includeModules = true;
+        config.mc4 = false;
+        config.cable = false;
+        config.wood = false;
+      } else if (checkboxWithAllMatch) {
+        // "mit allem" → Alle aktivieren
+        config.includeModules = true;
+        config.mc4 = true;
+        config.cable = true;
+        config.wood = true;
       } else {
-        // Fallback: Einzelne Checkbox-Patterns parsen
-        
-        // Module-Checkbox parsen (getrennt von moduleCount)
-        const moduleCheckboxMatch = input.match(this.patterns.moduleCheckbox);
-        if (moduleCheckboxMatch) {
-          config.includeModules = moduleCheckboxMatch[0].toLowerCase().includes('mit');
-        }
+        // Checkbox-Kombinationen parsen (hat Priorität vor einzelnen Patterns)
+        const checkboxCombinations = this.parseCheckboxCombinations(input);
+        let hasCheckboxCombinations = Object.values(checkboxCombinations).some(value => value !== null);
 
-        // Optionen parsen (nur wenn explizit erwähnt)
-        const mc4Match = input.match(this.patterns.mc4);
-        if (mc4Match) {
-          config.mc4 = mc4Match[0].toLowerCase().includes('mit');
-        }
+        if (hasCheckboxCombinations) {
+          // Setze nur die Werte, die explizit erkannt wurden (nicht null)
+          if (checkboxCombinations.modules !== null) config.includeModules = checkboxCombinations.modules;
+          if (checkboxCombinations.mc4 !== null) config.mc4 = checkboxCombinations.mc4;
+          if (checkboxCombinations.cable !== null) config.cable = checkboxCombinations.cable;
+          if (checkboxCombinations.wood !== null) config.wood = checkboxCombinations.wood;
+                } else {
+          // Fallback: Einzelne Checkbox-Patterns parsen
+          
+          // Module-Checkbox parsen (getrennt von moduleCount)
+          const moduleCheckboxMatch = input.match(this.patterns.moduleCheckbox);
+          if (moduleCheckboxMatch) {
+            config.includeModules = moduleCheckboxMatch[0].toLowerCase().includes('mit');
+          }
 
-        const cableMatch = input.match(this.patterns.cable);
-        if (cableMatch) {
-          config.cable = cableMatch[0].toLowerCase().includes('mit');
-        }
+          // Optionen parsen (nur wenn explizit erwähnt)
+          const mc4Match = input.match(this.patterns.mc4);
+          if (mc4Match) {
+            config.mc4 = mc4Match[0].toLowerCase().includes('mit');
+          }
 
-        const woodMatch = input.match(this.patterns.wood);
-        if (woodMatch) {
-          config.wood = woodMatch[0].toLowerCase().includes('mit');
+          const cableMatch = input.match(this.patterns.cable);
+          if (cableMatch) {
+            config.cable = cableMatch[0].toLowerCase().includes('mit');
+          }
+
+          const woodMatch = input.match(this.patterns.wood);
+          if (woodMatch) {
+            config.wood = woodMatch[0].toLowerCase().includes('mit');
+          }
         }
       }
 
       // NEUE ACTION PATTERNS PRÜFEN (höchste Priorität - vor allen anderen Patterns)
+      const saveWithNameMatch = input.match(this.patterns.saveWithName);
+      if (saveWithNameMatch) {
+        config.action = 'saveConfig';
+        config.configName = saveWithNameMatch[1];
+        return config;
+      }
+      
       const saveConfigMatch = input.match(this.patterns.saveConfig);
       if (saveConfigMatch) {
         config.action = 'saveConfig';
