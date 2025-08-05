@@ -4622,8 +4622,8 @@
         const selectionChanged = this.arraysEqual(currentSelection, savedSelection);
         
         if (selectionChanged) {
-          // Ersetze gespeicherte Konfigurationen durch aktuelle
-          bundles = [{
+          // Füge aktuelle Konfiguration zu den gespeicherten hinzu
+          bundles.push({
             selection:   currentSelection, // Direkte Referenz
             rows:        this.rows,
             cols:        this.cols,
@@ -4636,9 +4636,24 @@
             solarkabel:  this.solarkabel && this.solarkabel.checked,
             holz:        this.holz && this.holz.checked,
             quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-          }];
+          });
+        } else {
+          // Keine Änderung: Füge aktuelle Konfiguration trotzdem hinzu
+          bundles.push({
+            selection:   currentSelection, // Direkte Referenz
+            rows:        this.rows,
+            cols:        this.cols,
+            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+            // GLOBALE Checkbox-Werte
+            incM:        this.incM && this.incM.checked,
+            mc4:         this.mc4 && this.mc4.checked,
+            solarkabel:  this.solarkabel && this.solarkabel.checked,
+            holz:        this.holz && this.holz.checked,
+            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
+          });
         }
-        // Wenn keine Änderung, verwende gespeicherte Konfigurationen (bundles bleibt unverändert)
       }
   		
   		const total = {};
