@@ -91,7 +91,7 @@
     Erdungsklemme: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Quetschkabelschuhe: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6887614c64676f0b0c8d5037_Kabelschuh%20Platzhalter.jpg',
     Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
-    Tellerkopfschraube: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png'
+    Tellerkopfschraube: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg'
   };
   
   // Zentrale Konfiguration ist jetzt direkt eingebettet
@@ -253,7 +253,8 @@
       parts.Dachhaken          += len > 1 ? len * 3 : 4;
       parts.Endkappen          += parts.Endklemmen;
       parts.Solarmodul         += len;
-      parts.Schrauben          += parts.Dachhaken * 2;
+      parts.Schrauben          += parts.Dachhaken * 1; // M10x25: 1 pro Dachhaken (vorher 3)
+      parts.Tellerkopfschraube += parts.Dachhaken * 2; // Tellerkopfschraube: 2 pro Dachhaken (neu)
     }
 
     calculateExtendedPartsSync(data) {
@@ -4806,7 +4807,8 @@
 			parts.Solarmodul         += len;
 			// Schrauben basierend auf Dachhaken für diese Gruppe berechnen
 			const dachhakenForGroup = len > 1 ? len * 3 : 4;
-			parts.Schrauben          += dachhakenForGroup * 2;
+			parts.Schrauben          += dachhakenForGroup * 1; // M10x25: 1 pro Dachhaken (vorher 3)
+			parts.Tellerkopfschraube += dachhakenForGroup * 2; // Tellerkopfschraube: 2 pro Dachhaken (neu)
 		}
 
     generateContinueLink() {

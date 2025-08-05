@@ -118,7 +118,8 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   parts.Solarmodul         += len;
   // Schrauben basierend auf Dachhaken für diese Gruppe berechnen
   const dachhakenForGroup = len > 1 ? len * 3 : 4;
-  parts.Schrauben          += dachhakenForGroup * 2;
+  parts.Schrauben          += dachhakenForGroup * 1; // M10x25: 1 pro Dachhaken (vorher 3)
+  parts.Tellerkopfschraube += dachhakenForGroup * 2; // Tellerkopfschraube: 2 pro Dachhaken (neu)
         
   workerLog(`WORKER DEBUG: Parts after processing - Solarmodul=${parts.Solarmodul}, Dachhaken=${parts.Dachhaken}, Schrauben=${parts.Schrauben}`);
 }
