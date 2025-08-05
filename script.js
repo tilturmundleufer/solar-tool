@@ -2461,12 +2461,9 @@
     }
 
     setupKeyListener() {
-      // Globaler Keyboard-Listener für Shift-Toggle
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Shift' && !e.repeat) {
-          this.toggleBulkMode();
-        }
-      });
+      // FEATURE 2: Shift+Klick entfernt - nur noch Drag-and-Drop
+      // Keine Keyboard-Listener mehr für Shift-Toggle
+      // Bulk-Modus wird nur noch über Drag-and-Drop aktiviert
     }
 
     toggleBulkMode() {
@@ -2551,61 +2548,52 @@
         const newCell = cell.cloneNode(true);
         cell.parentNode.replaceChild(newCell, cell);
         
-        // NEUE: Drag-to-Select Event Listeners
+        // FEATURE 1: Snap-to-Grid + Touch-Optimierung
+        // NEUE: Drag-to-Select Event Listeners mit Touch-Support
         newCell.addEventListener('mousedown', (e) => {
           e.preventDefault(); // Verhindert Textauswahl während Drag
-          
-          // Erfasse aktuellen Status der Start-Zelle für intelligentes Toggle
-          const isCurrentlySelected = this.solarGrid.selection[y]?.[x] || false;
-          
-          // Starte Drag-to-Select Modus
-          this.mousePressed = true;
-          this.isDragging = false; // Wird erst bei mousemove aktiviert
-          this.dragStart = { x, y, wasSelected: isCurrentlySelected };
-          
-          // Visuelle Markierung der Start-Zelle
-          this.clearHighlight();
-          newCell.classList.add('drag-start-marker');
-          
-          // Visueller Hinweis auf Toggle-Modus
-          if (isCurrentlySelected) {
-            newCell.classList.add('drag-deselect-mode');
-          } else {
-            newCell.classList.add('drag-select-mode');
-          }
+          this.handleDragStart(e, x, y, newCell);
+        });
+        
+        // Touch-Events für Mobile-Optimierung
+        newCell.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.handleDragStart(e, x, y, newCell);
         });
         
         newCell.addEventListener('mouseenter', (e) => {
           if (this.mousePressed && this.dragStart) {
-            // Drag-to-Select: Live-Preview des Bereichs mit intelligenter Vorschau
+            // FEATURE 1: Snap-to-Grid - Live-Preview mit Grid-Snap
             this.isDragging = true;
             this.highlightRange(this.dragStart, { x, y });
-          } else if (this.bulkMode && this.firstClick) {
-            // Alter Bulk-Modus: Hover-Preview zwischen Clicks
-            this.highlightRange(this.firstClick, { x, y });
+          }
+        });
+        
+        // Touch-Move für Mobile
+        newCell.addEventListener('touchmove', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            e.preventDefault();
+            this.isDragging = true;
+            this.highlightRange(this.dragStart, { x, y });
           }
         });
         
         newCell.addEventListener('mouseup', (e) => {
           if (this.mousePressed && this.dragStart) {
             e.preventDefault();
-            
-            if (this.isDragging || (this.dragStart.x === x && this.dragStart.y === y)) {
-              // Drag beendet ODER Single-Click (gleiche Zelle)
-              this.selectRange(this.dragStart, { x, y });
-              
-              // Toast-Nachricht mit intelligenter Beschreibung
-              const selectedCount = this.calculateRangeSize(this.dragStart, { x, y });
-              const action = this.dragStart.wasSelected ? "abgewählt" : "ausgewählt";
-              const emoji = this.dragStart.wasSelected ? "❌" : "✅";
-              this.solarGrid.showToast(`${emoji} Drag-${action}: ${selectedCount} Zellen`, 1500);
-            }
-            
-            // Reset Drag-Zustand
-            this.resetDragState();
+            this.handleDragEnd(e, x, y);
+          }
+        });
+        
+        // Touch-End für Mobile
+        newCell.addEventListener('touchend', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            e.preventDefault();
+            this.handleDragEnd(e, x, y);
           }
         });
 
+        // FEATURE 2: Shift+Klick entfernt - nur noch Drag-and-Drop
         // Füge neue Event Listener hinzu
         newCell.addEventListener('click', (e) => {
           // Verhindere Click-Verarbeitung wenn gerade ein Drag beendet wurde
@@ -2613,40 +2601,21 @@
             return;
           }
           
-          if (this.bulkMode) {
-            // Bulk-Modus aktiv
-            if (!this.firstClick) {
-              // Erste Zelle markieren und ihren aktuellen Zustand speichern
-              const isCurrentlySelected = this.solarGrid.selection[y]?.[x] || false;
-              this.firstClick = { x, y, wasSelected: isCurrentlySelected };
-              newCell.classList.add('first-click-marker');
-            } else {
-              // Zweite Zelle: Bereich auswählen
-              this.selectRange(this.firstClick, { x, y });
-              
-              // Bulk-Modus deaktivieren nach Auswahl
-              this.bulkMode = false;
-              this.showBulkModeIndicator(false);
-              this.firstClick = null;
-              this.clearFirstClickMarker();
-            }
+          // Normaler Click-Modus (Bulk-Modus entfernt)
+          if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+          
+          if (e.ctrlKey || e.metaKey) {
+            // Ctrl+Click: Toggle ohne firstClick zu ändern
+            this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
           } else {
-            // Normaler Click-Modus
-            if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
-            
-            if (e.ctrlKey || e.metaKey) {
-              // Ctrl+Click: Toggle ohne firstClick zu ändern
-              this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
-            } else {
-              // Normaler Click: Toggle
-              this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
-            }
-            
-            newCell.classList.toggle('selected');
-            this.solarGrid.trackInteraction();
-            this.solarGrid.buildList();
-            this.solarGrid.updateSummaryOnChange();
+            // Normaler Click: Toggle
+            this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
           }
+          
+          newCell.classList.toggle('selected');
+          this.solarGrid.trackInteraction();
+          this.solarGrid.buildList();
+          this.solarGrid.updateSummaryOnChange();
         });
 
         newCell.addEventListener('mouseleave', () => {
@@ -2750,12 +2719,58 @@
       cells.forEach(cell => cell.classList.remove('first-click-marker'));
     }
     
-    // NEUE METHODE: Globale Mouse-Events für Drag-to-Select
+    // FEATURE 1: Snap-to-Grid + Touch-Optimierung - Neue Methoden
+    handleDragStart(e, x, y, cell) {
+      // Erfasse aktuellen Status der Start-Zelle für intelligentes Toggle
+      const isCurrentlySelected = this.solarGrid.selection[y]?.[x] || false;
+      
+      // Starte Drag-to-Select Modus
+      this.mousePressed = true;
+      this.isDragging = false; // Wird erst bei mousemove aktiviert
+      this.dragStart = { x, y, wasSelected: isCurrentlySelected };
+      
+      // Visuelle Markierung der Start-Zelle
+      this.clearHighlight();
+      cell.classList.add('drag-start-marker');
+      
+      // Visueller Hinweis auf Toggle-Modus
+      if (isCurrentlySelected) {
+        cell.classList.add('drag-deselect-mode');
+      } else {
+        cell.classList.add('drag-select-mode');
+      }
+    }
+    
+    handleDragEnd(e, x, y) {
+      if (this.isDragging || (this.dragStart.x === x && this.dragStart.y === y)) {
+        // Drag beendet ODER Single-Click (gleiche Zelle)
+        this.selectRange(this.dragStart, { x, y });
+        
+        // Toast-Nachricht mit intelligenter Beschreibung
+        const selectedCount = this.calculateRangeSize(this.dragStart, { x, y });
+        const action = this.dragStart.wasSelected ? "abgewählt" : "ausgewählt";
+        const emoji = this.dragStart.wasSelected ? "❌" : "✅";
+        this.solarGrid.showToast(`${emoji} Drag-${action}: ${selectedCount} Zellen`, 1500);
+      }
+      
+      // Reset Drag-Zustand
+      this.resetDragState();
+    }
+    
+    // FEATURE 1: Snap-to-Grid + Touch-Optimierung - Globale Events
     setupGlobalMouseEvents() {
       // Globaler Mouse-Up Event um Drag-Operations außerhalb des Grids zu beenden
       document.addEventListener('mouseup', (e) => {
         if (this.mousePressed) {
           // Drag wurde außerhalb des Grids beendet - ohne Auswahl
+          this.resetDragState();
+        }
+      });
+      
+      // Touch-End für Mobile
+      document.addEventListener('touchend', (e) => {
+        if (this.mousePressed) {
+          // Touch wurde außerhalb des Grids beendet - ohne Auswahl
           this.resetDragState();
         }
       });
@@ -2768,8 +2783,23 @@
         }
       });
       
+      // Touch-Leave für Mobile
+      this.solarGrid.gridEl.addEventListener('touchcancel', () => {
+        if (this.mousePressed && !this.isDragging) {
+          // Touch verlässt Grid während Drag-Start - Reset ohne Auswahl
+          this.resetDragState();
+        }
+      });
+      
       // Verhindere Kontext-Menu während Drag-Operationen
       this.solarGrid.gridEl.addEventListener('contextmenu', (e) => {
+        if (this.isDragging || this.mousePressed) {
+          e.preventDefault();
+        }
+      });
+      
+      // Verhindere Zoom-Gesten während Drag-Operationen
+      this.solarGrid.gridEl.addEventListener('touchmove', (e) => {
         if (this.isDragging || this.mousePressed) {
           e.preventDefault();
         }
@@ -2812,6 +2842,21 @@
       // Performance: Resize Observer für responsive Updates
       this.resizeObserver = null;
       this.resizeTimeout = null;
+      
+      // FEATURE 8: Pinch-to-Zoom
+      this.zoomLevel = 1;
+      this.minZoom = 0.5;
+      this.maxZoom = 3;
+      this.zoomObserver = null;
+      
+      // FEATURE 5: Performance-Monitoring (entfernbar)
+      this.performanceMetrics = {
+        gridRenderTime: 0,
+        updateTime: 0,
+        memoryUsage: 0,
+        fps: 0,
+        errorCount: 0
+      };
       
       // Tracking für Session-Daten
       this.sessionId = this.generateSessionId();
@@ -2868,7 +2913,9 @@
         interactionCount: this.interactionCount,
         sessionStartTime: this.sessionStartTime,
         firstInteractionTime: this.firstInteractionTime,
-        lastInteractionTime: this.lastInteractionTime
+        lastInteractionTime: this.lastInteractionTime,
+        // FEATURE 5: Performance-Monitoring - Metriken hinzufügen
+        performanceMetrics: this.performanceMetrics
       };
     }
 
@@ -3028,6 +3075,24 @@
 
     async sendConfigToWebhook(configData) {
       try {
+        // FEATURE 10: Analytics zum Webhook hinzufügen
+        const analyticsData = {
+          ...configData,
+          analytics: {
+            sessionData: this.getSessionData(),
+            performanceMetrics: this.performanceMetrics,
+            userAgent: navigator.userAgent,
+            screenResolution: `${screen.width}x${screen.height}`,
+            timestamp: new Date().toISOString(),
+            featureUsage: {
+              dragToSelect: this.interactionCount > 0,
+              smartConfig: configData.smartConfigUsed || false,
+              mobileDevice: this.checkMobileDevice(),
+              zoomLevel: this.zoomLevel || 1
+            }
+          }
+        };
+
         // NEUE: Füge Grid-Bild zu Webhook-Daten hinzu
         const gridImage = await this.pdfGenerator.captureGridImageForWebhook(configData);
         if (gridImage) {
@@ -3047,7 +3112,7 @@
           // Erstelle sowohl Data-URL als auch reinen Base64-String für Kompatibilität
           const base64Only = gridImage.split(',')[1];
           
-          configData.gridImage = {
+          analyticsData.gridImage = {
             data: gridImage, // Vollständiger Data-URL: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...
             base64: base64Only, // Reiner Base64-String für Fallback
             format: 'data-url',
@@ -3062,7 +3127,7 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(configData)
+          body: JSON.stringify(analyticsData)
         });
 
         if (response.ok) {
@@ -3478,6 +3543,9 @@
 			
 			// Performance: Resize Observer für responsive Updates
 			this.setupResizeObserver();
+			
+			// FEATURE 8: Pinch-to-Zoom Setup
+			this.setupPinchToZoom();
 			
 			// Initialisiere Smart Config Features
 			this.initSmartConfigFeatures();
@@ -3955,6 +4023,9 @@
     buildGrid() {
   		if (!Array.isArray(this.selection)) return;
   		
+  		// FEATURE 5: Performance-Monitoring - Start
+  		const startTime = performance.now();
+  		
   		// Performance: Verwende DocumentFragment für bessere Performance
   		const fragment = document.createDocumentFragment();
   		
@@ -3974,15 +4045,34 @@
       		const cell = document.createElement('div');
       		cell.className = 'grid-cell animate-in';
       		if (this.selection[y]?.[x]) cell.classList.add('selected');
+      		
+      		// FEATURE 6: Screen Reader Support - ARIA-Labels
+      		cell.setAttribute('role', 'button');
+      		cell.setAttribute('tabindex', '0');
+      		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y]?.[x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
+      		cell.setAttribute('aria-pressed', this.selection[y]?.[x] ? 'true' : 'false');
 
       		// Event-Listener optimiert
       		cell.addEventListener('click', () => {
         		if (!this.selection[y]) this.selection[y] = [];
         		this.selection[y][x] = !this.selection[y][x];
         		cell.classList.toggle('selected');
+        		
+        		// FEATURE 6: Screen Reader Support - Update ARIA
+        		cell.setAttribute('aria-pressed', this.selection[y][x] ? 'true' : 'false');
+        		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
+        		
         		this.trackInteraction();
         		this.buildList();
         		this.updateSummaryOnChange();
+      		});
+       
+      		// FEATURE 6: Screen Reader Support - Keyboard Navigation
+      		cell.addEventListener('keydown', (e) => {
+        		if (e.key === 'Enter' || e.key === ' ') {
+        			e.preventDefault();
+        			cell.click();
+        		}
       		});
 
       		const dx = x - centerX;
@@ -3999,6 +4089,9 @@
   		// Einmalige DOM-Manipulation
   		this.gridEl.innerHTML = '';
   		this.gridEl.appendChild(fragment);
+  		
+  		// FEATURE 5: Performance-Monitoring - End
+  		this.performanceMetrics.gridRenderTime = performance.now() - startTime;
 		}
     
     async buildList() {
@@ -4484,7 +4577,10 @@
       }
       
       this.updateTimeout = setTimeout(() => {
+        // FEATURE 5: Performance-Monitoring - Update Time
+        const startTime = performance.now();
         this.renderProductSummary();
+        this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
       }, this.updateDelay);
     }
@@ -5388,6 +5484,52 @@
       }
     }
     
+    // FEATURE 8: Pinch-to-Zoom Setup
+    setupPinchToZoom() {
+      if (!this.wrapper) return;
+      
+      let initialDistance = 0;
+      let initialZoom = 1;
+      
+      this.wrapper.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          initialDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+          initialZoom = this.zoomLevel;
+        }
+      });
+      
+      this.wrapper.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+          const scale = currentDistance / initialDistance;
+          const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, initialZoom * scale));
+          
+          this.setZoom(newZoom);
+        }
+      });
+      
+      this.wrapper.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+          initialDistance = 0;
+          initialZoom = 1;
+        }
+      });
+    }
+    
+    getTouchDistance(touch1, touch2) {
+      const dx = touch1.clientX - touch2.clientX;
+      const dy = touch1.clientY - touch2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    setZoom(zoomLevel) {
+      this.zoomLevel = zoomLevel;
+      this.wrapper.style.transform = `scale(${zoomLevel})`;
+      this.wrapper.style.transformOrigin = 'center center';
+    }
+    
     cleanup() {
       // Memory-Leak Prävention: Timeouts löschen
       if (this.updateTimeout) {
@@ -5409,6 +5551,16 @@
       if (this.resizeObserver) {
         this.resizeObserver.disconnect();
         this.resizeObserver = null;
+      }
+      
+      // FEATURE 5: Performance-Monitoring Cleanup
+      if (this.performanceMetrics) {
+        this.performanceMetrics = null;
+      }
+      
+      // FEATURE 8: Pinch-to-Zoom Cleanup
+      if (this.zoomObserver) {
+        this.zoomObserver = null;
       }
       
       // Event-Listener entfernen
