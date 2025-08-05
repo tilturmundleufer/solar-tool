@@ -750,9 +750,7 @@
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
 
-      // Produkte pro Modul Informationen
-      checkPageBreak(80);
-      positionRef.y = this.addProductPerModuleInfo(pdf, positionRef.y, checkPageBreak);
+      // Produkte pro Modul Informationen entfernt - nicht mehr notwendig
 
       // Footer mit Logo auf der letzten Seite
       this.addFooter(pdf, pageWidth, pageHeight);
@@ -1445,53 +1443,7 @@
     }
 
     // Füge "Produkte pro Modul" Informationen hinzu
-    addProductPerModuleInfo(pdf, yPosition, checkPageBreak) {
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Produkte pro Modul (Richtwerte):', 20, yPosition);
-      yPosition += 10;
 
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      
-      const perModuleInfo = [
-        'Endklemmen: 2 Stück (je Modulreihe)',
-        'Mittelklemmen: 1 Stück (zwischen Modulen)',
-        'Dachhaken: 1-2 Stück (je nach Dachtyp)',
-        'Schrauben: 4-6 Stück (je Dachhaken)',
-        'MC4-Stecker: 1 Packung pro 30 Module',
-        'Solarkabel: 1 Rolle pro Anlage',
-        'Holzunterleger: 1 Stück pro Schienenmeter'
-      ];
-
-      perModuleInfo.forEach(info => {
-        // Prüfe ob noch Platz für eine weitere Zeile vorhanden ist
-        if (checkPageBreak && checkPageBreak(8)) {
-          // Nach Seitenumbruch den Titel wiederholen
-          pdf.setFontSize(14);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Produkte pro Modul (Richtwerte) - Fortsetzung:', 20, yPosition);
-          yPosition += 10;
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'normal');
-        }
-        
-        pdf.text(`• ${info}`, 25, yPosition);
-        yPosition += 6;
-      });
-
-      // Prüfe ob noch Platz für Hinweis vorhanden ist
-      if (checkPageBreak && checkPageBreak(15)) {
-        // Kein Titel nötig nach Seitenumbruch für Hinweis
-      }
-
-      yPosition += 10;
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'italic');
-      pdf.text('Hinweis: Genaue Mengen hängen von der spezifischen Dachkonfiguration ab.', 20, yPosition);
-
-      return yPosition + 10;
-    }
 
     // Berechne Teile für eine spezifische Konfiguration - VOLLSTÄNDIG ISOLIERT
     async calculateConfigParts(config) {
