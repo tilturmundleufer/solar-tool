@@ -17,7 +17,7 @@
     Holzunterleger: 50,
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     Erdungsklemme: 1,
-    Quetschkabelschuh: 100,
+    Quetschkabelschuhe: 100,
     Erdungsband: 1,
     Tellerkopfschraube: 100
   };

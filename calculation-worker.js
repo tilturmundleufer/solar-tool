@@ -31,7 +31,12 @@ const VE_VALUES = {
   Solarmodul: 1,
   MC4_Stecker: 1,
   Solarkabel: 1,
-  Holzunterleger: 50  // NEU: VE von 50
+  Holzunterleger: 50,  // NEU: VE von 50
+  // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
+  Erdungsklemme: 1,
+  Quetschkabelschuhe: 100,
+  Erdungsband: 1,
+  Tellerkopfschraube: 100
 };
 
 // Berechne Teile für eine gegebene Auswahl
