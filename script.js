@@ -178,42 +178,8 @@
     }
 
     processGroupSync(len, parts, cellWidth, cellHeight, orientation) {
-      // Verwende die tatsächliche Zellbreite basierend auf Orientierung
-      const isVertical = orientation === 'vertical';
-      const actualCellWidth = isVertical ? cellHeight : cellWidth;
-      
-      const totalLen = len * actualCellWidth;
-      const floor360 = Math.floor(totalLen / 360);
-      const rem360 = totalLen - floor360 * 360;
-      const floor240 = Math.ceil(rem360 / 240);
-      const pure360 = Math.ceil(totalLen / 360);
-      const pure240 = Math.ceil(totalLen / 240);
-      
-      const variants = [
-        {cnt360: floor360, cnt240: floor240},
-        {cnt360: pure360,  cnt240: 0},
-        {cnt360: 0,        cnt240: pure240}
-      ].map(v => ({
-        ...v,
-        rails: v.cnt360 + v.cnt240,
-        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
-      }));
-      
-      const minRails = Math.min(...variants.map(v => v.rails));
-      const best = variants
-        .filter(v => v.rails === minRails)
-        .reduce((a, b) => a.waste <= b.waste ? a : b);
-      
-      const {cnt360, cnt240} = best;
-      parts.Schiene_360_cm     += cnt360 * 2;
-      parts.Schiene_240_cm     += cnt240 * 2;
-      parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
-      parts.Endklemmen         += 4;
-      parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-      			parts.Dachhaken          += len > 1 ? len * 3 : 4;
-      parts.Endkappen          += parts.Endklemmen;
-      parts.Solarmodul         += len;
-      // Schrauben werden in der SolarPDFGenerator Klasse berechnet, nicht hier
+      // Diese Methode wird nicht mehr verwendet
+      // Alle Berechnungen laufen über den Calculation Worker
     }
 
     calculateExtendedPartsSync(data) {
@@ -1483,41 +1449,8 @@
 
     // Hilfsfunktion für Gruppenverarbeitung (aus CalculationManager übernommen)
     processGroup(len, parts, cellWidth, cellHeight, orientation) {
-      const isVertical = orientation === 'vertical';
-      const actualCellWidth = isVertical ? cellHeight : cellWidth;
-      
-      const totalLen = len * actualCellWidth;
-      const floor360 = Math.floor(totalLen / 360);
-      const rem360 = totalLen - floor360 * 360;
-      const floor240 = Math.ceil(rem360 / 240);
-      const pure360 = Math.ceil(totalLen / 360);
-      const pure240 = Math.ceil(totalLen / 240);
-      
-      const mixed = floor360 + floor240;
-      const pure = Math.min(pure360, pure240);
-      
-      if (mixed <= pure) {
-        parts.Schiene_360_cm += floor360;
-        parts.Schiene_240_cm += floor240;
-      } else {
-        if (pure360 <= pure240) {
-          parts.Schiene_360_cm += pure360;
-        } else {
-          parts.Schiene_240_cm += pure240;
-        }
-      }
-      
-      parts.Solarmodul += len;
-      parts.Endklemmen += 2;
-      parts.Mittelklemmen += Math.max(0, len - 1);
-      parts.Dachhaken += len > 1 ? len * 3 : 4; // KORREKT: 3 Dachhaken pro Modul bei Reihen ≥2
-      parts.Schrauben += parts.Dachhaken * 2; // KORREKT: 2 Schrauben pro Dachhaken
-      parts.Endkappen += parts.Endklemmen;
-      
-      const totalSchienen = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
-      if (totalSchienen > 1) {
-        parts.Schienenverbinder += Math.max(0, totalSchienen - len);
-      }
+      // Diese Methode wird nicht mehr verwendet
+      // Alle Berechnungen laufen über den Calculation Worker
     }
 
     // Generiere Dateinamen basierend auf Konfiguration(en)
@@ -4266,41 +4199,8 @@
 		}
 
     processGroup(len, p) {
-      // Verwende die tatsächliche Zellbreite basierend auf Orientierung
-      const isVertical = this.orV.checked;
-      const cellWidth = isVertical ? 
-        parseInt(this.hIn.value, 10) || 113 : 
-        parseInt(this.wIn.value, 10) || 179;
-      
-      const totalLen = len * cellWidth;
-      const floor360 = Math.floor(totalLen / 360),
-            rem360   = totalLen - floor360 * 360,
-            floor240 = Math.ceil(rem360 / 240),
-            pure360  = Math.ceil(totalLen / 360),
-            pure240  = Math.ceil(totalLen / 240);
-      const variants = [
-        {cnt360: floor360, cnt240: floor240},
-        {cnt360: pure360,  cnt240: 0},
-        {cnt360: 0,        cnt240: pure240}
-      ].map(v => ({
-        ...v,
-        rails: v.cnt360 + v.cnt240,
-        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
-      }));
-      const minRails = Math.min(...variants.map(v => v.rails));
-      const best = variants
-        .filter(v => v.rails === minRails)
-        .reduce((a, b) => a.waste <= b.waste ? a : b);
-      const {cnt360, cnt240} = best;
-      p.Schiene_360_cm     += cnt360 * 2;
-      p.Schiene_240_cm     += cnt240 * 2;
-      p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
-      p.Endklemmen         += 4;
-      p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-      p.Dachhaken          += len > 1 ? len * 3 : 4; // KORREKT: 3 Dachhaken pro Modul bei Reihen ≥2
-      p.Endkappen          += p.Endklemmen;
-      p.Solarmodul         += len;
-      // Schrauben werden in der SolarPDFGenerator Klasse berechnet, nicht hier
+      // Diese Methode wird nicht mehr verwendet
+      // Alle Berechnungen laufen über den Calculation Worker
     }
 
     mapImage(key) {
@@ -4767,43 +4667,10 @@
 			return parts;
 		}
 
-		// ISOLIERTE processGroup für Fallback
+		// FALLBACK: Verwende Calculation Worker
 		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation) {
-			const isVertical = orientation === 'vertical';
-			const actualCellWidth = isVertical ? cellHeight : cellWidth;
-			
-			const totalLen = len * actualCellWidth;
-			const floor360 = Math.floor(totalLen / 360);
-			const rem360 = totalLen - floor360 * 360;
-			const floor240 = Math.ceil(rem360 / 240);
-			const pure360 = Math.ceil(totalLen / 360);
-			const pure240 = Math.ceil(totalLen / 240);
-			
-			const variants = [
-				{cnt360: floor360, cnt240: floor240},
-				{cnt360: pure360,  cnt240: 0},
-				{cnt360: 0,        cnt240: pure240}
-			].map(v => ({
-				...v,
-				rails: v.cnt360 + v.cnt240,
-				waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
-			}));
-			
-			const minRails = Math.min(...variants.map(v => v.rails));
-			const best = variants
-				.filter(v => v.rails === minRails)
-				.reduce((a, b) => a.waste <= b.waste ? a : b);
-			
-			const {cnt360, cnt240} = best;
-			parts.Schiene_360_cm     += cnt360 * 2;
-			parts.Schiene_240_cm     += cnt240 * 2;
-			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
-			parts.Endklemmen         += 4;
-			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-			parts.Dachhaken          += len > 1 ? len * 3 : 4;
-			parts.Endkappen          += parts.Endklemmen;
-			parts.Solarmodul         += len;
-			// Schrauben werden in der SolarPDFGenerator Klasse berechnet, nicht hier
+			// Diese Methode wird nicht mehr verwendet
+			// Alle Berechnungen laufen über den Calculation Worker
 		}
 
     generateContinueLink() {
