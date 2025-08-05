@@ -4640,6 +4640,7 @@
 				console.log('DEBUG: Selection matrix structure:', calculationData.selection);
 				console.log('DEBUG: Selection matrix length:', calculationData.selection?.length);
 				
+				// DEBUG: Zähle ausgewählte Zellen in calculationData.selection
 				for (let y = 0; y < calculationData.rows; y++) {
 					console.log(`DEBUG: Row ${y}:`, calculationData.selection[y]);
 					for (let x = 0; x < calculationData.cols; x++) {
@@ -4649,7 +4650,18 @@
 						}
 					}
 				}
-				console.log(`DEBUG: Total selected cells: ${selectedCells}`);
+				console.log(`DEBUG: Total selected cells in calculationData: ${selectedCells}`);
+				
+				// DEBUG: Zähle auch in this.selection
+				let thisSelectedCells = 0;
+				for (let y = 0; y < this.rows; y++) {
+					for (let x = 0; x < this.cols; x++) {
+						if (this.selection[y]?.[x]) {
+							thisSelectedCells++;
+						}
+					}
+				}
+				console.log(`DEBUG: Total selected cells in this.selection: ${thisSelectedCells}`);
 				
 				// DEBUG: Prüfe this.selection direkt
 				console.log('DEBUG: this.selection:', this.selection);
