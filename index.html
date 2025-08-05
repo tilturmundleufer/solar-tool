@@ -106,15 +106,42 @@
           </div>
           
           <div class="bulk-selection-help">
-            <strong>💡 Mögliche Eingaben:</strong>
-            <p>
-              <strong>Grid:</strong> "5x4", "6x3" • 
-              <strong>Module:</strong> "20 module", "mit modulen", "ohne module" • 
-              <strong>Reihen:</strong> "3 reihen mit 5 modulen" • 
-              <strong>Optionen:</strong> "mit/ohne mc4", "mit/ohne kabel", "mit/ohne holz" • 
-              <strong>Orientierung:</strong> "vertikal", "horizontal" • 
-              <strong>Kombiniert:</strong> "5x4 vertikal mit module, ohne mc4"
-            </p>
+            <div class="help-header">
+              <strong>💡 Smart Config Beispiele:</strong>
+              <button id="smart-help-trigger" class="help-toggle">?</button>
+            </div>
+            <div id="smart-help-dropdown" class="help-dropdown">
+              <div class="help-section">
+                <strong>Grid & Module:</strong>
+                <div class="example" data-example="5x4">"5x4"</div>
+                <div class="example" data-example="20 module">"20 module"</div>
+                <div class="example" data-example="3 reihen mit 6 modulen">"3 reihen mit 6 modulen"</div>
+              </div>
+              <div class="help-section">
+                <strong>Intelligente Verteilung:</strong>
+                <div class="example" data-example="20 module gleichmäßig">"20 module gleichmäßig"</div>
+                <div class="example" data-example="20 module in reihen">"20 module in reihen"</div>
+                <div class="example" data-example="20 module zufällig">"20 module zufällig"</div>
+              </div>
+              <div class="help-section">
+                <strong>Abstand & Layout:</strong>
+                <div class="example" data-example="5x4 kompakt">"5x4 kompakt"</div>
+                <div class="example" data-example="5x4 mit lücken">"5x4 mit lücken"</div>
+                <div class="example" data-example="mit doppeltem abstand">"mit doppeltem abstand"</div>
+              </div>
+              <div class="help-section">
+                <strong>Checkbox-Kombinationen:</strong>
+                <div class="example" data-example="alles außer holz">"alles außer holz"</div>
+                <div class="example" data-example="nur module und mc4">"nur module und mc4"</div>
+                <div class="example" data-example="ohne zubehör">"ohne zubehör"</div>
+              </div>
+              <div class="help-section">
+                <strong>Aktionen:</strong>
+                <div class="example" data-example="speichern als 'meine config'">"speichern als 'meine config'"</div>
+                <div class="example" data-example="löschen">"löschen"</div>
+                <div class="example" data-example="grid zurücksetzen">"grid zurücksetzen"</div>
+              </div>
+            </div>
           </div>
         </div>
         
