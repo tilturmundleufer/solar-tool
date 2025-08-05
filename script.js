@@ -210,7 +210,7 @@
       parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
       parts.Endklemmen         += 4;
       parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-      			parts.Dachhaken          += len > 1 ? len * 2 : 4;
+      			parts.Dachhaken          += len > 1 ? len * 3 : 4;
       parts.Endkappen          += parts.Endklemmen;
       parts.Solarmodul         += len;
       parts.Schrauben          += parts.Dachhaken * 2;
@@ -1511,7 +1511,7 @@
       parts.Endklemmen += 2;
       parts.Mittelklemmen += Math.max(0, len - 1);
       parts.Dachhaken += len;
-      parts.Schrauben += len * 4;
+      // Schrauben werden basierend auf Dachhaken berechnet, nicht hier
       parts.Endkappen += 2;
       
       const totalSchienen = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
@@ -4297,10 +4297,10 @@
       p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
       p.Endklemmen         += 4;
       p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-      p.Dachhaken          += len > 1 ? len * 2 : 4; // FIX: 2 Schrauben pro Dachhaken
+      p.Dachhaken          += len > 1 ? len * 3 : 4; // KORREKT: 3 Dachhaken pro Modul bei Reihen ≥2
       p.Endkappen          += p.Endklemmen;
       p.Solarmodul         += len;
-      p.Schrauben         += p.Dachhaken * 2;  // FIX: += statt =
+      p.Schrauben         += p.Dachhaken * 2;  // KORREKT: 2 Schrauben pro Dachhaken
     }
 
     mapImage(key) {
@@ -4797,7 +4797,7 @@
 			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
 			parts.Endklemmen         += 4;
 			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-			parts.Dachhaken          += len > 1 ? len * 2 : 4;
+			parts.Dachhaken          += len > 1 ? len * 3 : 4;
 			parts.Endkappen          += parts.Endklemmen;
 			parts.Solarmodul         += len;
 			parts.Schrauben          += parts.Dachhaken * 2;

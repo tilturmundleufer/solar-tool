@@ -75,7 +75,7 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
   parts.Endklemmen         += 4;
   parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-  			parts.Dachhaken          += len > 1 ? len * 2 : 4;
+  			parts.Dachhaken          += len > 1 ? len * 3 : 4;
   parts.Endkappen          += parts.Endklemmen;
   parts.Solarmodul         += len;
   parts.Schrauben          += parts.Dachhaken * 2;
