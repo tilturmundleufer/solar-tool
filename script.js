@@ -1683,6 +1683,9 @@
         }
       }
 
+      // Reihen-Pattern parsen (hat Priorität vor einfacher moduleCount)
+      const rowMatch = input.match(this.patterns.rowPattern);
+      
       // Separate Abstand-Anpassung nur wenn KEINE anderen Patterns gefunden wurden
       // (z.B. nur "mit abstand" ohne Grid-Größe oder Module-Anzahl)
       const hasOtherPatterns = gridMatch || rowMatch || input.match(this.patterns.moduleCount);
@@ -1721,9 +1724,6 @@
           }
         }
       }
-
-      // Reihen-Pattern parsen (hat Priorität vor einfacher moduleCount)
-      const rowMatch = input.match(this.patterns.rowPattern);
       if (rowMatch) {
         let numRows, modulesPerRow;
         
