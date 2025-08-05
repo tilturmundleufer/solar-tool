@@ -3464,14 +3464,14 @@
 									
 									// Preview nach 3 Sekunden automatisch löschen
 									console.log('Setting timeout for auto-clear in 3 seconds'); // Debug
-									const solarGridRef = this.solarGrid; // Referenz speichern
+									const self = this; // Referenz auf die SolarGrid Instanz selbst
 									this.previewTimeout = setTimeout(() => {
 										console.log('Auto-clearing preview after 3 seconds - timeout triggered'); // Debug
-										if (solarGridRef && solarGridRef.clearGridPreview) {
+										if (self && self.clearGridPreview) {
 											console.log('Calling clearGridPreview from timeout'); // Debug
-											solarGridRef.clearGridPreview();
+											self.clearGridPreview();
 										} else {
-											console.log('clearGridPreview not available, solarGridRef:', solarGridRef); // Debug
+											console.log('clearGridPreview not available, self:', self); // Debug
 										}
 									}, 3000);
 								} else {
