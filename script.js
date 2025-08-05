@@ -4623,15 +4623,32 @@
   				console.log('DEBUG: Bundle selection:', b.selection);
 
   				let parts;
-  				try {
-  					parts = await calculationManager.calculate('calculateParts', calculationData);
-  					console.log('DEBUG: Worker result:', parts);
-  				} catch (error) {
-  					console.log('DEBUG: Worker failed, using fallback:', error);
-  					// Fallback zu synchroner Berechnung
-  					parts = this.calculatePartsDirectly(calculationData);
-  					console.log('DEBUG: Fallback result:', parts);
-  				}
+  								try {
+					parts = await calculationManager.calculate('calculateParts', calculationData);
+					console.log('DEBUG: Worker result:', parts);
+					
+					// DEBUG: Zeige die Eingabedaten an den Worker
+					console.log('DEBUG: Worker input data:', calculationData);
+					console.log('DEBUG: Worker input selection:', calculationData.selection);
+					
+					// DEBUG: Prüfe ob ausgewählte Zellen vorhanden sind
+					let selectedCells = 0;
+					for (let y = 0; y < calculationData.rows; y++) {
+						for (let x = 0; x < calculationData.cols; x++) {
+							if (calculationData.selection[y]?.[x]) {
+								selectedCells++;
+								console.log(`DEBUG: Found selected cell at [${y}][${x}]`);
+							}
+						}
+					}
+					console.log(`DEBUG: Total selected cells: ${selectedCells}`);
+					
+				} catch (error) {
+					console.log('DEBUG: Worker failed, using fallback:', error);
+					// Fallback zu synchroner Berechnung
+					parts = this.calculatePartsDirectly(calculationData);
+					console.log('DEBUG: Fallback result:', parts);
+				}
 
   				// Module werden NACH der Summierung entfernt (wie in buildList)
   				// MC4, Solarkabel und Holz werden GLOBAL nach der Summierung hinzugefügt
