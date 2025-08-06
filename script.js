@@ -3623,9 +3623,33 @@
 				detailView.classList.remove('active');
 				overviewView.classList.add('active');
 				
+				// Alle Input-Felder entfernen
+				this.clearAllInputFields();
+				
 				// Config-Liste aktualisieren
 				this.updateConfigList();
 			}
+		}
+		
+		clearAllInputFields() {
+			// Entferne alle Input-Felder aus der Detail-Ansicht
+			const titleEl = document.getElementById('current-config-title');
+			if (titleEl) {
+				const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
+				existingInputs.forEach(input => input.remove());
+				titleEl.style.display = 'block';
+			}
+			
+			// Entferne alle Input-Felder aus der Config-Liste
+			const configItems = document.querySelectorAll('.config-item');
+			configItems.forEach(item => {
+				const nameEl = item.querySelector('.config-item-name');
+				if (nameEl) {
+					const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
+					existingInputs.forEach(input => input.remove());
+					nameEl.style.display = 'block';
+				}
+			});
 		}
 		
 		// Initialisiere Config-Liste beim Start
@@ -3768,13 +3792,12 @@
 			const titleEl = document.getElementById('current-config-title');
 			if (!titleEl) return;
 			
-			// Prüfe ob bereits ein Input-Feld existiert
-			const existingInput = titleEl.parentNode.querySelector('.config-title-input');
-			if (existingInput) {
-				existingInput.focus();
-				existingInput.select();
-				return;
-			}
+			// Entferne alle existierenden Input-Felder
+			const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
+			existingInputs.forEach(input => input.remove());
+			
+			// Stelle sicher, dass der Titel sichtbar ist
+			titleEl.style.display = 'block';
 			
 			// Erstelle Input-Feld
 			const input = document.createElement('input');
@@ -3842,6 +3865,13 @@
 			// Finde das name Element
 			const nameEl = configItem.querySelector('.config-item-name');
 			if (!nameEl) return;
+			
+			// Entferne alle existierenden Input-Felder in diesem Item
+			const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
+			existingInputs.forEach(input => input.remove());
+			
+			// Stelle sicher, dass der Name sichtbar ist
+			nameEl.style.display = 'block';
 			
 			// Erstelle Input-Feld
 			const input = document.createElement('input');
