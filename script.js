@@ -3881,13 +3881,13 @@
 			input.type = 'text';
 			input.value = nameEl.textContent;
 			input.style.cssText = `
-				font-size: 24px;
-				font-weight: bold;
+				font-size: 16px;
+				font-weight: normal;
 				color: #000000;
-				background: transparent;
-				border: 2px solid #FFB101;
-				border-radius: 8px;
-				padding: 4px 8px;
+				background: white;
+				border: 1px solid #FFB101;
+				border-radius: 4px;
+				padding: 2px 6px;
 				width: 100%;
 				outline: none;
 			`;
