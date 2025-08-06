@@ -2172,11 +2172,11 @@
           if (config.configName) {
             // Name der aktuellen Konfiguration ändern
             this.solarGrid.renameCurrentConfig(config.configName);
-            this.solarGrid.showToast(`💾 Konfiguration umbenannt zu "${config.configName}"`, 2000);
+            			this.solarGrid.showToast(`Konfiguration umbenannt zu "${config.configName}"`, 2000);
           } else {
             // Normales Speichern
             this.solarGrid.saveNewConfig();
-            this.solarGrid.showToast('💾 Konfiguration gespeichert', 2000);
+            				this.solarGrid.showToast('Konfiguration gespeichert', 2000);
           }
           break;
           
@@ -2189,7 +2189,7 @@
           // Lösche aktuelle Konfiguration
           if (this.solarGrid.currentConfig !== null) {
             this.solarGrid.deleteConfig(this.solarGrid.currentConfig);
-            this.solarGrid.showToast('🗑️ Konfiguration gelöscht', 2000);
+            				this.solarGrid.showToast('Konfiguration gelöscht', 2000);
           }
           break;
           
@@ -5208,7 +5208,7 @@
     		let deleteBtn = null;
     		if (this.configs.length > 1) {
     			deleteBtn = document.createElement('button');
-    			deleteBtn.innerHTML = '🗑️';
+    			deleteBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986121f0519d394183f_Delete.png" alt="Löschen" style="width: 16px; height: 16px;">';
     			deleteBtn.title = 'Konfiguration löschen';
     			Object.assign(deleteBtn.style, {
       			background: 'none',
@@ -5227,7 +5227,7 @@
     		}
 
     		const shareBtn = document.createElement('button');
-    		shareBtn.textContent = '🔗';
+    		shareBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Link" style="width: 16px; height: 16px;">';
     		shareBtn.title = 'Später weitermachen - Link kopieren';
     		Object.assign(shareBtn.style, {
       		background: 'none',
