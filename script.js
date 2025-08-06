@@ -4891,8 +4891,8 @@
   		this.wIn.value = width;
   		this.hIn.value = height;
   		
-  				// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
-		const defaultVertical = document.getElementById('orient-v') ? document.getElementById('orient-v').hasAttribute('checked') : false;
+  				// Setze Orientierung auf Standard (vertikal als Standard)
+		const defaultVertical = true; // Vertikal als Standard
 		if (this.orH) this.orH.checked = !defaultVertical;
 		if (this.orV) this.orV.checked = defaultVertical;
 		
@@ -5026,6 +5026,14 @@
 			this.hIn.value = cfg.cellHeight;
 			this.orV.checked = cfg.orientation === 'vertical';
 			this.orH.checked = !this.orV.checked;
+			
+			// Synchronisiere mit den Orientation Buttons
+			const orientHBtn = document.getElementById('orient-h');
+			const orientVBtn = document.getElementById('orient-v');
+			if (orientHBtn && orientVBtn) {
+				orientHBtn.classList.toggle('active', cfg.orientation === 'horizontal');
+				orientVBtn.classList.toggle('active', cfg.orientation === 'vertical');
+			}
 			this.incM.checked = cfg.incM;
 			this.mc4.checked = cfg.mc4;
 			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
@@ -5520,11 +5528,19 @@
     				this.hIn.value = data.cellHeight;
     			}
     			
-    			// Lade Orientierung
-    			if (this.orH && this.orV && typeof data.orientation === 'string') {
-    				this.orH.checked = data.orientation === 'horizontal';
-    				this.orV.checked = data.orientation === 'vertical';
-    			}
+    						// Lade Orientierung
+			if (this.orH && this.orV && typeof data.orientation === 'string') {
+				this.orH.checked = data.orientation === 'horizontal';
+				this.orV.checked = data.orientation === 'vertical';
+				
+				// Synchronisiere mit den Orientation Buttons
+				const orientHBtn = document.getElementById('orient-h');
+				const orientVBtn = document.getElementById('orient-v');
+				if (orientHBtn && orientVBtn) {
+					orientHBtn.classList.toggle('active', data.orientation === 'horizontal');
+					orientVBtn.classList.toggle('active', data.orientation === 'vertical');
+				}
+			}
     			
     			// Lade die erste Konfiguration
     			if (this.configs.length > 0) {
