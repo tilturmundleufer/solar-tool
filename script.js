@@ -3654,6 +3654,14 @@
 					this.generateContinueLink();
 				});
 			}
+			
+			// Add Config Button
+			const addConfigBtn = document.getElementById('add-config-btn');
+			if (addConfigBtn) {
+				addConfigBtn.addEventListener('click', () => {
+					this.saveNewConfig();
+				});
+			}
 		}
 		
 		showOverview() {
