@@ -4155,6 +4155,12 @@
 				}
 			}
 			
+			// Module nur hinzufügen wenn Checkbox aktiviert ist
+			const includeModules = document.getElementById('include-modules')?.checked || false;
+			if (!includeModules) {
+				delete parts.Solarmodul;
+			}
+			
 			let totalPrice = 0;
 			
 			Object.entries(parts).forEach(([partName, quantity]) => {
