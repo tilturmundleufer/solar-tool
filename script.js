@@ -3369,6 +3369,14 @@
               orientHSetup.checked = el === this.orH;
               orientVSetup.checked = el === this.orV;
             }
+            
+            // Synchronisiere mit den neuen Orientation Buttons
+            const orientHBtn = document.getElementById('orient-h-btn');
+            const orientVBtn = document.getElementById('orient-v-btn');
+            if (orientHBtn && orientVBtn) {
+              orientHBtn.classList.toggle('active', el === this.orH);
+              orientVBtn.classList.toggle('active', el === this.orV);
+            }
 
             // Vollständige Grid-Neuinitialisierung wie bei Smart Config
             this.trackInteraction();
@@ -3413,6 +3421,35 @@
 					this.updateSummaryOnChange();
 				})
 			);
+		}
+		
+		// Event-Listener für die neuen Orientation Buttons
+		const orientHBtn = document.getElementById('orient-h-btn');
+		const orientVBtn = document.getElementById('orient-v-btn');
+		
+		if (orientHBtn && orientVBtn) {
+			[orientHBtn, orientVBtn].forEach(btn => {
+				btn.addEventListener('click', () => {
+					// Entferne active Klasse von beiden Buttons
+					orientHBtn.classList.remove('active');
+					orientVBtn.classList.remove('active');
+					
+					// Füge active Klasse zum geklickten Button hinzu
+					btn.classList.add('active');
+					
+					// Synchronisiere mit den Radio-Buttons
+					const isVertical = btn === orientVBtn;
+					if (this.orV) this.orV.checked = isVertical;
+					if (this.orH) this.orH.checked = !isVertical;
+					
+					// Vollständige Grid-Neuinitialisierung
+					this.trackInteraction();
+					this.updateSize();
+					this.buildGrid();
+					this.buildList();
+					this.updateSummaryOnChange();
+				});
+			});
 		}
       
       // Event-Listener für die Grid-Expansion-Buttons (neue Struktur)
@@ -3748,13 +3785,13 @@
 					</div>
 					<div class="config-item-actions">
 						<button class="icon-btn" onclick="solarGrid.editConfigNameInList(${index})" title="Bearbeiten">
-							<span>✏️</span>
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
 						</button>
 						<button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${index})" title="Löschen">
-							<span>🗑️</span>
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936c5481f2a4db850a01f5_Trashbin.png" alt="Löschen" style="width: 16px; height: 16px;">
 						</button>
 						<div class="config-item-arrow">
-							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 16px; height: 16px;">
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 10px; height: 16px;">
 						</div>
 					</div>
 				`;
