@@ -3311,6 +3311,13 @@
       // Mobile Detection und Warning
       this.checkMobileDevice();
       
+      // Prüfe zuerst den Cache (höchste Priorität)
+      if (this.loadFromCache()) {
+      	// Cache wurde erfolgreich geladen - keine weiteren Aktionen nötig
+      	return;
+      }
+      
+      // Prüfe URL-Parameter als Fallback
       const params = new URLSearchParams(window.location.search);
   		const rawData = params.get('configData');
   		if (rawData) {
@@ -5371,13 +5378,121 @@
     		this.updateConfig();
     	}
     	
-    	// Erstelle Link mit allen Konfigurationen
+    	// Speichere alle Konfigurationen und Einstellungen im Cache
+    	this.saveToCache();
+    	
+    	// Erstelle Link mit allen Konfigurationen (als Backup)
     	const allConfigsData = JSON.stringify(this.configs);
 			const base64 = btoa(encodeURIComponent(allConfigsData));
 			const continueUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
 			
 			navigator.clipboard.writeText(continueUrl);
 			this.showToast('Später-weitermachen Link kopiert ✅', 2000);
+    }
+    
+    // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
+    saveToCache() {
+    	try {
+    		const cacheData = {
+    			configs: this.configs,
+    			currentConfig: this.currentConfig,
+    			// Aktuelle Grid-Einstellungen
+    			cols: this.cols,
+    			rows: this.rows,
+    			cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+    			cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10),
+    			orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+    			// Checkbox-Einstellungen
+    			includeModules: this.incM ? this.incM.checked : false,
+    			mc4: this.mc4 ? this.mc4.checked : false,
+    			solarkabel: this.solarkabel ? this.solarkabel.checked : false,
+    			holz: this.holz ? this.holz.checked : false,
+    			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+    			// Timestamp für Cache-Gültigkeit
+    			timestamp: Date.now()
+    		};
+    		
+    		localStorage.setItem('solarTool_continueCache', JSON.stringify(cacheData));
+    	} catch (error) {
+    		console.error('Fehler beim Speichern des Caches:', error);
+    	}
+    }
+    
+    // NEUE FUNKTION: Lade Konfigurationen aus dem Cache
+    loadFromCache() {
+    	try {
+    		const cachedData = localStorage.getItem('solarTool_continueCache');
+    		if (!cachedData) return false;
+    		
+    		const data = JSON.parse(cachedData);
+    		const cacheAge = Date.now() - data.timestamp;
+    		const maxAge = 24 * 60 * 60 * 1000; // 24 Stunden
+    		
+    		// Prüfe ob Cache noch gültig ist
+    		if (cacheAge > maxAge) {
+    			localStorage.removeItem('solarTool_continueCache');
+    			return false;
+    		}
+    		
+    		// Lade Konfigurationen
+    		if (data.configs && Array.isArray(data.configs)) {
+    			this.configs = data.configs;
+    			this.currentConfig = data.currentConfig;
+    			
+    			// Lade Grid-Einstellungen
+    			if (data.cols && data.rows) {
+    				this.cols = data.cols;
+    				this.rows = data.rows;
+    			}
+    			
+    			// Lade Checkbox-Einstellungen
+    			if (this.incM && typeof data.includeModules === 'boolean') {
+    				this.incM.checked = data.includeModules;
+    			}
+    			if (this.mc4 && typeof data.mc4 === 'boolean') {
+    				this.mc4.checked = data.mc4;
+    			}
+    			if (this.solarkabel && typeof data.solarkabel === 'boolean') {
+    				this.solarkabel.checked = data.solarkabel;
+    			}
+    			if (this.holz && typeof data.holz === 'boolean') {
+    				this.holz.checked = data.holz;
+    			}
+    			if (this.quetschkabelschuhe && typeof data.quetschkabelschuhe === 'boolean') {
+    				this.quetschkabelschuhe.checked = data.quetschkabelschuhe;
+    			}
+    			
+    			// Lade Grid-Dimensionen
+    			if (this.wIn && data.cellWidth) {
+    				this.wIn.value = data.cellWidth;
+    			}
+    			if (this.hIn && data.cellHeight) {
+    				this.hIn.value = data.cellHeight;
+    			}
+    			
+    			// Lade Orientierung
+    			if (this.orH && this.orV && typeof data.orientation === 'string') {
+    				this.orH.checked = data.orientation === 'horizontal';
+    				this.orV.checked = data.orientation === 'vertical';
+    			}
+    			
+    			// Lade die erste Konfiguration
+    			if (this.configs.length > 0) {
+    				this.loadConfig(0);
+    			}
+    			
+    			// Cache nach dem Laden leeren
+    			localStorage.removeItem('solarTool_continueCache');
+    			
+    			this.showToast('Konfiguration aus Cache geladen ✅', 2000);
+    			return true;
+    		}
+    	} catch (error) {
+    		console.error('Fehler beim Laden des Caches:', error);
+    		localStorage.removeItem('solarTool_continueCache');
+    	}
+    	
+    	return false;
     }
     
         generateHiddenCartForms() {
