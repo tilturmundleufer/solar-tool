@@ -1540,6 +1540,8 @@
         cable: /(?:mit|ohne)[\s-]*(?:kabel|solarkabel)/i,
         // "mit holz" oder "ohne holz"
         wood: /(?:mit|ohne)[\s-]*holz(?:unterleger)?/i,
+        // "mit quetschkabelschuhe" oder "ohne quetschkabelschuhe"
+        quetschkabelschuhe: /(?:mit|ohne)[\s-]*(?:quetschkabelschuhe|kabelschuhe)/i,
         // "3 reihen mit 5 modulen" oder "drei reihen 5 module" oder "20 module in 4 reihen" oder "3 mal 6 module"
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))|(?:(\d+)\s*mal\s*(\d+)\s*modul[e]?[n]?)/i,
         // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
@@ -1597,7 +1599,8 @@
         modules: null,  // null = nicht erkannt, true = mit, false = ohne
         mc4: null,
         cable: null,
-        wood: null
+        wood: null,
+        quetschkabelschuhe: null
       };
 
       // Normalisiere Input für bessere Erkennung
@@ -1654,6 +1657,15 @@
             checkboxes.wood = false;
           } else {
             checkboxes.wood = true;
+          }
+        }
+        
+        // Prüfe auf Quetschkabelschuhe
+        if (/\b(?:quetschkabelschuhe|kabelschuhe)\b/.test(trimmedPart)) {
+          if (/\bohne[\s-]+(?:quetschkabelschuhe|kabelschuhe)\b/.test(trimmedPart) || /\bohne[\s-]+(?:quetschkabelschuhe|kabelschuhe)\b/.test(input.toLowerCase())) {
+            checkboxes.quetschkabelschuhe = false;
+          } else {
+            checkboxes.quetschkabelschuhe = true;
           }
         }
       }
@@ -1907,6 +1919,7 @@
           config.mc4 = exceptItem !== 'mc4';
           config.cable = exceptItem !== 'kabel' && exceptItem !== 'solarkabel';
           config.wood = exceptItem !== 'holz' && exceptItem !== 'holzunterleger';
+          config.quetschkabelschuhe = exceptItem !== 'quetschkabelschuhe' && exceptItem !== 'kabelschuhe';
         }
       } else if (checkboxOnlyMatch) {
         // "nur module und mc4" → Nur die spezifischen Items
@@ -1917,6 +1930,7 @@
           config.mc4 = items.some(item => item.includes('mc4'));
           config.cable = items.some(item => item.includes('kabel') || item.includes('solarkabel'));
           config.wood = items.some(item => item.includes('holz'));
+          config.quetschkabelschuhe = items.some(item => item.includes('quetschkabelschuhe') || item.includes('kabelschuhe'));
         }
       } else if (checkboxWithoutMatch) {
         // "ohne zubehör" → Nur Module
@@ -1924,12 +1938,14 @@
         config.mc4 = false;
         config.cable = false;
         config.wood = false;
+        config.quetschkabelschuhe = false;
       } else if (checkboxWithAllMatch) {
         // "mit allem" → Alle aktivieren
         config.includeModules = true;
         config.mc4 = true;
         config.cable = true;
         config.wood = true;
+        config.quetschkabelschuhe = true;
       } else {
         // Checkbox-Kombinationen parsen (hat Priorität vor einzelnen Patterns)
         const checkboxCombinations = this.parseCheckboxCombinations(input);
@@ -1941,6 +1957,7 @@
           if (checkboxCombinations.mc4 !== null) config.mc4 = checkboxCombinations.mc4;
           if (checkboxCombinations.cable !== null) config.cable = checkboxCombinations.cable;
           if (checkboxCombinations.wood !== null) config.wood = checkboxCombinations.wood;
+          if (checkboxCombinations.quetschkabelschuhe !== null) config.quetschkabelschuhe = checkboxCombinations.quetschkabelschuhe;
                 } else {
           // Fallback: Einzelne Checkbox-Patterns parsen
           
@@ -1964,6 +1981,11 @@
           const woodMatch = input.match(this.patterns.wood);
           if (woodMatch) {
             config.wood = woodMatch[0].toLowerCase().includes('mit');
+          }
+
+          const quetschkabelschuheMatch = input.match(this.patterns.quetschkabelschuhe);
+          if (quetschkabelschuheMatch) {
+            config.quetschkabelschuhe = quetschkabelschuheMatch[0].toLowerCase().includes('mit');
           }
         }
       }
@@ -2069,6 +2091,9 @@
       }
       if (config.hasOwnProperty('wood')) {
         if (this.solarGrid.holz) this.solarGrid.holz.checked = config.wood;
+      }
+      if (config.hasOwnProperty('quetschkabelschuhe')) {
+        if (this.solarGrid.quetschkabelschuhe) this.solarGrid.quetschkabelschuhe.checked = config.quetschkabelschuhe;
       }
 
       // INTELLIGENTE Selection-Matrix-Erstellung
