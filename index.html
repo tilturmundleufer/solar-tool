@@ -169,46 +169,10 @@
           <strong>🔲 Rechteck-Tool:</strong> Klicken Sie auf eine Zelle, dann Shift+Klick auf eine andere für Rechteck-Selektion
         </div>
       </div>
-    </div>
 
-
-
-
-
-    <!-- Sidebar für Konfigurationen -->
-    <div id="config-sidebar" class="config-sidebar">
-      <!-- Side-Section für Produktliste -->
-      <div class="side-section">
-        <button id="side-toggle" class="side-toggle-btn">
-          <span class="toggle-icon">◀</span>
-        </button>
-        <div class="side-content">
-          <div class="product-section">
-            <div class="section-header">
-              <h4>Produktliste</h4>
-            </div>
-                    <div id="product-content" class="section-content">
-          <div id="produktliste" class="produktliste"></div>
-          <button id="add-to-cart-btn" class="btn primary">Aktuelle Auswahl in den Warenkorb</button>
-        </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Haupt-Toggle-Button -->
-      <button id="sidebar-toggle" class="sidebar-toggle-btn">
-        <span class="toggle-icon">◀</span>
-      </button>
-
-      <!-- Sidebar-Content -->
-      <div class="sidebar-main">
-        <div class="sidebar-header">
-          <h3>Konfigurationen</h3>
-        </div>
-        <div class="sidebar-content">
-          <div id="config-list"></div>
-                <div class="sidebar-buttons">
-        <div class="product-options">
+      <!-- Checkboxen oberhalb des Grids -->
+      <div class="grid-checkboxes">
+        <div class="checkbox-row">
           <label class="checkbox-item">
             <input type="checkbox" id="include-modules">
             <span>Module hinzufügen</span>
@@ -230,15 +194,102 @@
             <span>Quetschkabelschuhe</span>
           </label>
         </div>
-        <button id="save-config-btn" class="btn primary">Neue Konfiguration speichern</button>
-        <button id="continue-later-btn" class="btn secondary">Später weitermachen</button>
       </div>
+    </div>
+
+    <!-- Sidebar für Konfigurationen -->
+    <div id="config-sidebar" class="config-sidebar">
+      <!-- Detail-Ansicht einer Konfiguration -->
+      <div id="config-detail-view" class="config-detail-view active">
+        <!-- Header mit Zurück-Button und Auto-Save -->
+        <div class="detail-header">
+          <button id="back-to-overview" class="back-btn">
+            <span>◀</span> Zur Übersicht
+          </button>
+          <div id="auto-save-indicator" class="auto-save-indicator hidden">
+            <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986891ec6c5e5224ced_AutmoatischSpeichern.png" alt="Speichern" class="save-icon" style="width: 16px; height: 16px;">
+            <span>Automatisch gespeichert</span>
+          </div>
+        </div>
+
+        <!-- Konfigurationstitel mit Edit/Delete -->
+        <div class="config-title-section">
+          <h2 id="current-config-title">Konfiguration #1</h2>
+          <div class="config-actions">
+            <button id="edit-config-name" class="icon-btn" title="Name bearbeiten">
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
+            </button>
+            <button id="delete-current-config" class="icon-btn delete" title="Löschen">
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986121f0519d394183f_Delete.png" alt="Löschen" style="width: 16px; height: 16px;">
+            </button>
+          </div>
+        </div>
+
+        <!-- Produktliste -->
+        <div class="product-section">
+          <h4>Produktliste</h4>
+          <div id="produktliste" class="produktliste"></div>
+        </div>
+
+        <!-- Gesamt-Preis -->
+        <div class="total-section">
+          <div class="total-line">
+            <span class="total-label">Gesamt</span>
+            <span id="current-total-price" class="total-price">0,00€</span>
+          </div>
+          <div class="total-subtitle">inkl. MwSt</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="detail-buttons">
+          <button id="next-config-btn" class="btn outline">
+            <span>+</span> Nächste Konfiguration
+          </button>
+          <button id="express-checkout-btn" class="btn primary">
+            <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986aedee4ccf01541f2_Cart.png" alt="Warenkorb" style="width: 16px; height: 16px; margin-right: 8px;"> Express-Checkout
+          </button>
+        </div>
+      </div>
+
+      <!-- Übersicht aller Konfigurationen -->
+      <div id="config-overview" class="config-overview">
+        <div class="overview-header">
+          <h3>Alle Konfigurationen</h3>
+        </div>
+        
+        <div class="overview-content">
+          <div id="config-list" class="config-list"></div>
+          
+          <!-- Gesamtpreis aller Konfigurationen -->
+          <div class="total-section">
+            <div class="total-line">
+              <span class="total-label">Gesamt</span>
+              <span id="overview-total-price" class="total-price">0,00€</span>
+            </div>
+            <div class="total-subtitle">inkl. MwSt</div>
+          </div>
+          
+          <!-- Zusatzprodukte -->
+          <div class="additional-products-section">
+            <h4>Zusatzprodukte</h4>
+            <div id="additional-products-list" class="additional-products-list"></div>
+          </div>
+        </div>
+
+        <!-- Übersicht Action Buttons -->
+        <div class="overview-buttons">
+          <button id="add-all-to-cart-btn" class="btn primary">
+            <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986aedee4ccf01541f2_Cart.png" alt="Warenkorb" style="width: 16px; height: 16px; margin-right: 8px;"> Gesamte Auswahl in den Warenkorb
+          </button>
+          <button id="continue-later-btn" class="btn outline">
+            <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986891ec6c5e5224ced_AutmoatischSpeichern.png" alt="Speichern" style="width: 16px; height: 16px; margin-right: 8px;"> Später weitermachen
+          </button>
         </div>
       </div>
     </div>
 
 
   </div>
-  <script src="script.js?v=1.0.1"></script>
+  <script src="script.js?v=1.0.2"></script>
 </body>
 </html>

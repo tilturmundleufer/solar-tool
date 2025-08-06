@@ -2172,11 +2172,11 @@
           if (config.configName) {
             // Name der aktuellen Konfiguration ändern
             this.solarGrid.renameCurrentConfig(config.configName);
-            this.solarGrid.showToast(`💾 Konfiguration umbenannt zu "${config.configName}"`, 2000);
+            			this.solarGrid.showToast(`Konfiguration umbenannt zu "${config.configName}"`, 2000);
           } else {
             // Normales Speichern
             this.solarGrid.saveNewConfig();
-            this.solarGrid.showToast('💾 Konfiguration gespeichert', 2000);
+            				this.solarGrid.showToast('Konfiguration gespeichert', 2000);
           }
           break;
           
@@ -2189,7 +2189,7 @@
           // Lösche aktuelle Konfiguration
           if (this.solarGrid.currentConfig !== null) {
             this.solarGrid.deleteConfig(this.solarGrid.currentConfig);
-            this.solarGrid.showToast('🗑️ Konfiguration gelöscht', 2000);
+            				this.solarGrid.showToast('Konfiguration gelöscht', 2000);
           }
           break;
           
@@ -2649,6 +2649,13 @@
           this.solarGrid.trackInteraction();
           this.solarGrid.buildList();
           this.solarGrid.updateSummaryOnChange();
+          
+          // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+          if (this.solarGrid.currentConfig !== null) {
+            // Speichere die Konfiguration automatisch
+            this.solarGrid.updateConfig();
+            this.solarGrid.updateConfigList();
+          }
         });
 
         newCell.addEventListener('mouseleave', () => {
@@ -2854,8 +2861,7 @@
 
       this.listHolder    = document.querySelector('.product-section');
       this.prodList      = document.getElementById('produktliste');
-      this.summaryHolder = document.getElementById('summary-list-holder');
-      this.summaryList   = document.getElementById('summary-list');
+
       this.saveBtn       = document.getElementById('save-config-btn');
       this.addBtn        = document.getElementById('add-to-cart-btn');
       this.summaryBtn    = document.getElementById('summary-add-cart-btn');
@@ -2955,9 +2961,8 @@
     getProductSummary() {
       const parts = this.calculateParts();
       if (!this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
-      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+      // Sie werden nur noch in der Overview berechnet
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       let totalPrice = 0;
@@ -3025,10 +3030,8 @@
         cellHeight: parseInt(this.hIn.value, 10),
         orientation: this.orV.checked ? 'vertical' : 'horizontal',
         selection: this.selection,
-        incM: this.incM.checked,
-        mc4: this.mc4.checked,
-        solarkabel: this.solarkabel.checked,
-        holz: this.holz.checked
+        incM: this.incM.checked
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       };
 
       const summary = this.getProductSummary();
@@ -3048,17 +3051,9 @@
         cellWidth: targetConfig.cellWidth,
         cellHeight: targetConfig.cellHeight,
         orientation: targetConfig.orientation,
-        incM: targetConfig.incM,
-        mc4: targetConfig.mc4,
-        solarkabel: targetConfig.solarkabel,
-        holz: targetConfig.holz
+        incM: targetConfig.incM
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       });
-
-      // Stelle sicher, dass alle 12 Produkte übertragen werden, auch mit 0
-      // Zusätzliche Berechnungen basierend auf Checkbox-Einstellungen
-      if (targetConfig.mc4) parts.MC4_Stecker = targetConfig.selection.flat().filter(v => v).length;
-      if (targetConfig.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (targetConfig.holz) parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
       
       const allProductQuantities = {
         Solarmodul: parts.Solarmodul || 0,
@@ -3069,10 +3064,8 @@
         Endkappen: parts.Endkappen || 0,
         Schienenverbinder: parts.Schienenverbinder || 0,
         Schiene240cm: parts.Schiene_240_cm || 0,
-        Schiene360cm: parts.Schiene_360_cm || 0,
-        MC4Stecker: parts.MC4_Stecker || 0,
-        Solarkabel: parts.Solarkabel || 0,
-        Holzunterleger: parts.Holzunterleger || 0
+        Schiene360cm: parts.Schiene_360_cm || 0
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       };
       
       return {
@@ -3087,10 +3080,8 @@
           orientation: targetConfig.orientation,
           gridVisualization: gridVisualization,
           options: {
-            includeModules: targetConfig.incM,
-            mc4Connectors: targetConfig.mc4,
-            solarkabel: targetConfig.solarkabel,
-            woodUnderlay: targetConfig.holz
+            includeModules: targetConfig.incM
+            // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
           }
         },
         summary: summary,
@@ -3320,6 +3311,13 @@
       // Mobile Detection und Warning
       this.checkMobileDevice();
       
+      // Prüfe zuerst den Cache (höchste Priorität)
+      if (this.loadFromCache()) {
+      	// Cache wurde erfolgreich geladen - keine weiteren Aktionen nötig
+      	return;
+      }
+      
+      // Prüfe URL-Parameter als Fallback
       const params = new URLSearchParams(window.location.search);
   		const rawData = params.get('configData');
   		if (rawData) {
@@ -3512,47 +3510,8 @@
 
 		// Sidebar Toggle Funktionalität
 		const sidebarToggle = document.getElementById('sidebar-toggle');
-		const configSidebar = document.getElementById('config-sidebar');
-
-		if (sidebarToggle && configSidebar) {
-			// Sidebar standardmäßig öffnen
-			configSidebar.classList.add('open');
-			
-			// Initiale Position setzen
-			requestAnimationFrame(() => {
-				configSidebar.style.right = '0';
-			});
-
-			sidebarToggle.addEventListener('click', () => {
-				this.trackInteraction();
-				configSidebar.classList.toggle('open');
-				
-				// Dynamische Position berechnen
-				if (!configSidebar.classList.contains('open')) {
-					const sidebarWidth = configSidebar.offsetWidth;
-					const visibleWidth = 30; // 30px sichtbar
-					const hiddenWidth = sidebarWidth - visibleWidth;
-					configSidebar.style.right = `-${hiddenWidth}px`;
-				} else {
-					configSidebar.style.right = '0';
-				}
-			});
-		}
-
-		// Side-Section Toggle Funktionalität
-		const sideToggle = document.getElementById('side-toggle');
-		const sideSection = document.querySelector('.side-section');
-
-		if (sideToggle && sideSection) {
-			sideToggle.addEventListener('click', () => {
-				this.trackInteraction();
-				sideSection.classList.toggle('collapsed');
-				const toggleIcon = sideToggle.querySelector('.toggle-icon');
-				if (toggleIcon) {
-					toggleIcon.textContent = sideSection.classList.contains('collapsed') ? '▶' : '◀';
-				}
-			});
-		}
+		// Neue Sidebar Navigation
+		this.initSidebarNavigation();
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
@@ -3580,6 +3539,686 @@
 			
 			// Initialisiere Smart Config Features
 			this.initSmartConfigFeatures();
+			
+			// Initialisiere Auto-Save Indicator
+			this.initAutoSaveIndicator();
+			
+			// Initialisiere Config-Liste
+			this.initConfigList();
+		}
+		
+		initSidebarNavigation() {
+			// Navigation zwischen Detail-Ansicht und Übersicht
+			const backToOverviewBtn = document.getElementById('back-to-overview');
+			const detailView = document.getElementById('config-detail-view');
+			const overviewView = document.getElementById('config-overview');
+			
+			if (backToOverviewBtn) {
+				backToOverviewBtn.addEventListener('click', () => {
+					this.showOverview();
+				});
+			}
+			
+			// Edit Config Name
+			const editConfigBtn = document.getElementById('edit-config-name');
+			if (editConfigBtn) {
+				editConfigBtn.addEventListener('click', () => {
+					this.editConfigName();
+				});
+			}
+			
+			// Delete Current Config
+			const deleteConfigBtn = document.getElementById('delete-current-config');
+			if (deleteConfigBtn) {
+				deleteConfigBtn.addEventListener('click', () => {
+					this.deleteCurrentConfig();
+				});
+			}
+			
+			// Express Checkout (alter "In den Warenkorb" Button)
+			const expressCheckoutBtn = document.getElementById('express-checkout-btn');
+			if (expressCheckoutBtn) {
+				expressCheckoutBtn.addEventListener('click', () => {
+					this.addCurrentToCart();
+				});
+			}
+			
+			// Nächste Konfiguration (alter "Konfiguration speichern" Button)
+			const nextConfigBtn = document.getElementById('next-config-btn');
+			if (nextConfigBtn) {
+				nextConfigBtn.addEventListener('click', () => {
+					this.saveNewConfig();
+				});
+			}
+			
+			// Gesamte Auswahl in Warenkorb
+			const addAllToCartBtn = document.getElementById('add-all-to-cart-btn');
+			if (addAllToCartBtn) {
+				addAllToCartBtn.addEventListener('click', () => {
+					this.addAllConfigsToCart();
+				});
+			}
+			
+			// Später weitermachen
+			const continueLaterBtn = document.getElementById('continue-later-btn');
+			if (continueLaterBtn) {
+				continueLaterBtn.addEventListener('click', () => {
+					this.generateContinueLink();
+				});
+			}
+		}
+		
+		showOverview() {
+			// Aktuelle Konfiguration speichern um Progress nicht zu verlieren
+			if (this.currentConfig !== null) {
+				this.updateConfig();
+			}
+			
+			const detailView = document.getElementById('config-detail-view');
+			const overviewView = document.getElementById('config-overview');
+			
+			if (detailView && overviewView) {
+				detailView.classList.remove('active');
+				overviewView.classList.add('active');
+				
+				// Alle Input-Felder entfernen
+				this.clearAllInputFields();
+				
+				// Config-Liste aktualisieren
+				this.updateConfigList();
+			}
+		}
+		
+		clearAllInputFields() {
+			// Entferne alle Input-Felder aus der Detail-Ansicht
+			const titleEl = document.getElementById('current-config-title');
+			if (titleEl) {
+				const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
+				existingInputs.forEach(input => input.remove());
+				titleEl.style.display = 'block';
+			}
+			
+			// Entferne alle Input-Felder aus der Config-Liste
+			const configItems = document.querySelectorAll('.config-item');
+			configItems.forEach(item => {
+				const nameEl = item.querySelector('.config-item-name');
+				if (nameEl) {
+					const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
+					existingInputs.forEach(input => input.remove());
+					nameEl.style.display = 'block';
+				}
+			});
+		}
+		
+		// Initialisiere Config-Liste beim Start
+		initConfigList() {
+			if (document.getElementById('config-overview')?.classList.contains('active')) {
+				this.updateConfigList();
+			}
+			
+			// Event-Listener für Zusatzprodukte-Checkboxen
+			this.initAdditionalProductsListeners();
+		}
+		
+		showDetailView(configIndex = null) {
+			const detailView = document.getElementById('config-detail-view');
+			const overviewView = document.getElementById('config-overview');
+			
+			if (detailView && overviewView) {
+				overviewView.classList.remove('active');
+				detailView.classList.add('active');
+				
+				if (configIndex !== null) {
+					this.loadConfig(configIndex);
+				}
+				
+				// Detail-Ansicht aktualisieren
+				this.updateDetailView();
+			}
+		}
+		
+				updateDetailView() {
+			const currentConfig = this.configs[this.currentConfig];
+			if (!currentConfig) return;
+			
+			// Titel aktualisieren
+			const titleEl = document.getElementById('current-config-title');
+			if (titleEl) {
+				titleEl.textContent = currentConfig.name || `Konfiguration #${this.currentConfig + 1}`;
+			}
+			
+			// Gesamtpreis aktualisieren
+			this.updateCurrentTotalPrice();
+		}
+		
+		updateCurrentTotalPrice() {
+			const totalPriceEl = document.getElementById('current-total-price');
+			if (totalPriceEl) {
+				// Isolierte Berechnung nur für die aktuelle Konfiguration
+				const parts = this.calculatePartsDirectly({
+					selection: this.selection,
+					cols: this.cols,
+					rows: this.rows,
+					cellWidth: parseInt(this.wIn?.value || '179'),
+					cellHeight: parseInt(this.hIn?.value || '113'),
+					orientation: this.orV?.checked ? 'vertical' : 'horizontal'
+				});
+				
+				// Module nur hinzufügen wenn Checkbox aktiviert ist
+				const includeModules = document.getElementById('include-modules')?.checked || false;
+				if (!includeModules) {
+					delete parts.Solarmodul;
+				}
+				
+				let totalPrice = 0;
+				
+				Object.entries(parts).forEach(([partName, quantity]) => {
+					if (quantity > 0) {
+						const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
+						const pricePerPackage = getPriceFromCache(partName);
+						totalPrice += packagesNeeded * pricePerPackage;
+					}
+				});
+				
+				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+			}
+		}
+		
+		updateConfigList() {
+			const configListEl = document.getElementById('config-list');
+			if (!configListEl) return;
+			
+			configListEl.innerHTML = '';
+			
+			this.configs.forEach((config, index) => {
+				const configItem = document.createElement('div');
+				configItem.className = 'config-item';
+				
+				// Markiere aktuelle Konfiguration
+				if (index === this.currentConfig) {
+					configItem.classList.add('active');
+				}
+				
+				const totalPrice = this.calculateConfigPrice(config);
+				
+				configItem.innerHTML = `
+					<div class="config-item-info">
+						<div class="config-item-name">${config.name || `Konfiguration #${index + 1}`}</div>
+						<div class="config-item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+					</div>
+					<div class="config-item-actions">
+						<button class="icon-btn" onclick="solarGrid.editConfigNameInList(${index})" title="Bearbeiten">
+							<span>✏️</span>
+						</button>
+						<button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${index})" title="Löschen">
+							<span>🗑️</span>
+						</button>
+						<div class="config-item-arrow">
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 16px; height: 16px;">
+						</div>
+					</div>
+				`;
+				
+				configItem.addEventListener('click', (e) => {
+					// Verhindere Klick wenn auf Action-Button geklickt wurde
+					if (e.target.closest('.config-item-actions')) return;
+					
+					this.showDetailView(index);
+				});
+				
+				configListEl.appendChild(configItem);
+			});
+			
+			// Update Gesamtpreis und Zusatzprodukte
+			this.updateOverviewTotalPrice();
+			this.renderAdditionalProducts();
+		}
+		
+		initAutoSaveIndicator() {
+			// Auto-Save Indicator Setup
+			this.autoSaveTimeout = null;
+		}
+		
+		showAutoSaveIndicator() {
+			const indicator = document.getElementById('auto-save-indicator');
+			if (!indicator) return;
+			
+			// Zeige Indicator
+			indicator.classList.remove('hidden');
+			
+			// Verstecke nach 1 Sekunde
+			if (this.autoSaveTimeout) {
+				clearTimeout(this.autoSaveTimeout);
+			}
+			
+			this.autoSaveTimeout = setTimeout(() => {
+				indicator.classList.add('hidden');
+			}, 1000);
+		}
+		
+		updateOverviewTotalPrice() {
+			const totalPriceEl = document.getElementById('overview-total-price');
+			if (!totalPriceEl) return;
+			
+			// Berechne Gesamtpreis aller Konfigurationen
+			let totalPrice = 0;
+			this.configs.forEach(config => {
+				totalPrice += this.calculateConfigPrice(config);
+			});
+			
+			// Füge Zusatzprodukte hinzu
+			const additionalProductsPrice = this.calculateAdditionalProductsPrice();
+			totalPrice += additionalProductsPrice;
+			
+			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+		}
+		
+		calculateAdditionalProductsPrice() {
+			let totalPrice = 0;
+			
+			// MC4 Stecker
+			if (document.getElementById('mc4')?.checked) {
+				const moduleCount = this.configs.reduce((total, config) => {
+					return total + config.selection.flat().filter(v => v).length;
+				}, 0);
+				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
+				const pricePerPackage = getPriceFromCache('MC4_Stecker');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			// Solarkabel
+			if (document.getElementById('solarkabel')?.checked) {
+				const packagesNeeded = 1; // 1x Solarkabel 100M
+				const pricePerPackage = getPriceFromCache('Solarkabel');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			// Holzunterleger
+			if (document.getElementById('holz')?.checked) {
+				const packagesNeeded = 1; // 1x Unterlegholz für Dachhaken - 50 Stück
+				const pricePerPackage = getPriceFromCache('Holzunterleger');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			// Quetschkabelschuhe
+			if (document.getElementById('quetschkabelschuhe')?.checked) {
+				const packagesNeeded = 1; // 1x Quetschkabelschuhe - 100 Stück
+				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			return totalPrice;
+		}
+		
+		renderAdditionalProducts() {
+			const additionalProductsListEl = document.getElementById('additional-products-list');
+			if (!additionalProductsListEl) return;
+			
+			additionalProductsListEl.innerHTML = '';
+			
+			// MC4 Stecker
+			if (document.getElementById('mc4')?.checked) {
+				const moduleCount = this.configs.reduce((total, config) => {
+					return total + config.selection.flat().filter(v => v).length;
+				}, 0);
+				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
+				const pricePerPackage = getPriceFromCache('MC4_Stecker');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">${packagesNeeded}x</span>
+						<span class="item-name">MC4 Stecker</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Solarkabel
+			if (document.getElementById('solarkabel')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPriceFromCache('Solarkabel');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1x</span>
+						<span class="item-name">Solarkabel 100M</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Holzunterleger
+			if (document.getElementById('holz')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPriceFromCache('Holzunterleger');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1x</span>
+						<span class="item-name">Unterlegholz für Dachhaken - 50 Stück</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Quetschkabelschuhe
+			if (document.getElementById('quetschkabelschuhe')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1x</span>
+						<span class="item-name">Quetschkabelschuhe - 100 Stück</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+		}
+		
+		initAdditionalProductsListeners() {
+			// Event-Listener für Zusatzprodukte-Checkboxen
+			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe'];
+			
+			additionalProductCheckboxes.forEach(checkboxId => {
+				const checkbox = document.getElementById(checkboxId);
+				if (checkbox) {
+					checkbox.addEventListener('change', () => {
+						// Update Gesamtpreis und Zusatzprodukte-Liste
+						this.updateOverviewTotalPrice();
+						this.renderAdditionalProducts();
+					});
+				}
+			});
+		}
+		
+		editConfigName() {
+			const titleEl = document.getElementById('current-config-title');
+			if (!titleEl) return;
+			
+			// Entferne alle existierenden Input-Felder
+			const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
+			existingInputs.forEach(input => input.remove());
+			
+			// Stelle sicher, dass der Titel sichtbar ist
+			titleEl.style.display = 'block';
+			
+			// Erstelle Input-Feld
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.value = titleEl.textContent;
+			input.className = 'config-title-input';
+			input.style.cssText = `
+				font-size: 24px;
+				font-weight: bold;
+				color: #000000;
+				background: transparent;
+				border: 2px solid #FFB101;
+				border-radius: 8px;
+				padding: 4px 8px;
+				width: 100%;
+				outline: none;
+			`;
+			
+			// Ersetze Titel durch Input
+			titleEl.style.display = 'none';
+			titleEl.parentNode.insertBefore(input, titleEl);
+			input.focus();
+			input.select();
+			
+			// Event-Listener für Enter und Blur
+			const saveEdit = function() {
+				const newName = input.value.trim();
+				if (newName && this.currentConfig !== null) {
+					this.configs[this.currentConfig].name = newName;
+					titleEl.textContent = newName;
+					this.updateConfigList();
+					this.updateConfig();
+					this.showAutoSaveIndicator();
+				}
+				titleEl.style.display = 'block';
+				input.remove();
+			}.bind(this);
+			
+			const cancelEdit = function() {
+				titleEl.style.display = 'block';
+				input.remove();
+			}.bind(this);
+			
+			input.addEventListener('blur', saveEdit);
+			input.addEventListener('keydown', function(e) {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					saveEdit();
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					cancelEdit();
+				}
+			});
+		}
+		
+		editConfigNameInList(configIndex) {
+			const config = this.configs[configIndex];
+			if (!config) return;
+			
+			// Finde das config-item Element
+			const configItems = document.querySelectorAll('.config-item');
+			const configItem = configItems[configIndex];
+			if (!configItem) return;
+			
+			// Finde das name Element
+			const nameEl = configItem.querySelector('.config-item-name');
+			if (!nameEl) return;
+			
+			// Entferne alle existierenden Input-Felder in diesem Item
+			const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
+			existingInputs.forEach(input => input.remove());
+			
+			// Stelle sicher, dass der Name sichtbar ist
+			nameEl.style.display = 'block';
+			
+			// Erstelle Input-Feld
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.value = nameEl.textContent;
+			input.style.cssText = `
+				font-size: 16px;
+				font-weight: normal;
+				color: #000000;
+				background: white;
+				border: 1px solid #FFB101;
+				border-radius: 4px;
+				padding: 2px 6px;
+				width: 80%;
+				outline: none;
+			`;
+			
+			// Ersetze Name durch Input
+			nameEl.style.display = 'none';
+			nameEl.parentNode.insertBefore(input, nameEl);
+			input.focus();
+			input.select();
+			
+			// Event-Listener für Enter und Blur
+			const saveEdit = function() {
+				const newName = input.value.trim();
+				if (newName) {
+					config.name = newName;
+					nameEl.textContent = newName;
+					this.updateConfig();
+					this.showAutoSaveIndicator();
+				}
+				nameEl.style.display = 'block';
+				if (input.parentNode) {
+					input.remove();
+				}
+				this.updateConfigList();
+			}.bind(this);
+			
+			const cancelEdit = function() {
+				nameEl.style.display = 'block';
+				if (input.parentNode) {
+					input.remove();
+				}
+			}.bind(this);
+			
+			input.addEventListener('blur', saveEdit);
+			input.addEventListener('keydown', function(e) {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					saveEdit();
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					cancelEdit();
+				}
+			});
+		}
+		
+		deleteCurrentConfig() {
+			if (this.configs.length <= 1) {
+				alert('Die letzte Konfiguration kann nicht gelöscht werden.');
+				return;
+			}
+			
+			const currentConfig = this.configs[this.currentConfig];
+			const configName = currentConfig?.name || `Konfiguration #${this.currentConfig + 1}`;
+			
+			if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
+				this.configs.splice(this.currentConfig, 1);
+				
+				// Aktive Konfiguration anpassen
+				if (this.currentConfig >= this.configs.length) {
+					this.currentConfig = this.configs.length - 1;
+				}
+				
+				this.loadConfig(this.currentConfig);
+				this.saveToUrl();
+				
+				// Zurück zur Übersicht und Config-Liste updaten
+				this.showOverview();
+			}
+		}
+		
+		deleteConfigFromList(configIndex) {
+			if (this.configs.length <= 1) {
+				alert('Die letzte Konfiguration kann nicht gelöscht werden.');
+				return;
+			}
+			
+			const config = this.configs[configIndex];
+			const configName = config?.name || `Konfiguration #${configIndex + 1}`;
+			
+			if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
+				this.configs.splice(configIndex, 1);
+				
+				// Aktive Konfiguration anpassen
+				if (this.currentConfig >= this.configs.length) {
+					this.currentConfig = this.configs.length - 1;
+				} else if (this.currentConfig > configIndex) {
+					this.currentConfig--;
+				}
+				
+				this.loadConfig(this.currentConfig);
+				this.saveToUrl();
+				this.updateConfigList();
+			}
+			
+			// Event propagation stoppen
+			event.stopPropagation();
+		}
+		
+		calculateConfigPrice(config) {
+			// Verwende die ursprüngliche Berechnungslogik
+			const parts = {
+				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
+			};
+
+			// Berechne Teile für jede Zeile
+			for (let y = 0; y < config.rows; y++) {
+				if (!Array.isArray(config.selection[y])) continue;
+				let run = 0;
+
+				for (let x = 0; x < config.cols; x++) {
+					if (config.selection[y]?.[x]) {
+						run++;
+					}
+					else if (run) { 
+						this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical'); 
+						run = 0; 
+					}
+				}
+				if (run) {
+					this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical');
+				}
+			}
+			
+			// Module nur hinzufügen wenn Checkbox aktiviert ist
+			const includeModules = document.getElementById('include-modules')?.checked || false;
+			if (!includeModules) {
+				delete parts.Solarmodul;
+			}
+			
+			let totalPrice = 0;
+			
+			Object.entries(parts).forEach(([partName, quantity]) => {
+				if (quantity > 0) {
+					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
+					const pricePerPackage = getPriceFromCache(partName);
+					totalPrice += packagesNeeded * pricePerPackage;
+				}
+			});
+			
+			return totalPrice;
+		}
+		
+		calculateCurrentTotalPrice() {
+			// Synchrone Preisberechnung für aktuelle Konfiguration
+			const parts = this.calculatePartsDirectly({
+				selection: this.selection,
+				cols: this.cols,
+				rows: this.rows,
+				cellWidth: parseInt(this.wIn?.value || '179'),
+				cellHeight: parseInt(this.hIn?.value || '113'),
+				orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+				incM: document.getElementById('include-modules')?.checked || false
+				// Zusatzprodukte werden nicht mehr berücksichtigt
+			});
+			
+			let totalPrice = 0;
+			
+			Object.entries(parts).forEach(([partName, quantity]) => {
+				if (quantity > 0) {
+					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
+					const pricePerPackage = getPriceFromCache(partName);
+					const itemTotal = packagesNeeded * pricePerPackage;
+					totalPrice += itemTotal;
+				}
+			});
+			
+			return totalPrice;
+		}
+		
+		addAllConfigsToCart() {
+			// Verwende die gleiche Logik wie addAllToCart()
+			this.addAllToCart();
 		}
 		
 		initSmartConfigFeatures() {
@@ -3906,7 +4545,6 @@
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
-  		this.renderProductSummary();
   		this.updateSaveButtons();
 		}
 
@@ -4095,12 +4733,19 @@
         		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
         			// Direkte Referenz statt JSON.parse/stringify
         			this.configs[this.currentConfig].selection = this.selection;
+        			// Speichere die Konfiguration automatisch
+        			this.updateConfig();
         		}
         		
         		this.trackInteraction();
         		// Performance: Sofortige Produktliste Update + Debounced Summary
         		this.buildList();
         		this.updateSummaryOnChange();
+        		
+        		// Update config-list und overview wenn eine Konfiguration ausgewählt ist
+        		if (this.currentConfig !== null) {
+        			this.updateConfigList();
+        		}
       		});
        
       		// FEATURE 6: Screen Reader Support - Keyboard Navigation
@@ -4137,12 +4782,8 @@
         
         const parts = await this.calculateParts();
       if (this.incM && !this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4 && this.mc4.checked) {
-        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-      }
-      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz && this.holz.checked)  parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
-      if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
+      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+      // Sie werden nur noch in der Overview berechnet
 
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
@@ -4160,12 +4801,17 @@
         const fragment = document.createDocumentFragment();
         entries.forEach(([k,v]) => {
           const packs = Math.ceil(v / VE[k]);
+          const price = getPriceFromCache(k);
+          const itemTotal = packs * price;
           const div = document.createElement('div');
           div.className = 'produkt-item';
           div.innerHTML = `
-            <span>${packs}×</span>
-            <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
-            <span>${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')} (${v})</span>
+            <div class="item-left">
+              <span class="item-quantity">${packs}×</span>
+              <span class="item-name">${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')}</span>
+              <span class="item-details">(${v})</span>
+            </div>
+            <span class="item-price">${itemTotal.toFixed(2).replace('.', ',')} €</span>
           `;
           fragment.appendChild(div);
         });
@@ -4278,11 +4924,35 @@
 		}
 
     processGroup(len, p) {
-      // Fallback-Berechnung für Tellerkopfschraube
-      const cnt360 = Math.ceil(len * 3.6);
-      const cnt240 = Math.ceil(len * 2.4);
+      // Verwende die korrekte Schienenlogik (wie im Worker)
+      const isVertical = this.orV?.checked;
+      const actualCellWidth = isVertical ? parseInt(this.hIn?.value || '113') : parseInt(this.wIn?.value || '179');
       
-      p.Schiene_360_cm     += cnt360;
+      const totalLen = len * actualCellWidth;
+      const floor360 = Math.floor(totalLen / 360);
+      const rem360 = totalLen - floor360 * 360;
+      const floor240 = Math.ceil(rem360 / 240);
+      const pure360 = Math.ceil(totalLen / 360);
+      const pure240 = Math.ceil(totalLen / 240);
+      
+      const variants = [
+        {cnt360: floor360, cnt240: floor240},
+        {cnt360: pure360,  cnt240: 0},
+        {cnt360: 0,        cnt240: pure240}
+      ].map(v => ({
+        ...v,
+        rails: v.cnt360 + v.cnt240,
+        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+      }));
+      
+      const minRails = Math.min(...variants.map(v => v.rails));
+      const best = variants
+        .filter(v => v.rails === minRails)
+        .reduce((a, b) => a.waste <= b.waste ? a : b);
+      
+      const {cnt360, cnt240} = best;
+      
+      p.Schiene_360_cm     += cnt360 * 2;
       p.Schiene_240_cm     += cnt240 * 2;
       p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
       p.Endklemmen         += 4;
@@ -4299,31 +4969,38 @@
       return PRODUCT_IMAGES[key] || '';
     }
     
-    loadConfig(idx) {
-  		const cfg = this.configs[idx];
-  		this.currentConfig = idx;
+    		loadConfig(idx) {
+			const cfg = this.configs[idx];
+			this.currentConfig = idx;
 
-  				// Input-Werte setzen
-		this.wIn.value = cfg.cellWidth;
-		this.hIn.value = cfg.cellHeight;
-		this.orV.checked = cfg.orientation === 'vertical';
-		this.orH.checked = !this.orV.checked;
-		this.incM.checked = cfg.incM;
-		this.mc4.checked = cfg.mc4;
-		this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
-		this.holz.checked = cfg.holz;
-		this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
+			// Input-Werte setzen
+			this.wIn.value = cfg.cellWidth;
+			this.hIn.value = cfg.cellHeight;
+			this.orV.checked = cfg.orientation === 'vertical';
+			this.orH.checked = !this.orV.checked;
+			this.incM.checked = cfg.incM;
+			this.mc4.checked = cfg.mc4;
+			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
+			this.holz.checked = cfg.holz;
+			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
 
-  		// STATE Werte setzen - WICHTIG: Vor setup() setzen
-  		this.cols = cfg.cols;
-  		this.rows = cfg.rows;
-  		this.selection = cfg.selection.map(r => [...r]);
+			// STATE Werte setzen - WICHTIG: Vor setup() setzen
+			this.cols = cfg.cols;
+			this.rows = cfg.rows;
+			this.selection = cfg.selection.map(r => [...r]);
 
-  		// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
-  		this.setup();
+			// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
+			this.setup();
 
-  		this.renderConfigList();
-  		this.updateSaveButtons();
+			// Produktliste und Summary aktualisieren
+			this.buildList();
+			this.updateSummaryOnChange();
+
+			this.renderConfigList();
+			this.updateSaveButtons();
+			
+			// Detail-Ansicht aktualisieren wenn aktiv
+			this.updateDetailView();
 		}
     
     showToast(message = 'Gespeichert ✅', duration = 1500) {
@@ -4364,8 +5041,13 @@
   		this.setup(); // Baut Grid mit leerer Auswahl neu auf
   		
   		this.renderConfigList();
-  		this.updateSaveButtons();
-  		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
+		this.updateConfigList(); // Config-Liste in Overview updaten
+		this.updateSaveButtons();
+		
+		// 6. Detail-Ansicht aktualisieren wenn aktiv
+		this.updateDetailView();
+		
+		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
 		}
 
     renameCurrentConfig(newName) {
@@ -4528,7 +5210,7 @@
     		let deleteBtn = null;
     		if (this.configs.length > 1) {
     			deleteBtn = document.createElement('button');
-    			deleteBtn.innerHTML = '🗑️';
+    			deleteBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986121f0519d394183f_Delete.png" alt="Löschen" style="width: 16px; height: 16px;">';
     			deleteBtn.title = 'Konfiguration löschen';
     			Object.assign(deleteBtn.style, {
       			background: 'none',
@@ -4547,7 +5229,7 @@
     		}
 
     		const shareBtn = document.createElement('button');
-    		shareBtn.textContent = '🔗';
+    		shareBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Link" style="width: 16px; height: 16px;">';
     		shareBtn.title = 'Später weitermachen - Link kopieren';
     		Object.assign(shareBtn.style, {
       		background: 'none',
@@ -4595,214 +5277,30 @@
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
         
-        // Performance: Nur renderProductSummary, da es buildList Funktionalität enthält
-        this.renderProductSummary();
+        // Auto-Save Indicator anzeigen
+        this.showAutoSaveIndicator();
+        
+        // Detail-Ansicht aktualisieren falls aktiv
+        if (document.getElementById('config-detail-view')?.classList.contains('active')) {
+          this.updateDetailView();
+        }
+        
+        // Gesamtpreis aktualisieren
+        this.updateCurrentTotalPrice();
+        
+        // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+        if (this.currentConfig !== null) {
+          // Speichere die Konfiguration automatisch
+          this.updateConfig();
+          this.updateConfigList();
+        }
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
       }, this.updateDelay);
     }
 
-        async renderProductSummary() {
-      // NEUE GLOBALE LOGIK: Verwende aktuelle Checkbox-Werte für alle Konfigurationen
-      // Performance: Reduziere Deep Copies
-      let bundles = this.configs.map((c, idx) => {
-        return {
-          selection:   c.selection, // Direkte Referenz statt Deep Copy
-          rows:        c.rows,
-          cols:        c.cols,
-          cellWidth:   c.cellWidth,
-          cellHeight:  c.cellHeight,
-          orientation: c.orientation,
-          // GLOBALE Checkbox-Werte für alle Konfigurationen
-          incM:        this.incM && this.incM.checked,
-          mc4:         this.mc4 && this.mc4.checked,
-          solarkabel:  this.solarkabel && this.solarkabel.checked,
-          holz:        this.holz && this.holz.checked,
-          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-        };
-      });
 
-      // Verwende nur aktuelle Konfiguration wenn sie sich von der gespeicherten unterscheidet
-      if (this.currentConfig === null) {
-        // Keine gespeicherten Konfigurationen: Verwende aktuelle
-        bundles.push({
-          selection:   this.selection, // Direkte Referenz statt Deep Copy
-          rows:        this.rows,
-          cols:        this.cols,
-          cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-          cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-          orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-          // GLOBALE Checkbox-Werte
-          incM:        this.incM && this.incM.checked,
-          mc4:         this.mc4 && this.mc4.checked,
-          solarkabel:  this.solarkabel && this.solarkabel.checked,
-          holz:        this.holz && this.holz.checked,
-          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-        });
-      } else {
-        // Gespeicherte Konfigurationen vorhanden: Prüfe ob aktuelle sich unterscheidet
-        const currentSelection = this.selection;
-        const savedSelection = this.configs[this.currentConfig].selection;
-        // Performance: Schnellerer Vergleich statt JSON.stringify
-        const selectionChanged = this.arraysEqual(currentSelection, savedSelection);
-        
-        if (selectionChanged) {
-          // Füge aktuelle Konfiguration zu den gespeicherten hinzu
-          bundles.push({
-            selection:   currentSelection, // Direkte Referenz
-            rows:        this.rows,
-            cols:        this.cols,
-            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-            // GLOBALE Checkbox-Werte
-            incM:        this.incM && this.incM.checked,
-            mc4:         this.mc4 && this.mc4.checked,
-            solarkabel:  this.solarkabel && this.solarkabel.checked,
-            holz:        this.holz && this.holz.checked,
-            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-          });
-        } else {
-          // Keine Änderung: Füge aktuelle Konfiguration trotzdem hinzu
-          bundles.push({
-            selection:   currentSelection, // Direkte Referenz
-            rows:        this.rows,
-            cols:        this.cols,
-            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-            // GLOBALE Checkbox-Werte
-            incM:        this.incM && this.incM.checked,
-            mc4:         this.mc4 && this.mc4.checked,
-            solarkabel:  this.solarkabel && this.solarkabel.checked,
-            holz:        this.holz && this.holz.checked,
-            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-          });
-        }
-      }
-  		
-  		const total = {};
-  		
-  		// ISOLIERTE Berechnungen mit calculationManager - KEINE Grid-Eigenschaften berühren!
-  		try {
-  			const allParts = await Promise.all(bundles.map(async (b) => {
-  				// Direkte Berechnung mit calculationManager ohne Grid-Modification
-  				const calculationData = {
-  					selection: b.selection,
-  					rows: b.rows,
-  					cols: b.cols,
-  					cellWidth: b.cellWidth,
-  					cellHeight: b.cellHeight,
-  					orientation: b.orientation
-  				};
-
-  				
-
-  				let parts;
-  								try {
-					parts = await calculationManager.calculate('calculateParts', calculationData);
-				} catch (error) {
-					// Fallback zu synchroner Berechnung
-					parts = this.calculatePartsDirectly(calculationData);
-				}
-
-  				// Module werden NACH der Summierung entfernt (wie in buildList)
-  				// MC4, Solarkabel und Holz werden GLOBAL nach der Summierung hinzugefügt
-
-  				return parts;
-  			}));
-
-  						// Summiere alle Parts
-			allParts.forEach((parts, index) => {
-    		Object.entries(parts).forEach(([k, v]) => {
-      		total[k] = (total[k] || 0) + v;
-    		});
-  		});
-  		
-  		// NEUE GLOBALE LOGIK: Füge pauschale Produkte zur Gesamtbestellung hinzu
-  		const totalSelectedCells = bundles.reduce((sum, bundle) => {
-  			return sum + bundle.selection.flat().filter(v => v).length;
-  		}, 0);
-  		
-  		// Module NACH der Summierung entfernen (wie in buildList)
-  		if (this.incM && !this.incM.checked) {
-  			delete total.Solarmodul;
-  		}
-  		
-  		// MC4-Stecker: Berechne basierend auf Gesamt-Modulen aller Konfigurationen
-  		if (this.mc4 && this.mc4.checked) {
-  			total.MC4_Stecker = Math.ceil(totalSelectedCells / 30);
-  		}
-  		
-  		// Solarkabel: Pauschal 1x zur Gesamtbestellung
-  		if (this.solarkabel && this.solarkabel.checked) {
-  			total.Solarkabel = 1;
-  		}
-  		
-  		// Unterlegholz: Pauschal 1x zur Gesamtbestellung (NEU: VE von 50)
-  		if (this.holz && this.holz.checked) {
-  			total.Holzunterleger = 1; // Pauschal 1x statt basierend auf Schienen
-  		}
-  		
-  		// Quetschkabelschuhe: Pauschal 1x zur Gesamtbestellung
-  		if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) {
-  			total.Quetschkabelschuhe = 1; // Pauschal 1x zur Gesamtbestellung
-  		}
-  		
-  		} catch (error) {
-  			console.error('Error in renderProductSummary:', error);
-  			// Fallback: Verwende leeres total
-  		}
-
-  				const entries = Object.entries(total).filter(([, v]) => v > 0);
-  		const itemsPerColumn = 4;
-  		const numColumns = Math.ceil(entries.length / itemsPerColumn);
-
-  		let totalPrice = 0;
-  		let html = '';
-
-  		for (let i = 0; i < numColumns; i++) {
-    		const columnEntries = entries.slice(i * itemsPerColumn, (i + 1) * itemsPerColumn);
-    		const columnHtml = columnEntries.map(([k, v]) => {
-      		const packs = Math.ceil(v / VE[k]);
-      		const price = getPriceFromCache(k);
-      		const itemTotal = packs * price;
-      		totalPrice += itemTotal;
-
-      		// Verwende neue Produktnamen
-      		const displayName = PRODUCT_NAME_MAP[k] || k.replace(/_/g, ' ');
-      		
-      		return `<div class="produkt-item">
-        		<span>${packs}×</span>
-        		<img src="${this.mapImage(k)}" alt="${displayName}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(displayName)}'">
-        		<span>${displayName} (${v})</span>
-        		<span style="margin-left:auto; font-weight:bold;">${itemTotal.toFixed(2)} €</span>
-      		</div>`;
-    		}).join('');
-
-    		html += `<div class="summary-column">${columnHtml}</div>`;
-  		}
-
-  		html += `<div class="summary-total">Gesamtpreis: ${totalPrice.toFixed(2)} €</div>`;
-  		this.summaryList.innerHTML = html;
-
-  		
-
-		// Zeige Summary List nur wenn Produkte vorhanden sind
-		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
-		this.summaryList.style.display = entries.length ? 'flex' : 'none';
-		
-		// Wenn keine Produkte vorhanden sind, zeige eine Nachricht
-		if (entries.length === 0) {
-			this.summaryList.innerHTML = '<div class="summary-total">Keine Produkte berechnet. Bitte wählen Sie Module aus.</div>';
-			this.summaryList.style.display = 'flex';
-		} else {
-			// Zeige die berechneten Produkte an
-			this.summaryList.innerHTML = html;
-			this.summaryList.style.display = 'flex';
-		}
-		}
 
 		// ISOLIERTE synchrone Berechnung für Fallback
 		calculatePartsDirectly(data) {
@@ -4882,13 +5380,121 @@
     		this.updateConfig();
     	}
     	
-    	// Erstelle Link mit allen Konfigurationen
+    	// Speichere alle Konfigurationen und Einstellungen im Cache
+    	this.saveToCache();
+    	
+    	// Erstelle Link mit allen Konfigurationen (als Backup)
     	const allConfigsData = JSON.stringify(this.configs);
 			const base64 = btoa(encodeURIComponent(allConfigsData));
 			const continueUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
 			
 			navigator.clipboard.writeText(continueUrl);
 			this.showToast('Später-weitermachen Link kopiert ✅', 2000);
+    }
+    
+    // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
+    saveToCache() {
+    	try {
+    		const cacheData = {
+    			configs: this.configs,
+    			currentConfig: this.currentConfig,
+    			// Aktuelle Grid-Einstellungen
+    			cols: this.cols,
+    			rows: this.rows,
+    			cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+    			cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10),
+    			orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+    			// Checkbox-Einstellungen
+    			includeModules: this.incM ? this.incM.checked : false,
+    			mc4: this.mc4 ? this.mc4.checked : false,
+    			solarkabel: this.solarkabel ? this.solarkabel.checked : false,
+    			holz: this.holz ? this.holz.checked : false,
+    			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+    			// Timestamp für Cache-Gültigkeit
+    			timestamp: Date.now()
+    		};
+    		
+    		localStorage.setItem('solarTool_continueCache', JSON.stringify(cacheData));
+    	} catch (error) {
+    		console.error('Fehler beim Speichern des Caches:', error);
+    	}
+    }
+    
+    // NEUE FUNKTION: Lade Konfigurationen aus dem Cache
+    loadFromCache() {
+    	try {
+    		const cachedData = localStorage.getItem('solarTool_continueCache');
+    		if (!cachedData) return false;
+    		
+    		const data = JSON.parse(cachedData);
+    		const cacheAge = Date.now() - data.timestamp;
+    		const maxAge = 24 * 60 * 60 * 1000; // 24 Stunden
+    		
+    		// Prüfe ob Cache noch gültig ist
+    		if (cacheAge > maxAge) {
+    			localStorage.removeItem('solarTool_continueCache');
+    			return false;
+    		}
+    		
+    		// Lade Konfigurationen
+    		if (data.configs && Array.isArray(data.configs)) {
+    			this.configs = data.configs;
+    			this.currentConfig = data.currentConfig;
+    			
+    			// Lade Grid-Einstellungen
+    			if (data.cols && data.rows) {
+    				this.cols = data.cols;
+    				this.rows = data.rows;
+    			}
+    			
+    			// Lade Checkbox-Einstellungen
+    			if (this.incM && typeof data.includeModules === 'boolean') {
+    				this.incM.checked = data.includeModules;
+    			}
+    			if (this.mc4 && typeof data.mc4 === 'boolean') {
+    				this.mc4.checked = data.mc4;
+    			}
+    			if (this.solarkabel && typeof data.solarkabel === 'boolean') {
+    				this.solarkabel.checked = data.solarkabel;
+    			}
+    			if (this.holz && typeof data.holz === 'boolean') {
+    				this.holz.checked = data.holz;
+    			}
+    			if (this.quetschkabelschuhe && typeof data.quetschkabelschuhe === 'boolean') {
+    				this.quetschkabelschuhe.checked = data.quetschkabelschuhe;
+    			}
+    			
+    			// Lade Grid-Dimensionen
+    			if (this.wIn && data.cellWidth) {
+    				this.wIn.value = data.cellWidth;
+    			}
+    			if (this.hIn && data.cellHeight) {
+    				this.hIn.value = data.cellHeight;
+    			}
+    			
+    			// Lade Orientierung
+    			if (this.orH && this.orV && typeof data.orientation === 'string') {
+    				this.orH.checked = data.orientation === 'horizontal';
+    				this.orV.checked = data.orientation === 'vertical';
+    			}
+    			
+    			// Lade die erste Konfiguration
+    			if (this.configs.length > 0) {
+    				this.loadConfig(0);
+    			}
+    			
+    			// Cache nach dem Laden leeren
+    			localStorage.removeItem('solarTool_continueCache');
+    			
+    			this.showToast('Konfiguration aus Cache geladen ✅', 2000);
+    			return true;
+    		}
+    	} catch (error) {
+    		console.error('Fehler beim Laden des Caches:', error);
+    		localStorage.removeItem('solarTool_continueCache');
+    	}
+    	
+    	return false;
     }
     
         generateHiddenCartForms() {
@@ -5152,13 +5758,8 @@
       this.selection = sel;
         let parts = await this.calculateParts();
       if (!incM) delete parts.Solarmodul;
-      if (mc4) {
-        const panelCount = sel.flat().filter(v => v).length;
-        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-      }
-      if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (holz)  parts.Holzunterleger = 1; // NEU: Pauschal 1x statt basierend auf Schienen
-      if (quetschkabelschuhe) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
+      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+      // Sie werden nur noch in der Overview berechnet
       
         return parts;
       } finally {
