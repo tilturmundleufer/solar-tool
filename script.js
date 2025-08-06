@@ -2955,9 +2955,8 @@
     getProductSummary() {
       const parts = this.calculateParts();
       if (!this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
-      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+      // Sie werden nur noch in der Overview berechnet
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       let totalPrice = 0;
@@ -3025,10 +3024,8 @@
         cellHeight: parseInt(this.hIn.value, 10),
         orientation: this.orV.checked ? 'vertical' : 'horizontal',
         selection: this.selection,
-        incM: this.incM.checked,
-        mc4: this.mc4.checked,
-        solarkabel: this.solarkabel.checked,
-        holz: this.holz.checked
+        incM: this.incM.checked
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       };
 
       const summary = this.getProductSummary();
@@ -3048,17 +3045,9 @@
         cellWidth: targetConfig.cellWidth,
         cellHeight: targetConfig.cellHeight,
         orientation: targetConfig.orientation,
-        incM: targetConfig.incM,
-        mc4: targetConfig.mc4,
-        solarkabel: targetConfig.solarkabel,
-        holz: targetConfig.holz
+        incM: targetConfig.incM
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       });
-
-      // Stelle sicher, dass alle 12 Produkte übertragen werden, auch mit 0
-      // Zusätzliche Berechnungen basierend auf Checkbox-Einstellungen
-      if (targetConfig.mc4) parts.MC4_Stecker = targetConfig.selection.flat().filter(v => v).length;
-      if (targetConfig.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (targetConfig.holz) parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
       
       const allProductQuantities = {
         Solarmodul: parts.Solarmodul || 0,
@@ -3069,10 +3058,8 @@
         Endkappen: parts.Endkappen || 0,
         Schienenverbinder: parts.Schienenverbinder || 0,
         Schiene240cm: parts.Schiene_240_cm || 0,
-        Schiene360cm: parts.Schiene_360_cm || 0,
-        MC4Stecker: parts.MC4_Stecker || 0,
-        Solarkabel: parts.Solarkabel || 0,
-        Holzunterleger: parts.Holzunterleger || 0
+        Schiene360cm: parts.Schiene_360_cm || 0
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       };
       
       return {
@@ -3087,10 +3074,8 @@
           orientation: targetConfig.orientation,
           gridVisualization: gridVisualization,
           options: {
-            includeModules: targetConfig.incM,
-            mc4Connectors: targetConfig.mc4,
-            solarkabel: targetConfig.solarkabel,
-            woodUnderlay: targetConfig.holz
+            includeModules: targetConfig.incM
+            // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
           }
         },
         summary: summary,
@@ -4769,12 +4754,8 @@
         
         const parts = await this.calculateParts();
       if (this.incM && !this.incM.checked) delete parts.Solarmodul;
-      if (this.mc4 && this.mc4.checked) {
-        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-      }
-      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (this.holz && this.holz.checked)  parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
-      if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
+      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+      // Sie werden nur noch in der Overview berechnet
 
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
@@ -5404,35 +5385,13 @@
     		});
   		});
   		
-  		// NEUE GLOBALE LOGIK: Füge pauschale Produkte zur Gesamtbestellung hinzu
-  		const totalSelectedCells = bundles.reduce((sum, bundle) => {
-  			return sum + bundle.selection.flat().filter(v => v).length;
-  		}, 0);
-  		
-  		// Module NACH der Summierung entfernen (wie in buildList)
-  		if (this.incM && !this.incM.checked) {
-  			delete total.Solarmodul;
-  		}
-  		
-  		// MC4-Stecker: Berechne basierend auf Gesamt-Modulen aller Konfigurationen
-  		if (this.mc4 && this.mc4.checked) {
-  			total.MC4_Stecker = Math.ceil(totalSelectedCells / 30);
-  		}
-  		
-  		// Solarkabel: Pauschal 1x zur Gesamtbestellung
-  		if (this.solarkabel && this.solarkabel.checked) {
-  			total.Solarkabel = 1;
-  		}
-  		
-  		// Unterlegholz: Pauschal 1x zur Gesamtbestellung (NEU: VE von 50)
-  		if (this.holz && this.holz.checked) {
-  			total.Holzunterleger = 1; // Pauschal 1x statt basierend auf Schienen
-  		}
-  		
-  		// Quetschkabelschuhe: Pauschal 1x zur Gesamtbestellung
-  		if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) {
-  			total.Quetschkabelschuhe = 1; // Pauschal 1x zur Gesamtbestellung
-  		}
+  				// Module NACH der Summierung entfernen (wie in buildList)
+		if (this.incM && !this.incM.checked) {
+			delete total.Solarmodul;
+		}
+		
+		// Zusatzprodukte werden nicht mehr zur Summary hinzugefügt
+		// Sie werden nur noch in der Overview berechnet
   		
   		} catch (error) {
   			console.error('Error in renderProductSummary:', error);
