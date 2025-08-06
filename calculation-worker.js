@@ -378,7 +378,7 @@ function findErdungsbandClusters(selection, rows, cols) {
   return clusters;
 }
 
-// Flood-fill für Erdungsband-Cluster (horizontale und vertikale Verbindungen)
+// Flood-fill für Erdungsband-Cluster (komplette Verbindungs-Analyse)
 function floodFillErdungsbandCluster(x, y, visited, cluster, selection, rows, cols) {
   if (y < 0 || y >= rows || x < 0 || x >= cols) return;
   if (visited[y][x] || !selection[y]?.[x]) return;
@@ -406,8 +406,10 @@ function floodFillErdungsbandCluster(x, y, visited, cluster, selection, rows, co
   }
 
   // Zusätzlich: Prüfe horizontale Verbindungen in derselben Reihe
-  // für Module die nicht direkt benachbart sind
   checkHorizontalConnectionsInRow(x, y, visited, cluster, selection, rows, cols);
+  
+  // Zusätzlich: Prüfe vertikale Verbindungen in derselben Spalte
+  checkVerticalConnectionsInColumn(x, y, visited, cluster, selection, rows, cols);
 }
 
 // Prüfe horizontale Verbindungen in derselben Reihe
@@ -431,6 +433,35 @@ function hasHorizontalConnection(x1, x2, y, selection, cols) {
   // Prüfe alle Spalten zwischen x1 und x2
   for (let x = minX + 1; x < maxX; x++) {
     // Wenn eine leere Spalte dazwischen ist, keine Verbindung
+    if (!selection[y]?.[x]) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+// Prüfe vertikale Verbindungen in derselben Spalte
+function checkVerticalConnectionsInColumn(x, y, visited, cluster, selection, rows, cols) {
+  // Prüfe alle Module in derselben Spalte
+  for (let checkY = 0; checkY < rows; checkY++) {
+    if (checkY !== y && selection[checkY]?.[x] && !visited[checkY][x]) {
+      // Prüfe ob es eine Verbindung gibt (keine leeren Reihen dazwischen)
+      if (hasVerticalConnection(x, y, checkY, selection, rows)) {
+        floodFillErdungsbandCluster(x, checkY, visited, cluster, selection, rows, cols);
+      }
+    }
+  }
+}
+
+// Prüfe ob zwei Module in derselben Spalte vertikal verbunden sind
+function hasVerticalConnection(x, y1, y2, selection, rows) {
+  const minY = Math.min(y1, y2);
+  const maxY = Math.max(y1, y2);
+  
+  // Prüfe alle Reihen zwischen y1 und y2
+  for (let y = minY + 1; y < maxY; y++) {
+    // Wenn eine leere Reihe dazwischen ist, keine Verbindung
     if (!selection[y]?.[x]) {
       return false;
     }
@@ -501,7 +532,7 @@ function findColumnsInCluster(cluster) {
   return columns.sort((a, b) => a.x - b.x);
 }
 
-// Berechne Länge basierend auf Spalten-Struktur
+// Berechne Länge basierend auf Spalten-Struktur mit horizontaler Sicherung
 function calculateLengthForColumns(columns, moduleHeight, gap) {
   if (columns.length === 0) return 0;
 
@@ -511,14 +542,62 @@ function calculateLengthForColumns(columns, moduleHeight, gap) {
     return column.height * moduleHeight + (column.height - 1) * gap;
   }
 
-  // Mehrere Spalten: Jede Spalte braucht ein Erdungsband
+  // Mehrere Spalten: Berücksichtige horizontale Sicherung
+  return calculateOptimizedLengthForMultipleColumns(columns, moduleHeight, gap);
+}
+
+// Berechne optimierte Länge für mehrere Spalten
+function calculateOptimizedLengthForMultipleColumns(columns, moduleHeight, gap) {
+  // Finde horizontale Reihen mit Modulen
+  const rows = findRowsWithModules(columns);
+  
+  // Berechne minimale Erdungsbandlength
   let totalLength = 0;
+  
+  // Jede Spalte braucht mindestens ein Erdungsband
   for (const column of columns) {
     const columnLength = column.height * moduleHeight + (column.height - 1) * gap;
     totalLength += columnLength;
   }
+  
+  // Reduziere Länge für Module die horizontal gesichert sind
+  const horizontalReduction = calculateHorizontalReduction(columns, rows, moduleHeight, gap);
+  totalLength -= horizontalReduction;
+  
+  return Math.max(totalLength, 0);
+}
 
-  return totalLength;
+// Finde Reihen mit Modulen
+function findRowsWithModules(columns) {
+  const rows = new Set();
+  for (const column of columns) {
+    for (const module of column.modules) {
+      rows.add(module.y);
+    }
+  }
+  return Array.from(rows).sort((a, b) => a - b);
+}
+
+// Berechne Reduktion durch horizontale Sicherung
+function calculateHorizontalReduction(columns, rows, moduleHeight, gap) {
+  let reduction = 0;
+  
+  for (const row of rows) {
+    const modulesInRow = [];
+    for (const column of columns) {
+      const moduleInRow = column.modules.find(m => m.y === row);
+      if (moduleInRow) {
+        modulesInRow.push(moduleInRow);
+      }
+    }
+    
+    // Wenn mehrere Module in einer Reihe, reduziere Länge
+    if (modulesInRow.length > 1) {
+      reduction += (modulesInRow.length - 1) * moduleHeight;
+    }
+  }
+  
+  return reduction;
 }
 
 
