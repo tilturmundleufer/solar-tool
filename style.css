@@ -748,6 +748,8 @@ body {
   flex-direction: column;
   height: 100%;
   padding: 24px;
+  padding-bottom: 120px;
+  position: relative;
 }
 
 .config-detail-view.active,
@@ -846,6 +848,8 @@ body {
 .product-section {
   flex: 1;
   margin-bottom: 24px;
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
 }
 
 .product-section h4 {
@@ -892,6 +896,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  background: white;
+  padding-top: 16px;
+  border-top: 1px solid #CECECE;
 }
 
 .btn.outline {
@@ -951,6 +962,8 @@ body {
 .overview-content {
   flex: 1;
   margin-bottom: 24px;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
 }
 
 .config-list {
@@ -963,6 +976,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  background: white;
+  padding-top: 16px;
+  border-top: 1px solid #CECECE;
 }
 
 /* Checkboxen oberhalb des Grids */
