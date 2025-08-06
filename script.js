@@ -3753,7 +3753,9 @@
 						<button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${index})" title="Löschen">
 							<span>🗑️</span>
 						</button>
-						<div class="config-item-arrow">▶</div>
+						<div class="config-item-arrow">
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 16px; height: 16px;">
+						</div>
 					</div>
 				`;
 				
