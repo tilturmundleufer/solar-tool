@@ -2652,6 +2652,8 @@
           
           // Update config-list und overview wenn eine Konfiguration ausgewählt ist
           if (this.solarGrid.currentConfig !== null) {
+            // Speichere die Konfiguration automatisch
+            this.solarGrid.updateConfig();
             this.solarGrid.updateConfigList();
           }
         });
@@ -4724,6 +4726,8 @@
         		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
         			// Direkte Referenz statt JSON.parse/stringify
         			this.configs[this.currentConfig].selection = this.selection;
+        			// Speichere die Konfiguration automatisch
+        			this.updateConfig();
         		}
         		
         		this.trackInteraction();
@@ -5282,6 +5286,8 @@
         
         // Update config-list und overview wenn eine Konfiguration ausgewählt ist
         if (this.currentConfig !== null) {
+          // Speichere die Konfiguration automatisch
+          this.updateConfig();
           this.updateConfigList();
         }
         
