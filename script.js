@@ -3823,7 +3823,7 @@
 			input.select();
 			
 			// Event-Listener für Enter und Blur
-			const saveEdit = () => {
+			const saveEdit = function() {
 				const newName = input.value.trim();
 				if (newName && this.currentConfig !== null) {
 					this.configs[this.currentConfig].name = newName;
@@ -3834,12 +3834,12 @@
 				}
 				titleEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
-			const cancelEdit = () => {
+			const cancelEdit = function() {
 				titleEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
 			input.addEventListener('blur', saveEdit);
 			input.addEventListener('keydown', (e) => {
@@ -3896,7 +3896,7 @@
 			input.select();
 			
 			// Event-Listener für Enter und Blur
-			const saveEdit = () => {
+			const saveEdit = function() {
 				const newName = input.value.trim();
 				if (newName) {
 					config.name = newName;
@@ -3907,12 +3907,12 @@
 				}
 				nameEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
-			const cancelEdit = () => {
+			const cancelEdit = function() {
 				nameEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
 			input.addEventListener('blur', saveEdit);
 			input.addEventListener('keydown', (e) => {
