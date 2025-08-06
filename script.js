@@ -3878,13 +3878,13 @@
 			input.type = 'text';
 			input.value = nameEl.textContent;
 			input.style.cssText = `
-				font-size: inherit;
-				font-weight: inherit;
-				color: inherit;
+				font-size: 24px;
+				font-weight: bold;
+				color: #000000;
 				background: transparent;
 				border: 2px solid #FFB101;
-				border-radius: 4px;
-				padding: 2px 4px;
+				border-radius: 8px;
+				padding: 4px 8px;
 				width: 100%;
 				outline: none;
 			`;
