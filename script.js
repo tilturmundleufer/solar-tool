@@ -3942,20 +3942,31 @@
 		}
 		
 		calculateConfigPrice(config) {
-			// Verwende calculatePartsDirectly für isolierte Berechnung
-			const parts = this.calculatePartsDirectly({
-				selection: config.selection,
-				cols: config.cols,
-				rows: config.rows,
-				cellWidth: config.cellWidth || 179,
-				cellHeight: config.cellHeight || 113,
-				orientation: config.orientation || 'vertical',
-				incM: config.incM || false,
-				mc4: config.mc4 || false,
-				solarkabel: config.solarkabel || false,
-				holz: config.holz || false,
-				quetschkabelschuhe: config.quetschkabelschuhe || false
-			});
+			// Verwende die ursprüngliche Berechnungslogik
+			const parts = {
+				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
+			};
+
+			// Berechne Teile für jede Zeile
+			for (let y = 0; y < config.rows; y++) {
+				if (!Array.isArray(config.selection[y])) continue;
+				let run = 0;
+
+				for (let x = 0; x < config.cols; x++) {
+					if (config.selection[y]?.[x]) {
+						run++;
+					}
+					else if (run) { 
+						this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical'); 
+						run = 0; 
+					}
+				}
+				if (run) {
+					this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical');
+				}
+			}
 			
 			let totalPrice = 0;
 			
