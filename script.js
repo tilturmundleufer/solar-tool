@@ -3349,10 +3349,11 @@
 			})
 		);
       
-            // Prüfe ob Radio-Buttons existieren bevor auf sie zugegriffen wird
+            // Prüfe ob Orientation-Elemente existieren (Radio-Buttons oder Buttons)
       if (this.orH && this.orV) {
         let lastOrientation = this.orH.checked ? 'horizontal' : 'vertical';
 
+        // Event-Listener für Radio-Buttons (falls vorhanden)
         [this.orH, this.orV].forEach(el =>
           el.addEventListener('change', () => {
 
@@ -3370,9 +3371,9 @@
               orientVSetup.checked = el === this.orV;
             }
             
-            // Synchronisiere mit den neuen Orientation Buttons
-            const orientHBtn = document.getElementById('orient-h-btn');
-            const orientVBtn = document.getElementById('orient-v-btn');
+            // Synchronisiere mit den Orientation Buttons
+            const orientHBtn = document.getElementById('orient-h');
+            const orientVBtn = document.getElementById('orient-v');
             if (orientHBtn && orientVBtn) {
               orientHBtn.classList.toggle('active', el === this.orH);
               orientVBtn.classList.toggle('active', el === this.orV);
@@ -3388,6 +3389,35 @@
             lastOrientation = currentOrientation;
           })
         );
+        
+        // Event-Listener für Orientation Buttons
+        const orientHBtn = document.getElementById('orient-h');
+        const orientVBtn = document.getElementById('orient-v');
+        
+        if (orientHBtn && orientVBtn) {
+          [orientHBtn, orientVBtn].forEach(btn => {
+            btn.addEventListener('click', () => {
+              // Entferne active Klasse von beiden Buttons
+              orientHBtn.classList.remove('active');
+              orientVBtn.classList.remove('active');
+              
+              // Füge active Klasse zum geklickten Button hinzu
+              btn.classList.add('active');
+              
+              // Synchronisiere mit den Radio-Buttons
+              const isVertical = btn === orientVBtn;
+              if (this.orV) this.orV.checked = isVertical;
+              if (this.orH) this.orH.checked = !isVertical;
+              
+              // Vollständige Grid-Neuinitialisierung
+              this.trackInteraction();
+              this.updateSize();
+              this.buildGrid();
+              this.buildList();
+              this.updateSummaryOnChange();
+            });
+          });
+        }
       }
 
   		// GLOBALE Checkbox-Event-Listener - gelten für alle Konfigurationen
@@ -3423,34 +3453,7 @@
 			);
 		}
 		
-		// Event-Listener für die neuen Orientation Buttons
-		const orientHBtn = document.getElementById('orient-h-btn');
-		const orientVBtn = document.getElementById('orient-v-btn');
-		
-		if (orientHBtn && orientVBtn) {
-			[orientHBtn, orientVBtn].forEach(btn => {
-				btn.addEventListener('click', () => {
-					// Entferne active Klasse von beiden Buttons
-					orientHBtn.classList.remove('active');
-					orientVBtn.classList.remove('active');
-					
-					// Füge active Klasse zum geklickten Button hinzu
-					btn.classList.add('active');
-					
-					// Synchronisiere mit den Radio-Buttons
-					const isVertical = btn === orientVBtn;
-					if (this.orV) this.orV.checked = isVertical;
-					if (this.orH) this.orH.checked = !isVertical;
-					
-					// Vollständige Grid-Neuinitialisierung
-					this.trackInteraction();
-					this.updateSize();
-					this.buildGrid();
-					this.buildList();
-					this.updateSummaryOnChange();
-				});
-			});
-		}
+
       
       // Event-Listener für die Grid-Expansion-Buttons (neue Struktur)
 			// Spalten-Buttons - rechts (fügt am Ende hinzu)
