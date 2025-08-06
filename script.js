@@ -3901,17 +3901,21 @@
 				if (newName) {
 					config.name = newName;
 					nameEl.textContent = newName;
-					this.updateConfigList();
 					this.updateConfig();
 					this.showAutoSaveIndicator();
 				}
 				nameEl.style.display = 'block';
-				input.remove();
+				if (input.parentNode) {
+					input.remove();
+				}
+				this.updateConfigList();
 			}.bind(this);
 			
 			const cancelEdit = function() {
 				nameEl.style.display = 'block';
-				input.remove();
+				if (input.parentNode) {
+					input.remove();
+				}
 			}.bind(this);
 			
 			input.addEventListener('blur', saveEdit);
