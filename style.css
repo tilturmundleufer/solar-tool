@@ -985,6 +985,55 @@ body {
   border-top: 1px solid #CECECE;
 }
 
+/* Zusatzprodukte Sektion */
+.additional-products-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #CECECE;
+}
+
+.additional-products-section h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 16px;
+}
+
+.additional-products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.additional-product-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #000000;
+}
+
+.additional-product-item .item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.additional-product-item .item-quantity {
+  font-weight: 600;
+  color: #666666;
+}
+
+.additional-product-item .item-name {
+  font-weight: 500;
+}
+
+.additional-product-item .item-price {
+  font-weight: 600;
+  color: #000000;
+}
+
 /* Checkboxen oberhalb des Grids */
 .grid-checkboxes {
   margin: 20px 0;

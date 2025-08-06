@@ -3657,6 +3657,9 @@
 			if (document.getElementById('config-overview')?.classList.contains('active')) {
 				this.updateConfigList();
 			}
+			
+			// Event-Listener für Zusatzprodukte-Checkboxen
+			this.initAdditionalProductsListeners();
 		}
 		
 		showDetailView(configIndex = null) {
@@ -3764,6 +3767,10 @@
 				
 				configListEl.appendChild(configItem);
 			});
+			
+			// Update Gesamtpreis und Zusatzprodukte
+			this.updateOverviewTotalPrice();
+			this.renderAdditionalProducts();
 		}
 		
 		initAutoSaveIndicator() {
@@ -3786,6 +3793,158 @@
 			this.autoSaveTimeout = setTimeout(() => {
 				indicator.classList.add('hidden');
 			}, 1000);
+		}
+		
+		updateOverviewTotalPrice() {
+			const totalPriceEl = document.getElementById('overview-total-price');
+			if (!totalPriceEl) return;
+			
+			// Berechne Gesamtpreis aller Konfigurationen
+			let totalPrice = 0;
+			this.configs.forEach(config => {
+				totalPrice += this.calculateConfigPrice(config);
+			});
+			
+			// Füge Zusatzprodukte hinzu
+			const additionalProductsPrice = this.calculateAdditionalProductsPrice();
+			totalPrice += additionalProductsPrice;
+			
+			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+		}
+		
+		calculateAdditionalProductsPrice() {
+			let totalPrice = 0;
+			
+			// MC4 Stecker
+			if (document.getElementById('mc4')?.checked) {
+				const moduleCount = this.configs.reduce((total, config) => {
+					return total + config.selection.flat().filter(v => v).length;
+				}, 0);
+				const packagesNeeded = Math.ceil(moduleCount / (VE.MC4_Stecker || 1));
+				const pricePerPackage = getPriceFromCache('MC4_Stecker');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			// Solarkabel
+			if (document.getElementById('solarkabel')?.checked) {
+				const packagesNeeded = 1; // 1x Solarkabel 100M
+				const pricePerPackage = getPriceFromCache('Solarkabel');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			// Holzunterleger
+			if (document.getElementById('holz')?.checked) {
+				const packagesNeeded = 1; // 1x Unterlegholz für Dachhaken - 50 Stück
+				const pricePerPackage = getPriceFromCache('Holzunterleger');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			// Quetschkabelschuhe
+			if (document.getElementById('quetschkabelschuhe')?.checked) {
+				const packagesNeeded = 1; // 1x Quetschkabelschuhe - 100 Stück
+				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			return totalPrice;
+		}
+		
+		renderAdditionalProducts() {
+			const additionalProductsListEl = document.getElementById('additional-products-list');
+			if (!additionalProductsListEl) return;
+			
+			additionalProductsListEl.innerHTML = '';
+			
+			// MC4 Stecker
+			if (document.getElementById('mc4')?.checked) {
+				const moduleCount = this.configs.reduce((total, config) => {
+					return total + config.selection.flat().filter(v => v).length;
+				}, 0);
+				const packagesNeeded = Math.ceil(moduleCount / (VE.MC4_Stecker || 1));
+				const pricePerPackage = getPriceFromCache('MC4_Stecker');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">${packagesNeeded}x</span>
+						<span class="item-name">MC4 Stecker</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Solarkabel
+			if (document.getElementById('solarkabel')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPriceFromCache('Solarkabel');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1x</span>
+						<span class="item-name">Solarkabel 100M</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Holzunterleger
+			if (document.getElementById('holz')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPriceFromCache('Holzunterleger');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1x</span>
+						<span class="item-name">Unterlegholz für Dachhaken - 50 Stück</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Quetschkabelschuhe
+			if (document.getElementById('quetschkabelschuhe')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1x</span>
+						<span class="item-name">Quetschkabelschuhe - 100 Stück</span>
+					</div>
+					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+		}
+		
+		initAdditionalProductsListeners() {
+			// Event-Listener für Zusatzprodukte-Checkboxen
+			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe'];
+			
+			additionalProductCheckboxes.forEach(checkboxId => {
+				const checkbox = document.getElementById(checkboxId);
+				if (checkbox) {
+					checkbox.addEventListener('change', () => {
+						// Update Gesamtpreis und Zusatzprodukte-Liste
+						this.updateOverviewTotalPrice();
+						this.renderAdditionalProducts();
+					});
+				}
+			});
 		}
 		
 		editConfigName() {
