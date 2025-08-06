@@ -3512,47 +3512,8 @@
 
 		// Sidebar Toggle Funktionalität
 		const sidebarToggle = document.getElementById('sidebar-toggle');
-		const configSidebar = document.getElementById('config-sidebar');
-
-		if (sidebarToggle && configSidebar) {
-			// Sidebar standardmäßig öffnen
-			configSidebar.classList.add('open');
-			
-			// Initiale Position setzen
-			requestAnimationFrame(() => {
-				configSidebar.style.right = '0';
-			});
-
-			sidebarToggle.addEventListener('click', () => {
-				this.trackInteraction();
-				configSidebar.classList.toggle('open');
-				
-				// Dynamische Position berechnen
-				if (!configSidebar.classList.contains('open')) {
-					const sidebarWidth = configSidebar.offsetWidth;
-					const visibleWidth = 30; // 30px sichtbar
-					const hiddenWidth = sidebarWidth - visibleWidth;
-					configSidebar.style.right = `-${hiddenWidth}px`;
-				} else {
-					configSidebar.style.right = '0';
-				}
-			});
-		}
-
-		// Side-Section Toggle Funktionalität
-		const sideToggle = document.getElementById('side-toggle');
-		const sideSection = document.querySelector('.side-section');
-
-		if (sideToggle && sideSection) {
-			sideToggle.addEventListener('click', () => {
-				this.trackInteraction();
-				sideSection.classList.toggle('collapsed');
-				const toggleIcon = sideToggle.querySelector('.toggle-icon');
-				if (toggleIcon) {
-					toggleIcon.textContent = sideSection.classList.contains('collapsed') ? '▶' : '◀';
-				}
-			});
-		}
+		// Neue Sidebar Navigation
+		this.initSidebarNavigation();
 
   		window.addEventListener('resize', () => {
     		this.updateSize();
@@ -3580,6 +3541,344 @@
 			
 			// Initialisiere Smart Config Features
 			this.initSmartConfigFeatures();
+			
+			// Initialisiere Auto-Save Indicator
+			this.initAutoSaveIndicator();
+		}
+		
+		initSidebarNavigation() {
+			// Navigation zwischen Detail-Ansicht und Übersicht
+			const backToOverviewBtn = document.getElementById('back-to-overview');
+			const detailView = document.getElementById('config-detail-view');
+			const overviewView = document.getElementById('config-overview');
+			
+			if (backToOverviewBtn) {
+				backToOverviewBtn.addEventListener('click', () => {
+					this.showOverview();
+				});
+			}
+			
+			// Edit Config Name
+			const editConfigBtn = document.getElementById('edit-config-name');
+			if (editConfigBtn) {
+				editConfigBtn.addEventListener('click', () => {
+					this.editConfigName();
+				});
+			}
+			
+			// Delete Current Config
+			const deleteConfigBtn = document.getElementById('delete-current-config');
+			if (deleteConfigBtn) {
+				deleteConfigBtn.addEventListener('click', () => {
+					this.deleteCurrentConfig();
+				});
+			}
+			
+			// Express Checkout (alter "In den Warenkorb" Button)
+			const expressCheckoutBtn = document.getElementById('express-checkout-btn');
+			if (expressCheckoutBtn) {
+				expressCheckoutBtn.addEventListener('click', () => {
+					this.addToCart();
+				});
+			}
+			
+			// Nächste Konfiguration (alter "Konfiguration speichern" Button)
+			const nextConfigBtn = document.getElementById('next-config-btn');
+			if (nextConfigBtn) {
+				nextConfigBtn.addEventListener('click', () => {
+					this.saveConfig();
+				});
+			}
+			
+			// Gesamte Auswahl in Warenkorb
+			const addAllToCartBtn = document.getElementById('add-all-to-cart-btn');
+			if (addAllToCartBtn) {
+				addAllToCartBtn.addEventListener('click', () => {
+					this.addAllConfigsToCart();
+				});
+			}
+			
+			// Später weitermachen
+			const continueLaterBtn = document.getElementById('continue-later-btn');
+			if (continueLaterBtn) {
+				continueLaterBtn.addEventListener('click', () => {
+					this.continueLater();
+				});
+			}
+		}
+		
+		showOverview() {
+			const detailView = document.getElementById('config-detail-view');
+			const overviewView = document.getElementById('config-overview');
+			
+			if (detailView && overviewView) {
+				detailView.classList.remove('active');
+				overviewView.classList.add('active');
+				
+				// Config-Liste aktualisieren
+				this.updateConfigList();
+			}
+		}
+		
+		showDetailView(configIndex = null) {
+			const detailView = document.getElementById('config-detail-view');
+			const overviewView = document.getElementById('config-overview');
+			
+			if (detailView && overviewView) {
+				overviewView.classList.remove('active');
+				detailView.classList.add('active');
+				
+				if (configIndex !== null) {
+					this.loadConfig(configIndex);
+				}
+				
+				// Detail-Ansicht aktualisieren
+				this.updateDetailView();
+			}
+		}
+		
+		updateDetailView() {
+			const currentConfig = this.configs[this.activeConfig];
+			if (!currentConfig) return;
+			
+			// Titel aktualisieren
+			const titleEl = document.getElementById('current-config-title');
+			if (titleEl) {
+				titleEl.textContent = currentConfig.name || `Konfiguration #${this.activeConfig + 1}`;
+			}
+			
+							// Gesamtpreis aktualisieren
+			const totalPriceEl = document.getElementById('current-total-price');
+			if (totalPriceEl) {
+				const totalPrice = this.calculateCurrentTotalPrice();
+				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+			}
+		}
+		
+		updateConfigList() {
+			const configListEl = document.getElementById('config-list');
+			if (!configListEl) return;
+			
+			configListEl.innerHTML = '';
+			
+			this.configs.forEach((config, index) => {
+				const configItem = document.createElement('div');
+				configItem.className = 'config-item';
+				
+				const totalPrice = this.calculateConfigPrice(config);
+				
+				configItem.innerHTML = `
+					<div class="config-item-info">
+						<div class="config-item-name">${config.name || `Konfiguration #${index + 1}`}</div>
+						<div class="config-item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+					</div>
+					<div class="config-item-actions">
+						<button class="icon-btn" onclick="solarGrid.editConfigNameInList(${index})" title="Bearbeiten">
+							<span>✏️</span>
+						</button>
+						<button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${index})" title="Löschen">
+							<span>🗑️</span>
+						</button>
+						<div class="config-item-arrow">▶</div>
+					</div>
+				`;
+				
+				configItem.addEventListener('click', (e) => {
+					// Verhindere Klick wenn auf Action-Button geklickt wurde
+					if (e.target.closest('.config-item-actions')) return;
+					
+					this.showDetailView(index);
+				});
+				
+				configListEl.appendChild(configItem);
+			});
+		}
+		
+		initAutoSaveIndicator() {
+			// Auto-Save Indicator Setup
+			this.autoSaveTimeout = null;
+		}
+		
+		showAutoSaveIndicator() {
+			const indicator = document.getElementById('auto-save-indicator');
+			if (!indicator) return;
+			
+			// Zeige Indicator
+			indicator.classList.remove('hidden');
+			
+			// Verstecke nach 1 Sekunde
+			if (this.autoSaveTimeout) {
+				clearTimeout(this.autoSaveTimeout);
+			}
+			
+			this.autoSaveTimeout = setTimeout(() => {
+				indicator.classList.add('hidden');
+			}, 1000);
+		}
+		
+		editConfigName() {
+			const currentConfig = this.configs[this.activeConfig];
+			if (!currentConfig) return;
+			
+			const newName = prompt('Neuer Name für die Konfiguration:', currentConfig.name || `Konfiguration #${this.activeConfig + 1}`);
+			if (newName && newName.trim()) {
+				currentConfig.name = newName.trim();
+				this.updateDetailView();
+				this.saveToUrl();
+				this.showAutoSaveIndicator();
+			}
+		}
+		
+		editConfigNameInList(configIndex) {
+			const config = this.configs[configIndex];
+			if (!config) return;
+			
+			const newName = prompt('Neuer Name für die Konfiguration:', config.name || `Konfiguration #${configIndex + 1}`);
+			if (newName && newName.trim()) {
+				config.name = newName.trim();
+				this.updateConfigList();
+				this.saveToUrl();
+			}
+		}
+		
+		deleteCurrentConfig() {
+			if (this.configs.length <= 1) {
+				alert('Die letzte Konfiguration kann nicht gelöscht werden.');
+				return;
+			}
+			
+			const currentConfig = this.configs[this.activeConfig];
+			const configName = currentConfig?.name || `Konfiguration #${this.activeConfig + 1}`;
+			
+			if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
+				this.configs.splice(this.activeConfig, 1);
+				
+				// Aktive Konfiguration anpassen
+				if (this.activeConfig >= this.configs.length) {
+					this.activeConfig = this.configs.length - 1;
+				}
+				
+				this.loadConfig(this.activeConfig);
+				this.saveToUrl();
+				this.showOverview();
+			}
+		}
+		
+		deleteConfigFromList(configIndex) {
+			if (this.configs.length <= 1) {
+				alert('Die letzte Konfiguration kann nicht gelöscht werden.');
+				return;
+			}
+			
+			const config = this.configs[configIndex];
+			const configName = config?.name || `Konfiguration #${configIndex + 1}`;
+			
+			if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
+				this.configs.splice(configIndex, 1);
+				
+				// Aktive Konfiguration anpassen
+				if (this.activeConfig >= this.configs.length) {
+					this.activeConfig = this.configs.length - 1;
+				} else if (this.activeConfig > configIndex) {
+					this.activeConfig--;
+				}
+				
+				this.loadConfig(this.activeConfig);
+				this.saveToUrl();
+				this.updateConfigList();
+			}
+			
+			// Event propagation stoppen
+			event.stopPropagation();
+		}
+		
+		calculateConfigPrice(config) {
+			// Temporär die Konfiguration laden um den Preis zu berechnen
+			const currentActiveConfig = this.activeConfig;
+			const currentCols = this.cols;
+			const currentRows = this.rows;
+			const currentGrid = [...this.grid];
+			const currentCheckboxes = {
+				modules: document.getElementById('include-modules')?.checked,
+				mc4: document.getElementById('mc4')?.checked,
+				solarkabel: document.getElementById('solarkabel')?.checked,
+				holz: document.getElementById('holz')?.checked,
+				quetschkabelschuhe: document.getElementById('quetschkabelschuhe')?.checked
+			};
+			
+			// Temporär die Config laden
+			this.cols = config.cols;
+			this.rows = config.rows;
+			this.grid = [...config.grid];
+			
+			// Checkboxes setzen
+			if (document.getElementById('include-modules')) document.getElementById('include-modules').checked = config.includeModules;
+			if (document.getElementById('mc4')) document.getElementById('mc4').checked = config.mc4;
+			if (document.getElementById('solarkabel')) document.getElementById('solarkabel').checked = config.solarkabel;
+			if (document.getElementById('holz')) document.getElementById('holz').checked = config.holz;
+			if (document.getElementById('quetschkabelschuhe')) document.getElementById('quetschkabelschuhe').checked = config.quetschkabelschuhe;
+			
+			const totalPrice = this.calculateTotalPrice();
+			
+			// Zurücksetzen
+			this.cols = currentCols;
+			this.rows = currentRows;
+			this.grid = currentGrid;
+			
+			// Checkboxes zurücksetzen
+			if (document.getElementById('include-modules')) document.getElementById('include-modules').checked = currentCheckboxes.modules;
+			if (document.getElementById('mc4')) document.getElementById('mc4').checked = currentCheckboxes.mc4;
+			if (document.getElementById('solarkabel')) document.getElementById('solarkabel').checked = currentCheckboxes.solarkabel;
+			if (document.getElementById('holz')) document.getElementById('holz').checked = currentCheckboxes.holz;
+			if (document.getElementById('quetschkabelschuhe')) document.getElementById('quetschkabelschuhe').checked = currentCheckboxes.quetschkabelschuhe;
+			
+			return totalPrice;
+		}
+		
+		calculateCurrentTotalPrice() {
+			// Synchrone Preisberechnung für aktuelle Konfiguration
+			const parts = this.calculatePartsDirectly({
+				selection: this.selection,
+				cols: this.cols,
+				rows: this.rows,
+				cellWidth: parseInt(this.wIn?.value || '179'),
+				cellHeight: parseInt(this.hIn?.value || '113'),
+				orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+				incM: document.getElementById('include-modules')?.checked || false,
+				mc4: document.getElementById('mc4')?.checked || false,
+				solarkabel: document.getElementById('solarkabel')?.checked || false,
+				holz: document.getElementById('holz')?.checked || false,
+				quetschkabelschuhe: document.getElementById('quetschkabelschuhe')?.checked || false
+			});
+			
+			let totalPrice = 0;
+			
+			Object.entries(parts).forEach(([partName, quantity]) => {
+				if (quantity > 0) {
+					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
+					const pricePerPackage = getPriceFromCache(partName);
+					totalPrice += packagesNeeded * pricePerPackage;
+				}
+			});
+			
+			return totalPrice;
+		}
+		
+		addAllConfigsToCart() {
+			// Alle Konfigurationen zum Warenkorb hinzufügen
+			let totalItems = 0;
+			let totalPrice = 0;
+			
+			this.configs.forEach((config, index) => {
+				const configPrice = this.calculateConfigPrice(config);
+				totalPrice += configPrice;
+				totalItems++;
+			});
+			
+			if (confirm(`${totalItems} Konfiguration(en) für insgesamt ${totalPrice.toFixed(2).replace('.', ',')} € in den Warenkorb legen?`)) {
+				// Hier würde die Warenkorb-Logik implementiert werden
+				this.showToast(`${totalItems} Konfiguration(en) wurden zum Warenkorb hinzugefügt!`);
+			}
 		}
 		
 		initSmartConfigFeatures() {
@@ -4597,6 +4896,14 @@
         
         // Performance: Nur renderProductSummary, da es buildList Funktionalität enthält
         this.renderProductSummary();
+        
+        // Auto-Save Indicator anzeigen
+        this.showAutoSaveIndicator();
+        
+        // Detail-Ansicht aktualisieren falls aktiv
+        if (document.getElementById('config-detail-view')?.classList.contains('active')) {
+          this.updateDetailView();
+        }
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
