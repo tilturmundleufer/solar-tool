@@ -5085,7 +5085,7 @@
       return clusters;
     }
 
-    // Flood-fill für Erdungsband-Cluster (nur direkte Verbindungen)
+    // Flood-fill für Erdungsband-Cluster (horizontale und vertikale Verbindungen)
     floodFillErdungsbandCluster(x, y, visited, cluster) {
       if (y < 0 || y >= this.rows || x < 0 || x >= this.cols) return;
       if (visited[y][x] || !this.selection[y]?.[x]) return;
@@ -5093,8 +5093,7 @@
       visited[y][x] = true;
       cluster.push({ x, y });
 
-      // Nur direkte Verbindungen (keine "Überbrückungen")
-      // Prüfe alle 4 Richtungen
+      // Prüfe alle 4 Richtungen für direkte Verbindungen
       const directions = [
         { dx: 1, dy: 0 },  // rechts
         { dx: -1, dy: 0 }, // links
@@ -5112,6 +5111,39 @@
           }
         }
       }
+
+      // Zusätzlich: Prüfe horizontale Verbindungen in derselben Reihe
+      // für Module die nicht direkt benachbart sind
+      this.checkHorizontalConnectionsInRow(x, y, visited, cluster);
+    }
+
+    // Prüfe horizontale Verbindungen in derselben Reihe
+    checkHorizontalConnectionsInRow(x, y, visited, cluster) {
+      // Prüfe alle Module in derselben Reihe
+      for (let checkX = 0; checkX < this.cols; checkX++) {
+        if (checkX !== x && this.selection[y]?.[checkX] && !visited[y][checkX]) {
+          // Prüfe ob es eine Verbindung gibt (keine leeren Spalten dazwischen)
+          if (this.hasHorizontalConnection(x, checkX, y)) {
+            this.floodFillErdungsbandCluster(checkX, y, visited, cluster);
+          }
+        }
+      }
+    }
+
+    // Prüfe ob zwei Module in derselben Reihe horizontal verbunden sind
+    hasHorizontalConnection(x1, x2, y) {
+      const minX = Math.min(x1, x2);
+      const maxX = Math.max(x1, x2);
+      
+      // Prüfe alle Spalten zwischen x1 und x2
+      for (let x = minX + 1; x < maxX; x++) {
+        // Wenn eine leere Spalte dazwischen ist, keine Verbindung
+        if (!this.selection[y]?.[x]) {
+          return false;
+        }
+      }
+      
+      return true;
     }
 
     // Flood-fill Algorithmus für Cluster-Erkennung
