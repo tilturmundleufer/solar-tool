@@ -3612,7 +3612,7 @@
 		
 		showOverview() {
 			// Aktuelle Konfiguration speichern um Progress nicht zu verlieren
-			if (this.activeConfig !== null) {
+			if (this.currentConfig !== null) {
 				this.updateConfig();
 			}
 			
@@ -3653,13 +3653,13 @@
 		}
 		
 				updateDetailView() {
-			const currentConfig = this.configs[this.activeConfig];
+			const currentConfig = this.configs[this.currentConfig];
 			if (!currentConfig) return;
 			
 			// Titel aktualisieren
 			const titleEl = document.getElementById('current-config-title');
 			if (titleEl) {
-				titleEl.textContent = currentConfig.name || `Konfiguration #${this.activeConfig + 1}`;
+				titleEl.textContent = currentConfig.name || `Konfiguration #${this.currentConfig + 1}`;
 			}
 			
 			// Gesamtpreis aktualisieren
@@ -3685,7 +3685,7 @@
 				configItem.className = 'config-item';
 				
 				// Markiere aktuelle Konfiguration
-				if (index === this.activeConfig) {
+				if (index === this.currentConfig) {
 					configItem.classList.add('active');
 				}
 				
@@ -3770,8 +3770,8 @@
 			// Event-Listener für Enter und Blur
 			const saveEdit = () => {
 				const newName = input.value.trim();
-				if (newName && this.activeConfig !== null) {
-					this.configs[this.activeConfig].name = newName;
+				if (newName && this.currentConfig !== null) {
+					this.configs[this.currentConfig].name = newName;
 					titleEl.textContent = newName;
 					this.updateConfigList();
 					this.saveToUrl();
@@ -3802,13 +3802,66 @@
 			const config = this.configs[configIndex];
 			if (!config) return;
 			
-			const newName = prompt('Neuer Name für die Konfiguration:', config.name || `Konfiguration #${configIndex + 1}`);
-			if (newName && newName.trim()) {
-				config.name = newName.trim();
-				this.updateConfigList();
-				// Speichere in URL
-				this.saveToUrl();
-			}
+			// Finde das config-item Element
+			const configItems = document.querySelectorAll('.config-item');
+			const configItem = configItems[configIndex];
+			if (!configItem) return;
+			
+			// Finde das name Element
+			const nameEl = configItem.querySelector('.config-item-name');
+			if (!nameEl) return;
+			
+			// Erstelle Input-Feld
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.value = nameEl.textContent;
+			input.style.cssText = `
+				font-size: inherit;
+				font-weight: inherit;
+				color: inherit;
+				background: transparent;
+				border: 2px solid #FFB101;
+				border-radius: 4px;
+				padding: 2px 4px;
+				width: 100%;
+				outline: none;
+			`;
+			
+			// Ersetze Name durch Input
+			nameEl.style.display = 'none';
+			nameEl.parentNode.insertBefore(input, nameEl);
+			input.focus();
+			input.select();
+			
+			// Event-Listener für Enter und Blur
+			const saveEdit = () => {
+				const newName = input.value.trim();
+				if (newName) {
+					config.name = newName;
+					nameEl.textContent = newName;
+					this.updateConfigList();
+					this.saveToUrl();
+					this.showAutoSaveIndicator();
+				}
+				nameEl.style.display = 'block';
+				input.remove();
+			};
+			
+			const cancelEdit = () => {
+				nameEl.style.display = 'block';
+				input.remove();
+			};
+			
+			input.addEventListener('blur', saveEdit);
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					saveEdit();
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					cancelEdit();
+				}
+			});
 		}
 		
 		deleteCurrentConfig() {
@@ -3817,18 +3870,18 @@
 				return;
 			}
 			
-			const currentConfig = this.configs[this.activeConfig];
-			const configName = currentConfig?.name || `Konfiguration #${this.activeConfig + 1}`;
+			const currentConfig = this.configs[this.currentConfig];
+			const configName = currentConfig?.name || `Konfiguration #${this.currentConfig + 1}`;
 			
 			if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
-				this.configs.splice(this.activeConfig, 1);
+				this.configs.splice(this.currentConfig, 1);
 				
 				// Aktive Konfiguration anpassen
-				if (this.activeConfig >= this.configs.length) {
-					this.activeConfig = this.configs.length - 1;
+				if (this.currentConfig >= this.configs.length) {
+					this.currentConfig = this.configs.length - 1;
 				}
 				
-				this.loadConfig(this.activeConfig);
+				this.loadConfig(this.currentConfig);
 				this.saveToUrl();
 				
 				// Zurück zur Übersicht und Config-Liste updaten
@@ -3849,13 +3902,13 @@
 				this.configs.splice(configIndex, 1);
 				
 				// Aktive Konfiguration anpassen
-				if (this.activeConfig >= this.configs.length) {
-					this.activeConfig = this.configs.length - 1;
-				} else if (this.activeConfig > configIndex) {
-					this.activeConfig--;
+				if (this.currentConfig >= this.configs.length) {
+					this.currentConfig = this.configs.length - 1;
+				} else if (this.currentConfig > configIndex) {
+					this.currentConfig--;
 				}
 				
-				this.loadConfig(this.activeConfig);
+				this.loadConfig(this.currentConfig);
 				this.saveToUrl();
 				this.updateConfigList();
 			}
