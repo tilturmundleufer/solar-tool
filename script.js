@@ -4927,8 +4927,8 @@
 		if (this.rowsIn) this.rowsIn.value = this.default.rows;
 		if (this.wIn) this.wIn.value = this.default.width;
 		if (this.hIn) this.hIn.value = this.default.height;
-		if (this.orH) this.orH.checked = true;
-		if (this.orV) this.orV.checked = false;
+		if (this.orH) this.orH.checked = false;
+		if (this.orV) this.orV.checked = true;
 
   		// Setze cols/rows synchron
   		this.cols = this.default.cols;
