@@ -3820,7 +3820,7 @@
 				const moduleCount = this.configs.reduce((total, config) => {
 					return total + config.selection.flat().filter(v => v).length;
 				}, 0);
-				const packagesNeeded = Math.ceil(moduleCount / (VE.MC4_Stecker || 1));
+				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
 				const pricePerPackage = getPriceFromCache('MC4_Stecker');
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
@@ -3860,7 +3860,7 @@
 				const moduleCount = this.configs.reduce((total, config) => {
 					return total + config.selection.flat().filter(v => v).length;
 				}, 0);
-				const packagesNeeded = Math.ceil(moduleCount / (VE.MC4_Stecker || 1));
+				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
 				const pricePerPackage = getPriceFromCache('MC4_Stecker');
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
@@ -4191,11 +4191,8 @@
 				cellWidth: parseInt(this.wIn?.value || '179'),
 				cellHeight: parseInt(this.hIn?.value || '113'),
 				orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-				incM: document.getElementById('include-modules')?.checked || false,
-				mc4: document.getElementById('mc4')?.checked || false,
-				solarkabel: document.getElementById('solarkabel')?.checked || false,
-				holz: document.getElementById('holz')?.checked || false,
-				quetschkabelschuhe: document.getElementById('quetschkabelschuhe')?.checked || false
+				incM: document.getElementById('include-modules')?.checked || false
+				// Zusatzprodukte werden nicht mehr berücksichtigt
 			});
 			
 			let totalPrice = 0;
@@ -5839,13 +5836,8 @@
       this.selection = sel;
         let parts = await this.calculateParts();
       if (!incM) delete parts.Solarmodul;
-      if (mc4) {
-        const panelCount = sel.flat().filter(v => v).length;
-        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
-      }
-      if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
-      if (holz)  parts.Holzunterleger = 1; // NEU: Pauschal 1x statt basierend auf Schienen
-      if (quetschkabelschuhe) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
+      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+      // Sie werden nur noch in der Overview berechnet
       
         return parts;
       } finally {
