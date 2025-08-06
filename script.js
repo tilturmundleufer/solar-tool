@@ -3807,44 +3807,30 @@
 		}
 		
 		calculateConfigPrice(config) {
-			// Temporär die Konfiguration laden um den Preis zu berechnen
-			const currentActiveConfig = this.activeConfig;
-			const currentCols = this.cols;
-			const currentRows = this.rows;
-			const currentGrid = [...this.grid];
-			const currentCheckboxes = {
-				modules: document.getElementById('include-modules')?.checked,
-				mc4: document.getElementById('mc4')?.checked,
-				solarkabel: document.getElementById('solarkabel')?.checked,
-				holz: document.getElementById('holz')?.checked,
-				quetschkabelschuhe: document.getElementById('quetschkabelschuhe')?.checked
-			};
+			// Verwende calculatePartsDirectly für isolierte Berechnung
+			const parts = this.calculatePartsDirectly({
+				selection: config.selection,
+				cols: config.cols,
+				rows: config.rows,
+				cellWidth: config.cellWidth || 179,
+				cellHeight: config.cellHeight || 113,
+				orientation: config.orientation || 'vertical',
+				incM: config.incM || false,
+				mc4: config.mc4 || false,
+				solarkabel: config.solarkabel || false,
+				holz: config.holz || false,
+				quetschkabelschuhe: config.quetschkabelschuhe || false
+			});
 			
-			// Temporär die Config laden
-			this.cols = config.cols;
-			this.rows = config.rows;
-			this.grid = [...config.grid];
+			let totalPrice = 0;
 			
-			// Checkboxes setzen
-			if (document.getElementById('include-modules')) document.getElementById('include-modules').checked = config.includeModules;
-			if (document.getElementById('mc4')) document.getElementById('mc4').checked = config.mc4;
-			if (document.getElementById('solarkabel')) document.getElementById('solarkabel').checked = config.solarkabel;
-			if (document.getElementById('holz')) document.getElementById('holz').checked = config.holz;
-			if (document.getElementById('quetschkabelschuhe')) document.getElementById('quetschkabelschuhe').checked = config.quetschkabelschuhe;
-			
-			const totalPrice = this.calculateTotalPrice();
-			
-			// Zurücksetzen
-			this.cols = currentCols;
-			this.rows = currentRows;
-			this.grid = currentGrid;
-			
-			// Checkboxes zurücksetzen
-			if (document.getElementById('include-modules')) document.getElementById('include-modules').checked = currentCheckboxes.modules;
-			if (document.getElementById('mc4')) document.getElementById('mc4').checked = currentCheckboxes.mc4;
-			if (document.getElementById('solarkabel')) document.getElementById('solarkabel').checked = currentCheckboxes.solarkabel;
-			if (document.getElementById('holz')) document.getElementById('holz').checked = currentCheckboxes.holz;
-			if (document.getElementById('quetschkabelschuhe')) document.getElementById('quetschkabelschuhe').checked = currentCheckboxes.quetschkabelschuhe;
+			Object.entries(parts).forEach(([partName, quantity]) => {
+				if (quantity > 0) {
+					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
+					const pricePerPackage = getPriceFromCache(partName);
+					totalPrice += packagesNeeded * pricePerPackage;
+				}
+			});
 			
 			return totalPrice;
 		}
@@ -3879,20 +3865,8 @@
 		}
 		
 		addAllConfigsToCart() {
-			// Alle Konfigurationen zum Warenkorb hinzufügen
-			let totalItems = 0;
-			let totalPrice = 0;
-			
-			this.configs.forEach((config, index) => {
-				const configPrice = this.calculateConfigPrice(config);
-				totalPrice += configPrice;
-				totalItems++;
-			});
-			
-			if (confirm(`${totalItems} Konfiguration(en) für insgesamt ${totalPrice.toFixed(2).replace('.', ',')} € in den Warenkorb legen?`)) {
-				// Hier würde die Warenkorb-Logik implementiert werden
-				this.showToast(`${totalItems} Konfiguration(en) wurden zum Warenkorb hinzugefügt!`);
-			}
+			// Verwende die gleiche Logik wie addAllToCart()
+			this.addAllToCart();
 		}
 		
 		initSmartConfigFeatures() {
