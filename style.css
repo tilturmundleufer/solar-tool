@@ -1064,6 +1064,24 @@ body {
   color: #8F8F8F;
 }
 
+/* Aktive Config-Item */
+.config-item.active {
+  background: #FFB101;
+  color: #000000;
+}
+
+.config-item.active .config-item-name {
+  color: #000000;
+}
+
+.config-item.active .config-item-price {
+  color: #000000;
+}
+
+.config-item.active .config-item-arrow {
+  color: #000000;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .planner {

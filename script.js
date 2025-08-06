@@ -3611,6 +3611,11 @@
 		}
 		
 		showOverview() {
+			// Aktuelle Konfiguration speichern um Progress nicht zu verlieren
+			if (this.activeConfig !== null) {
+				this.updateConfig();
+			}
+			
 			const detailView = document.getElementById('config-detail-view');
 			const overviewView = document.getElementById('config-overview');
 			
@@ -3679,6 +3684,11 @@
 				const configItem = document.createElement('div');
 				configItem.className = 'config-item';
 				
+				// Markiere aktuelle Konfiguration
+				if (index === this.activeConfig) {
+					configItem.classList.add('active');
+				}
+				
 				const totalPrice = this.calculateConfigPrice(config);
 				
 				configItem.innerHTML = `
@@ -3731,16 +3741,61 @@
 		}
 		
 		editConfigName() {
-			const currentConfig = this.configs[this.activeConfig];
-			if (!currentConfig) return;
+			const titleEl = document.getElementById('current-config-title');
+			if (!titleEl) return;
 			
-			const newName = prompt('Neuer Name für die Konfiguration:', currentConfig.name || `Konfiguration #${this.activeConfig + 1}`);
-			if (newName && newName.trim()) {
-				currentConfig.name = newName.trim();
-				this.updateDetailView();
-				this.saveToUrl();
-				this.showAutoSaveIndicator();
-			}
+			// Erstelle Input-Feld
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.value = titleEl.textContent;
+			input.className = 'config-title-input';
+			input.style.cssText = `
+				font-size: 24px;
+				font-weight: bold;
+				color: #000000;
+				background: transparent;
+				border: 2px solid #FFB101;
+				border-radius: 8px;
+				padding: 4px 8px;
+				width: 100%;
+				outline: none;
+			`;
+			
+			// Ersetze Titel durch Input
+			titleEl.style.display = 'none';
+			titleEl.parentNode.insertBefore(input, titleEl);
+			input.focus();
+			input.select();
+			
+			// Event-Listener für Enter und Blur
+			const saveEdit = () => {
+				const newName = input.value.trim();
+				if (newName && this.activeConfig !== null) {
+					this.configs[this.activeConfig].name = newName;
+					titleEl.textContent = newName;
+					this.updateConfigList();
+					this.saveToUrl();
+					this.showAutoSaveIndicator();
+				}
+				titleEl.style.display = 'block';
+				input.remove();
+			};
+			
+			const cancelEdit = () => {
+				titleEl.style.display = 'block';
+				input.remove();
+			};
+			
+			input.addEventListener('blur', saveEdit);
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					saveEdit();
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					cancelEdit();
+				}
+			});
 		}
 		
 		editConfigNameInList(configIndex) {
@@ -3775,6 +3830,8 @@
 				
 				this.loadConfig(this.activeConfig);
 				this.saveToUrl();
+				
+				// Zurück zur Übersicht und Config-Liste updaten
 				this.showOverview();
 			}
 		}
@@ -4660,9 +4717,10 @@
   		this.currentConfig = this.configs.length - 1;
   		this.setup(); // Baut Grid mit leerer Auswahl neu auf
   		
-  		this.renderConfigList();
-  		this.updateSaveButtons();
-  		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
+  				this.renderConfigList();
+		this.updateConfigList(); // Config-Liste in Overview updaten
+		this.updateSaveButtons();
+		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
 		}
 
     renameCurrentConfig(newName) {
