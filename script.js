@@ -2071,6 +2071,14 @@
       if (config.orientation) {
         if (this.solarGrid.orV) this.solarGrid.orV.checked = config.orientation === 'vertical';
         if (this.solarGrid.orH) this.solarGrid.orH.checked = config.orientation === 'horizontal';
+        
+        // Synchronisiere mit den Orientation Buttons
+        const orientHBtn = document.getElementById('orient-h');
+        const orientVBtn = document.getElementById('orient-v');
+        if (orientHBtn && orientVBtn) {
+          orientHBtn.classList.toggle('active', config.orientation === 'horizontal');
+          orientVBtn.classList.toggle('active', config.orientation === 'vertical');
+        }
       }
 
       // NEUE ACTION PATTERNS HANDHABEN (höchste Priorität)
@@ -5851,6 +5859,9 @@
       
       // Aktualisiere Summary und Produktliste
       this.updateSummaryOnChange();
+      
+      // Aktualisiere auch die Produktliste in der detailed-overview
+      this.buildList();
     }
 
     // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF
