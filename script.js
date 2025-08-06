@@ -3768,6 +3768,14 @@
 			const titleEl = document.getElementById('current-config-title');
 			if (!titleEl) return;
 			
+			// Prüfe ob bereits ein Input-Feld existiert
+			const existingInput = titleEl.parentNode.querySelector('.config-title-input');
+			if (existingInput) {
+				existingInput.focus();
+				existingInput.select();
+				return;
+			}
+			
 			// Erstelle Input-Feld
 			const input = document.createElement('input');
 			input.type = 'text';
@@ -4791,6 +4799,9 @@
 
 			this.renderConfigList();
 			this.updateSaveButtons();
+			
+			// Detail-Ansicht aktualisieren wenn aktiv
+			this.updateDetailView();
 		}
     
     showToast(message = 'Gespeichert ✅', duration = 1500) {
@@ -4830,9 +4841,13 @@
   		this.currentConfig = this.configs.length - 1;
   		this.setup(); // Baut Grid mit leerer Auswahl neu auf
   		
-  				this.renderConfigList();
+  		this.renderConfigList();
 		this.updateConfigList(); // Config-Liste in Overview updaten
 		this.updateSaveButtons();
+		
+		// 6. Detail-Ansicht aktualisieren wenn aktiv
+		this.updateDetailView();
+		
 		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
 		}
 
