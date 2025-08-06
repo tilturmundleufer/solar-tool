@@ -338,7 +338,7 @@ self.addEventListener('message', function(e) {
 
 // Erdungsband-Berechnung für Worker
 function calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orientation) {
-  const clusters = findClusters(selection, rows, cols);
+  const clusters = findErdungsbandClusters(selection, rows, cols);
   if (clusters.length === 0) return 0;
 
   const isVertical = orientation === 'vertical';
@@ -346,18 +346,18 @@ function calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orie
   const moduleHeight = isVertical ? cellWidth : cellHeight;
   const gap = 2; // 2cm Lücke zwischen Modulen
 
-  // Berechne optimale Gesamtlänge für alle Cluster
-  let totalLength = 0;
+  // Berechne Erdungsbandtotal (Summe aller Erdungsbandlengths)
+  let erdungsbandtotal = 0;
   for (const cluster of clusters) {
-    totalLength += calculateOptimalClusterLength(cluster, moduleHeight, gap);
+    erdungsbandtotal += calculateErdungsbandLength(cluster, moduleHeight, gap);
   }
 
   // Berechne Anzahl benötigter Erdungsbänder
-  return Math.ceil(totalLength / 600);
+  return Math.ceil(erdungsbandtotal / 600);
 }
 
-// Finde alle Cluster (zusammenhängende Rechtecke/Quadrate)
-function findClusters(selection, rows, cols) {
+// Finde alle Cluster für Erdungsband-Berechnung (echte Verbindungen)
+function findErdungsbandClusters(selection, rows, cols) {
   const visited = Array.from({ length: rows }, () => 
     Array.from({ length: cols }, () => false)
   );
@@ -367,7 +367,7 @@ function findClusters(selection, rows, cols) {
     for (let x = 0; x < cols; x++) {
       if (selection[y]?.[x] && !visited[y][x]) {
         const cluster = [];
-        floodFillCluster(x, y, visited, cluster, selection, rows, cols);
+        floodFillErdungsbandCluster(x, y, visited, cluster, selection, rows, cols);
         if (cluster.length > 0) {
           clusters.push(cluster);
         }
@@ -376,6 +376,35 @@ function findClusters(selection, rows, cols) {
   }
 
   return clusters;
+}
+
+// Flood-fill für Erdungsband-Cluster (nur direkte Verbindungen)
+function floodFillErdungsbandCluster(x, y, visited, cluster, selection, rows, cols) {
+  if (y < 0 || y >= rows || x < 0 || x >= cols) return;
+  if (visited[y][x] || !selection[y]?.[x]) return;
+
+  visited[y][x] = true;
+  cluster.push({ x, y });
+
+  // Nur direkte Verbindungen (keine "Überbrückungen")
+  // Prüfe alle 4 Richtungen
+  const directions = [
+    { dx: 1, dy: 0 },  // rechts
+    { dx: -1, dy: 0 }, // links
+    { dx: 0, dy: 1 },  // unten
+    { dx: 0, dy: -1 }  // oben
+  ];
+
+  for (const dir of directions) {
+    const newX = x + dir.dx;
+    const newY = y + dir.dy;
+    
+    if (newY >= 0 && newY < rows && newX >= 0 && newX < cols) {
+      if (!visited[newY][newX] && selection[newY]?.[newX]) {
+        floodFillErdungsbandCluster(newX, newY, visited, cluster, selection, rows, cols);
+      }
+    }
+  }
 }
 
 // Flood-fill Algorithmus für Cluster-Erkennung
@@ -393,8 +422,8 @@ function floodFillCluster(x, y, visited, cluster, selection, rows, cols) {
   floodFillCluster(x, y - 1, visited, cluster, selection, rows, cols);
 }
 
-// Berechne optimale Erdungsband-Länge für einen Cluster
-function calculateOptimalClusterLength(cluster, moduleHeight, gap) {
+// Berechne Erdungsbandlength für einen Cluster
+function calculateErdungsbandLength(cluster, moduleHeight, gap) {
   if (cluster.length === 0) return 0;
 
   // Finde die Bounding Box des Clusters
@@ -403,74 +432,58 @@ function calculateOptimalClusterLength(cluster, moduleHeight, gap) {
   const minY = Math.min(...cluster.map(c => c.y));
   const maxY = Math.max(...cluster.map(c => c.y));
 
-  // Generiere alle möglichen Erdungsband-Platzierungen
-  const placements = generateAllBandPlacements(cluster, minX, maxX, minY, maxY);
-  
-  // Finde die optimale Platzierung (kürzeste Gesamtlänge)
-  let optimalLength = Infinity;
-  for (const placement of placements) {
-    const totalLength = calculatePlacementLength(placement, moduleHeight, gap);
-    if (totalLength < optimalLength) {
-      optimalLength = totalLength;
-    }
+  // Prüfe ob Cluster vertikal oder horizontal ist
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+
+  // Vertikaler Cluster (Spalte)
+  if (width === 1 && height > 1) {
+    return height * moduleHeight + (height - 1) * gap;
   }
 
-  return optimalLength;
+  // Horizontaler Cluster (Reihe)
+  if (height === 1 && width > 1) {
+    return moduleHeight; // Vertikale Länge für horizontale Reihe
+  }
+
+  // Komplexer Cluster (mehrere Reihen/Spalten)
+  return calculateComplexClusterLength(cluster, moduleHeight, gap, minX, maxX, minY, maxY);
 }
 
-// Generiere alle möglichen Erdungsband-Platzierungen
-function generateAllBandPlacements(cluster, minX, maxX, minY, maxY) {
-  const placements = [];
-  
-  // Finde alle vertikalen Spalten mit Modulen
+// Berechne Länge für komplexe Cluster
+function calculateComplexClusterLength(cluster, moduleHeight, gap, minX, maxX, minY, maxY) {
+  // Finde alle vertikalen Spalten im Cluster
   const columns = [];
   for (let x = minX; x <= maxX; x++) {
     const columnModules = cluster.filter(c => c.x === x);
     if (columnModules.length > 0) {
+      const columnHeight = Math.max(...columnModules.map(c => c.y)) - Math.min(...columnModules.map(c => c.y)) + 1;
       columns.push({
         x: x,
-        modules: columnModules,
-        height: Math.max(...columnModules.map(c => c.y)) - Math.min(...columnModules.map(c => c.y)) + 1
+        height: columnHeight,
+        modules: columnModules
       });
     }
   }
 
-  // Generiere verschiedene Kombinationen von Spalten
-  for (let i = 0; i < columns.length; i++) {
-    // Einzelne Spalte
-    placements.push([columns[i]]);
-    
-    // Kombinationen von Spalten
-    for (let j = i + 1; j < columns.length; j++) {
-      placements.push([columns[i], columns[j]]);
-      
-      // Weitere Kombinationen
-      for (let k = j + 1; k < columns.length; k++) {
-        placements.push([columns[i], columns[j], columns[k]]);
-      }
-    }
+  // Wenn nur eine Spalte, einfache Berechnung
+  if (columns.length === 1) {
+    return columns[0].height * moduleHeight + (columns[0].height - 1) * gap;
   }
 
-  // Füge auch die Option "alle Spalten" hinzu
-  if (columns.length > 1) {
-    placements.push(columns);
-  }
-
-  return placements;
-}
-
-// Berechne Gesamtlänge für eine Platzierung
-function calculatePlacementLength(placement, moduleHeight, gap) {
+  // Mehrere Spalten: Berechne minimale Anzahl Erdungsbänder
   let totalLength = 0;
   
-  for (const column of placement) {
-    const height = column.height;
-    const length = height * moduleHeight + (height - 1) * gap;
-    totalLength += length;
+  // Jede Spalte braucht mindestens ein Erdungsband
+  for (const column of columns) {
+    const columnLength = column.height * moduleHeight + (column.height - 1) * gap;
+    totalLength += columnLength;
   }
-  
+
   return totalLength;
 }
+
+
 
 
 
