@@ -3829,7 +3829,7 @@
 					this.configs[this.currentConfig].name = newName;
 					titleEl.textContent = newName;
 					this.updateConfigList();
-					this.saveToUrl();
+					this.updateConfig();
 					this.showAutoSaveIndicator();
 				}
 				titleEl.style.display = 'block';
@@ -3885,7 +3885,7 @@
 				border: 1px solid #FFB101;
 				border-radius: 4px;
 				padding: 2px 6px;
-				width: 100%;
+				width: 80%;
 				outline: none;
 			`;
 			
@@ -3902,7 +3902,7 @@
 					config.name = newName;
 					nameEl.textContent = newName;
 					this.updateConfigList();
-					this.saveToUrl();
+					this.updateConfig();
 					this.showAutoSaveIndicator();
 				}
 				nameEl.style.display = 'block';
