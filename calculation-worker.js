@@ -46,7 +46,7 @@ function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientatio
   const parts = {
     Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
     Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-    Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0
+    Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Erdungsband: 0
   };
 
   for (let y = 0; y < rows; y++) {
@@ -69,6 +69,9 @@ function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientatio
       processGroup(run, parts, cellWidth, cellHeight, orientation);
     }
   }
+
+  // Erdungsband-Berechnung
+  parts.Erdungsband = calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orientation);
 
   workerLog('WORKER DEBUG: calculateParts result:', parts);
   return parts;
@@ -332,6 +335,197 @@ self.addEventListener('message', function(e) {
     });
   }
 });
+
+// Erdungsband-Berechnung für Worker
+function calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orientation) {
+  const clusters = findClusters(selection, rows, cols);
+  if (clusters.length === 0) return 0;
+
+  const isVertical = orientation === 'vertical';
+  // Modulhöhe: horizontal = cellHeight, vertikal = cellWidth
+  const moduleHeight = isVertical ? cellWidth : cellHeight;
+  const gap = 2; // 2cm Lücke zwischen Modulen
+  const bandLength = 600; // 6 Meter = 600cm pro Erdungsband
+
+  // Berechne benötigte Länge für jeden Cluster
+  const clusterLengths = clusters.map(cluster => {
+    return calculateClusterErdungsbandLength(cluster, moduleHeight, gap);
+  });
+
+  // Optimiere Erdungsband-Nutzung (minimale Anzahl)
+  return optimizeErdungsbandUsage(clusterLengths, bandLength);
+}
+
+// Finde alle Cluster (zusammenhängende Rechtecke/Quadrate)
+function findClusters(selection, rows, cols) {
+  const visited = Array.from({ length: rows }, () => 
+    Array.from({ length: cols }, () => false)
+  );
+  const clusters = [];
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (selection[y]?.[x] && !visited[y][x]) {
+        const cluster = [];
+        floodFillCluster(x, y, visited, cluster, selection, rows, cols);
+        if (cluster.length > 0) {
+          clusters.push(cluster);
+        }
+      }
+    }
+  }
+
+  return clusters;
+}
+
+// Flood-fill Algorithmus für Cluster-Erkennung
+function floodFillCluster(x, y, visited, cluster, selection, rows, cols) {
+  if (y < 0 || y >= rows || x < 0 || x >= cols) return;
+  if (visited[y][x] || !selection[y]?.[x]) return;
+
+  visited[y][x] = true;
+  cluster.push({ x, y });
+
+  // Rekursiv alle 4 Richtungen prüfen (horizontal und vertikal verbunden)
+  floodFillCluster(x + 1, y, visited, cluster, selection, rows, cols);
+  floodFillCluster(x - 1, y, visited, cluster, selection, rows, cols);
+  floodFillCluster(x, y + 1, visited, cluster, selection, rows, cols);
+  floodFillCluster(x, y - 1, visited, cluster, selection, rows, cols);
+}
+
+// Berechne benötigte Erdungsband-Länge für einen Cluster
+function calculateClusterErdungsbandLength(cluster, moduleHeight, gap) {
+  if (cluster.length === 0) return 0;
+
+  // Finde die Bounding Box des Clusters
+  const minX = Math.min(...cluster.map(c => c.x));
+  const maxX = Math.max(...cluster.map(c => c.x));
+  const minY = Math.min(...cluster.map(c => c.y));
+  const maxY = Math.max(...cluster.map(c => c.y));
+
+  // Prüfe auf Lücken in Reihen (horizontal)
+  const rowsWithGaps = [];
+  for (let y = minY; y <= maxY; y++) {
+    const rowModules = cluster.filter(c => c.y === y).map(c => c.x).sort((a, b) => a - b);
+    if (rowModules.length > 0) {
+      // Prüfe auf Lücken in dieser Reihe
+      let hasGaps = false;
+      for (let i = 1; i < rowModules.length; i++) {
+        if (rowModules[i] - rowModules[i-1] > 1) {
+          hasGaps = true;
+          break;
+        }
+      }
+      if (hasGaps) {
+        rowsWithGaps.push(y);
+      }
+    }
+  }
+
+  // Berechne benötigte Länge
+  const height = maxY - minY + 1; // Anzahl Reihen im Cluster
+  const totalLength = height * moduleHeight + (height - 1) * gap;
+
+  // Spezialfall: Lücken in Reihen bedeuten zusätzliche Erdungsbänder nötig
+  if (rowsWithGaps.length > 0) {
+    // Für jeden getrennten Bereich in einer Reihe wird ein separates Erdungsband benötigt
+    let additionalBands = 0;
+    for (const gapRow of rowsWithGaps) {
+      const rowModules = cluster.filter(c => c.y === gapRow).map(c => c.x).sort((a, b) => a - b);
+      let segments = 1;
+      for (let i = 1; i < rowModules.length; i++) {
+        if (rowModules[i] - rowModules[i-1] > 1) {
+          segments++;
+        }
+      }
+      additionalBands += segments - 1; // -1 weil das erste Segment bereits gezählt ist
+    }
+    
+    // Retourniere Array mit Längen für alle benötigten Bänder
+    const lengths = [totalLength];
+    for (let i = 0; i < additionalBands; i++) {
+      lengths.push(totalLength); // Jedes zusätzliche Band braucht die gleiche Länge
+    }
+    return lengths;
+  }
+
+  // Spezialfall: O-Form (Loch in der Mitte)
+  if (isOShape(cluster, minX, maxX, minY, maxY)) {
+    // O-Form braucht 2 Erdungsbänder (linke und rechte Spalte)
+    return [totalLength, totalLength];
+  }
+
+  // Standardfall: Ein Erdungsband
+  return [totalLength];
+}
+
+// Prüfe ob Cluster O-förmig ist (hat Loch in der Mitte)
+function isOShape(cluster, minX, maxX, minY, maxY) {
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+  
+  // Nur bei mindestens 3x3 kann es ein O sein
+  if (width < 3 || height < 3) return false;
+
+  // Prüfe ob es ein Loch in der Mitte gibt
+  for (let y = minY + 1; y < maxY; y++) {
+    for (let x = minX + 1; x < maxX; x++) {
+      const hasModule = cluster.some(c => c.x === x && c.y === y);
+      if (!hasModule) {
+        // Es gibt ein Loch - prüfe ob es wirklich O-förmig ist
+        const hasLeftColumn = cluster.some(c => c.x === minX && c.y === y);
+        const hasRightColumn = cluster.some(c => c.x === maxX && c.y === y);
+        if (hasLeftColumn && hasRightColumn) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
+// Optimiere Erdungsband-Nutzung (minimale Anzahl verwenden)
+function optimizeErdungsbandUsage(clusterLengths, bandLength) {
+  const allLengths = [];
+  
+  // Flatten alle Längen aus allen Clustern
+  for (const lengths of clusterLengths) {
+    if (Array.isArray(lengths)) {
+      allLengths.push(...lengths);
+    } else {
+      allLengths.push(lengths);
+    }
+  }
+
+  if (allLengths.length === 0) return 0;
+
+  // Sortiere Längen absteigend für bessere Optimierung
+  allLengths.sort((a, b) => b - a);
+
+  // Greedy-Algorithmus: Versuche Längen optimal zu kombinieren
+  const bands = [];
+  
+  for (const length of allLengths) {
+    let placed = false;
+    
+    // Versuche die Länge in ein bestehendes Band zu packen
+    for (let i = 0; i < bands.length; i++) {
+      if (bands[i] + length <= bandLength) {
+        bands[i] += length;
+        placed = true;
+        break;
+      }
+    }
+    
+    // Falls nicht möglich, neues Band hinzufügen
+    if (!placed) {
+      bands.push(length);
+    }
+  }
+
+  return bands.length;
+}
 
 // Worker bereit Signal
 self.postMessage({
