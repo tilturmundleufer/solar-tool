@@ -2649,6 +2649,11 @@
           this.solarGrid.trackInteraction();
           this.solarGrid.buildList();
           this.solarGrid.updateSummaryOnChange();
+          
+          // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+          if (this.solarGrid.currentConfig !== null) {
+            this.solarGrid.updateConfigList();
+          }
         });
 
         newCell.addEventListener('mouseleave', () => {
@@ -4725,6 +4730,11 @@
         		// Performance: Sofortige Produktliste Update + Debounced Summary
         		this.buildList();
         		this.updateSummaryOnChange();
+        		
+        		// Update config-list und overview wenn eine Konfiguration ausgewählt ist
+        		if (this.currentConfig !== null) {
+        			this.updateConfigList();
+        		}
       		});
        
       		// FEATURE 6: Screen Reader Support - Keyboard Navigation
@@ -5269,6 +5279,11 @@
         
         // Gesamtpreis aktualisieren
         this.updateCurrentTotalPrice();
+        
+        // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+        if (this.currentConfig !== null) {
+          this.updateConfigList();
+        }
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
