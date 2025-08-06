@@ -345,15 +345,15 @@ function calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orie
   // Modulhöhe: horizontal = cellHeight, vertikal = cellWidth
   const moduleHeight = isVertical ? cellWidth : cellHeight;
   const gap = 2; // 2cm Lücke zwischen Modulen
-  const bandLength = 600; // 6 Meter = 600cm pro Erdungsband
 
-  // Berechne benötigte Länge für jeden Cluster
-  const clusterLengths = clusters.map(cluster => {
-    return calculateClusterErdungsbandLength(cluster, moduleHeight, gap);
-  });
+  // Berechne optimale Gesamtlänge für alle Cluster
+  let totalLength = 0;
+  for (const cluster of clusters) {
+    totalLength += calculateOptimalClusterLength(cluster, moduleHeight, gap);
+  }
 
-  // Optimiere Erdungsband-Nutzung (minimale Anzahl)
-  return optimizeErdungsbandUsage(clusterLengths, bandLength);
+  // Berechne Anzahl benötigter Erdungsbänder
+  return Math.ceil(totalLength / 600);
 }
 
 // Finde alle Cluster (zusammenhängende Rechtecke/Quadrate)
@@ -393,8 +393,8 @@ function floodFillCluster(x, y, visited, cluster, selection, rows, cols) {
   floodFillCluster(x, y - 1, visited, cluster, selection, rows, cols);
 }
 
-// Berechne benötigte Erdungsband-Länge für einen Cluster
-function calculateClusterErdungsbandLength(cluster, moduleHeight, gap) {
+// Berechne optimale Erdungsband-Länge für einen Cluster
+function calculateOptimalClusterLength(cluster, moduleHeight, gap) {
   if (cluster.length === 0) return 0;
 
   // Finde die Bounding Box des Clusters
@@ -403,129 +403,76 @@ function calculateClusterErdungsbandLength(cluster, moduleHeight, gap) {
   const minY = Math.min(...cluster.map(c => c.y));
   const maxY = Math.max(...cluster.map(c => c.y));
 
-  // Prüfe auf Lücken in Reihen (horizontal)
-  const rowsWithGaps = [];
-  for (let y = minY; y <= maxY; y++) {
-    const rowModules = cluster.filter(c => c.y === y).map(c => c.x).sort((a, b) => a - b);
-    if (rowModules.length > 0) {
-      // Prüfe auf Lücken in dieser Reihe
-      let hasGaps = false;
-      for (let i = 1; i < rowModules.length; i++) {
-        if (rowModules[i] - rowModules[i-1] > 1) {
-          hasGaps = true;
-          break;
-        }
-      }
-      if (hasGaps) {
-        rowsWithGaps.push(y);
-      }
+  // Generiere alle möglichen Erdungsband-Platzierungen
+  const placements = generateAllBandPlacements(cluster, minX, maxX, minY, maxY);
+  
+  // Finde die optimale Platzierung (kürzeste Gesamtlänge)
+  let optimalLength = Infinity;
+  for (const placement of placements) {
+    const totalLength = calculatePlacementLength(placement, moduleHeight, gap);
+    if (totalLength < optimalLength) {
+      optimalLength = totalLength;
     }
   }
 
-  // Berechne benötigte Länge
-  const height = maxY - minY + 1; // Anzahl Reihen im Cluster
-  const totalLength = height * moduleHeight + (height - 1) * gap;
-
-  // Spezialfall: Lücken in Reihen bedeuten zusätzliche Erdungsbänder nötig
-  if (rowsWithGaps.length > 0) {
-    // Für jeden getrennten Bereich in einer Reihe wird ein separates Erdungsband benötigt
-    let additionalBands = 0;
-    for (const gapRow of rowsWithGaps) {
-      const rowModules = cluster.filter(c => c.y === gapRow).map(c => c.x).sort((a, b) => a - b);
-      let segments = 1;
-      for (let i = 1; i < rowModules.length; i++) {
-        if (rowModules[i] - rowModules[i-1] > 1) {
-          segments++;
-        }
-      }
-      additionalBands += segments - 1; // -1 weil das erste Segment bereits gezählt ist
-    }
-    
-    // Retourniere Array mit Längen für alle benötigten Bänder
-    const lengths = [totalLength];
-    for (let i = 0; i < additionalBands; i++) {
-      lengths.push(totalLength); // Jedes zusätzliche Band braucht die gleiche Länge
-    }
-    return lengths;
-  }
-
-  // Spezialfall: O-Form (Loch in der Mitte)
-  if (isOShape(cluster, minX, maxX, minY, maxY)) {
-    // O-Form braucht 2 Erdungsbänder (linke und rechte Spalte)
-    return [totalLength, totalLength];
-  }
-
-  // Standardfall: Ein Erdungsband
-  return [totalLength];
+  return optimalLength;
 }
 
-// Prüfe ob Cluster O-förmig ist (hat Loch in der Mitte)
-function isOShape(cluster, minX, maxX, minY, maxY) {
-  const width = maxX - minX + 1;
-  const height = maxY - minY + 1;
+// Generiere alle möglichen Erdungsband-Platzierungen
+function generateAllBandPlacements(cluster, minX, maxX, minY, maxY) {
+  const placements = [];
   
-  // Nur bei mindestens 3x3 kann es ein O sein
-  if (width < 3 || height < 3) return false;
+  // Finde alle vertikalen Spalten mit Modulen
+  const columns = [];
+  for (let x = minX; x <= maxX; x++) {
+    const columnModules = cluster.filter(c => c.x === x);
+    if (columnModules.length > 0) {
+      columns.push({
+        x: x,
+        modules: columnModules,
+        height: Math.max(...columnModules.map(c => c.y)) - Math.min(...columnModules.map(c => c.y)) + 1
+      });
+    }
+  }
 
-  // Prüfe ob es ein Loch in der Mitte gibt
-  for (let y = minY + 1; y < maxY; y++) {
-    for (let x = minX + 1; x < maxX; x++) {
-      const hasModule = cluster.some(c => c.x === x && c.y === y);
-      if (!hasModule) {
-        // Es gibt ein Loch - prüfe ob es wirklich O-förmig ist
-        const hasLeftColumn = cluster.some(c => c.x === minX && c.y === y);
-        const hasRightColumn = cluster.some(c => c.x === maxX && c.y === y);
-        if (hasLeftColumn && hasRightColumn) {
-          return true;
-        }
+  // Generiere verschiedene Kombinationen von Spalten
+  for (let i = 0; i < columns.length; i++) {
+    // Einzelne Spalte
+    placements.push([columns[i]]);
+    
+    // Kombinationen von Spalten
+    for (let j = i + 1; j < columns.length; j++) {
+      placements.push([columns[i], columns[j]]);
+      
+      // Weitere Kombinationen
+      for (let k = j + 1; k < columns.length; k++) {
+        placements.push([columns[i], columns[j], columns[k]]);
       }
     }
   }
-  
-  return false;
-}
 
-// Optimiere Erdungsband-Nutzung (minimale Anzahl verwenden)
-function optimizeErdungsbandUsage(clusterLengths, bandLength) {
-  const allLengths = [];
-  
-  // Flatten alle Längen aus allen Clustern
-  for (const lengths of clusterLengths) {
-    if (Array.isArray(lengths)) {
-      allLengths.push(...lengths);
-    } else {
-      allLengths.push(lengths);
-    }
+  // Füge auch die Option "alle Spalten" hinzu
+  if (columns.length > 1) {
+    placements.push(columns);
   }
 
-  if (allLengths.length === 0) return 0;
-
-  // Sortiere Längen absteigend für bessere Optimierung
-  allLengths.sort((a, b) => b - a);
-
-  // Greedy-Algorithmus: Versuche Längen optimal zu kombinieren
-  const bands = [];
-  
-  for (const length of allLengths) {
-    let placed = false;
-    
-    // Versuche die Länge in ein bestehendes Band zu packen
-    for (let i = 0; i < bands.length; i++) {
-      if (bands[i] + length <= bandLength) {
-        bands[i] += length;
-        placed = true;
-        break;
-      }
-    }
-    
-    // Falls nicht möglich, neues Band hinzufügen
-    if (!placed) {
-      bands.push(length);
-    }
-  }
-
-  return bands.length;
+  return placements;
 }
+
+// Berechne Gesamtlänge für eine Platzierung
+function calculatePlacementLength(placement, moduleHeight, gap) {
+  let totalLength = 0;
+  
+  for (const column of placement) {
+    const height = column.height;
+    const length = height * moduleHeight + (height - 1) * gap;
+    totalLength += length;
+  }
+  
+  return totalLength;
+}
+
+
 
 // Worker bereit Signal
 self.postMessage({
