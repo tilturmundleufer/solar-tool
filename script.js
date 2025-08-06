@@ -3544,6 +3544,9 @@
 			
 			// Initialisiere Auto-Save Indicator
 			this.initAutoSaveIndicator();
+			
+			// Initialisiere Config-Liste
+			this.initConfigList();
 		}
 		
 		initSidebarNavigation() {
@@ -3620,6 +3623,13 @@
 			}
 		}
 		
+		// Initialisiere Config-Liste beim Start
+		initConfigList() {
+			if (document.getElementById('config-overview')?.classList.contains('active')) {
+				this.updateConfigList();
+			}
+		}
+		
 		showDetailView(configIndex = null) {
 			const detailView = document.getElementById('config-detail-view');
 			const overviewView = document.getElementById('config-overview');
@@ -3637,7 +3647,7 @@
 			}
 		}
 		
-		updateDetailView() {
+				updateDetailView() {
 			const currentConfig = this.configs[this.activeConfig];
 			if (!currentConfig) return;
 			
@@ -3647,7 +3657,11 @@
 				titleEl.textContent = currentConfig.name || `Konfiguration #${this.activeConfig + 1}`;
 			}
 			
-							// Gesamtpreis aktualisieren
+			// Gesamtpreis aktualisieren
+			this.updateCurrentTotalPrice();
+		}
+		
+		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
 				const totalPrice = this.calculateCurrentTotalPrice();
@@ -4459,12 +4473,17 @@
         const fragment = document.createDocumentFragment();
         entries.forEach(([k,v]) => {
           const packs = Math.ceil(v / VE[k]);
+          const price = getPriceFromCache(k);
+          const itemTotal = packs * price;
           const div = document.createElement('div');
           div.className = 'produkt-item';
           div.innerHTML = `
-            <span>${packs}×</span>
-            <img src="${this.mapImage(k)}" alt="${k}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(k)}'">
-            <span>${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')} (${v})</span>
+            <div class="item-left">
+              <span class="item-quantity">${packs}×</span>
+              <span class="item-name">${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')}</span>
+              <span class="item-details">(${v})</span>
+            </div>
+            <span class="item-price">${itemTotal.toFixed(2).replace('.', ',')} €</span>
           `;
           fragment.appendChild(div);
         });
@@ -4904,6 +4923,9 @@
         if (document.getElementById('config-detail-view')?.classList.contains('active')) {
           this.updateDetailView();
         }
+        
+        // Gesamtpreis aktualisieren
+        this.updateCurrentTotalPrice();
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;

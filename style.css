@@ -1123,7 +1123,7 @@ body {
   overflow: hidden;
 }
 
-/* Produktliste */
+/* Produktliste - Neues Design */
 .produktliste {
   margin-bottom: 15px;
 }
@@ -1131,37 +1131,48 @@ body {
 .produkt-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 0.5rem;
+  justify-content: space-between;
+  padding: 8px 0;
   margin-bottom: 8px;
-  color: white;
-  transition: all 0.2s ease;
+  color: #000000;
+  border: none;
+  background: transparent;
 }
 
 .produkt-item:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.2);
+  background: transparent;
 }
 
-.produkt-item img {
-  width: 32px;
-  height: 32px;
-  border-radius: 0.25rem;
-  object-fit: cover;
+.produkt-item .item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
 }
 
-.produkt-item span:first-child {
+.produkt-item .item-quantity {
   font-weight: bold;
-  color: #ffb101;
+  color: #000000;
   min-width: 30px;
 }
 
-.produkt-item span:last-child {
+.produkt-item .item-name {
+  font-weight: bold;
+  color: #000000;
   flex: 1;
-  font-size: 0.9rem;
+}
+
+.produkt-item .item-details {
+  color: #8F8F8F;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.produkt-item .item-price {
+  font-weight: bold;
+  color: #000000;
+  text-align: right;
+  min-width: 60px;
 }
 
 /* Alte Checkbox Styles entfernt */
