@@ -3581,7 +3581,7 @@
 			const expressCheckoutBtn = document.getElementById('express-checkout-btn');
 			if (expressCheckoutBtn) {
 				expressCheckoutBtn.addEventListener('click', () => {
-					this.addToCart();
+					this.addCurrentToCart();
 				});
 			}
 			
@@ -3589,7 +3589,7 @@
 			const nextConfigBtn = document.getElementById('next-config-btn');
 			if (nextConfigBtn) {
 				nextConfigBtn.addEventListener('click', () => {
-					this.saveConfig();
+					this.saveNewConfig();
 				});
 			}
 			
@@ -3605,7 +3605,7 @@
 			const continueLaterBtn = document.getElementById('continue-later-btn');
 			if (continueLaterBtn) {
 				continueLaterBtn.addEventListener('click', () => {
-					this.continueLater();
+					this.generateContinueLink();
 				});
 			}
 		}
@@ -3751,6 +3751,7 @@
 			if (newName && newName.trim()) {
 				config.name = newName.trim();
 				this.updateConfigList();
+				// Speichere in URL
 				this.saveToUrl();
 			}
 		}
@@ -4591,31 +4592,35 @@
       return PRODUCT_IMAGES[key] || '';
     }
     
-    loadConfig(idx) {
-  		const cfg = this.configs[idx];
-  		this.currentConfig = idx;
+    		loadConfig(idx) {
+			const cfg = this.configs[idx];
+			this.currentConfig = idx;
 
-  				// Input-Werte setzen
-		this.wIn.value = cfg.cellWidth;
-		this.hIn.value = cfg.cellHeight;
-		this.orV.checked = cfg.orientation === 'vertical';
-		this.orH.checked = !this.orV.checked;
-		this.incM.checked = cfg.incM;
-		this.mc4.checked = cfg.mc4;
-		this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
-		this.holz.checked = cfg.holz;
-		this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
+			// Input-Werte setzen
+			this.wIn.value = cfg.cellWidth;
+			this.hIn.value = cfg.cellHeight;
+			this.orV.checked = cfg.orientation === 'vertical';
+			this.orH.checked = !this.orV.checked;
+			this.incM.checked = cfg.incM;
+			this.mc4.checked = cfg.mc4;
+			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
+			this.holz.checked = cfg.holz;
+			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
 
-  		// STATE Werte setzen - WICHTIG: Vor setup() setzen
-  		this.cols = cfg.cols;
-  		this.rows = cfg.rows;
-  		this.selection = cfg.selection.map(r => [...r]);
+			// STATE Werte setzen - WICHTIG: Vor setup() setzen
+			this.cols = cfg.cols;
+			this.rows = cfg.rows;
+			this.selection = cfg.selection.map(r => [...r]);
 
-  		// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
-  		this.setup();
+			// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
+			this.setup();
 
-  		this.renderConfigList();
-  		this.updateSaveButtons();
+			// Produktliste und Summary aktualisieren
+			this.buildList();
+			this.updateSummaryOnChange();
+
+			this.renderConfigList();
+			this.updateSaveButtons();
 		}
     
     showToast(message = 'Gespeichert ✅', duration = 1500) {
