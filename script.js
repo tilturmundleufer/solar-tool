@@ -3688,13 +3688,14 @@
 					rows: this.rows,
 					cellWidth: parseInt(this.wIn?.value || '179'),
 					cellHeight: parseInt(this.hIn?.value || '113'),
-					orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-					incM: document.getElementById('include-modules')?.checked || false,
-					mc4: document.getElementById('mc4')?.checked || false,
-					solarkabel: document.getElementById('solarkabel')?.checked || false,
-					holz: document.getElementById('holz')?.checked || false,
-					quetschkabelschuhe: document.getElementById('quetschkabelschuhe')?.checked || false
+					orientation: this.orV?.checked ? 'vertical' : 'horizontal'
 				});
+				
+				// Module nur hinzufügen wenn Checkbox aktiviert ist
+				const includeModules = document.getElementById('include-modules')?.checked || false;
+				if (!includeModules) {
+					delete parts.Solarmodul;
+				}
 				
 				let totalPrice = 0;
 				
