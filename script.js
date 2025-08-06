@@ -5133,55 +5133,61 @@
     calculateErdungsbandLength(cluster, moduleHeight, gap) {
       if (cluster.length === 0) return 0;
 
-      // Finde die Bounding Box des Clusters
-      const minX = Math.min(...cluster.map(c => c.x));
-      const maxX = Math.max(...cluster.map(c => c.x));
-      const minY = Math.min(...cluster.map(c => c.y));
-      const maxY = Math.max(...cluster.map(c => c.y));
-
-      // Prüfe ob Cluster vertikal oder horizontal ist
-      const width = maxX - minX + 1;
-      const height = maxY - minY + 1;
-
-      // Vertikaler Cluster (Spalte)
-      if (width === 1 && height > 1) {
-        return height * moduleHeight + (height - 1) * gap;
-      }
-
-      // Horizontaler Cluster (Reihe)
-      if (height === 1 && width > 1) {
-        return moduleHeight; // Vertikale Länge für horizontale Reihe
-      }
-
-      // Komplexer Cluster (mehrere Reihen/Spalten)
-      return this.calculateComplexClusterLength(cluster, moduleHeight, gap, minX, maxX, minY, maxY);
+      // Analysiere Cluster dynamisch
+      return this.analyzeClusterAndCalculateLength(cluster, moduleHeight, gap);
     }
 
-    // Berechne Länge für komplexe Cluster
-    calculateComplexClusterLength(cluster, moduleHeight, gap, minX, maxX, minY, maxY) {
+    // Analysiere Cluster und berechne Länge dynamisch
+    analyzeClusterAndCalculateLength(cluster, moduleHeight, gap) {
       // Finde alle vertikalen Spalten im Cluster
-      const columns = [];
-      for (let x = minX; x <= maxX; x++) {
-        const columnModules = cluster.filter(c => c.x === x);
-        if (columnModules.length > 0) {
-          const columnHeight = Math.max(...columnModules.map(c => c.y)) - Math.min(...columnModules.map(c => c.y)) + 1;
-          columns.push({
-            x: x,
-            height: columnHeight,
-            modules: columnModules
-          });
-        }
-      }
-
-      // Wenn nur eine Spalte, einfache Berechnung
-      if (columns.length === 1) {
-        return columns[0].height * moduleHeight + (columns[0].height - 1) * gap;
-      }
-
-      // Mehrere Spalten: Berechne minimale Anzahl Erdungsbänder
-      let totalLength = 0;
+      const columns = this.findColumnsInCluster(cluster);
       
-      // Jede Spalte braucht mindestens ein Erdungsband
+      // Berechne Erdungsbandlength basierend auf Cluster-Struktur
+      return this.calculateLengthForColumns(columns, moduleHeight, gap);
+    }
+
+    // Finde alle vertikalen Spalten in einem Cluster
+    findColumnsInCluster(cluster) {
+      const columns = [];
+      const columnMap = new Map();
+
+      // Gruppiere Module nach Spalten
+      for (const module of cluster) {
+        const x = module.x;
+        if (!columnMap.has(x)) {
+          columnMap.set(x, []);
+        }
+        columnMap.get(x).push(module);
+      }
+
+      // Erstelle Spalten-Objekte
+      for (const [x, modules] of columnMap) {
+        const yValues = modules.map(m => m.y).sort((a, b) => a - b);
+        const height = yValues[yValues.length - 1] - yValues[0] + 1;
+        
+        columns.push({
+          x: x,
+          height: height,
+          modules: modules,
+          yValues: yValues
+        });
+      }
+
+      return columns.sort((a, b) => a.x - b.x);
+    }
+
+    // Berechne Länge basierend auf Spalten-Struktur
+    calculateLengthForColumns(columns, moduleHeight, gap) {
+      if (columns.length === 0) return 0;
+
+      // Einzelne Spalte
+      if (columns.length === 1) {
+        const column = columns[0];
+        return column.height * moduleHeight + (column.height - 1) * gap;
+      }
+
+      // Mehrere Spalten: Jede Spalte braucht ein Erdungsband
+      let totalLength = 0;
       for (const column of columns) {
         const columnLength = column.height * moduleHeight + (column.height - 1) * gap;
         totalLength += columnLength;
@@ -5189,6 +5195,8 @@
 
       return totalLength;
     }
+
+
 
 
 
