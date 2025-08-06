@@ -3669,7 +3669,22 @@
 		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
-				const totalPrice = this.calculateCurrentTotalPrice();
+				// Verwende die gleiche Logik wie calculateConfigPrice für Konsistenz
+				const currentConfig = {
+					selection: this.selection,
+					cols: this.cols,
+					rows: this.rows,
+					cellWidth: parseInt(this.wIn?.value || '179'),
+					cellHeight: parseInt(this.hIn?.value || '113'),
+					orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+					incM: document.getElementById('include-modules')?.checked || false,
+					mc4: document.getElementById('mc4')?.checked || false,
+					solarkabel: document.getElementById('solarkabel')?.checked || false,
+					holz: document.getElementById('holz')?.checked || false,
+					quetschkabelschuhe: document.getElementById('quetschkabelschuhe')?.checked || false
+				};
+				
+				const totalPrice = this.calculateConfigPrice(currentConfig);
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 			}
 		}
@@ -3968,7 +3983,8 @@
 				if (quantity > 0) {
 					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
 					const pricePerPackage = getPriceFromCache(partName);
-					totalPrice += packagesNeeded * pricePerPackage;
+					const itemTotal = packagesNeeded * pricePerPackage;
+					totalPrice += itemTotal;
 				}
 			});
 			
