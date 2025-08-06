@@ -2204,7 +2204,7 @@
         case 'deleteModules':
           // Lösche nur die Module-Auswahl, behalte Grid-Größe
           this.clearModuleSelection();
-          this.solarGrid.showToast('🔄 Module-Auswahl gelöscht', 2000);
+          			this.solarGrid.showToast('Module-Auswahl gelöscht', 2000);
           break;
           
         case 'resetGrid':
@@ -3593,6 +3593,20 @@
 			
 			// Initialisiere Config-Liste
 			this.initConfigList();
+			
+			// Setze Standard-Orientation auf vertikal
+			if (this.orH && this.orV) {
+				this.orH.checked = false;
+				this.orV.checked = true;
+				
+				// Synchronisiere mit den Orientation Buttons
+				const orientHBtn = document.getElementById('orient-h');
+				const orientVBtn = document.getElementById('orient-v');
+				if (orientHBtn && orientVBtn) {
+					orientHBtn.classList.remove('active');
+					orientVBtn.classList.add('active');
+				}
+			}
 		}
 		
 		initSidebarNavigation() {
@@ -5067,7 +5081,7 @@
 			this.updateDetailView();
 		}
     
-    showToast(message = 'Gespeichert ✅', duration = 1500) {
+    		showToast(message = 'Gespeichert', duration = 1500) {
   		const toast = document.getElementById('toast');
   		if (!toast) return;
   		toast.textContent = message;
@@ -5111,7 +5125,7 @@
 		// 6. Detail-Ansicht aktualisieren wenn aktiv
 		this.updateDetailView();
 		
-		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
+		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt`);
 		}
 
     renameCurrentConfig(newName) {
@@ -5453,7 +5467,7 @@
 			const continueUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
 			
 			navigator.clipboard.writeText(continueUrl);
-			this.showToast('Später-weitermachen Link kopiert ✅', 2000);
+			this.showToast('Später-weitermachen Link kopiert', 2000);
     }
     
     // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
@@ -5558,7 +5572,7 @@
     			// Cache nach dem Laden leeren
     			localStorage.removeItem('solarTool_continueCache');
     			
-    			this.showToast('Konfiguration aus Cache geladen ✅', 2000);
+    			this.showToast('Konfiguration aus Cache geladen', 2000);
     			return true;
     		}
     	} catch (error) {
@@ -5770,7 +5784,7 @@
         if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
           this.showToast('PDF wird erstellt...', 2000);
           await this.pdfGenerator.generatePDFFromSnapshot(configSnapshot);
-          this.showToast('PDF erfolgreich erstellt ✅', 1500);
+          			this.showToast('PDF erfolgreich erstellt', 1500);
         }
         
         // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
