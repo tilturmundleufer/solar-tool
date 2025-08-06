@@ -4681,11 +4681,35 @@
 		}
 
     processGroup(len, p) {
-      // Fallback-Berechnung für Tellerkopfschraube
-      const cnt360 = Math.ceil(len * 3.6);
-      const cnt240 = Math.ceil(len * 2.4);
+      // Verwende die korrekte Schienenlogik (wie im Worker)
+      const isVertical = this.orV?.checked;
+      const actualCellWidth = isVertical ? parseInt(this.hIn?.value || '113') : parseInt(this.wIn?.value || '179');
       
-      p.Schiene_360_cm     += cnt360;
+      const totalLen = len * actualCellWidth;
+      const floor360 = Math.floor(totalLen / 360);
+      const rem360 = totalLen - floor360 * 360;
+      const floor240 = Math.ceil(rem360 / 240);
+      const pure360 = Math.ceil(totalLen / 360);
+      const pure240 = Math.ceil(totalLen / 240);
+      
+      const variants = [
+        {cnt360: floor360, cnt240: floor240},
+        {cnt360: pure360,  cnt240: 0},
+        {cnt360: 0,        cnt240: pure240}
+      ].map(v => ({
+        ...v,
+        rails: v.cnt360 + v.cnt240,
+        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+      }));
+      
+      const minRails = Math.min(...variants.map(v => v.rails));
+      const best = variants
+        .filter(v => v.rails === minRails)
+        .reduce((a, b) => a.waste <= b.waste ? a : b);
+      
+      const {cnt360, cnt240} = best;
+      
+      p.Schiene_360_cm     += cnt360 * 2;
       p.Schiene_240_cm     += cnt240 * 2;
       p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
       p.Endklemmen         += 4;
