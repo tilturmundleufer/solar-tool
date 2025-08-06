@@ -2861,8 +2861,7 @@
 
       this.listHolder    = document.querySelector('.product-section');
       this.prodList      = document.getElementById('produktliste');
-      this.summaryHolder = document.getElementById('summary-list-holder');
-      this.summaryList   = document.getElementById('summary-list');
+
       this.saveBtn       = document.getElementById('save-config-btn');
       this.addBtn        = document.getElementById('add-to-cart-btn');
       this.summaryBtn    = document.getElementById('summary-add-cart-btn');
@@ -4537,7 +4536,6 @@
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
-  		this.renderProductSummary();
   		this.updateSaveButtons();
 		}
 
@@ -5270,9 +5268,6 @@
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
         
-        // Performance: Nur renderProductSummary, da es buildList Funktionalität enthält
-        this.renderProductSummary();
-        
         // Auto-Save Indicator anzeigen
         this.showAutoSaveIndicator();
         
@@ -5296,184 +5291,7 @@
       }, this.updateDelay);
     }
 
-        async renderProductSummary() {
-      // NEUE GLOBALE LOGIK: Verwende aktuelle Checkbox-Werte für alle Konfigurationen
-      // Performance: Reduziere Deep Copies
-      let bundles = this.configs.map((c, idx) => {
-        return {
-          selection:   c.selection, // Direkte Referenz statt Deep Copy
-          rows:        c.rows,
-          cols:        c.cols,
-          cellWidth:   c.cellWidth,
-          cellHeight:  c.cellHeight,
-          orientation: c.orientation,
-          // GLOBALE Checkbox-Werte für alle Konfigurationen
-          incM:        this.incM && this.incM.checked,
-          mc4:         this.mc4 && this.mc4.checked,
-          solarkabel:  this.solarkabel && this.solarkabel.checked,
-          holz:        this.holz && this.holz.checked,
-          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-        };
-      });
 
-      // Verwende nur aktuelle Konfiguration wenn sie sich von der gespeicherten unterscheidet
-      if (this.currentConfig === null) {
-        // Keine gespeicherten Konfigurationen: Verwende aktuelle
-        bundles.push({
-          selection:   this.selection, // Direkte Referenz statt Deep Copy
-          rows:        this.rows,
-          cols:        this.cols,
-          cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-          cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-          orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-          // GLOBALE Checkbox-Werte
-          incM:        this.incM && this.incM.checked,
-          mc4:         this.mc4 && this.mc4.checked,
-          solarkabel:  this.solarkabel && this.solarkabel.checked,
-          holz:        this.holz && this.holz.checked,
-          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-        });
-      } else {
-        // Gespeicherte Konfigurationen vorhanden: Prüfe ob aktuelle sich unterscheidet
-        const currentSelection = this.selection;
-        const savedSelection = this.configs[this.currentConfig].selection;
-        // Performance: Schnellerer Vergleich statt JSON.stringify
-        const selectionChanged = this.arraysEqual(currentSelection, savedSelection);
-        
-        if (selectionChanged) {
-          // Füge aktuelle Konfiguration zu den gespeicherten hinzu
-          bundles.push({
-            selection:   currentSelection, // Direkte Referenz
-            rows:        this.rows,
-            cols:        this.cols,
-            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-            // GLOBALE Checkbox-Werte
-            incM:        this.incM && this.incM.checked,
-            mc4:         this.mc4 && this.mc4.checked,
-            solarkabel:  this.solarkabel && this.solarkabel.checked,
-            holz:        this.holz && this.holz.checked,
-            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-          });
-        } else {
-          // Keine Änderung: Füge aktuelle Konfiguration trotzdem hinzu
-          bundles.push({
-            selection:   currentSelection, // Direkte Referenz
-            rows:        this.rows,
-            cols:        this.cols,
-            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
-            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-            // GLOBALE Checkbox-Werte
-            incM:        this.incM && this.incM.checked,
-            mc4:         this.mc4 && this.mc4.checked,
-            solarkabel:  this.solarkabel && this.solarkabel.checked,
-            holz:        this.holz && this.holz.checked,
-            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
-          });
-        }
-      }
-  		
-  		const total = {};
-  		
-  		// ISOLIERTE Berechnungen mit calculationManager - KEINE Grid-Eigenschaften berühren!
-  		try {
-  			const allParts = await Promise.all(bundles.map(async (b) => {
-  				// Direkte Berechnung mit calculationManager ohne Grid-Modification
-  				const calculationData = {
-  					selection: b.selection,
-  					rows: b.rows,
-  					cols: b.cols,
-  					cellWidth: b.cellWidth,
-  					cellHeight: b.cellHeight,
-  					orientation: b.orientation
-  				};
-
-  				
-
-  				let parts;
-  								try {
-					parts = await calculationManager.calculate('calculateParts', calculationData);
-				} catch (error) {
-					// Fallback zu synchroner Berechnung
-					parts = this.calculatePartsDirectly(calculationData);
-				}
-
-  				// Module werden NACH der Summierung entfernt (wie in buildList)
-  				// MC4, Solarkabel und Holz werden GLOBAL nach der Summierung hinzugefügt
-
-  				return parts;
-  			}));
-
-  						// Summiere alle Parts
-			allParts.forEach((parts, index) => {
-    		Object.entries(parts).forEach(([k, v]) => {
-      		total[k] = (total[k] || 0) + v;
-    		});
-  		});
-  		
-  				// Module NACH der Summierung entfernen (wie in buildList)
-		if (this.incM && !this.incM.checked) {
-			delete total.Solarmodul;
-		}
-		
-		// Zusatzprodukte werden nicht mehr zur Summary hinzugefügt
-		// Sie werden nur noch in der Overview berechnet
-  		
-  		} catch (error) {
-  			console.error('Error in renderProductSummary:', error);
-  			// Fallback: Verwende leeres total
-  		}
-
-  				const entries = Object.entries(total).filter(([, v]) => v > 0);
-  		const itemsPerColumn = 4;
-  		const numColumns = Math.ceil(entries.length / itemsPerColumn);
-
-  		let totalPrice = 0;
-  		let html = '';
-
-  		for (let i = 0; i < numColumns; i++) {
-    		const columnEntries = entries.slice(i * itemsPerColumn, (i + 1) * itemsPerColumn);
-    		const columnHtml = columnEntries.map(([k, v]) => {
-      		const packs = Math.ceil(v / VE[k]);
-      		const price = getPriceFromCache(k);
-      		const itemTotal = packs * price;
-      		totalPrice += itemTotal;
-
-      		// Verwende neue Produktnamen
-      		const displayName = PRODUCT_NAME_MAP[k] || k.replace(/_/g, ' ');
-      		
-      		return `<div class="produkt-item">
-        		<span>${packs}×</span>
-        		<img src="${this.mapImage(k)}" alt="${displayName}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(displayName)}'">
-        		<span>${displayName} (${v})</span>
-        		<span style="margin-left:auto; font-weight:bold;">${itemTotal.toFixed(2)} €</span>
-      		</div>`;
-    		}).join('');
-
-    		html += `<div class="summary-column">${columnHtml}</div>`;
-  		}
-
-  		html += `<div class="summary-total">Gesamtpreis: ${totalPrice.toFixed(2)} €</div>`;
-  		this.summaryList.innerHTML = html;
-
-  		
-
-		// Zeige Summary List nur wenn Produkte vorhanden sind
-		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
-		this.summaryList.style.display = entries.length ? 'flex' : 'none';
-		
-		// Wenn keine Produkte vorhanden sind, zeige eine Nachricht
-		if (entries.length === 0) {
-			this.summaryList.innerHTML = '<div class="summary-total">Keine Produkte berechnet. Bitte wählen Sie Module aus.</div>';
-			this.summaryList.style.display = 'flex';
-		} else {
-			// Zeige die berechneten Produkte an
-			this.summaryList.innerHTML = html;
-			this.summaryList.style.display = 'flex';
-		}
-		}
 
 		// ISOLIERTE synchrone Berechnung für Fallback
 		calculatePartsDirectly(data) {
