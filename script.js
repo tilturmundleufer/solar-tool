@@ -3822,30 +3822,27 @@
 			input.focus();
 			input.select();
 			
-			// Speichere this-Kontext
-			const self = this;
-			
 			// Event-Listener für Enter und Blur
-			const saveEdit = () => {
+			const saveEdit = function() {
 				const newName = input.value.trim();
-				if (newName && self.currentConfig !== null) {
-					self.configs[self.currentConfig].name = newName;
+				if (newName && this.currentConfig !== null) {
+					this.configs[this.currentConfig].name = newName;
 					titleEl.textContent = newName;
-					self.updateConfigList();
-					self.saveToUrl();
-					self.showAutoSaveIndicator();
+					this.updateConfigList();
+					this.saveToUrl();
+					this.showAutoSaveIndicator();
 				}
 				titleEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
-			const cancelEdit = () => {
+			const cancelEdit = function() {
 				titleEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
 			input.addEventListener('blur', saveEdit);
-			input.addEventListener('keydown', (e) => {
+			input.addEventListener('keydown', function(e) {
 				if (e.key === 'Enter') {
 					e.preventDefault();
 					saveEdit();
@@ -3898,30 +3895,27 @@
 			input.focus();
 			input.select();
 			
-			// Speichere this-Kontext
-			const self = this;
-			
 			// Event-Listener für Enter und Blur
-			const saveEdit = () => {
+			const saveEdit = function() {
 				const newName = input.value.trim();
 				if (newName) {
 					config.name = newName;
 					nameEl.textContent = newName;
-					self.updateConfigList();
-					self.saveToUrl();
-					self.showAutoSaveIndicator();
+					this.updateConfigList();
+					this.saveToUrl();
+					this.showAutoSaveIndicator();
 				}
 				nameEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
-			const cancelEdit = () => {
+			const cancelEdit = function() {
 				nameEl.style.display = 'block';
 				input.remove();
-			};
+			}.bind(this);
 			
 			input.addEventListener('blur', saveEdit);
-			input.addEventListener('keydown', (e) => {
+			input.addEventListener('keydown', function(e) {
 				if (e.key === 'Enter') {
 					e.preventDefault();
 					saveEdit();
