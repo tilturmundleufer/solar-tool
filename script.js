@@ -3443,209 +3443,32 @@
       this.checkMobileDevice();
       
       // Prüfe zuerst den Cache (höchste Priorität)
-      if (this.loadFromCache()) {
-      	// Cache wurde erfolgreich geladen - keine weiteren Aktionen nötig
-      	return;
-      }
+      const cacheLoaded = this.loadFromCache();
       
-      // Prüfe URL-Parameter als Fallback
-      const params = new URLSearchParams(window.location.search);
-  		const rawData = params.get('configData');
-  		if (rawData) {
-    		try {
-      		const json = decodeURIComponent(atob(rawData));
-      		const configs = JSON.parse(json);
-      		// Lade alle Konfigurationen aus der URL
-      		if (Array.isArray(configs)) {
-      			this.configs = configs;
-      			this.loadConfig(0); // Lade die erste Konfiguration
-      		} else {
-      			// Einzelne Konfiguration (alte URL-Format)
-      			this.configs.push(configs);
-      			this.loadConfig(0);
+      // Prüfe URL-Parameter als Fallback (nur wenn Cache nicht geladen wurde)
+      if (!cacheLoaded) {
+        const params = new URLSearchParams(window.location.search);
+    		const rawData = params.get('configData');
+    		if (rawData) {
+      		try {
+        		const json = decodeURIComponent(atob(rawData));
+        		const configs = JSON.parse(json);
+        		// Lade alle Konfigurationen aus der URL
+        		if (Array.isArray(configs)) {
+        			this.configs = configs;
+        			this.loadConfig(0); // Lade die erste Konfiguration
+        		} else {
+        			// Einzelne Konfiguration (alte URL-Format)
+        			this.configs.push(configs);
+        			this.loadConfig(0);
+        		}
+      		} catch (e) {
       		}
-      		return;
-    		} catch (e) {
     		}
-  		}
-
-  				// Prüfe ob Input-Elemente existieren bevor Event-Listener hinzugefügt werden
-		const inputs = [this.wIn, this.hIn].filter(el => el);
-		inputs.forEach(el =>
-			el.addEventListener('change', () => {
-				this.trackInteraction();
-				this.updateSize();
-				this.buildList();
-				this.updateSummaryOnChange();
-			})
-		);
-      
-            // Prüfe ob Orientation-Elemente existieren (Radio-Buttons oder Buttons)
-      if (this.orH && this.orV) {
-        let lastOrientation = this.orH.checked ? 'horizontal' : 'vertical';
-
-        // Event-Listener für Radio-Buttons (falls vorhanden)
-        [this.orH, this.orV].forEach(el =>
-          el.addEventListener('change', () => {
-
-            if (!el.checked) return;
-
-            const currentOrientation = el === this.orH ? 'horizontal' : 'vertical';
-
-            if (currentOrientation === lastOrientation) return;
-
-            // Synchronisiere mit Setup-Container Radio-Buttons
-            const orientHSetup = document.getElementById('orient-h-setup');
-            const orientVSetup = document.getElementById('orient-v-setup');
-            if (orientHSetup && orientVSetup) {
-              orientHSetup.checked = el === this.orH;
-              orientVSetup.checked = el === this.orV;
-            }
-            
-            // Synchronisiere mit den Orientation Buttons
-            const orientHBtn = document.getElementById('orient-h');
-            const orientVBtn = document.getElementById('orient-v');
-            if (orientHBtn && orientVBtn) {
-              orientHBtn.classList.toggle('active', el === this.orH);
-              orientVBtn.classList.toggle('active', el === this.orV);
-            }
-
-            // Vollständige Grid-Neuinitialisierung wie bei Smart Config
-            this.trackInteraction();
-            this.updateSize();
-            this.buildGrid(); // Vollständige Grid-Neuinitialisierung für Animation
-            this.buildList();
-            this.updateSummaryOnChange();
-
-            lastOrientation = currentOrientation;
-          })
-        );
-        
-        // Event-Listener für Orientation Buttons
-        const orientHBtn = document.getElementById('orient-h');
-        const orientVBtn = document.getElementById('orient-v');
-        
-        if (orientHBtn && orientVBtn) {
-          [orientHBtn, orientVBtn].forEach(btn => {
-            btn.addEventListener('click', () => {
-              // Entferne active Klasse von beiden Buttons
-              orientHBtn.classList.remove('active');
-              orientVBtn.classList.remove('active');
-              
-              // Füge active Klasse zum geklickten Button hinzu
-              btn.classList.add('active');
-              
-              // Synchronisiere mit den Radio-Buttons
-              const isVertical = btn === orientVBtn;
-              if (this.orV) this.orV.checked = isVertical;
-              if (this.orH) this.orH.checked = !isVertical;
-              
-              // Vollständige Grid-Neuinitialisierung
-              this.trackInteraction();
-              this.updateSize();
-              this.buildGrid();
-              this.buildList();
-              this.updateSummaryOnChange();
-            });
-          });
-        }
       }
 
-  		// GLOBALE Checkbox-Event-Listener - gelten für alle Konfigurationen
-		const checkboxes = [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule].filter(el => el);
-		checkboxes.forEach(el =>
-			el.addEventListener('change', () => {
-				this.trackInteraction();
-				this.updateAllConfigurationsForCheckboxes(); // NEU: Globale Checkbox-Logik
-			})
-		);
-		
-		// Event-Listener für Setup-Container Radio-Buttons
-		const orientHSetup = document.getElementById('orient-h-setup');
-		const orientVSetup = document.getElementById('orient-v-setup');
-		
-		if (orientHSetup && orientVSetup) {
-			[orientHSetup, orientVSetup].forEach(el =>
-				el.addEventListener('change', () => {
-					if (!el.checked) return;
-					
-					// Synchronisiere mit den Haupt-Radio-Buttons
-					const isVertical = el === orientVSetup;
-					if (this.orV) this.orV.checked = isVertical;
-					if (this.orH) this.orH.checked = !isVertical;
-					
-					// Vollständige Grid-Neuinitialisierung wie bei Smart Config
-					this.trackInteraction();
-					this.updateSize();
-					this.buildGrid(); // Vollständige Grid-Neuinitialisierung für Animation
-					this.buildList();
-					this.updateSummaryOnChange();
-				})
-			);
-		}
-		
-
-      
-      // Event-Listener für die Grid-Expansion-Buttons (neue Struktur)
-			// Spalten-Buttons - rechts (fügt am Ende hinzu)
-			document.querySelectorAll('[data-dir="right"]').forEach(btn => {
-				if (btn.classList.contains('plus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.addColumnRight();
-					});
-				} else if (btn.classList.contains('minus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.removeColumnRight();
-					});
-				}
-			});
-			
-			// Spalten-Buttons - links (fügt am Anfang hinzu)
-			document.querySelectorAll('[data-dir="left"]').forEach(btn => {
-				if (btn.classList.contains('plus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.addColumnLeft();
-					});
-				} else if (btn.classList.contains('minus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.removeColumnLeft();
-					});
-				}
-			});
-			
-			// Zeilen-Buttons - unten (fügt am Ende hinzu)
-			document.querySelectorAll('[data-dir="bottom"]').forEach(btn => {
-				if (btn.classList.contains('plus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.addRowBottom();
-					});
-				} else if (btn.classList.contains('minus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.removeRowBottom();
-					});
-				}
-			});
-			
-			// Zeilen-Buttons - oben (fügt am Anfang hinzu)
-			document.querySelectorAll('[data-dir="top"]').forEach(btn => {
-				if (btn.classList.contains('plus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.addRowTop();
-					});
-				} else if (btn.classList.contains('minus-btn')) {
-					btn.addEventListener('click', () => {
-						this.trackInteraction();
-						this.removeRowTop();
-					});
-				}
-			});
+  		// Event-Listener für alle UI-Elemente setzen
+		this.setupAllEventListeners();
 
   		// Prüfe ob Buttons existieren bevor Event-Listener hinzugefügt werden
   		if (this.saveBtn) {
@@ -4748,6 +4571,144 @@
   		this.buildGrid();
   		this.buildList();
   		this.updateSaveButtons();
+  		
+  		// Event-Listener für Grid-Interaktionen setzen
+  		this.setupGridEventListeners();
+		}
+		
+		// Neue Funktion für Grid-Event-Listener
+		setupGridEventListeners() {
+			// Grid-Zellen Event-Listener
+			const cells = this.gridEl.querySelectorAll('.grid-cell');
+			cells.forEach((cell, index) => {
+				const x = index % this.cols;
+				const y = Math.floor(index / this.cols);
+				
+				// Entferne alte Event-Listener
+				cell.removeEventListener('click', this.handleCellClick);
+				cell.removeEventListener('mouseenter', this.handleCellMouseEnter);
+				cell.removeEventListener('mouseleave', this.handleCellMouseLeave);
+				
+				// Füge neue Event-Listener hinzu
+				cell.addEventListener('click', this.handleCellClick.bind(this, x, y));
+				cell.addEventListener('mouseenter', this.handleCellMouseEnter.bind(this, x, y));
+				cell.addEventListener('mouseleave', this.handleCellMouseLeave.bind(this, x, y));
+			});
+		}
+		
+		// Neue Funktion für alle Event-Listener
+		setupAllEventListeners() {
+			// Input-Event-Listener
+			const inputs = [this.wIn, this.hIn].filter(el => el);
+			inputs.forEach(el => {
+				el.removeEventListener('change', this.handleInputChange);
+				el.addEventListener('change', this.handleInputChange.bind(this));
+			});
+			
+			// Orientation-Event-Listener
+			if (this.orH && this.orV) {
+				[this.orH, this.orV].forEach(el => {
+					el.removeEventListener('change', this.handleOrientationChange);
+					el.addEventListener('change', this.handleOrientationChange.bind(this));
+				});
+			}
+			
+			// Checkbox-Event-Listener
+			[this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule].filter(el => el).forEach(el => {
+				el.removeEventListener('change', this.handleCheckboxChange);
+				el.addEventListener('change', this.handleCheckboxChange.bind(this));
+			});
+			
+			// Expansion-Button-Event-Listener
+			document.querySelectorAll('[data-dir="right"]').forEach(btn => {
+				btn.removeEventListener('click', this.handleExpansionClick);
+				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+			});
+			
+			document.querySelectorAll('[data-dir="left"]').forEach(btn => {
+				btn.removeEventListener('click', this.handleExpansionClick);
+				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+			});
+			
+			document.querySelectorAll('[data-dir="top"]').forEach(btn => {
+				btn.removeEventListener('click', this.handleExpansionClick);
+				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+			});
+			
+			document.querySelectorAll('[data-dir="bottom"]').forEach(btn => {
+				btn.removeEventListener('click', this.handleExpansionClick);
+				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+			});
+			
+			// Orientation-Button-Event-Listener
+			const orientHBtn = document.getElementById('orient-h');
+			const orientVBtn = document.getElementById('orient-v');
+			if (orientHBtn && orientVBtn) {
+				[orientHBtn, orientVBtn].forEach(btn => {
+					btn.removeEventListener('click', this.handleOrientationButtonClick);
+					btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
+				});
+			}
+		}
+		
+		// Event-Handler-Funktionen
+		handleInputChange() {
+			this.trackInteraction();
+			this.updateSize();
+			this.buildList();
+			this.updateSummaryOnChange();
+		}
+		
+		handleOrientationChange() {
+			this.trackInteraction();
+			this.updateSize();
+			this.buildGrid();
+			this.buildList();
+			this.updateSummaryOnChange();
+		}
+		
+		handleCheckboxChange() {
+			this.trackInteraction();
+			this.updateSummaryOnChange();
+		}
+		
+		handleExpansionClick(e) {
+			this.trackInteraction();
+			const dir = e.target.dataset.dir;
+			const isPlus = e.target.classList.contains('plus-btn');
+			
+			if (dir === 'right') {
+				isPlus ? this.addColumnRight() : this.removeColumnRight();
+			} else if (dir === 'left') {
+				isPlus ? this.addColumnLeft() : this.removeColumnLeft();
+			} else if (dir === 'top') {
+				isPlus ? this.addRowTop() : this.removeRowTop();
+			} else if (dir === 'bottom') {
+				isPlus ? this.addRowBottom() : this.removeRowBottom();
+			}
+		}
+		
+		handleOrientationButtonClick(e) {
+			const orientHBtn = document.getElementById('orient-h');
+			const orientVBtn = document.getElementById('orient-v');
+			
+			// Entferne active Klasse von beiden Buttons
+			orientHBtn.classList.remove('active');
+			orientVBtn.classList.remove('active');
+			
+			// Füge active Klasse zum geklickten Button hinzu
+			e.target.classList.add('active');
+			
+			// Synchronisiere mit den Radio-Buttons
+			const isVertical = e.target === orientVBtn;
+			if (this.orV) this.orV.checked = isVertical;
+			if (this.orH) this.orH.checked = !isVertical;
+			
+			this.trackInteraction();
+			this.updateSize();
+			this.buildGrid();
+			this.buildList();
+			this.updateSummaryOnChange();
 		}
 
     updateSaveButtons() {
@@ -5898,6 +5859,14 @@
     			if (this.configs.length > 0) {
     				this.loadConfig(0);
     			}
+    			
+    			// Grid und UI nach dem Laden wiederherstellen
+    			this.setup(); // Grid-Event-Listener wiederherstellen
+    			this.buildGrid(); // Grid visuell wiederherstellen
+    			this.buildList(); // Produktliste wiederherstellen
+    			
+    			// Event-Listener für alle UI-Elemente wiederherstellen
+    			this.setupAllEventListeners();
     			
     			// Aktualisiere UI nach dem Laden
     			this.updateConfigList();
