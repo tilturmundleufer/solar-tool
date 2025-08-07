@@ -4875,11 +4875,18 @@
           const itemTotal = packs * price;
           const div = document.createElement('div');
           div.className = 'produkt-item';
+          
+          // Spezielle Behandlung für Erdungsband: Zeige Länge statt Anzahl
+          let itemDetails = `(${v})`;
+          if (k === 'Erdungsband' && this.erdungsbandtotal) {
+            itemDetails = `(${this.erdungsbandtotal} cm)`;
+          }
+          
           div.innerHTML = `
             <div class="item-left">
               <span class="item-quantity">${packs}×</span>
               <span class="item-name">${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')}</span>
-              <span class="item-details">(${v})</span>
+              <span class="item-details">${itemDetails}</span>
             </div>
             <span class="item-price">${itemTotal.toFixed(2).replace('.', ',')} €</span>
           `;
@@ -5045,266 +5052,123 @@
 
     // Erdungsband-Berechnung
     calculateErdungsband() {
-      const clusters = this.findErdungsbandClusters();
-      if (clusters.length === 0) return 0;
-
       const isVertical = this.orV?.checked;
-      // Modulhöhe: horizontal = cellHeight, vertikal = cellWidth
       const moduleHeight = isVertical ? parseInt(this.wIn?.value || '179') : parseInt(this.hIn?.value || '113');
       const gap = 2; // 2cm Lücke zwischen Modulen
-
-      // Berechne Erdungsbandtotal (Summe aller Erdungsbandlengths)
+      
+      // Erstelle Matrix für Erdungsbandlength-Tracking
+      const erdungsbandMatrix = Array.from({ length: this.rows }, () =>
+        Array.from({ length: this.cols }, () => false)
+      );
+      
       let erdungsbandtotal = 0;
-      for (const cluster of clusters) {
-        erdungsbandtotal += this.calculateErdungsbandLength(cluster, moduleHeight, gap);
+      
+      // Analysiere Grid von oben nach unten, links nach rechts
+      for (let y = 0; y < this.rows; y++) {
+        for (let x = 0; x < this.cols; x++) {
+          const result = this.analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
+          erdungsbandtotal += result;
+        }
       }
-
+      
+      // Speichere Erdungsbandtotal für Display
+      this.erdungsbandtotal = erdungsbandtotal;
+      
       // Berechne Anzahl benötigter Erdungsbänder
       return Math.ceil(erdungsbandtotal / 600);
     }
 
-    // Finde alle Cluster für Erdungsband-Berechnung (echte Verbindungen)
-    findErdungsbandClusters() {
-      const visited = Array.from({ length: this.rows }, () => 
-        Array.from({ length: this.cols }, () => false)
-      );
-      const clusters = [];
-
-      for (let y = 0; y < this.rows; y++) {
-        for (let x = 0; x < this.cols; x++) {
-          if (this.selection[y]?.[x] && !visited[y][x]) {
-            const cluster = [];
-            this.floodFillErdungsbandCluster(x, y, visited, cluster);
-            if (cluster.length > 0) {
-              clusters.push(cluster);
-            }
-          }
-        }
+    // Analysiere ein Feld für Erdungsband
+    analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
+      // Schritt 1: Hat das Feld ein Modul?
+      if (!this.selection[y]?.[x]) {
+        return 0; // Kein Modul, nächstes Feld
       }
-
-      return clusters;
-    }
-
-    // Flood-fill für Erdungsband-Cluster (komplette Verbindungs-Analyse)
-    floodFillErdungsbandCluster(x, y, visited, cluster) {
-      if (y < 0 || y >= this.rows || x < 0 || x >= this.cols) return;
-      if (visited[y][x] || !this.selection[y]?.[x]) return;
-
-      visited[y][x] = true;
-      cluster.push({ x, y });
-
-      // Prüfe alle 4 Richtungen für direkte Verbindungen
-      const directions = [
-        { dx: 1, dy: 0 },  // rechts
-        { dx: -1, dy: 0 }, // links
-        { dx: 0, dy: 1 },  // unten
-        { dx: 0, dy: -1 }  // oben
-      ];
-
-      for (const dir of directions) {
-        const newX = x + dir.dx;
-        const newY = y + dir.dy;
-        
-        if (newY >= 0 && newY < this.rows && newX >= 0 && newX < this.cols) {
-          if (!visited[newY][newX] && this.selection[newY]?.[newX]) {
-            this.floodFillErdungsbandCluster(newX, newY, visited, cluster);
-          }
-        }
-      }
-
-      // Zusätzlich: Prüfe horizontale Verbindungen in derselben Reihe
-      this.checkHorizontalConnectionsInRow(x, y, visited, cluster);
       
-      // Zusätzlich: Prüfe vertikale Verbindungen in derselben Spalte
-      this.checkVerticalConnectionsInColumn(x, y, visited, cluster);
+      // Schritt 2: Hat das Modul ein weiteres Modul direkt darunter?
+      if (y + 1 >= this.rows || !this.selection[y + 1]?.[x]) {
+        return 0; // Kein Modul darunter, nächstes Feld
+      }
+      
+      // Schritt 3: Ist links vom aktuellen Feld ein weiteres Feld mit Modul?
+      if (x === 0 || !this.selection[y]?.[x - 1]) {
+        // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
+        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+      }
+      
+      // Schritt 4: Hat das linke Feld ein Modul darunter?
+      if (y + 1 >= this.rows || !this.selection[y + 1]?.[x - 1]) {
+        // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
+        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+      }
+      
+      // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
+      return this.checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
     }
 
-    // Prüfe horizontale Verbindungen in derselben Reihe
-    checkHorizontalConnectionsInRow(x, y, visited, cluster) {
-      // Prüfe alle Module in derselben Reihe
-      for (let checkX = 0; checkX < this.cols; checkX++) {
-        if (checkX !== x && this.selection[y]?.[checkX] && !visited[y][checkX]) {
-          // Prüfe ob es eine Verbindung gibt (keine leeren Spalten dazwischen)
-          if (this.hasHorizontalConnection(x, checkX, y)) {
-            this.floodFillErdungsbandCluster(checkX, y, visited, cluster);
-          }
-        }
+    // Prüfe linke Felder auf Erdungsbandlength
+    checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
+      const leftUpper = erdungsbandMatrix[y]?.[x - 1];
+      const leftLower = erdungsbandMatrix[y + 1]?.[x - 1];
+      
+      if (!leftUpper && !leftLower) {
+        // Keine Erdungsbandlength links → Rekursiv weiter links prüfen
+        return this.checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap);
+      } else if (leftUpper && !leftLower) {
+        // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
+        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+      } else {
+        // Beide haben Erdungsbandlength → Nichts tun
+        return 0;
       }
     }
 
-    // Prüfe ob zwei Module in derselben Reihe horizontal verbunden sind
-    hasHorizontalConnection(x1, x2, y) {
-      const minX = Math.min(x1, x2);
-      const maxX = Math.max(x1, x2);
+    // Rekursiv weiter links prüfen
+    checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap) {
+      let checkX = x - 2; // Ein Feld weiter links
       
-      // Prüfe alle Spalten zwischen x1 und x2
-      for (let x = minX + 1; x < maxX; x++) {
-        // Wenn eine leere Spalte dazwischen ist, keine Verbindung
-        if (!this.selection[y]?.[x]) {
-          return false;
-        }
-      }
-      
-      return true;
-    }
-
-    // Prüfe vertikale Verbindungen in derselben Spalte
-    checkVerticalConnectionsInColumn(x, y, visited, cluster) {
-      // Prüfe alle Module in derselben Spalte
-      for (let checkY = 0; checkY < this.rows; checkY++) {
-        if (checkY !== y && this.selection[checkY]?.[x] && !visited[checkY][x]) {
-          // Prüfe ob es eine Verbindung gibt (keine leeren Reihen dazwischen)
-          if (this.hasVerticalConnection(x, y, checkY)) {
-            this.floodFillErdungsbandCluster(x, checkY, visited, cluster);
-          }
-        }
-      }
-    }
-
-    // Prüfe ob zwei Module in derselben Spalte vertikal verbunden sind
-    hasVerticalConnection(x, y1, y2) {
-      const minY = Math.min(y1, y2);
-      const maxY = Math.max(y1, y2);
-      
-      // Prüfe alle Reihen zwischen y1 und y2
-      for (let y = minY + 1; y < maxY; y++) {
-        // Wenn eine leere Reihe dazwischen ist, keine Verbindung
-        if (!this.selection[y]?.[x]) {
-          return false;
-        }
-      }
-      
-      return true;
-    }
-
-    // Flood-fill Algorithmus für Cluster-Erkennung
-    floodFillCluster(x, y, visited, cluster) {
-      if (y < 0 || y >= this.rows || x < 0 || x >= this.cols) return;
-      if (visited[y][x] || !this.selection[y]?.[x]) return;
-
-      visited[y][x] = true;
-      cluster.push({ x, y });
-
-      // Rekursiv alle 4 Richtungen prüfen (horizontal und vertikal verbunden)
-      this.floodFillCluster(x + 1, y, visited, cluster);
-      this.floodFillCluster(x - 1, y, visited, cluster);
-      this.floodFillCluster(x, y + 1, visited, cluster);
-      this.floodFillCluster(x, y - 1, visited, cluster);
-    }
-
-    // Berechne Erdungsbandlength für einen Cluster
-    calculateErdungsbandLength(cluster, moduleHeight, gap) {
-      if (cluster.length === 0) return 0;
-
-      // Analysiere Cluster dynamisch
-      return this.analyzeClusterAndCalculateLength(cluster, moduleHeight, gap);
-    }
-
-    // Analysiere Cluster und berechne Länge dynamisch
-    analyzeClusterAndCalculateLength(cluster, moduleHeight, gap) {
-      // Finde alle vertikalen Spalten im Cluster
-      const columns = this.findColumnsInCluster(cluster);
-      
-      // Berechne Erdungsbandlength basierend auf Cluster-Struktur
-      return this.calculateLengthForColumns(columns, moduleHeight, gap);
-    }
-
-    // Finde alle vertikalen Spalten in einem Cluster
-    findColumnsInCluster(cluster) {
-      const columns = [];
-      const columnMap = new Map();
-
-      // Gruppiere Module nach Spalten
-      for (const module of cluster) {
-        const x = module.x;
-        if (!columnMap.has(x)) {
-          columnMap.set(x, []);
-        }
-        columnMap.get(x).push(module);
-      }
-
-      // Erstelle Spalten-Objekte
-      for (const [x, modules] of columnMap) {
-        const yValues = modules.map(m => m.y).sort((a, b) => a - b);
-        const height = yValues[yValues.length - 1] - yValues[0] + 1;
-        
-        columns.push({
-          x: x,
-          height: height,
-          modules: modules,
-          yValues: yValues
-        });
-      }
-
-      return columns.sort((a, b) => a.x - b.x);
-    }
-
-    // Berechne Länge basierend auf Spalten-Struktur mit horizontaler Sicherung
-    calculateLengthForColumns(columns, moduleHeight, gap) {
-      if (columns.length === 0) return 0;
-
-      // Einzelne Spalte
-      if (columns.length === 1) {
-        const column = columns[0];
-        return column.height * moduleHeight + (column.height - 1) * gap;
-      }
-
-      // Mehrere Spalten: Berücksichtige horizontale Sicherung
-      return this.calculateOptimizedLengthForMultipleColumns(columns, moduleHeight, gap);
-    }
-
-    // Berechne optimierte Länge für mehrere Spalten
-    calculateOptimizedLengthForMultipleColumns(columns, moduleHeight, gap) {
-      // Finde horizontale Reihen mit Modulen
-      const rows = this.findRowsWithModules(columns);
-      
-      // Berechne minimale Erdungsbandlength
-      let totalLength = 0;
-      
-      // Jede Spalte braucht mindestens ein Erdungsband
-      for (const column of columns) {
-        const columnLength = column.height * moduleHeight + (column.height - 1) * gap;
-        totalLength += columnLength;
-      }
-      
-      // Reduziere Länge für Module die horizontal gesichert sind
-      const horizontalReduction = this.calculateHorizontalReduction(columns, rows, moduleHeight, gap);
-      totalLength -= horizontalReduction;
-      
-      return Math.max(totalLength, 0);
-    }
-
-    // Finde Reihen mit Modulen
-    findRowsWithModules(columns) {
-      const rows = new Set();
-      for (const column of columns) {
-        for (const module of column.modules) {
-          rows.add(module.y);
-        }
-      }
-      return Array.from(rows).sort((a, b) => a - b);
-    }
-
-    // Berechne Reduktion durch horizontale Sicherung
-    calculateHorizontalReduction(columns, rows, moduleHeight, gap) {
-      let reduction = 0;
-      
-      for (const row of rows) {
-        const modulesInRow = [];
-        for (const column of columns) {
-          const moduleInRow = column.modules.find(m => m.y === row);
-          if (moduleInRow) {
-            modulesInRow.push(moduleInRow);
-          }
+      while (checkX >= 0) {
+        // Schritt 3: Hat das Feld links ein Modul?
+        if (!this.selection[y]?.[checkX]) {
+          // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
+          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
         }
         
-        // Wenn mehrere Module in einer Reihe, reduziere Länge
-        if (modulesInRow.length > 1) {
-          reduction += (modulesInRow.length - 1) * moduleHeight;
+        // Schritt 4: Hat das linke Feld ein Modul darunter?
+        if (y + 1 >= this.rows || !this.selection[y + 1]?.[checkX]) {
+          // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
+          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+        }
+        
+        // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
+        const leftUpper = erdungsbandMatrix[y]?.[checkX];
+        const leftLower = erdungsbandMatrix[y + 1]?.[checkX];
+        
+        if (!leftUpper && !leftLower) {
+          // Keine Erdungsbandlength → Weiter nach links
+          checkX--;
+          continue;
+        } else if (leftUpper && !leftLower) {
+          // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
+          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+        } else {
+          // Beide haben Erdungsbandlength → Nichts tun
+          return 0;
         }
       }
       
-      return reduction;
+      // Keine Module mehr links → Erdungsbandlength für aktuelles Feld + Feld darunter
+      return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+    }
+
+    // Weise Erdungsbandlength zu
+    assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap) {
+      // Markiere beide Felder als "hat Erdungsbandlength"
+      erdungsbandMatrix[y][x] = true;
+      erdungsbandMatrix[y + 1][x] = true;
+      
+      // Berechne Erdungsbandlength: 2 × Modul-Höhe + Gap
+      return 2 * moduleHeight + gap;
     }
 
 
