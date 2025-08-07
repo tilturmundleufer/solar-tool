@@ -5825,34 +5825,37 @@
     }
 
     renderConfigList() {
-      // Verwende das normale CSS-Design ohne Inline-Styles
+      // Verwende das gleiche HTML-Design wie updateConfigList()
       this.configListEl.innerHTML = '';
       
       this.configs.forEach((cfg, idx) => {
         const div = document.createElement('div');
         div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
         
+        const totalPrice = this.calculateConfigPrice(cfg);
+        
         div.innerHTML = `
-          <div class="config-item-content">
-            <div class="config-item-info">
-              <span class="config-item-name">${cfg.name}</span>
-              <span class="config-item-price">${this.calculateConfigPrice(cfg).toFixed(2)}€</span>
-            </div>
-            <div class="config-item-actions">
-              <button class="icon-btn" title="Namen bearbeiten" onclick="event.stopPropagation(); this.solarGrid.editConfigNameInList(${idx});">
-                <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
-              </button>
-              ${this.configs.length > 1 ? `<button class="icon-btn delete" title="Löschen" onclick="event.stopPropagation(); this.solarGrid.deleteConfigFromList(${idx});">
-                <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986121f0519d394183f_Delete.png" alt="Löschen" style="width: 16px; height: 16px;">
-              </button>` : ''}
-            </div>
+          <div class="config-item-info">
+            <div class="config-item-name">${cfg.name || `Konfiguration #${idx + 1}`}</div>
+            <div class="config-item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+          </div>
+          <div class="config-item-actions">
+            <button class="icon-btn" onclick="solarGrid.editConfigNameInList(${idx})" title="Bearbeiten">
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
+            </button>
+            <button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${idx})" title="Löschen">
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936c5481f2a4db850a01f5_Trashbin.png" alt="Löschen" style="width: 16px; height: 16px;">
+            </button>
             <div class="config-item-arrow">
-              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Details" style="width: 16px; height: 16px;">
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 10px; height: 16px;">
             </div>
           </div>
         `;
         
-        div.addEventListener('click', () => {
+        div.addEventListener('click', (e) => {
+          // Verhindere Klick wenn auf Action-Button geklickt wurde
+          if (e.target.closest('.config-item-actions')) return;
+          
           // Auto-Save der aktuellen Konfiguration vor dem Wechsel
           if (this.currentConfig !== null && this.currentConfig !== idx) {
             this.updateConfig();
