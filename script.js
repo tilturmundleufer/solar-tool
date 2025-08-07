@@ -4878,7 +4878,7 @@
           
           // Spezielle Behandlung für Erdungsband: Zeige Länge statt Anzahl
           let itemDetails = `(${v})`;
-          let itemVE = `(${VE[k]}) Stück`;
+          let itemVE = `${VE[k]} Stück`;
           if (k === 'Erdungsband' && this.erdungsbandtotal) {
             itemDetails = `(${this.erdungsbandtotal} cm)`;
             itemVE = `600 cm`;
