@@ -5414,6 +5414,13 @@
 			// Detail-Ansicht aktualisieren wenn aktiv
 			this.updateDetailView();
 		}
+		
+		// Funktion um die erste Konfiguration mit der globalen Orientation zu aktualisieren
+		updateFirstConfigOrientation(globalOrientation) {
+			if (this.configs.length > 0) {
+				this.configs[0].orientation = globalOrientation;
+			}
+		}
     
     		showToast(message = 'Gespeichert', duration = 1500) {
   		const toast = document.getElementById('toast');
@@ -5968,12 +5975,7 @@
     				this.hIn.value = data.cellHeight;
     			}
     			
-    			// Lade die erste Konfiguration OHNE Orientation zu überschreiben
-    			if (this.configs.length > 0) {
-    				this.loadFirstConfigFromCache();
-    			}
-    			
-    			// Lade Orientierung NACH dem Laden der Konfiguration
+    			// Lade Orientierung VOR dem Laden der Konfiguration
 			if (this.orH && this.orV && typeof data.orientation === 'string') {
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
@@ -5985,7 +5987,15 @@
 					orientHBtn.classList.toggle('active', data.orientation === 'horizontal');
 					orientVBtn.classList.toggle('active', data.orientation === 'vertical');
 				}
+				
+				// Aktualisiere die erste Konfiguration mit der globalen Orientation
+				this.updateFirstConfigOrientation(data.orientation);
 			}
+    			
+    			// Lade die erste Konfiguration
+    			if (this.configs.length > 0) {
+    				this.loadFirstConfigFromCache();
+    			}
     			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
