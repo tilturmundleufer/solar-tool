@@ -2996,6 +2996,16 @@
       this.configListEl  = document.getElementById('config-list');
       this.resetBtn      = document.getElementById('reset-btn');
       this.continueLaterBtn = document.getElementById('continue-later-btn');
+      this.moduleSelect = document.getElementById('module-select');
+      
+      // Modul-Daten
+      this.moduleData = {
+        'ulica-500': { name: 'Ulica Solar Black Jade-Flow 500 W', width: 182, height: 118 },
+        'ulica-450': { name: 'Ulica Solar Black Jade-Flow 450 W', width: 175, height: 115 },
+        'variant-3': { name: 'Modul Variante 3', width: 168, height: 120 },
+        'variant-4': { name: 'Modul Variante 4', width: 185, height: 110 },
+        'variant-5': { name: 'Modul Variante 5', width: 172, height: 125 }
+      };
 
       this.selection     = [];
       this.configs       = [];
@@ -4586,6 +4596,12 @@
 				el.addEventListener('change', this.handleInputChange.bind(this));
 			});
 			
+			// Modul-Auswahl-Event-Listener
+			if (this.moduleSelect) {
+				this.moduleSelect.removeEventListener('change', this.handleModuleSelectChange);
+				this.moduleSelect.addEventListener('change', this.handleModuleSelectChange.bind(this));
+			}
+			
 			// Orientation-Event-Listener
 			if (this.orH && this.orV) {
 				[this.orH, this.orV].forEach(el => {
@@ -4645,6 +4661,28 @@
 		}
 		
 		// Event-Handler-Funktionen
+		handleModuleSelectChange() {
+			this.trackInteraction();
+			const selectedValue = this.moduleSelect.value;
+			
+			if (selectedValue === '' || selectedValue === 'custom') {
+				// Kein Modul ausgewählt oder Benutzerdefiniert - Inputs freigeben
+				this.enableInputs();
+				this.updateSize();
+				this.buildList();
+				this.updateSummaryOnChange();
+			} else if (this.moduleData[selectedValue]) {
+				// Modul ausgewählt - Werte setzen und Inputs sperren
+				const module = this.moduleData[selectedValue];
+				this.wIn.value = module.width;
+				this.hIn.value = module.height;
+				this.disableInputs();
+				this.updateSize();
+				this.buildList();
+				this.updateSummaryOnChange();
+			}
+		}
+		
 		handleInputChange() {
 			this.trackInteraction();
 			this.updateSize();
@@ -4704,6 +4742,33 @@
 			this.buildGrid();
 			this.buildList();
 			this.updateSummaryOnChange();
+		}
+		
+		// Input-Sperr-Funktionen
+		disableInputs() {
+			if (this.wIn) {
+				this.wIn.disabled = true;
+				this.wIn.style.backgroundColor = '#f0f0f0';
+				this.wIn.style.cursor = 'not-allowed';
+			}
+			if (this.hIn) {
+				this.hIn.disabled = true;
+				this.hIn.style.backgroundColor = '#f0f0f0';
+				this.hIn.style.cursor = 'not-allowed';
+			}
+		}
+		
+		enableInputs() {
+			if (this.wIn) {
+				this.wIn.disabled = false;
+				this.wIn.style.backgroundColor = '';
+				this.wIn.style.cursor = '';
+			}
+			if (this.hIn) {
+				this.hIn.disabled = false;
+				this.hIn.style.backgroundColor = '';
+				this.hIn.style.cursor = '';
+			}
 		}
 
     updateSaveButtons() {
