@@ -4264,6 +4264,18 @@
 				// Zusatzprodukte werden nicht mehr berücksichtigt
 			});
 			
+			// Module nur hinzufügen wenn Checkbox aktiviert ist
+			const includeModules = document.getElementById('include-modules')?.checked || false;
+			const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+			
+			if (!includeModules) {
+				delete parts.Solarmodul;
+			}
+			
+			if (!ulicaModule) {
+				delete parts.UlicaSolarBlackJadeFlow;
+			}
+			
 			let totalPrice = 0;
 			
 			Object.entries(parts).forEach(([partName, quantity]) => {
@@ -5921,9 +5933,19 @@
       		this.generateContinueLink();
     		});
 
+    		// Preis berechnen und anzeigen
+    		const price = this.calculateConfigPrice(cfg);
+    		const priceEl = document.createElement('span');
+    		priceEl.textContent = `${price.toFixed(2)}€`;
+    		priceEl.style.color = '#000';
+    		priceEl.style.fontWeight = '500';
+    		priceEl.style.marginLeft = 'auto';
+    		priceEl.style.marginRight = '0.5rem';
+
     		nameContainer.appendChild(nameEl);
     		nameContainer.appendChild(editBtn);
     		div.appendChild(nameContainer);
+    		div.appendChild(priceEl);
     		if (deleteBtn) div.appendChild(deleteBtn); // Nur hinzufügen wenn vorhanden
     		div.appendChild(shareBtn);
     		fragment.appendChild(div);
@@ -6625,7 +6647,7 @@
         
         // Hole Daten - für aktuelle Config verwende Live-Daten
         let targetSelection, targetCols, targetRows, targetOrientation;
-        let targetIncM, targetMc4, targetCable, targetWood, targetQuetschkabelschuhe, targetCellWidth, targetCellHeight;
+        let targetIncM, targetMc4, targetCable, targetWood, targetQuetschkabelschuhe, targetErdungsband, targetUlicaModule, targetCellWidth, targetCellHeight;
         
         if (index === this.currentConfig) {
           // Aktuelle Konfiguration: MOMENTAUFNAHME der Live-Daten
