@@ -1792,7 +1792,10 @@
     }
 
     parseInput(input) {
+      console.log('Parsing input:', input);
       const config = {};
+      
+      try {
 
       // Grid-Größe parsen
       const gridMatch = input.match(this.patterns.gridSize);
@@ -2150,6 +2153,10 @@
       }
 
       return config;
+      } catch (error) {
+        console.error('Error parsing input:', input, error);
+        return {};
+      }
     }
 
     calculateOptimalGrid(moduleCount) {
@@ -4269,19 +4276,21 @@
 		}
 		
 		initSmartConfigFeatures() {
+			console.log('Initializing Smart Config Features...');
 			this.smartParser = new SmartConfigParser(this);
 			this.bulkSelector = new BulkSelector(this);
 			this.bulkSelector.initializeBulkSelection();
 			
-			// Quick Config Event Listeners
-			this.initQuickConfigInterface();
-			
 			// Stelle sicher, dass Smart Config und Tipps permanent sichtbar sind
 			this.ensurePermanentVisibility();
 			
-			// Initialisiere zusätzliche Features (aber deaktiviert für permanente Sichtbarkeit)
-			this.checkAndHideHelp();
+			// Initialisiere Smart Config Close Button
 			this.initSmartConfigCloseButton();
+			
+			// Initialisiere Quick Config Interface mit verbesserter Fehlerbehandlung
+			this.initQuickConfigInterface();
+			
+			console.log('Smart Config Features initialized');
 		}
 		
 		ensurePermanentVisibility() {
@@ -4337,108 +4346,133 @@
 
 
 		initQuickConfigInterface() {
-			// Warte kurz, damit das DOM vollständig geladen ist
-			setTimeout(() => {
+			// Verbesserte Initialisierung mit mehreren Versuchen
+			const initSmartConfig = () => {
 				const quickInput = document.getElementById('quick-config-input');
-				const applyButton = document.getElementById('apply-quick-config');
 				
-				if (quickInput && applyButton) {
-					applyButton.addEventListener('click', () => {
-						const input = quickInput.value.trim();
-						if (input) {
-							try {
-								// Clear preview timeout when applying configuration
-								if (this.previewTimeout) {
-									clearTimeout(this.previewTimeout);
-									this.previewTimeout = null;
-								}
-								
-								const config = this.smartParser.parseInput(input);
+				if (!quickInput) {
+					console.warn('Smart Config Input Element nicht gefunden, versuche erneut...');
+					setTimeout(initSmartConfig, 100);
+					return;
+				}
+				
+				console.log('Smart Config Interface initialisiert (ohne Button)');
+				
+				// Entferne bestehende Event-Listener (falls vorhanden)
+				const newQuickInput = quickInput.cloneNode(true);
+				quickInput.parentNode.replaceChild(newQuickInput, quickInput);
+				
+				// Automatische Anwendung der Konfiguration
+				const applyConfiguration = (input) => {
+					if (input && input.trim()) {
+						try {
+							console.log('Smart Config Input:', input);
+							
+							// Clear preview timeout when applying configuration
+							if (this.previewTimeout) {
+								clearTimeout(this.previewTimeout);
+								this.previewTimeout = null;
+							}
+							
+							const config = this.smartParser.parseInput(input);
+							console.log('Parsed config:', config);
+							
+							if (Object.keys(config).length > 0) {
 								this.smartParser.applyPreviewToMainGrid(config);
-								quickInput.value = ''; // Input leeren
-							} catch (error) {
-								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
+								newQuickInput.value = ''; // Input leeren
+								this.showToast('✅ Konfiguration angewendet', 1500);
+							} else {
+								this.showToast('⚠️ Keine gültige Konfiguration erkannt', 2000);
 							}
+						} catch (error) {
+							console.error('Smart Config Error:', error);
+							this.showToast(`❌ Fehler: ${error.message}`, 3000);
 						}
-					});
-					
-					// Enter-Taste Support
-					quickInput.addEventListener('keypress', (e) => {
-						if (e.key === 'Enter') {
-							applyButton.click();
+					}
+				};
+				
+				// Enter-Taste Support - automatische Anwendung
+				newQuickInput.addEventListener('keypress', (e) => {
+					if (e.key === 'Enter') {
+						e.preventDefault();
+						applyConfiguration(newQuickInput.value);
+					}
+				});
+				
+				// Feld verlassen (blur) Support - automatische Anwendung
+				newQuickInput.addEventListener('blur', () => {
+					setTimeout(() => {
+						const input = newQuickInput.value.trim();
+						if (input) {
+							applyConfiguration(input);
 						}
-					});
+					}, 100); // Kurze Verzögerung für bessere UX
+				});
+				
+				// Live-Grid-Preview bei jedem Tastendruck
+				newQuickInput.addEventListener('input', (e) => {
+					const input = e.target.value.trim();
 					
-					// Feld verlassen (blur) Support - mit Verzögerung
-					quickInput.addEventListener('blur', () => {
-						setTimeout(() => {
-							const input = quickInput.value.trim();
-							if (input) {
-								try {
-									// Clear preview timeout when applying configuration
-									if (this.previewTimeout) {
-										clearTimeout(this.previewTimeout);
-										this.previewTimeout = null;
-									}
-									
-									const config = this.smartParser.parseInput(input);
-									this.smartParser.applyPreviewToMainGrid(config);
-									quickInput.value = ''; // Input leeren
-								} catch (error) {
-									this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
-								}
-							}
-						}, 100); // Kurze Verzögerung für bessere UX
-					});
+					// Clear previous timeout
+					if (this.previewTimeout) {
+						clearTimeout(this.previewTimeout);
+						this.previewTimeout = null;
+					}
 					
-					// Live-Grid-Preview bei jedem Tastendruck
-					quickInput.addEventListener('input', (e) => {
-						const input = e.target.value.trim();
-						
-						// Clear previous timeout
-						if (this.previewTimeout) {
-							clearTimeout(this.previewTimeout);
-							this.previewTimeout = null;
-						}
-						
-						// Update input validation status
-						this.updateInputValidation(quickInput, input);
-						
-						if (input.length > 0) {
-							try {
-								const config = this.smartParser.parseInput(input);
+					// Update input validation status
+					this.updateInputValidation(newQuickInput, input);
+					
+					if (input.length > 0) {
+						try {
+							const config = this.smartParser.parseInput(input);
+							
+							// Zeige Preview für gültige Konfigurationen
+							if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig || config.action) {
+								this.showConfigPreview(config);
 								
-								// Zeige Preview für gültige Konfigurationen
-								if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig || config.action) {
-									this.showConfigPreview(config);
-									
-									// Preview nach 3 Sekunden automatisch löschen
-									const self = this;
-									this.previewTimeout = setTimeout(() => {
-										if (self && self.clearGridPreview) {
-											self.clearGridPreview();
+								// Automatische Anwendung nach 2 Sekunden Inaktivität
+								const self = this;
+								this.previewTimeout = setTimeout(() => {
+									if (self && self.clearGridPreview) {
+										// Automatisch anwenden wenn gültige Konfiguration
+										if (Object.keys(config).length > 0) {
+											self.smartParser.applyPreviewToMainGrid(config);
+											newQuickInput.value = ''; // Input leeren
+											self.showToast('✅ Konfiguration automatisch angewendet', 1500);
 										}
-									}, 3000);
-								} else {
-									// Keine gültige Konfiguration - Preview löschen
-									this.clearGridPreview();
-								}
-							} catch (error) {
-								// Bei Parsing-Fehler Preview löschen
+										self.clearGridPreview();
+									}
+								}, 2000); // Reduziert von 3 auf 2 Sekunden für bessere UX
+							} else {
+								// Keine gültige Konfiguration - Preview löschen
 								this.clearGridPreview();
 							}
-						} else {
-							// Input leer - Preview löschen
+						} catch (error) {
+							console.error('Smart Config Preview Error:', error);
+							// Bei Parsing-Fehler Preview löschen
 							this.clearGridPreview();
 						}
-					});
-					
-				} else {
-				}
+					} else {
+						// Input leer - Preview löschen
+						this.clearGridPreview();
+					}
+				});
 				
 				// Smart Config Help Dropdown Event-Handler initialisieren
 				this.initializeSmartConfigHelp();
-			}, 500);
+			};
+			
+			// Starte Initialisierung mit mehreren Versuchen
+			setTimeout(initSmartConfig, 100);
+			setTimeout(initSmartConfig, 500);
+			setTimeout(initSmartConfig, 1000);
+			
+			// Zusätzlicher Versuch nach DOMContentLoaded
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', () => {
+					setTimeout(initSmartConfig, 100);
+				});
+			}
 		}
 		
 		updateInputValidation(inputElement, input) {
@@ -4456,16 +4490,20 @@
 			setTimeout(() => {
 				try {
 					const config = this.smartParser.parseInput(input);
+					console.log('Input validation result:', config);
 					
 					// Prüfe ob gültige Konfiguration
 					if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig || config.action) {
 						inputElement.classList.remove('input-loading');
 						inputElement.classList.add('input-valid');
+						console.log('Input is valid');
 					} else {
 						inputElement.classList.remove('input-loading');
 						inputElement.classList.add('input-invalid');
+						console.log('Input is invalid');
 					}
 				} catch (error) {
+					console.error('Input validation error:', error);
 					inputElement.classList.remove('input-loading');
 					inputElement.classList.add('input-invalid');
 				}
@@ -4473,17 +4511,23 @@
 		}
 
 		showConfigPreview(config) {
+			console.log('Showing config preview:', config);
+			
 			// Grid-Preview für alle Konfigurationen die das Grid beeinflussen
 			if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
 				// this ist die SolarGrid Instanz selbst, also können wir direkt auf ihre Methoden zugreifen
 				if (this && typeof this.showGridPreview === 'function') {
-					this.showGridPreview(config);
+					try {
+						this.showGridPreview(config);
+						console.log('Grid preview shown successfully');
+					} catch (error) {
+						console.error('Error showing grid preview:', error);
+					}
 				} else {
-					console.error('showGridPreview not available!'); // Debug
-					
+					console.error('showGridPreview method not available!');
 				}
 			} else {
-		
+				console.log('No grid-affecting config found, skipping preview');
 			}
 		}
 		
@@ -6654,6 +6698,8 @@
     // ===== GRID PREVIEW METHODS =====
     
     showGridPreview(config) {
+      console.log('showGridPreview called with config:', config);
+      
       // Speichere aktuellen Zustand für späteres Zurücksetzen (immer, nicht nur beim ersten Mal)
       this.originalPreviewState = {
         selection: this.selection ? this.selection.map(row => [...row]) : null,
@@ -6664,28 +6710,42 @@
         cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10)
       };
       
-      // Erstelle Preview-Grid
-      this.createPreviewGrid(config);
+      console.log('Original state saved:', this.originalPreviewState);
       
-      // Smooth Animation: Verstecke Hauptgrid und zeige Preview-Grid
-      this.hideMainGrid();
-      this.showPreviewGrid();
-      
-      // Füge Animation-Klassen hinzu
-      const mainGrid = document.getElementById('grid');
-      const previewGrid = document.getElementById('preview-grid');
-      
-      if (mainGrid) mainGrid.classList.add('grid-fade-out');
-      if (previewGrid) previewGrid.classList.add('grid-fade-in');
+      try {
+        // Erstelle Preview-Grid
+        this.createPreviewGrid(config);
+        
+        // Smooth Animation: Verstecke Hauptgrid und zeige Preview-Grid
+        this.hideMainGrid();
+        this.showPreviewGrid();
+        
+        // Füge Animation-Klassen hinzu
+        const mainGrid = document.getElementById('grid');
+        const previewGrid = document.getElementById('preview-grid');
+        
+        if (mainGrid) mainGrid.classList.add('grid-fade-out');
+        if (previewGrid) previewGrid.classList.add('grid-fade-in');
+        
+        console.log('Grid preview shown successfully');
+      } catch (error) {
+        console.error('Error in showGridPreview:', error);
+        // Fallback: Zeige Hauptgrid wieder an
+        this.showMainGrid();
+      }
     }
     
     createPreviewGrid(config) {
+      console.log('createPreviewGrid called with config:', config);
+      
       const previewGrid = document.getElementById('preview-grid');
       
       if (!previewGrid) {
         console.error('Preview grid element not found');
         return;
       }
+      
+      console.log('Preview grid element found, building preview...');
       
       // Starte mit aktuellem Grid als Basis
       let previewCols = this.cols;
@@ -6905,6 +6965,8 @@
     }
     
     clearGridPreview() {
+      console.log('Clearing grid preview');
+      
       // Smooth Animation: Entferne Animation-Klassen
       const mainGrid = document.getElementById('grid');
       const previewGrid = document.getElementById('preview-grid');
@@ -6943,6 +7005,7 @@
           
           // Gespeicherten Zustand löschen
           this.originalPreviewState = null;
+          console.log('Grid preview cleared and original state restored');
         }
         
         // Sicherheitscheck: Stelle sicher, dass das Grid sichtbar ist
