@@ -3607,11 +3607,11 @@
 				});
 			}
 			
-			// Später weitermachen
+			// Alle Konfigurationen zurücksetzen
 			const continueLaterBtn = document.getElementById('continue-later-btn');
 			if (continueLaterBtn) {
 				continueLaterBtn.addEventListener('click', () => {
-					this.generateContinueLink();
+					this.resetAllConfigurations();
 				});
 			}
 			
@@ -4571,30 +4571,10 @@
   		this.buildGrid();
   		this.buildList();
   		this.updateSaveButtons();
-  		
-  		// Event-Listener für Grid-Interaktionen setzen
-  		this.setupGridEventListeners();
 		}
 		
 		// Neue Funktion für Grid-Event-Listener
-		setupGridEventListeners() {
-			// Grid-Zellen Event-Listener
-			const cells = this.gridEl.querySelectorAll('.grid-cell');
-			cells.forEach((cell, index) => {
-				const x = index % this.cols;
-				const y = Math.floor(index / this.cols);
-				
-				// Entferne alte Event-Listener
-				cell.removeEventListener('click', this.handleCellClick);
-				cell.removeEventListener('mouseenter', this.handleCellMouseEnter);
-				cell.removeEventListener('mouseleave', this.handleCellMouseLeave);
-				
-				// Füge neue Event-Listener hinzu
-				cell.addEventListener('click', this.handleCellClick.bind(this, x, y));
-				cell.addEventListener('mouseenter', this.handleCellMouseEnter.bind(this, x, y));
-				cell.addEventListener('mouseleave', this.handleCellMouseLeave.bind(this, x, y));
-			});
-		}
+
 		
 		// Neue Funktion für alle Event-Listener
 		setupAllEventListeners() {
@@ -5720,22 +5700,66 @@
 			parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
 		}
 
-    generateContinueLink() {
-    	// Auto-Save der aktuellen Konfiguration vor dem Link-Erstellen
-    	if (this.currentConfig !== null) {
-    		this.updateConfig();
+    resetAllConfigurations() {
+    	// Bestätigungsabfrage
+    	if (!confirm('Möchten Sie wirklich alle Konfigurationen löschen und von vorne anfangen?')) {
+    		return;
     	}
     	
-    	// Speichere alle Konfigurationen und Einstellungen im Cache
-    	this.saveToCache();
+    	// Cache löschen
+    	this.cacheManager.clearCache();
     	
-    	// Erstelle Link mit allen Konfigurationen (als Backup)
-    	const allConfigsData = JSON.stringify(this.configs);
-			const base64 = btoa(encodeURIComponent(allConfigsData));
-			const continueUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
-			
-			navigator.clipboard.writeText(continueUrl);
-			this.showToast('Später-weitermachen Link kopiert', 2000);
+    	// Alle Konfigurationen löschen
+    	this.configs = [];
+    	this.currentConfig = null;
+    	
+    	// Grid auf Default zurücksetzen
+    	this.cols = this.default.cols;
+    	this.rows = this.default.rows;
+    	this.selection = Array.from({ length: this.rows }, () =>
+    		Array.from({ length: this.cols }, () => false)
+    	);
+    	
+    	// Input-Felder auf Default zurücksetzen
+    	if (this.wIn) this.wIn.value = this.default.width;
+    	if (this.hIn) this.hIn.value = this.default.height;
+    	
+    	// Orientation auf Default zurücksetzen
+    	if (this.orH && this.orV) {
+    		this.orH.checked = true;
+    		this.orV.checked = false;
+    	}
+    	
+    	// Checkboxen auf Default zurücksetzen
+    	if (this.incM) this.incM.checked = true; // Module standardmäßig aktiviert
+    	if (this.mc4) this.mc4.checked = false;
+    	if (this.solarkabel) this.solarkabel.checked = false;
+    	if (this.holz) this.holz.checked = false;
+    	if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
+    	if (this.erdungsband) this.erdungsband.checked = false;
+    	if (this.ulicaModule) this.ulicaModule.checked = false;
+    	
+    	// Neue Standard-Konfiguration erstellen
+    	const defaultConfig = this._makeConfigObject('Konfiguration #1');
+    	this.configs.push(defaultConfig);
+    	this.currentConfig = 0;
+    	
+    	// Grid und UI neu aufbauen
+    	this.setup();
+    	this.buildGrid();
+    	this.buildList();
+    	
+    	// UI aktualisieren
+    	this.updateConfigList();
+    	this.updateCurrentTotalPrice();
+    	this.updateOverviewTotalPrice();
+    	this.renderConfigList();
+    	this.updateSaveButtons();
+    	
+    	// Detail-Ansicht aktualisieren wenn aktiv
+    	this.updateDetailView();
+    	
+    	this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
     }
     
     // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
