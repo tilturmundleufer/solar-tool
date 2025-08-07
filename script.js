@@ -3738,8 +3738,13 @@
 				
 				// Module nur hinzufügen wenn Checkbox aktiviert ist
 				const includeModules = document.getElementById('include-modules')?.checked || false;
+				const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+				
 				if (!includeModules) {
 					delete parts.Solarmodul;
+				}
+				if (!ulicaModule) {
+					delete parts.UlicaSolarBlackJadeFlow;
 				}
 				
 				let totalPrice = 0;
@@ -4695,8 +4700,19 @@
 				this.buildList();
 				this.updateSummaryOnChange();
 				
-				// Dropdown-Interaktion mit Modul-Checkboxen deaktiviert
-				// this.clearModuleCheckboxes();
+				// Sichere Dropdown-Checkbox-Interaktion
+				if (selectedValue === 'ulica-500') {
+					// Ulica 500W ausgewählt - entsprechende Checkbox setzen
+					if (this.ulicaModule) this.ulicaModule.checked = true;
+					if (this.incM) this.incM.checked = false;
+				} else if (selectedValue === 'ulica-450') {
+					// Ulica 450W ausgewählt - entsprechende Checkbox setzen
+					if (this.incM) this.incM.checked = true;
+					if (this.ulicaModule) this.ulicaModule.checked = false;
+				} else {
+					// Andere Module - Checkboxen abwählen
+					this.clearModuleCheckboxes();
+				}
 			}
 		}
 		
@@ -4710,15 +4726,24 @@
 				if (this.ulicaModule) {
 					this.ulicaModule.checked = false;
 				}
+				// Dropdown auf ulica-450 setzen (sicher)
+				if (this.moduleSelect) {
+					this.moduleSelect.value = 'ulica-450';
+				}
 			} else if (checkboxId === 'ulica-module' && this.ulicaModule.checked) {
 				// ulica-module wurde ausgewählt - include-modules abwählen
 				if (this.incM) {
 					this.incM.checked = false;
 				}
+				// Dropdown auf ulica-500 setzen (sicher)
+				if (this.moduleSelect) {
+					this.moduleSelect.value = 'ulica-500';
+				}
 			}
 			
 			// Wichtig: Update der Produktliste nach Checkbox-Änderung
 			this.updateSummaryOnChange();
+			this.buildList(); // Zusätzlich: Produktliste neu aufbauen
 		}
 		
 		clearModuleCheckboxes() {
