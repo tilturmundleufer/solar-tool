@@ -1457,7 +1457,8 @@
 
         // Erdungsband hinzufügen wenn aktiviert
         if (config.erdungsband) {
-          parts.Erdungsband = this.calculateErdungsband();
+          // Verwende die SolarGrid-Instanz für Erdungsband-Berechnung
+          parts.Erdungsband = this.solarGrid.calculateErdungsband();
         } else {
           delete parts.Erdungsband;
         }
@@ -3736,6 +3737,10 @@
 		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
+				// Module nur hinzufügen wenn Checkbox aktiviert ist
+				const includeModules = document.getElementById('include-modules')?.checked || false;
+				const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+				
 				// Isolierte Berechnung nur für die aktuelle Konfiguration
 				const parts = this.calculatePartsDirectly({
 					selection: this.selection,
@@ -3743,12 +3748,9 @@
 					rows: this.rows,
 					cellWidth: parseInt(this.wIn?.value || '179'),
 					cellHeight: parseInt(this.hIn?.value || '113'),
-					orientation: this.orV?.checked ? 'vertical' : 'horizontal'
+					orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+					ulicaModule: ulicaModule
 				});
-				
-				// Module nur hinzufügen wenn Checkbox aktiviert ist
-				const includeModules = document.getElementById('include-modules')?.checked || false;
-				const ulicaModule = document.getElementById('ulica-module')?.checked || false;
 				
 				if (!includeModules) {
 					delete parts.Solarmodul;
@@ -6397,10 +6399,7 @@
 
     async addAllToCart() {
       try {
-      // Auto-Save der aktuellen Konfiguration vor dem Hinzufügen
-      if (this.currentConfig !== null) {
-        this.updateConfig();
-      }
+      // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
       
         // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
         const configSnapshot = this.createConfigSnapshot();
