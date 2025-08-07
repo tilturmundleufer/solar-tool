@@ -5772,9 +5772,12 @@
   		const cfg = this._makeConfigObject(customName);
   		this.configs.push(cfg);
   		
-  		// 5. Neue Konfiguration auswählen und Grid neu aufbauen
-  		this.currentConfig = this.configs.length - 1;
-  		this.setup(); // Baut Grid mit leerer Auswahl neu auf
+    		// 5. Neue Konfiguration auswählen und Grid neu aufbauen
+    		this.currentConfig = this.configs.length - 1;
+    		this.setup(); // Baut Grid mit leerer Auswahl neu auf
+
+    		// Direkt zur Detail-Ansicht der neuen Konfiguration wechseln
+    		this.showDetailView(this.currentConfig);
   		
   				this.renderConfigList();
 		this.updateConfigList(); // Config-Liste in Overview updaten
@@ -5919,11 +5922,9 @@
             this.updateConfig();
           }
           
-          // Nur laden wenn es eine andere Konfiguration ist
-          if (this.currentConfig !== idx) {
-            this.loadConfig(idx);
-            this.showToast('Konfiguration geladen', 1000);
-          }
+          // Wechsle immer in die Detail-Ansicht der gewählten Konfiguration
+          this.showDetailView(idx);
+          this.showToast('Konfiguration geladen', 1000);
         });
         
         this.configListEl.appendChild(div);
