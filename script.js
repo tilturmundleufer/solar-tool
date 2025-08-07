@@ -1207,34 +1207,33 @@
         tempContainer.style.zIndex = '-1000'; // Sicherstellen dass es nicht sichtbar wird
         document.body.appendChild(tempContainer);
 
-        // Erstelle Grid HTML mit verbesserter Orientation-Darstellung
+        // Erstelle Grid HTML mit modernem Design (an In-App Grid angelehnt)
         const isVertical = config.orientation === 'vertical';
-        
-        // Verwende Zellen-Größenverhältnis um Orientation zu zeigen
-        const baseCellSize = 40; // Reduzierte Grundgröße
-        const cellWidth = isVertical ? baseCellSize * 0.6 : baseCellSize; // Schmalere Zellen für vertikal
-        const cellHeight = isVertical ? baseCellSize : baseCellSize * 0.6; // Niedrigere Zellen für horizontal
-        const cellGap = 1; // Minimaler Abstand
-        
+        const baseCellSize = 58; // Kompakter und modern
+        const cellWidth = isVertical ? Math.round(baseCellSize * 0.62) : baseCellSize;
+        const cellHeight = isVertical ? baseCellSize : Math.round(baseCellSize * 0.62);
+        const cellGap = 2;
+
         // Berechne PDF-konforme Größe (max 170mm breit für PDF mit 20mm padding)
         const maxPDFWidth = 170; // mm
-        const totalGridWidth = cols * cellWidth + (cols - 1) * cellGap + 4; // +4 für padding
+        const totalGridWidth = cols * cellWidth + (cols - 1) * cellGap + 32; // +32 für 16px Padding links/rechts
         const scaleFactor = totalGridWidth > (maxPDFWidth * 3.78) ? (maxPDFWidth * 3.78) / totalGridWidth : 1; // 3.78 px per mm
-        
+
         const finalCellWidth = cellWidth * scaleFactor;
         const finalCellHeight = cellHeight * scaleFactor;
         const finalGap = cellGap * scaleFactor;
-        
+
         const gridEl = document.createElement('div');
         gridEl.style.display = 'grid';
         gridEl.style.gap = `${finalGap}px`;
         gridEl.style.gridTemplateColumns = `repeat(${cols}, ${finalCellWidth}px)`;
         gridEl.style.gridTemplateRows = `repeat(${rows}, ${finalCellHeight}px)`;
-        gridEl.style.padding = '2px';
-        gridEl.style.backgroundColor = '#ffffff';
-        gridEl.style.border = '1px solid #000000';
-        gridEl.style.borderRadius = '3px';
-        // CSS für scharfe Linien und pixelgenaue Darstellung
+        gridEl.style.padding = '16px';
+        gridEl.style.backgroundColor = '#f5f7fa';
+        gridEl.style.border = '1px solid #e5e7eb';
+        gridEl.style.borderRadius = '12px';
+        gridEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+        // CSS für scharfe Linien
         gridEl.style.imageRendering = 'crisp-edges';
         gridEl.style.imageRendering = '-webkit-optimize-contrast';
         gridEl.style.transform = 'translateZ(0)';
@@ -1248,22 +1247,48 @@
             // Verwende direkt die Snapshot-Selection (bereits normalisiert)
             const isSelected = selection[y] && selection[y][x] === true;
             
-            // Basis-Styles für alle Zellen mit ultra-scharfen Linien
+            // Basis-Styles für alle Zellen mit scharfen Linien
             cell.style.width = `${finalCellWidth}px`;
             cell.style.height = `${finalCellHeight}px`;
-            cell.style.borderRadius = '2px';
-            cell.style.border = '1px solid #000000'; // Stärkere Border für schärfere Linien
+            cell.style.borderRadius = '6px';
+            cell.style.border = '1px solid #d1d5db';
             cell.style.imageRendering = 'crisp-edges';
             cell.style.imageRendering = '-webkit-optimize-contrast';
             cell.style.transform = 'translateZ(0)';
             cell.style.backfaceVisibility = 'hidden';
-            
+
             if (isSelected) {
-              // Ausgewählte Zelle - Dunkelblaue Farbe
-              cell.style.backgroundColor = '#072544';
+              // Ausgewählte Zelle - modernes Solar-Panel-Design
+              cell.style.backgroundColor = '#0b0b0b';
+              cell.style.border = '2px solid #cccccc';
+              cell.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.25)';
+
+              const pattern = document.createElement('div');
+              pattern.style.width = '100%';
+              pattern.style.height = '100%';
+              pattern.style.background = `linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 40%),
+                linear-gradient(135deg, #0b0b0b 0%, #111111 50%, #0b0b0b 100%)`;
+              pattern.style.borderRadius = '4px';
+              pattern.style.position = 'relative';
+
+              const gridLines = document.createElement('div');
+              gridLines.style.position = 'absolute';
+              gridLines.style.top = '2px';
+              gridLines.style.left = '2px';
+              gridLines.style.right = '2px';
+              gridLines.style.bottom = '2px';
+              gridLines.style.backgroundImage = `
+                linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)
+              `;
+              gridLines.style.backgroundSize = '33% 50%';
+
+              pattern.appendChild(gridLines);
+              cell.appendChild(pattern);
             } else {
-              // Nicht-ausgewählte Zelle - hell-grau
+              // Unausgewählte Zelle - neutral
               cell.style.backgroundColor = '#f3f4f6';
+              cell.style.border = '1px solid #e5e7eb';
             }
             
             gridEl.appendChild(cell);
@@ -1277,8 +1302,8 @@
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Screenshot von temporärem Element (isoliert) mit großzügigem Padding
-        const paddingX = 20; // Großzügiges horizontales Padding
-        const paddingY = 20; // Großzügiges vertikales Padding
+        const paddingX = 32; // Entspricht 16px Padding links/rechts
+        const paddingY = 32; // Entspricht 16px Padding oben/unten
         const actualGridWidth = Math.ceil(cols * finalCellWidth + (cols - 1) * finalGap + paddingX);
         const actualGridHeight = Math.ceil(rows * finalCellHeight + (rows - 1) * finalGap + paddingY);
         
