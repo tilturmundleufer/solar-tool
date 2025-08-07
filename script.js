@@ -799,37 +799,28 @@
         totalCells: config.totalCells
       });
 
-      // NEUES DESIGN: Header mit dunkelblauem Hintergrund
-      pdf.setFillColor(14, 30, 52); // #0e1e34
-      pdf.rect(0, 0, pageWidth, 35, 'F');
-      
-      // Header Text
-      pdf.setTextColor(255, 255, 255);
+      // NEUES DESIGN: Header minimal, weißer Hintergrund mit Titel in dunkelblau
+      pdf.setTextColor(14, 30, 52);
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Ihre Konfiguration', 20, 22);
-      
-      // Datum rechts
+      pdf.text('Ihre Konfiguration', 20, 20);
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, 22);
-      
-      // Zurück zu schwarzem Text
+      pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, 20);
       pdf.setTextColor(0, 0, 0);
-      positionRef.y = 45;
+      positionRef.y = 28;
 
-      // Projekt-Info Sektion
-      checkPageBreak(25);
-      pdf.setFillColor(245, 166, 35); // #f5a623
-      pdf.rect(15, positionRef.y - 5, pageWidth - 30, 20, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(12);
+      // Projekt-Info Sektion: dezenter Container
+      checkPageBreak(20);
+      pdf.setDrawColor(229, 231, 235); // #e5e7eb
+      pdf.setLineWidth(0.5);
+      pdf.rect(15, positionRef.y - 4, pageWidth - 30, 14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 10);
-      
+      pdf.setFontSize(12);
+      pdf.setTextColor(14, 30, 52);
+      pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 6);
       pdf.setTextColor(0, 0, 0);
-      positionRef.y += 30;
+      positionRef.y += 22;
 
       // Grid-Informationen
       checkPageBreak(20);
@@ -848,13 +839,9 @@
           
           checkPageBreak(imgHeight + 15);
           
-          // Rahmen um das Bild - zentriert mit gleichem Abstand
-          pdf.setDrawColor(14, 30, 52);
-          pdf.setLineWidth(2);
+          // Bild zentriert ohne umlaufenden Rahmen einfügen (moderner Look)
           const centerX = (pageWidth - imgWidth) / 2;
           const centerY = positionRef.y;
-          pdf.rect(centerX - 2, centerY - 2, imgWidth + 4, imgHeight + 4);
-          
           pdf.addImage(gridImage, 'PNG', centerX, centerY, imgWidth, imgHeight);
           positionRef.y += imgHeight + 10;
         }
