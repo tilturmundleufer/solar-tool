@@ -1,6 +1,106 @@
 (function() {
   const ADD_TO_CART_DELAY = 400;
   
+  // Cache-Manager für 24h Persistierung
+  class CacheManager {
+    constructor() {
+      this.cacheKey = 'solarTool_continueCache';
+      this.cacheTimeout = 24 * 60 * 60 * 1000; // 24 Stunden
+      this.debounceTimeout = null;
+      this.debounceDelay = 500; // 500ms Delay für Performance
+    }
+    
+    // Prüfe ob localStorage verfügbar ist
+    isLocalStorageAvailable() {
+      try {
+        const test = '__localStorage_test__';
+        localStorage.setItem(test, test);
+        localStorage.removeItem(test);
+        return true;
+      } catch (e) {
+        console.warn('localStorage nicht verfügbar:', e);
+        return false;
+      }
+    }
+    
+    // Speichere Daten mit Debouncing
+    saveData(data) {
+      if (!this.isLocalStorageAvailable()) {
+        console.warn('localStorage nicht verfügbar - Cache wird nicht gespeichert');
+        return;
+      }
+      
+      // Debounce für Performance
+      if (this.debounceTimeout) {
+        clearTimeout(this.debounceTimeout);
+      }
+      
+      this.debounceTimeout = setTimeout(() => {
+        try {
+          const cacheData = {
+            ...data,
+            timestamp: Date.now(),
+            version: '1.0' // Für zukünftige Kompatibilität
+          };
+          
+          localStorage.setItem(this.cacheKey, JSON.stringify(cacheData));
+          console.log('Cache gespeichert:', new Date().toLocaleString());
+        } catch (error) {
+          console.error('Fehler beim Speichern des Caches:', error);
+        }
+      }, this.debounceDelay);
+    }
+    
+    // Lade Daten aus dem Cache
+    loadData() {
+      if (!this.isLocalStorageAvailable()) {
+        console.warn('localStorage nicht verfügbar - Cache wird nicht geladen');
+        return null;
+      }
+      
+      try {
+        const cachedData = localStorage.getItem(this.cacheKey);
+        if (!cachedData) {
+          console.log('Kein Cache gefunden');
+          return null;
+        }
+        
+        const data = JSON.parse(cachedData);
+        const cacheAge = Date.now() - data.timestamp;
+        
+        // Prüfe Cache-Alter
+        if (cacheAge > this.cacheTimeout) {
+          console.log('Cache ist abgelaufen (24h) - wird gelöscht');
+          this.clearCache();
+          return null;
+        }
+        
+        console.log('Cache geladen:', new Date().toLocaleString());
+        return data;
+      } catch (error) {
+        console.error('Fehler beim Laden des Caches:', error);
+        this.clearCache();
+        return null;
+      }
+    }
+    
+    // Lösche Cache
+    clearCache() {
+      try {
+        localStorage.removeItem(this.cacheKey);
+        console.log('Cache gelöscht');
+      } catch (error) {
+        console.error('Fehler beim Löschen des Caches:', error);
+      }
+    }
+    
+    // Prüfe Cache-Alter
+    isCacheValid() {
+      const data = this.loadData();
+      return data !== null;
+    }
+  }
+  
   // Zentrale Produkt-Konfiguration (direkt eingebettet)
   const VE = {
     Endklemmen: 100,
@@ -2935,6 +3035,9 @@
 
       // PDF Generator initialisieren
       this.pdfGenerator = new SolarPDFGenerator(this);
+      
+      // Cache Manager für 24h Persistierung
+      this.cacheManager = new CacheManager();
 
       this.init();
     }
@@ -5574,6 +5677,9 @@
           this.updateConfigList();
         }
         
+        // Automatisches Cache-Speichern bei jeder Änderung
+        this.saveToCache();
+        
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
       }, this.updateDelay);
@@ -5677,6 +5783,7 @@
     		const cacheData = {
     			configs: this.configs,
     			currentConfig: this.currentConfig,
+    			selection: this.selection, // Aktuelle Grid-Auswahl
     			// Aktuelle Grid-Einstellungen
     			cols: this.cols,
     			rows: this.rows,
@@ -5691,11 +5798,20 @@
     			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
     			erdungsband: this.erdungsband ? this.erdungsband.checked : false,
     			ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
-    			// Timestamp für Cache-Gültigkeit
-    			timestamp: Date.now()
+    			// Grid-Struktur
+    			gridStructure: {
+    				cols: this.cols,
+    				rows: this.rows,
+    				cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+    				cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10)
+    			}
     		};
     		
-    		localStorage.setItem('solarTool_continueCache', JSON.stringify(cacheData));
+    		// Verwende CacheManager für bessere Performance und Error Handling
+    		this.cacheManager.saveData(cacheData);
+    		
+    		// Zeige Auto-Save Indicator
+    		this.showAutoSaveIndicator();
     	} catch (error) {
     		console.error('Fehler beim Speichern des Caches:', error);
     	}
@@ -5704,16 +5820,16 @@
     // NEUE FUNKTION: Lade Konfigurationen aus dem Cache
     loadFromCache() {
     	try {
-    		const cachedData = localStorage.getItem('solarTool_continueCache');
-    		if (!cachedData) return false;
+    		// Verwende CacheManager für bessere Error Handling
+    		const data = this.cacheManager.loadData();
+    		if (!data) {
+    			console.log('Kein Cache gefunden oder Cache abgelaufen');
+    			return false;
+    		}
     		
-    		const data = JSON.parse(cachedData);
-    		const cacheAge = Date.now() - data.timestamp;
-    		const maxAge = 24 * 60 * 60 * 1000; // 24 Stunden
-    		
-    		// Prüfe ob Cache noch gültig ist
-    		if (cacheAge > maxAge) {
-    			localStorage.removeItem('solarTool_continueCache');
+    		// Prüfe localStorage Verfügbarkeit
+    		if (!this.cacheManager.isLocalStorageAvailable()) {
+    			this.showToast('Es wurde nichts im Speicher gefunden', 3000);
     			return false;
     		}
     		
@@ -5721,6 +5837,11 @@
     		if (data.configs && Array.isArray(data.configs)) {
     			this.configs = data.configs;
     			this.currentConfig = data.currentConfig;
+    			
+    			// Lade Grid-Auswahl
+    		if (data.selection && Array.isArray(data.selection)) {
+    			this.selection = data.selection;
+    		}
     			
     			// Lade Grid-Einstellungen
     			if (data.cols && data.rows) {
@@ -5759,7 +5880,7 @@
     				this.hIn.value = data.cellHeight;
     			}
     			
-    						// Lade Orientierung
+    			// Lade Orientierung
 			if (this.orH && this.orV && typeof data.orientation === 'string') {
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
@@ -5778,15 +5899,18 @@
     				this.loadConfig(0);
     			}
     			
-    			// Cache nach dem Laden leeren
-    			localStorage.removeItem('solarTool_continueCache');
+    			// Aktualisiere UI nach dem Laden
+    			this.updateConfigList();
+    			this.updateCurrentTotalPrice();
+    			this.updateOverviewTotalPrice();
     			
     			this.showToast('Konfiguration aus Cache geladen', 2000);
     			return true;
     		}
     	} catch (error) {
     		console.error('Fehler beim Laden des Caches:', error);
-    		localStorage.removeItem('solarTool_continueCache');
+    		this.cacheManager.clearCache();
+    		this.showToast('Datei im Speicher ist beschädigt und konnte nicht geladen werden!', 3000);
     	}
     	
     	return false;
