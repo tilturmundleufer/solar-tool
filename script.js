@@ -4694,12 +4694,16 @@
 							btn.removeEventListener('click', this.handleOrientationButtonClick);
 							btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
 						});
-						// Orientation Buttons sind bereits korrekt gesetzt
+						// Synchronisiere Orientation Buttons nach dem Setup
+						this.syncOrientationButtons();
 					}
 				}, 100);
 			}
 			
-			// Orientation Buttons werden direkt im Click-Handler gesetzt
+			// Synchronisiere Orientation Buttons nach dem Setup
+			setTimeout(() => {
+				this.syncOrientationButtons();
+			}, 200);
 		}
 		
 		// Event-Handler-Funktionen
@@ -4834,7 +4838,7 @@
 			if (this.orV) this.orV.checked = isVertical;
 			if (this.orH) this.orH.checked = !isVertical;
 			
-			// Dann die active Klassen setzen
+			// Dann die active Klassen setzen - SOFORT
 			orientHBtn.classList.remove('active');
 			orientVBtn.classList.remove('active');
 			e.target.classList.add('active');
@@ -5498,12 +5502,7 @@
 			this.orH.checked = !this.orV.checked;
 			
 			// Synchronisiere mit den Orientation Buttons
-			const orientHBtn = document.getElementById('orient-h');
-			const orientVBtn = document.getElementById('orient-v');
-			if (orientHBtn && orientVBtn) {
-				orientHBtn.classList.toggle('active', cfg.orientation === 'horizontal');
-				orientVBtn.classList.toggle('active', cfg.orientation === 'vertical');
-			}
+			this.syncOrientationButtons();
 			this.incM.checked = cfg.incM;
 			this.mc4.checked = cfg.mc4;
 			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
@@ -6040,12 +6039,7 @@
     	}
     	
     	// Orientation-Buttons visuell aktualisieren
-    	const orientHBtn = document.getElementById('orient-h');
-    	const orientVBtn = document.getElementById('orient-v');
-    	if (orientHBtn && orientVBtn) {
-    		orientHBtn.classList.add('active');
-    		orientVBtn.classList.remove('active');
-    	}
+    	this.syncOrientationButtons();
     	
     	// Checkboxen auf Default zurücksetzen (ALLE abwählen)
     	if (this.incM) this.incM.checked = false;
@@ -6066,10 +6060,7 @@
     	this.createNewConfig();
     	
     	// Orientation-Buttons nach createNewConfig() aktualisieren
-    	if (orientHBtn && orientVBtn) {
-    		orientHBtn.classList.toggle('active', this.orH.checked);
-    		orientVBtn.classList.toggle('active', this.orV.checked);
-    	}
+    	this.syncOrientationButtons();
     	
     	this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
     }
@@ -6195,18 +6186,8 @@
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
 				
-				// Synchronisiere mit den Orientation Buttons direkt
-				const orientHBtn = document.getElementById('orient-h');
-				const orientVBtn = document.getElementById('orient-v');
-				if (orientHBtn && orientVBtn) {
-					orientHBtn.classList.remove('active');
-					orientVBtn.classList.remove('active');
-					if (data.orientation === 'horizontal') {
-						orientHBtn.classList.add('active');
-					} else if (data.orientation === 'vertical') {
-						orientVBtn.classList.add('active');
-					}
-				}
+				// Synchronisiere mit den Orientation Buttons (robuster)
+				this.syncOrientationButtons();
 				
 				// Aktualisiere die erste Konfiguration mit der globalen Orientation
 				this.updateFirstConfigOrientation(data.orientation);
