@@ -29,6 +29,7 @@ const VE_VALUES = {
   Schiene_240_cm: 8,
   Schiene_360_cm: 8,
   Solarmodul: 1,
+  UlicaSolarBlackJadeFlow: 1,
   MC4_Stecker: 1,
   Solarkabel: 1,
   Holzunterleger: 50,  // NEU: VE von 50
@@ -44,7 +45,7 @@ function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientatio
   workerLog('WORKER DEBUG: calculateParts input:', {selection, rows, cols, cellWidth, cellHeight, orientation});
   
   const parts = {
-    Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+    Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
     Dachhaken: 0, Schrauben: 0, Endkappen: 0,
     Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Erdungsband: 0
   };
@@ -119,6 +120,7 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   parts.Dachhaken          += len > 1 ? len * 3 : 4;
   parts.Endkappen          += 4;  // Fix: Direkt 4 statt parts.Endklemmen
   parts.Solarmodul         += len;
+  parts.UlicaSolarBlackJadeFlow += len;
   // Schrauben basierend auf Dachhaken für diese Gruppe berechnen
   const dachhakenForGroup = len > 1 ? len * 3 : 4;
   parts.Schrauben          += dachhakenForGroup * 1; // M10x25: 1 pro Dachhaken (vorher 3)

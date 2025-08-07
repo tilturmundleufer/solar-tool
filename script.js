@@ -12,6 +12,7 @@
     Schiene_240_cm: 8,
     Schiene_360_cm: 8,
     Solarmodul: 1,
+    UlicaSolarBlackJadeFlow: 1,
     MC4_Stecker: 1,
     Solarkabel: 1,
     Holzunterleger: 50,
@@ -24,6 +25,7 @@
   
   const PRICE_MAP = {
     Solarmodul: 59.00,
+    UlicaSolarBlackJadeFlow: 89.00,
     Endklemmen: 9.99,
     Schrauben: 9.99,
     Dachhaken: 9.99,
@@ -44,6 +46,7 @@
   
   const PRODUCT_MAP = {
     Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
+    UlicaSolarBlackJadeFlow: { productId:'689455ed543f0cbb26ba54e9', variantId:'689455ed7d7ddfd326d5dbf9' },
     Endklemmen: { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
     Schrauben: { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
     Dachhaken: { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
@@ -64,6 +67,7 @@
   
   const PRODUCT_NAME_MAP = {
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
+    'UlicaSolarBlackJadeFlow': 'Ulica Solar Black Jade-Flow 500 W',
     'Schrauben': 'Schraube M10x25',
     'Solarkabel': 'Solarkabel 100M',
     'Holzunterleger': 'Unterlegholz für Dachhaken - 50 Stück',
@@ -76,6 +80,7 @@
   
   const PRODUCT_IMAGES = {
     Solarmodul: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    UlicaSolarBlackJadeFlow: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Endklemmen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c316b21cb7d04ba2ed22_DSC04815-min.jpg',
     Schrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg',
     Dachhaken: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c1c8a2835b7879f46811_DSC04760-min.jpg',
@@ -2865,6 +2870,7 @@
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
       this.quetschkabelschuhe = document.getElementById('quetschkabelschuhe');
+      this.erdungsband   = document.getElementById('erdungsband');
       
 
       this.listHolder    = document.querySelector('.product-section');
@@ -4852,6 +4858,7 @@
         
         const parts = await this.calculateParts();
       if (this.incM && !this.incM.checked) delete parts.Solarmodul;
+      if (this.ulicaModule && !this.ulicaModule.checked) delete parts.UlicaSolarBlackJadeFlow;
       // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       // Sie werden nur noch in der Overview berechnet
 
@@ -4944,6 +4951,8 @@
 		if (this.solarkabel) this.solarkabel.checked = false;
 		if (this.holz) this.holz.checked = false;
 		if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
+		if (this.erdungsband) this.erdungsband.checked = false;
+		if (this.ulicaModule) this.ulicaModule.checked = false;
 
   		this.cols = cols;
   		this.rows = rows;
@@ -4986,7 +4995,7 @@
     // Fallback synchrone Berechnung (ursprüngliche Methode)
     calculatePartsSync() {
   		const p = {
-    		Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+    		Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
     		Dachhaken: 0, Schrauben: 0, Endkappen: 0,
     		Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
     		Erdungsband: 0
@@ -5046,6 +5055,7 @@
       p.Dachhaken          += len > 1 ? len * 3 : 4;
       p.Endkappen          += 4; // Gleich wie Endklemmen
       p.Solarmodul         += len;
+      p.UlicaSolarBlackJadeFlow += len;
       p.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
       p.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
     }
@@ -5220,6 +5230,8 @@
 			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
 			this.holz.checked = cfg.holz;
 			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
+			this.erdungsband.checked = cfg.erdungsband || false; // Fallback für alte Konfigurationen
+			this.ulicaModule.checked = cfg.ulicaModule || false; // Fallback für alte Konfigurationen
 
 			// STATE Werte setzen - WICHTIG: Vor setup() setzen
 			this.cols = cfg.cols;
@@ -5367,6 +5379,8 @@
         solarkabel:  this.solarkabel && this.solarkabel.checked,
         holz:        this.holz && this.holz.checked,
         quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked,
+        erdungsband: this.erdungsband && this.erdungsband.checked,
+        ulicaModule: this.ulicaModule && this.ulicaModule.checked,
         cols:        this.cols,
         rows:        this.rows,
         cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
@@ -5647,6 +5661,8 @@
     			solarkabel: this.solarkabel ? this.solarkabel.checked : false,
     			holz: this.holz ? this.holz.checked : false,
     			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+    			erdungsband: this.erdungsband ? this.erdungsband.checked : false,
+    			ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
     			// Timestamp für Cache-Gültigkeit
     			timestamp: Date.now()
     		};
@@ -5699,6 +5715,12 @@
     			}
     			if (this.quetschkabelschuhe && typeof data.quetschkabelschuhe === 'boolean') {
     				this.quetschkabelschuhe.checked = data.quetschkabelschuhe;
+    			}
+    			if (this.erdungsband && typeof data.erdungsband === 'boolean') {
+    				this.erdungsband.checked = data.erdungsband;
+    			}
+    			if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
+    				this.ulicaModule.checked = data.ulicaModule;
     			}
     			
     			// Lade Grid-Dimensionen
@@ -5900,7 +5922,7 @@
 
     async addCurrentToCart() {
       try {
-        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked);
+        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband.checked, this.ulicaModule.checked);
       const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
       
       if (itemCount === 0) {
@@ -5950,15 +5972,15 @@
         const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
         // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
         if (idx === this.currentConfig) {
-              return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked);
-        } else {
-                              return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz, cfg.quetschkabelschuhe);
+                      return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband.checked, this.ulicaModule.checked);
+      } else {
+        return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz, cfg.quetschkabelschuhe, cfg.erdungsband, cfg.ulicaModule);
         }
         }));
       
       // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
       if (this.currentConfig === null && this.configs.length === 0) {
-            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked);
+            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband.checked, this.ulicaModule.checked);
             allBundles.push(currentParts);
       }
       
@@ -5994,7 +6016,7 @@
       }
     }
 
-    async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe) {
+    async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe, erdungsband, ulicaModule) {
       // Speichere aktuelle Auswahl
       const originalSelection = this.selection.map(r => [...r]);
       
@@ -6003,6 +6025,10 @@
       this.selection = sel;
         let parts = await this.calculateParts();
       if (!incM) delete parts.Solarmodul;
+      if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
+      if (erdungsband) {
+        parts.Erdungsband = this.calculateErdungsband();
+      }
       // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       // Sie werden nur noch in der Overview berechnet
       
@@ -6039,7 +6065,9 @@
         mc4: this.mc4.checked,
         cable: this.solarkabel.checked,
         wood: this.holz.checked,
-        quetschkabelschuhe: this.quetschkabelschuhe.checked
+        quetschkabelschuhe: this.quetschkabelschuhe.checked,
+        erdungsband: this.erdungsband.checked,
+        ulicaModule: this.ulicaModule.checked
       };
     }
 
@@ -6052,6 +6080,8 @@
         config.solarkabel = this.solarkabel.checked;
         config.holz = this.holz.checked;
         config.quetschkabelschuhe = this.quetschkabelschuhe.checked;
+        config.erdungsband = this.erdungsband.checked;
+        config.ulicaModule = this.ulicaModule.checked;
       });
       
       // Aktualisiere Summary und Produktliste
@@ -6095,6 +6125,8 @@
           targetCable = this.solarkabel.checked;
           targetWood = this.holz.checked;
           targetQuetschkabelschuhe = this.quetschkabelschuhe.checked;
+          targetErdungsband = this.erdungsband.checked;
+          targetUlicaModule = this.ulicaModule.checked;
           targetCellWidth = parseInt(this.wIn.value, 10);
           targetCellHeight = parseInt(this.hIn.value, 10);
         } else {
@@ -6108,6 +6140,8 @@
           targetCable = config.solarkabel;
           targetWood = config.holz;
           targetQuetschkabelschuhe = config.quetschkabelschuhe;
+          targetErdungsband = config.erdungsband;
+          targetUlicaModule = config.ulicaModule;
           targetCellWidth = config.cellWidth;
           targetCellHeight = config.cellHeight;
         }
@@ -6137,6 +6171,8 @@
           cable: targetCable || false,
           wood: targetWood || false,
           quetschkabelschuhe: targetQuetschkabelschuhe || false,
+          erdungsband: targetErdungsband || false,
+          ulicaModule: targetUlicaModule || false,
           // Zusätzliche Metadaten für Debugging
           selectedCells: normalizedSelection.flat().filter(v => v).length,
           totalCells: (targetCols || 5) * (targetRows || 5)
