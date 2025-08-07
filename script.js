@@ -1440,23 +1440,26 @@
 
         console.log('Parts calculated:', parts);
 
-        // Entferne Module wenn nicht ausgewählt
+        // Module nur hinzufügen wenn Checkbox aktiviert ist
         if (!config.includeModules) {
           delete parts.Solarmodul;
         }
-
-        // Füge optionale Komponenten hinzu wenn ausgewählt
-        if (config.mc4) {
-          const moduleCount = config.selectedCells;
-          parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+        
+        if (!config.ulicaModule) {
+          delete parts.UlicaSolarBlackJadeFlow;
         }
 
-        if (config.cable) {
-          parts.Solarkabel = 1;
-        }
+        // Zusatzprodukte basierend auf Checkboxen
+        if (!config.mc4) delete parts.MC4;
+        if (!config.cable) delete parts.Solarkabel;
+        if (!config.wood) delete parts.Holzunterleger;
+        if (!config.quetschkabelschuhe) delete parts.Quetschkabelschuhe;
 
-        if (config.wood) {
-          parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
+        // Erdungsband hinzufügen wenn aktiviert
+        if (config.erdungsband) {
+          parts.Erdungsband = this.calculateErdungsband();
+        } else {
+          delete parts.Erdungsband;
         }
 
         console.log('Final parts after processing:', parts);
@@ -5820,141 +5823,49 @@
     }
 
     renderConfigList() {
-  		// Performance: Verwende DocumentFragment für bessere Performance
-  		const fragment = document.createDocumentFragment();
-  		
-  		this.configs.forEach((cfg, idx) => {
-    		const div = document.createElement('div');
-    		div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
-    		div.style.display = 'flex';
-    		div.style.alignItems = 'center';
-    		div.style.justifyContent = 'space-between';
-    		div.style.gap = '0.5rem';
-    		div.style.padding = '0.75rem 1rem';
-    		div.style.backgroundColor = '#ff6b35';
-    		div.style.borderRadius = '8px';
-    		div.style.marginBottom = '0.5rem';
-    		div.style.cursor = 'pointer';
-    		div.style.transition = 'all 0.2s ease';
-
-    		const nameContainer = document.createElement('div');
-    		nameContainer.style.display = 'flex';
-    		nameContainer.style.alignItems = 'center';
-    		nameContainer.style.gap = '0.25rem';
-    		nameContainer.style.flex = '1';
-
-    		const nameEl = document.createElement('span');
-    		nameEl.textContent = cfg.name;
-    		nameEl.style.cursor = 'pointer';
-    		nameEl.style.color = '#000';
-    		nameEl.style.fontWeight = '500';
-
-    		nameEl.addEventListener('click', () => {
-  				// Auto-Save der aktuellen Konfiguration vor dem Wechsel
-  				if (this.currentConfig !== null && this.currentConfig !== idx) {
-    				this.updateConfig();
-  				}
-  				
-  				// Nur laden wenn es eine andere Konfiguration ist
-  				if (this.currentConfig !== idx) {
-  					this.loadConfig(idx);
-  					this.showToast('Konfiguration geladen', 1000);
-  				}
-				});
-
-    		const editBtn = document.createElement('button');
-    		editBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">';
-    		editBtn.title = 'Namen bearbeiten';
-    		Object.assign(editBtn.style, {
-      		border: 'none',
-      		background: 'none',
-      		cursor: 'pointer',
-      		padding: '0',
-      		marginLeft: '0.5rem',
-      		lineHeight: '1'
-    		});
-
-    		editBtn.addEventListener('click', e => {
-      		e.stopPropagation();
-      		const input = document.createElement('input');
-      		input.type = 'text';
-      		input.value = cfg.name;
-      		input.style.flex = '1';
-      		input.style.border = 'none';
-      		input.style.background = 'transparent';
-      		input.style.color = '#000';
-      		input.style.fontWeight = '500';
-      		input.style.outline = 'none';
-      		input.addEventListener('keydown', ev => {
-        		if (ev.key === 'Enter') {
-          		cfg.name = input.value.trim() || cfg.name;
-          		this.renderConfigList();
-        		}
-      		});
-      		input.addEventListener('blur', () => {
-        		cfg.name = input.value.trim() || cfg.name;
-        		this.renderConfigList();
-      		});
-      		nameContainer.replaceChild(input, nameEl);
-      		input.focus();
-    		});
-
-    		// Löschen-Button nur anzeigen wenn mehr als eine Konfiguration existiert
-    		let deleteBtn = null;
-    		if (this.configs.length > 1) {
-    			deleteBtn = document.createElement('button');
-    			deleteBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986121f0519d394183f_Delete.png" alt="Löschen" style="width: 16px; height: 16px;">';
-    			deleteBtn.title = 'Konfiguration löschen';
-    			Object.assign(deleteBtn.style, {
-      			background: 'none',
-      			border: 'none',
-      			cursor: 'pointer',
-      			padding: '0',
-      			marginLeft: '0.5rem',
-      			lineHeight: '1'
-    			});
-    			deleteBtn.addEventListener('click', (e) => {
-      			e.stopPropagation();
-      			this.deleteConfig(idx);
-    			});
-    		}
-
-    		const shareBtn = document.createElement('button');
-    		shareBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Link" style="width: 16px; height: 16px;">';
-    		shareBtn.title = 'Später weitermachen - Link kopieren';
-    		Object.assign(shareBtn.style, {
-      		background: 'none',
-      		border: 'none',
-      		cursor: 'pointer',
-      		color: 'inherit'
-    		});
-    		shareBtn.addEventListener('click', (e) => {
-      		e.stopPropagation();
-      		this.generateContinueLink();
-    		});
-
-    		// Preis berechnen und anzeigen
-    		const price = this.calculateConfigPrice(cfg);
-    		const priceEl = document.createElement('span');
-    		priceEl.textContent = `${price.toFixed(2)}€`;
-    		priceEl.style.color = '#000';
-    		priceEl.style.fontWeight = '500';
-    		priceEl.style.marginLeft = 'auto';
-    		priceEl.style.marginRight = '0.5rem';
-
-    		nameContainer.appendChild(nameEl);
-    		nameContainer.appendChild(editBtn);
-    		div.appendChild(nameContainer);
-    		div.appendChild(priceEl);
-    		if (deleteBtn) div.appendChild(deleteBtn); // Nur hinzufügen wenn vorhanden
-    		div.appendChild(shareBtn);
-    		fragment.appendChild(div);
-  		});
-  		
-  		// Einmalige DOM-Manipulation
-  		this.configListEl.innerHTML = '';
-  		this.configListEl.appendChild(fragment);
-		}
+      // Verwende das normale CSS-Design ohne Inline-Styles
+      this.configListEl.innerHTML = '';
+      
+      this.configs.forEach((cfg, idx) => {
+        const div = document.createElement('div');
+        div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
+        
+        div.innerHTML = `
+          <div class="config-item-content">
+            <div class="config-item-info">
+              <span class="config-item-name">${cfg.name}</span>
+              <span class="config-item-price">${this.calculateConfigPrice(cfg).toFixed(2)}€</span>
+            </div>
+            <div class="config-item-actions">
+              <button class="icon-btn" title="Namen bearbeiten" onclick="event.stopPropagation(); this.solarGrid.editConfigNameInList(${idx});">
+                <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
+              </button>
+              ${this.configs.length > 1 ? `<button class="icon-btn delete" title="Löschen" onclick="event.stopPropagation(); this.solarGrid.deleteConfigFromList(${idx});">
+                <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986121f0519d394183f_Delete.png" alt="Löschen" style="width: 16px; height: 16px;">
+              </button>` : ''}
+            </div>
+            <div class="config-item-arrow">
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Details" style="width: 16px; height: 16px;">
+            </div>
+          </div>
+        `;
+        
+        div.addEventListener('click', () => {
+          // Auto-Save der aktuellen Konfiguration vor dem Wechsel
+          if (this.currentConfig !== null && this.currentConfig !== idx) {
+            this.updateConfig();
+          }
+          
+          // Nur laden wenn es eine andere Konfiguration ist
+          if (this.currentConfig !== idx) {
+            this.loadConfig(idx);
+            this.showToast('Konfiguration geladen', 1000);
+          }
+        });
+        
+        this.configListEl.appendChild(div);
+      });
+    }
 
     // Performance: Schnellerer Array-Vergleich
     arraysEqual(a, b) {
@@ -6554,23 +6465,31 @@
       const originalSelection = this.selection.map(r => [...r]);
       
       try {
-      // Temporär setzen für Berechnung
-      this.selection = sel;
+        // Temporär setzen für Berechnung
+        this.selection = sel;
         let parts = await this.calculateParts();
-      if (!incM) delete parts.Solarmodul;
-      if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
-      if (erdungsband) {
-        parts.Erdungsband = this.calculateErdungsband();
-      } else {
-        delete parts.Erdungsband;
-      }
-      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
-      // Sie werden nur noch in der Overview berechnet
-      
+        
+        // Module nur hinzufügen wenn Checkbox aktiviert ist
+        if (!incM) delete parts.Solarmodul;
+        if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
+        
+        // Zusatzprodukte basierend auf Checkboxen
+        if (!mc4) delete parts.MC4;
+        if (!solarkabel) delete parts.Solarkabel;
+        if (!holz) delete parts.Holzunterleger;
+        if (!quetschkabelschuhe) delete parts.Quetschkabelschuhe;
+        
+        // Erdungsband hinzufügen wenn aktiviert
+        if (erdungsband) {
+          parts.Erdungsband = this.calculateErdungsband();
+        } else {
+          delete parts.Erdungsband;
+        }
+        
         return parts;
       } finally {
-      // Ursprüngliche Auswahl wiederherstellen
-      this.selection = originalSelection;
+        // Ursprüngliche Auswahl wiederherstellen
+        this.selection = originalSelection;
       }
     }
 
