@@ -60,6 +60,20 @@ html, body {
   color: #9ca3af !important;
 }
 
+/* Versteckte Pfeile für Number Inputs */
+#width-input::-webkit-outer-spin-button,
+#width-input::-webkit-inner-spin-button,
+#height-input::-webkit-outer-spin-button,
+#height-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#width-input[type=number],
+#height-input[type=number] {
+  -moz-appearance: textfield;
+}
+
 body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: #f8f9fa;

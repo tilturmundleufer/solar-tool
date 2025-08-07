@@ -3006,6 +3006,12 @@
         'variant-4': { name: 'Modul Variante 4', width: 185, height: 110 },
         'variant-5': { name: 'Modul Variante 5', width: 172, height: 125 }
       };
+      
+      // Modul-Checkbox-Mapping
+      this.moduleCheckboxMapping = {
+        'include-modules': 'ulica-450',
+        'ulica-module': 'ulica-500'
+      };
 
       this.selection     = [];
       this.configs       = [];
@@ -4671,6 +4677,8 @@
 				this.updateSize();
 				this.buildList();
 				this.updateSummaryOnChange();
+				// Alle Modul-Checkboxen abwählen
+				this.clearModuleCheckboxes();
 			} else if (this.moduleData[selectedValue]) {
 				// Modul ausgewählt - Werte setzen und Inputs sperren
 				const module = this.moduleData[selectedValue];
@@ -4680,7 +4688,41 @@
 				this.updateSize();
 				this.buildList();
 				this.updateSummaryOnChange();
+				
+				// Nur für Ulica-Module: Entsprechende Checkbox abwählen
+				if (selectedValue === 'ulica-500' || selectedValue === 'ulica-450') {
+					this.clearModuleCheckboxes();
+				}
 			}
+		}
+		
+		// Neue Funktionen für Modul-Checkbox-Synchronisation
+		handleModuleCheckboxChange(checkboxId) {
+			this.trackInteraction();
+			
+			// Nur eine Modul-Checkbox darf ausgewählt sein
+			if (checkboxId === 'include-modules' && this.incM.checked) {
+				// include-modules wurde ausgewählt - ulica-module abwählen
+				if (this.ulicaModule) {
+					this.ulicaModule.checked = false;
+				}
+				// Dropdown auf ulica-450 setzen
+				this.moduleSelect.value = 'ulica-450';
+				this.handleModuleSelectChange();
+			} else if (checkboxId === 'ulica-module' && this.ulicaModule.checked) {
+				// ulica-module wurde ausgewählt - include-modules abwählen
+				if (this.incM) {
+					this.incM.checked = false;
+				}
+				// Dropdown auf ulica-500 setzen
+				this.moduleSelect.value = 'ulica-500';
+				this.handleModuleSelectChange();
+			}
+		}
+		
+		clearModuleCheckboxes() {
+			if (this.incM) this.incM.checked = false;
+			if (this.ulicaModule) this.ulicaModule.checked = false;
 		}
 		
 		handleInputChange() {
@@ -4700,6 +4742,13 @@
 		
 		handleCheckboxChange() {
 			this.trackInteraction();
+			
+			// Prüfe ob es sich um eine Modul-Checkbox handelt
+			const checkboxId = event.target.id;
+			if (checkboxId === 'include-modules' || checkboxId === 'ulica-module') {
+				this.handleModuleCheckboxChange(checkboxId);
+			}
+			
 			this.updateSummaryOnChange();
 		}
 		
