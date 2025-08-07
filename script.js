@@ -5421,6 +5421,12 @@
   		// Erstelle eine neue Standard-Konfiguration
   		this.currentConfig = null;
   		this.resetGridToDefault();
+  		
+  		// Neue Konfiguration erstellen und hinzufügen
+  		const newConfig = this._makeConfigObject();
+  		this.configs.push(newConfig);
+  		this.currentConfig = this.configs.length - 1;
+  		
   		this.renderConfigList();
   		this.updateSaveButtons();
 		}
@@ -5760,6 +5766,12 @@
     	// Bestehende Konfigurationserstellung verwenden
     	this.createNewConfig();
     	
+    	// Orientation-Buttons nach createNewConfig() aktualisieren
+    	if (orientHBtn && orientVBtn) {
+    		orientHBtn.classList.toggle('active', this.orH.checked);
+    		orientVBtn.classList.toggle('active', this.orV.checked);
+    	}
+    	
     	this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
     }
     
@@ -5866,12 +5878,7 @@
     				this.hIn.value = data.cellHeight;
     			}
     			
-    			// Lade die erste Konfiguration
-    			if (this.configs.length > 0) {
-    				this.loadConfig(0);
-    			}
-    			
-    			// Lade Orientierung NACH dem Laden der Konfiguration
+    			// Lade Orientierung VOR dem Laden der Konfiguration
 			if (this.orH && this.orV && typeof data.orientation === 'string') {
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
@@ -5884,6 +5891,11 @@
 					orientVBtn.classList.toggle('active', data.orientation === 'vertical');
 				}
 			}
+    			
+    			// Lade die erste Konfiguration
+    			if (this.configs.length > 0) {
+    				this.loadConfig(0);
+    			}
     			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
