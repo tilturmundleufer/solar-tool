@@ -4672,9 +4672,16 @@
 							btn.removeEventListener('click', this.handleOrientationButtonClick);
 							btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
 						});
+						// Synchronisiere Orientation Buttons nach dem Setup
+						this.syncOrientationButtons();
 					}
 				}, 100);
 			}
+			
+			// Synchronisiere Orientation Buttons nach dem Setup
+			setTimeout(() => {
+				this.syncOrientationButtons();
+			}, 200);
 		}
 		
 		// Event-Handler-Funktionen
@@ -4828,6 +4835,25 @@
 			this.buildGrid();
 			this.buildList();
 			this.updateSummaryOnChange();
+		}
+		
+		// NEUE FUNKTION: Synchronisiere Orientation Buttons
+		syncOrientationButtons() {
+			const orientHBtn = document.getElementById('orient-h');
+			const orientVBtn = document.getElementById('orient-v');
+			
+			if (!orientHBtn || !orientVBtn || !this.orH || !this.orV) return;
+			
+			// Entferne active Klasse von beiden Buttons
+			orientHBtn.classList.remove('active');
+			orientVBtn.classList.remove('active');
+			
+			// Setze active Klasse basierend auf Radio-Button Status
+			if (this.orH.checked) {
+				orientHBtn.classList.add('active');
+			} else if (this.orV.checked) {
+				orientVBtn.classList.add('active');
+			}
 		}
 		
 		// Input-Sperr-Funktionen
@@ -6040,14 +6066,16 @@
     			cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
     			cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10),
     			orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-    			// Checkbox-Einstellungen
-    			includeModules: this.incM ? this.incM.checked : false,
-    			mc4: this.mc4 ? this.mc4.checked : false,
-    			solarkabel: this.solarkabel ? this.solarkabel.checked : false,
-    			holz: this.holz ? this.holz.checked : false,
-    			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
-    			erdungsband: this.erdungsband ? this.erdungsband.checked : false,
-    			ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
+    						// Checkbox-Einstellungen
+			includeModules: this.incM ? this.incM.checked : false,
+			mc4: this.mc4 ? this.mc4.checked : false,
+			solarkabel: this.solarkabel ? this.solarkabel.checked : false,
+			holz: this.holz ? this.holz.checked : false,
+			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+			erdungsband: this.erdungsband ? this.erdungsband.checked : false,
+			ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
+			// Module Dropdown Auswahl
+			moduleSelectValue: this.moduleSelect ? this.moduleSelect.value : '',
     			// Grid-Struktur
     			gridStructure: {
     				cols: this.cols,
@@ -6118,30 +6146,36 @@
     			if (this.erdungsband && typeof data.erdungsband === 'boolean') {
     				this.erdungsband.checked = data.erdungsband;
     			}
-    			if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
-    				this.ulicaModule.checked = data.ulicaModule;
-    			}
-    			
-    			// Lade Grid-Dimensionen
-    			if (this.wIn && data.cellWidth) {
-    				this.wIn.value = data.cellWidth;
-    			}
-    			if (this.hIn && data.cellHeight) {
-    				this.hIn.value = data.cellHeight;
-    			}
+    						if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
+				this.ulicaModule.checked = data.ulicaModule;
+			}
+			
+			// Lade Module Dropdown Auswahl
+			if (this.moduleSelect && typeof data.moduleSelectValue === 'string') {
+				this.moduleSelect.value = data.moduleSelectValue;
+				// Wenn ein Modul ausgewählt ist, Inputs entsprechend sperren/freigeben
+				if (data.moduleSelectValue && data.moduleSelectValue !== 'custom') {
+					this.disableInputs();
+				} else {
+					this.enableInputs();
+				}
+			}
+			
+			// Lade Grid-Dimensionen
+			if (this.wIn && data.cellWidth) {
+				this.wIn.value = data.cellWidth;
+			}
+			if (this.hIn && data.cellHeight) {
+				this.hIn.value = data.cellHeight;
+			}
     			
     			// Lade Orientierung VOR dem Laden der Konfiguration
 			if (this.orH && this.orV && typeof data.orientation === 'string') {
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
 				
-				// Synchronisiere mit den Orientation Buttons
-				const orientHBtn = document.getElementById('orient-h');
-				const orientVBtn = document.getElementById('orient-v');
-				if (orientHBtn && orientVBtn) {
-					orientHBtn.classList.toggle('active', data.orientation === 'horizontal');
-					orientVBtn.classList.toggle('active', data.orientation === 'vertical');
-				}
+				// Synchronisiere mit den Orientation Buttons (robuster)
+				this.syncOrientationButtons();
 				
 				// Aktualisiere die erste Konfiguration mit der globalen Orientation
 				this.updateFirstConfigOrientation(data.orientation);
