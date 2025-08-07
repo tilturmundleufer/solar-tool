@@ -4829,6 +4829,10 @@
 			
 			if (!orientHBtn || !orientVBtn) return;
 			
+			// Verhindere mehrfache Klicks während der Verarbeitung
+			if (this.orientationProcessing) return;
+			this.orientationProcessing = true;
+			
 			// Entferne active Klasse von beiden Buttons
 			orientHBtn.classList.remove('active');
 			orientVBtn.classList.remove('active');
@@ -4842,10 +4846,19 @@
 			if (this.orH) this.orH.checked = !isVertical;
 			
 			this.trackInteraction();
-			this.updateSize();
-			this.buildGrid();
-			this.buildList();
-			this.updateSummaryOnChange();
+			
+			// Optimierte Update-Sequenz mit Debouncing
+			requestAnimationFrame(() => {
+				this.updateSize();
+				this.buildGrid();
+				
+				// Verzögerte Updates für bessere Performance
+				setTimeout(() => {
+					this.buildList();
+					this.updateSummaryOnChange();
+					this.orientationProcessing = false;
+				}, 50);
+			});
 		}
 		
 		// NEUE FUNKTION: Synchronisiere Orientation Buttons
@@ -5036,9 +5049,6 @@
     buildGrid() {
   		if (!Array.isArray(this.selection)) return;
   		
-  		// FEATURE 5: Performance-Monitoring - Start
-  		const startTime = performance.now();
-  		
   		// Performance: Verwende DocumentFragment für bessere Performance
   		const fragment = document.createDocumentFragment();
   		
@@ -5046,17 +5056,13 @@
   		document.documentElement.style.setProperty('--cols', this.cols);
   		document.documentElement.style.setProperty('--rows', this.rows);
 
-  		const centerX = (this.cols - 1) / 2;
-  		const centerY = (this.rows - 1) / 2;
-  		const delayPerUnit = 60; // ms
-
-  		// Batch-Erstellung aller Zellen
+  		// Batch-Erstellung aller Zellen - optimiert für Orientation Changes
   		for (let y = 0; y < this.rows; y++) {
     		if (!Array.isArray(this.selection[y])) continue;
 
     		for (let x = 0; x < this.cols; x++) {
       		const cell = document.createElement('div');
-      		cell.className = 'grid-cell animate-in';
+      		cell.className = 'grid-cell';
       		if (this.selection[y]?.[x]) cell.classList.add('selected');
       		
       		// FEATURE 6: Screen Reader Support - ARIA-Labels
@@ -5126,7 +5132,8 @@
         // Performance: Cached panel count calculation
         const panelCount = this.selection.flat().filter(v => v).length;
         
-        const parts = await this.calculateParts();
+        // Optimierung: Verwende synchrone Berechnung für bessere Performance
+        const parts = this.calculatePartsSync();
       if (this.incM && !this.incM.checked) delete parts.Solarmodul;
       if (this.ulicaModule && !this.ulicaModule.checked) delete parts.UlicaSolarBlackJadeFlow;
       if (this.erdungsband && !this.erdungsband.checked) delete parts.Erdungsband;
