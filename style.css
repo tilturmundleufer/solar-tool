@@ -1326,6 +1326,12 @@ body {
   flex: 1;
 }
 
+.produkt-item .item-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
 .produkt-item .item-quantity {
   font-weight: bold;
   color: #000000;
@@ -1336,6 +1342,14 @@ body {
   font-weight: bold;
   color: #000000;
   flex: 1;
+}
+
+.produkt-item .item-ve {
+  color: #8F8F8F;
+  font-size: 12px;
+  font-weight: normal;
+  display: block;
+  margin-top: 2px;
 }
 
 .produkt-item .item-details {
