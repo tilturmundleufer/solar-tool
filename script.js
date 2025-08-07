@@ -1,5 +1,14 @@
 (function() {
   const ADD_TO_CART_DELAY = 400;
+  // Global debug toggle: disable noisy logs in production
+  const DEBUG_MODE = false;
+  if (!DEBUG_MODE) {
+    try {
+      // Silence console.log and console.warn; keep console.error for critical issues
+      console.log = function() {};
+      console.warn = function() {};
+    } catch (_) {}
+  }
   
   // Cache-Manager für 24h Persistierung
   class CacheManager {
@@ -671,39 +680,9 @@
       }
     }
 
-    // DEPRECATED: Alte PDF-Generation für Backward Compatibility
-    async generatePDF(type = 'current') {
-      // Für alle Configs verwende neuen Snapshot-Approach
-      const snapshot = this.solarGrid.createConfigSnapshot();
-      await this.generatePDFFromSnapshot(snapshot);
-    }
+    // Entfernt alte generatePDF-Umleitung: direkte Nutzung von generatePDFFromSnapshot()
 
-    // Hilfsmethode für Gesamtpreis-Berechnung
-    async calculateTotalPrice(config) {
-      const parts = this.solarGrid.calculatePartsDirectly({
-        selection: config.selection,
-        cols: config.cols,
-        rows: config.rows,
-        cellWidth: config.cellWidth,
-        cellHeight: config.cellHeight,
-        orientation: config.orientation,
-        incM: config.incM,
-        mc4: config.mc4,
-        solarkabel: config.solarkabel,
-        holz: config.holz
-      });
-
-      let totalPrice = 0;
-      Object.entries(parts).forEach(([key, value]) => {
-        if (value > 0) {
-          const packs = Math.ceil(value / VE[key]);
-          const price = getPriceFromCache(key);
-          totalPrice += packs * price;
-        }
-      });
-
-      return totalPrice;
-    }
+    // Entfernt ungenutzte calculateTotalPrice (wir nutzen calculateConfigPrice zentral)
 
     // Footer mit Logo
     addFooter(pdf, pageWidth, pageHeight) {
@@ -1668,11 +1647,7 @@
       return parts;
     }
 
-    // Hilfsfunktion für Gruppenverarbeitung (aus CalculationManager übernommen)
-    processGroup(len, parts, cellWidth, cellHeight, orientation) {
-      // Diese Methode wird nicht mehr verwendet
-      // Alle Berechnungen laufen über den Calculation Worker
-    }
+    // Entfernt: processGroup war ungenutzt, alle Berechnungen laufen über Worker/Direct
 
     // Generiere Dateinamen basierend auf Konfiguration(en)
     generateFileName(configs) {
@@ -1749,7 +1724,9 @@
         checkboxWithout: /(?:ohne\s*zubehör|ohne\s*extras)/i,
         checkboxWithAll: /(?:mit\s*allem|alles\s*mit)/i,
         // Speichern mit Namen
-        saveWithName: /(?:speichern\s*als\s*['"]?([^'"]+)['"]?)/i
+        saveWithName: /(?:speichern\s*als\s*['"]?([^'"]+)['"]?)/i,
+        // Ulica Modul Auswahl (500/450 W) inkl. Synonyme
+        ulicaModule: /ulica(?:\s*(500|450)\s*w?)?|black\s*jade(?:[-\s]*flow)?\s*(500|450)?/i
       };
     }
 
@@ -2024,7 +2001,7 @@
       // Module-Anzahl parsen (nur wenn keine Reihen-Konfiguration)
       else {
         const moduleMatch = input.match(this.patterns.moduleCount);
-        if (moduleMatch && !gridMatch) {
+        if (moduleMatch) {
           config.moduleCount = parseInt(moduleMatch[1]);
           
           // Prüfe auf Abstand auch bei einfacher Module-Anzahl
@@ -2167,6 +2144,23 @@
         }
       }
 
+      // Ulica Modul Parsing (setzt spez. Modul + Checkbox)
+      const ulicaMatch = input.match(this.patterns.ulicaModule);
+      if (ulicaMatch) {
+        config.ulicaModule = true;
+        const watt = (ulicaMatch[1] || ulicaMatch[2] || '').toString();
+        if (watt === '450') {
+          config.selectedModule = 'ulica-450';
+        } else if (watt === '500') {
+          config.selectedModule = 'ulica-500';
+        } else {
+          // Default auf 500, wenn nicht eindeutig
+          config.selectedModule = 'ulica-500';
+        }
+        // Ulica schließt allgemeine Module aus
+        config.includeModules = false;
+      }
+
       // NEUE ACTION PATTERNS PRÜFEN (höchste Priorität - vor allen anderen Patterns)
       const saveWithNameMatch = input.match(this.patterns.saveWithName);
       if (saveWithNameMatch) {
@@ -2284,6 +2278,24 @@
       if (config.hasOwnProperty('quetschkabelschuhe')) {
         if (this.solarGrid.quetschkabelschuhe) this.solarGrid.quetschkabelschuhe.checked = config.quetschkabelschuhe;
       }
+      if (config.hasOwnProperty('ulicaModule')) {
+        if (this.solarGrid.ulicaModule) this.solarGrid.ulicaModule.checked = config.ulicaModule === true;
+        // Exklusivität sicherstellen: Ulica aktiv => include-modules aus
+        if (config.ulicaModule === true && this.solarGrid.incM) {
+          this.solarGrid.incM.checked = false;
+        }
+      }
+
+      // Spezifische Modulauswahl anwenden (z.B. Ulica 500/450)
+      if (config.selectedModule && this.solarGrid.moduleSelect) {
+        this.solarGrid.moduleSelect.value = config.selectedModule;
+        // Triggert Breite/Höhe und Checkbox-Clear gemäß bestehender Logik
+        this.solarGrid.handleModuleSelectChange();
+      }
+
+      // Checkbox-Änderungen global auf alle Konfigurationen anwenden
+      // (sichert konsistentes Verhalten über alle Configs)
+      this.solarGrid.updateAllConfigurationsForCheckboxes();
 
       // INTELLIGENTE Selection-Matrix-Erstellung
       // NUR bei Grid-Größen-Änderung → Selection anpassen/löschen
@@ -3805,55 +3817,12 @@
 			}
 		}
 		
-		updateConfigList() {
-			const configListEl = document.getElementById('config-list');
-			if (!configListEl) return;
-			
-			configListEl.innerHTML = '';
-			
-			this.configs.forEach((config, index) => {
-				const configItem = document.createElement('div');
-				configItem.className = 'config-item';
-				
-				// Markiere aktuelle Konfiguration
-				if (index === this.currentConfig) {
-					configItem.classList.add('active');
-				}
-				
-				const totalPrice = this.calculateConfigPrice(config);
-				
-				configItem.innerHTML = `
-					<div class="config-item-info">
-						<div class="config-item-name">${config.name || `Konfiguration #${index + 1}`}</div>
-						<div class="config-item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
-					</div>
-					<div class="config-item-actions">
-						<button class="icon-btn" onclick="solarGrid.editConfigNameInList(${index})" title="Bearbeiten">
-							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
-						</button>
-						<button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${index})" title="Löschen">
-							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936c5481f2a4db850a01f5_Trashbin.png" alt="Löschen" style="width: 16px; height: 16px;">
-						</button>
-						<div class="config-item-arrow">
-							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 10px; height: 16px;">
-						</div>
-					</div>
-				`;
-				
-				configItem.addEventListener('click', (e) => {
-					// Verhindere Klick wenn auf Action-Button geklickt wurde
-					if (e.target.closest('.config-item-actions')) return;
-					
-					this.showDetailView(index);
-				});
-				
-				configListEl.appendChild(configItem);
-			});
-			
-			// Update Gesamtpreis und Zusatzprodukte
-			this.updateOverviewTotalPrice();
-			this.renderAdditionalProducts();
-		}
+    updateConfigList() {
+      // Delegiere auf zentrale Render-Methode, um Doppelungen zu vermeiden
+      this.renderConfigList();
+      this.updateOverviewTotalPrice();
+      this.renderAdditionalProducts();
+    }
 		
 		initAutoSaveIndicator() {
 			// Auto-Save Indicator Setup
@@ -4856,6 +4825,8 @@
 			this.buildGrid();
 			this.buildList();
 			this.updateSummaryOnChange();
+			// Neu: Modul-Checkboxen gelten global -> auf alle Konfigurationen anwenden
+			this.updateAllConfigurationsForCheckboxes();
 		}
 		
 		clearModuleCheckboxes() {
