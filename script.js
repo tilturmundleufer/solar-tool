@@ -5757,25 +5757,8 @@
     	if (this.erdungsband) this.erdungsband.checked = false;
     	if (this.ulicaModule) this.ulicaModule.checked = false;
     	
-    	// Neue Standard-Konfiguration erstellen
-    	const defaultConfig = this._makeConfigObject('Konfiguration #1');
-    	this.configs.push(defaultConfig);
-    	this.currentConfig = 0;
-    	
-    	// Grid und UI neu aufbauen
-    	this.setup();
-    	this.buildGrid();
-    	this.buildList();
-    	
-    	// UI aktualisieren
-    	this.updateConfigList();
-    	this.updateCurrentTotalPrice();
-    	this.updateOverviewTotalPrice();
-    	this.renderConfigList();
-    	this.updateSaveButtons();
-    	
-    	// Detail-Ansicht aktualisieren wenn aktiv
-    	this.updateDetailView();
+    	// Bestehende Konfigurationserstellung verwenden
+    	this.createNewConfig();
     	
     	this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
     }
@@ -5883,7 +5866,12 @@
     				this.hIn.value = data.cellHeight;
     			}
     			
-    			// Lade Orientierung
+    			// Lade die erste Konfiguration
+    			if (this.configs.length > 0) {
+    				this.loadConfig(0);
+    			}
+    			
+    			// Lade Orientierung NACH dem Laden der Konfiguration
 			if (this.orH && this.orV && typeof data.orientation === 'string') {
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
@@ -5896,11 +5884,6 @@
 					orientVBtn.classList.toggle('active', data.orientation === 'vertical');
 				}
 			}
-    			
-    			// Lade die erste Konfiguration
-    			if (this.configs.length > 0) {
-    				this.loadConfig(0);
-    			}
     			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
