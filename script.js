@@ -3990,20 +3990,23 @@
 			input.value = titleEl.textContent;
 			input.className = 'config-title-input';
 			input.style.cssText = `
+				position: absolute;
+				top: 0;
+				left: 0;
 				font-size: 24px;
 				font-weight: bold;
 				color: #000000;
-				background: transparent;
+				background: white;
 				border: 2px solid #FFB101;
 				border-radius: 8px;
 				padding: 4px 8px;
-				width: 100%;
+				width: 200px;
 				outline: none;
+				z-index: 1000;
 			`;
 			
-			// Ersetze Titel durch Input
-			titleEl.style.display = 'none';
-			titleEl.parentNode.insertBefore(input, titleEl);
+			// Füge Input hinzu ohne Titel zu ersetzen
+			titleEl.parentNode.appendChild(input);
 			input.focus();
 			input.select();
 			
@@ -4017,12 +4020,10 @@
 					this.updateConfig();
 					this.showAutoSaveIndicator();
 				}
-				titleEl.style.display = 'block';
 				input.remove();
 			}.bind(this);
 			
 			const cancelEdit = function() {
-				titleEl.style.display = 'block';
 				input.remove();
 			}.bind(this);
 			
@@ -5471,6 +5472,12 @@
     		div.style.alignItems = 'center';
     		div.style.justifyContent = 'space-between';
     		div.style.gap = '0.5rem';
+    		div.style.padding = '0.75rem 1rem';
+    		div.style.backgroundColor = '#ff6b35';
+    		div.style.borderRadius = '8px';
+    		div.style.marginBottom = '0.5rem';
+    		div.style.cursor = 'pointer';
+    		div.style.transition = 'all 0.2s ease';
 
     		const nameContainer = document.createElement('div');
     		nameContainer.style.display = 'flex';
@@ -5481,6 +5488,8 @@
     		const nameEl = document.createElement('span');
     		nameEl.textContent = cfg.name;
     		nameEl.style.cursor = 'pointer';
+    		nameEl.style.color = '#000';
+    		nameEl.style.fontWeight = '500';
 
     		nameEl.addEventListener('click', () => {
   				// Auto-Save der aktuellen Konfiguration vor dem Wechsel
@@ -5496,14 +5505,12 @@
 				});
 
     		const editBtn = document.createElement('button');
-    		editBtn.innerHTML = '✎';
+    		editBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">';
     		editBtn.title = 'Namen bearbeiten';
     		Object.assign(editBtn.style, {
       		border: 'none',
       		background: 'none',
       		cursor: 'pointer',
-      		fontSize: '1rem',
-      		color: '#fff',
       		padding: '0',
       		marginLeft: '0.5rem',
       		lineHeight: '1'
@@ -5515,6 +5522,11 @@
       		input.type = 'text';
       		input.value = cfg.name;
       		input.style.flex = '1';
+      		input.style.border = 'none';
+      		input.style.background = 'transparent';
+      		input.style.color = '#000';
+      		input.style.fontWeight = '500';
+      		input.style.outline = 'none';
       		input.addEventListener('keydown', ev => {
         		if (ev.key === 'Enter') {
           		cfg.name = input.value.trim() || cfg.name;
@@ -5539,8 +5551,6 @@
       			background: 'none',
       			border: 'none',
       			cursor: 'pointer',
-      			fontSize: '1rem',
-      			color: '#fff',
       			padding: '0',
       			marginLeft: '0.5rem',
       			lineHeight: '1'
@@ -5728,6 +5738,14 @@
     	if (this.orH && this.orV) {
     		this.orH.checked = true;
     		this.orV.checked = false;
+    	}
+    	
+    	// Orientation-Buttons visuell aktualisieren
+    	const orientHBtn = document.getElementById('orient-h');
+    	const orientVBtn = document.getElementById('orient-v');
+    	if (orientHBtn && orientVBtn) {
+    		orientHBtn.classList.add('active');
+    		orientVBtn.classList.remove('active');
     	}
     	
     	// Checkboxen auf Default zurücksetzen
