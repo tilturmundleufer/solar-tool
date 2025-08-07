@@ -2,18 +2,16 @@
 // Dieser Worker führt komplexe Berechnungen im Hintergrund aus
 
 // Worker-Logs an Haupt-Console weiterleiten
-function workerLog(...args) {
-  postMessage({ type: 'debug', data: args });
-}
+
 
 // Worker-Message-Handler hinzufügen
 self.onmessage = function(e) {
   const { type, data, id } = e.data;
   
   if (type === 'calculateParts') {
-    workerLog('WORKER DEBUG: calculateParts called with data:', data);
+  
     const result = calculateParts(data.selection, data.rows, data.cols, data.cellWidth, data.cellHeight, data.orientation, data.options);
-    workerLog('WORKER DEBUG: calculateParts returning:', result);
+    
     self.postMessage({ type: 'result', id, data: result });
   }
 };
@@ -42,7 +40,6 @@ const VE_VALUES = {
 
 // Berechne Teile für eine gegebene Auswahl
 function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientation, options = {}) {
-  workerLog('WORKER DEBUG: calculateParts input:', {selection, rows, cols, cellWidth, cellHeight, orientation});
   
   const parts = {
     Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
@@ -55,20 +52,17 @@ function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientatio
     let run = 0;
 
     for (let x = 0; x < cols; x++) {
-      if (selection[y]?.[x]) {
-        run++;
-        workerLog(`WORKER DEBUG: Found selected cell at [${y}][${x}], run=${run}`);
-      }
-      else if (run) { 
-        workerLog(`WORKER DEBUG: Processing group with run=${run} at row ${y}`);
-        processGroup(run, parts, cellWidth, cellHeight, orientation, options); 
-        run = 0; 
-      }
+              if (selection[y]?.[x]) {
+          run++;
+        }
+              else if (run) { 
+          processGroup(run, parts, cellWidth, cellHeight, orientation, options); 
+          run = 0; 
+        }
     }
-    if (run) {
-      workerLog(`WORKER DEBUG: Processing final group with run=${run} at row ${y}`);
-      processGroup(run, parts, cellWidth, cellHeight, orientation, options);
-    }
+          if (run) {
+        processGroup(run, parts, cellWidth, cellHeight, orientation, options);
+      }
   }
 
   // Erdungsband-Berechnung nur wenn gewünscht
@@ -76,12 +70,10 @@ function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientatio
     parts.Erdungsband = calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orientation);
   }
 
-  workerLog('WORKER DEBUG: calculateParts result:', parts);
   return parts;
 }
 
 function processGroup(len, parts, cellWidth, cellHeight, orientation, options = {}) {
-  workerLog(`WORKER DEBUG: processGroup called with len=${len}, cellWidth=${cellWidth}, cellHeight=${cellHeight}, orientation=${orientation}`);
   
   // Verwende die tatsächliche Zellbreite basierend auf Orientierung
   const isVertical = orientation === 'vertical';
@@ -94,7 +86,7 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation, options = 
   const pure360 = Math.ceil(totalLen / 360);
   const pure240 = Math.ceil(totalLen / 240);
   
-  workerLog(`WORKER DEBUG: Rail calculation - totalLen=${totalLen}, floor360=${floor360}, floor240=${floor240}`);
+
   
   const variants = [
     {cnt360: floor360, cnt240: floor240},
@@ -112,7 +104,7 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation, options = 
     .reduce((a, b) => a.waste <= b.waste ? a : b);
   
   const {cnt360, cnt240} = best;
-  workerLog(`WORKER DEBUG: Best variant - cnt360=${cnt360}, cnt240=${cnt240}`);
+
   
   parts.Schiene_360_cm     += cnt360 * 2;
   parts.Schiene_240_cm     += cnt240 * 2;
@@ -130,7 +122,7 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation, options = 
   parts.Schrauben          += dachhakenForGroup * 1; // M10x25: 1 pro Dachhaken (vorher 3)
   parts.Tellerkopfschraube += dachhakenForGroup * 2; // Tellerkopfschraube: 2 pro Dachhaken (neu)
         
-  workerLog(`WORKER DEBUG: Parts after processing - Solarmodul=${parts.Solarmodul}, Dachhaken=${parts.Dachhaken}, Schrauben=${parts.Schrauben}`);
+
 }
 
 // Berechne erweiterte Teile mit zusätzlichen Optionen
@@ -140,6 +132,11 @@ function calculateExtendedParts(selection, rows, cols, cellWidth, cellHeight, or
   // Module entfernen wenn nicht gewünscht
   if (!options.includeModules) {
     delete parts.Solarmodul;
+  }
+  
+  // Ulica-Module entfernen wenn nicht gewünscht
+  if (options.ulicaModule !== true) {
+    delete parts.UlicaSolarBlackJadeFlow;
   }
   
   // MC4 Stecker hinzufügen

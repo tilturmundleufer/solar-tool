@@ -291,7 +291,7 @@
         // Simuliere Worker-Aufruf synchron
         const { selection, rows, cols, cellWidth, cellHeight, orientation, options = {} } = data;
         const parts = {
-          Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+          Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
           Dachhaken: 0, Schrauben: 0, Endkappen: 0,
           Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
         };
@@ -358,6 +358,10 @@
       parts.Dachhaken          += len > 1 ? len * 3 : 4;
       parts.Endkappen          += 4; // Gleich wie Endklemmen
       parts.Solarmodul         += len;
+      // UlicaSolarBlackJadeFlow hinzufügen wenn ulica-module Checkbox aktiviert ist
+      if (options.ulicaModule === true) {
+        parts.UlicaSolarBlackJadeFlow += len;
+      }
       parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
       parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
     }
@@ -368,6 +372,10 @@
       
       if (!options.includeModules) {
         delete parts.Solarmodul;
+      }
+      
+      if (options.ulicaModule !== true) {
+        delete parts.UlicaSolarBlackJadeFlow;
       }
       
       if (options.mc4Connectors) {
@@ -1318,6 +1326,8 @@
         const parts = await this.calculatePartsFromSnapshot(config);
         
         console.log('Received parts:', parts, 'Keys count:', Object.keys(parts || {}).length);
+        console.log('Parts entries:', Object.entries(parts || {}));
+        console.log('UlicaSolarBlackJadeFlow in parts:', parts?.UlicaSolarBlackJadeFlow);
         
         if (!parts || Object.keys(parts).length === 0) {
           console.log('No parts calculated, returning early');
@@ -1363,7 +1373,9 @@
         let rowCount = 0;
 
         Object.entries(parts).forEach(([productKey, quantity]) => {
+          console.log('Processing product:', productKey, 'quantity:', quantity);
           if (quantity > 0) {
+            console.log('Adding to PDF:', productKey, 'quantity:', quantity);
             checkPageBreak(12);
             
             // Alternierende Zeilen-Hintergründe
@@ -1424,9 +1436,12 @@
           orientation: config.orientation || 'horizontal',
           options: {
             erdungsband: config.erdungsband || false,
-            ulicaModule: config.ulicaModule || false
+            ulicaModule: config.ulicaModule === true,
+            includeModules: config.includeModules === true || config.incM === true
           }
         };
+        
+
 
         let parts;
         try {
@@ -1444,6 +1459,9 @@
           incM: config.incM,
           ulicaModule: config.ulicaModule
         });
+        console.log('Config object keys:', Object.keys(config));
+        console.log('Config ulicaModule value:', config.ulicaModule, 'type:', typeof config.ulicaModule);
+        console.log('CalculationData options:', calculationData.options);
 
         // Module nur hinzufügen wenn Checkbox aktiviert ist
         if (!config.includeModules && !config.incM) {
@@ -1451,9 +1469,11 @@
           delete parts.Solarmodul;
         }
         
-        if (!config.ulicaModule) {
-          console.log('Deleting UlicaSolarBlackJadeFlow - ulicaModule false');
+        if (config.ulicaModule !== true) {
+          console.log('Deleting UlicaSolarBlackJadeFlow - ulicaModule is not true');
           delete parts.UlicaSolarBlackJadeFlow;
+        } else {
+          console.log('Keeping UlicaSolarBlackJadeFlow - ulicaModule is true');
         }
 
         // Zusatzprodukte basierend auf Checkboxen
@@ -1599,7 +1619,8 @@
         orientation: config.orientation,
         options: {
           erdungsband: config.erdungsband || false,
-          ulicaModule: config.ulicaModule || false
+          ulicaModule: config.ulicaModule === true,
+          includeModules: config.includeModules === true || config.incM === true
         }
       };
 
@@ -1615,7 +1636,16 @@
       
       // Entferne Module wenn nicht ausgewählt
       if (!config.includeModules && !config.incM) {
+        console.log('Deleting Solarmodul - both includeModules and incM false');
         delete parts.Solarmodul;
+      }
+      
+      // Entferne Ulica-Module wenn nicht ausgewählt
+      if (config.ulicaModule !== true) {
+        console.log('Deleting UlicaSolarBlackJadeFlow - ulicaModule is not true');
+        delete parts.UlicaSolarBlackJadeFlow;
+      } else {
+        console.log('Keeping UlicaSolarBlackJadeFlow - ulicaModule is true');
       }
       
       // Füge optionale Komponenten nur hinzu wenn ausgewählt
@@ -3020,7 +3050,7 @@
       this.ulicaModule   = document.getElementById('ulica-module');
       
 
-      this.listHolder    = document.querySelector('.product-section');
+      		this.listHolder    = document.querySelector('.produktliste-holder');
       this.prodList      = document.getElementById('produktliste');
 
       this.saveBtn       = document.getElementById('save-config-btn');
@@ -3759,38 +3789,18 @@
 		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
-				// Module nur hinzufügen wenn Checkbox aktiviert ist
-				const includeModules = document.getElementById('include-modules')?.checked || false;
-				const ulicaModule = document.getElementById('ulica-module')?.checked || false;
-				
-				// Isolierte Berechnung nur für die aktuelle Konfiguration
-				const parts = this.calculatePartsDirectly({
+				// Verwende die gleiche Berechnungslogik wie calculateConfigPrice
+				const currentConfig = {
 					selection: this.selection,
 					cols: this.cols,
 					rows: this.rows,
 					cellWidth: parseInt(this.wIn?.value || '179'),
 					cellHeight: parseInt(this.hIn?.value || '113'),
 					orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-					ulicaModule: ulicaModule
-				});
+					ulicaModule: document.getElementById('ulica-module')?.checked || false
+				};
 				
-				if (!includeModules) {
-					delete parts.Solarmodul;
-				}
-				if (!ulicaModule) {
-					delete parts.UlicaSolarBlackJadeFlow;
-				}
-				
-				let totalPrice = 0;
-				
-				Object.entries(parts).forEach(([partName, quantity]) => {
-					if (quantity > 0) {
-						const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
-						const pricePerPackage = getPriceFromCache(partName);
-						totalPrice += packagesNeeded * pricePerPackage;
-					}
-				});
-				
+				const totalPrice = this.calculateConfigPrice(currentConfig);
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 			}
 		}
@@ -4277,45 +4287,7 @@
 			return totalPrice;
 		}
 		
-		calculateCurrentTotalPrice() {
-			// Synchrone Preisberechnung für aktuelle Konfiguration
-			const parts = this.calculatePartsDirectly({
-				selection: this.selection,
-				cols: this.cols,
-				rows: this.rows,
-				cellWidth: parseInt(this.wIn?.value || '179'),
-				cellHeight: parseInt(this.hIn?.value || '113'),
-				orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-				incM: document.getElementById('include-modules')?.checked || false,
-				ulicaModule: document.getElementById('ulica-module')?.checked || false
-				// Zusatzprodukte werden nicht mehr berücksichtigt
-			});
-			
-			// Module nur hinzufügen wenn Checkbox aktiviert ist
-			const includeModules = document.getElementById('include-modules')?.checked || false;
-			const ulicaModule = document.getElementById('ulica-module')?.checked || false;
-			
-			if (!includeModules) {
-				delete parts.Solarmodul;
-			}
-			
-			if (!ulicaModule) {
-				delete parts.UlicaSolarBlackJadeFlow;
-			}
-			
-			let totalPrice = 0;
-			
-			Object.entries(parts).forEach(([partName, quantity]) => {
-				if (quantity > 0) {
-					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
-					const pricePerPackage = getPriceFromCache(partName);
-					const itemTotal = packagesNeeded * pricePerPackage;
-					totalPrice += itemTotal;
-				}
-			});
-			
-			return totalPrice;
-		}
+
 		
 		addAllConfigsToCart() {
 			// Verwende die gleiche Logik wie addAllToCart()
@@ -5248,13 +5220,58 @@
         // Performance: Cached panel count calculation
         const panelCount = this.selection.flat().filter(v => v).length;
         
-        // Optimierung: Verwende synchrone Berechnung für bessere Performance
-        const parts = this.calculatePartsSync();
-      if (this.incM && !this.incM.checked) delete parts.Solarmodul;
-      if (this.ulicaModule && !this.ulicaModule.checked) delete parts.UlicaSolarBlackJadeFlow;
-      if (this.erdungsband && !this.erdungsband.checked) delete parts.Erdungsband;
-      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
-      // Sie werden nur noch in der Overview berechnet
+        // Verwende die gleiche Berechnungslogik wie calculateConfigPrice für Konsistenz
+        const currentConfig = {
+          selection: this.selection,
+          cols: this.cols,
+          rows: this.rows,
+          cellWidth: parseInt(this.wIn?.value || '179'),
+          cellHeight: parseInt(this.hIn?.value || '113'),
+          orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+          ulicaModule: document.getElementById('ulica-module')?.checked || false
+        };
+        
+        // Verwende calculateConfigPrice Logik für die Teile-Berechnung
+        const parts = {
+          Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+          Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
+          UlicaSolarBlackJadeFlow: 0
+        };
+
+        // Berechne Teile für jede Zeile (gleiche Logik wie calculateConfigPrice)
+        for (let y = 0; y < currentConfig.rows; y++) {
+          if (!Array.isArray(currentConfig.selection[y])) continue;
+          let run = 0;
+
+          for (let x = 0; x < currentConfig.cols; x++) {
+            if (currentConfig.selection[y]?.[x]) {
+              run++;
+            }
+            else if (run) { 
+              this.processGroupDirectly(run, parts, currentConfig.cellWidth || 179, currentConfig.cellHeight || 113, currentConfig.orientation || 'vertical', currentConfig.ulicaModule || false); 
+              run = 0; 
+            }
+          }
+          if (run) {
+            this.processGroupDirectly(run, parts, currentConfig.cellWidth || 179, currentConfig.cellHeight || 113, currentConfig.orientation || 'vertical', currentConfig.ulicaModule || false);
+          }
+        }
+        
+        // Module nur hinzufügen wenn Checkbox aktiviert ist (gleiche Logik wie calculateConfigPrice)
+        const includeModules = document.getElementById('include-modules')?.checked || false;
+        const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+        
+        if (!includeModules) {
+          delete parts.Solarmodul;
+        }
+        
+        if (!ulicaModule) {
+          delete parts.UlicaSolarBlackJadeFlow;
+        }
+        
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        // Sie werden nur noch in der Overview berechnet
 
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
@@ -5971,7 +5988,8 @@
 
 		// ISOLIERTE synchrone Berechnung für Fallback
 		calculatePartsDirectly(data) {
-			const { selection, rows, cols, cellWidth, cellHeight, orientation, ulicaModule } = data;
+			const { selection, rows, cols, cellWidth, cellHeight, orientation, options } = data;
+			const ulicaModule = options?.ulicaModule === true;
 			const parts = {
 				Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
 				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
@@ -6636,6 +6654,7 @@
           targetQuetschkabelschuhe = this.quetschkabelschuhe.checked;
           targetErdungsband = this.erdungsband ? this.erdungsband.checked : false;
           targetUlicaModule = this.ulicaModule ? this.ulicaModule.checked : false;
+          console.log('Current ulicaModule checkbox state:', targetUlicaModule);
           targetCellWidth = parseInt(this.wIn.value, 10);
           targetCellHeight = parseInt(this.hIn.value, 10);
         } else {
@@ -6681,7 +6700,7 @@
           wood: targetWood || false,
           quetschkabelschuhe: targetQuetschkabelschuhe || false,
           erdungsband: targetErdungsband || false,
-          ulicaModule: targetUlicaModule || false,
+          ulicaModule: targetUlicaModule === true,
           // Zusätzliche Metadaten für Debugging
           selectedCells: normalizedSelection.flat().filter(v => v).length,
           totalCells: (targetCols || 5) * (targetRows || 5)
