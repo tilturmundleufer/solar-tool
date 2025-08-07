@@ -983,21 +983,21 @@
 
         // Grid-Eigenschaften für Webhook-optimierte Darstellung
         const isVertical = configData.orientation === 'vertical';
-        const baseCellSize = 60; // Größere Zellen für bessere Sichtbarkeit
-        const cellWidth = isVertical ? baseCellSize * 0.6 : baseCellSize;
-        const cellHeight = isVertical ? baseCellSize : baseCellSize * 0.6;
-        const cellGap = 2;
+        const baseCellSize = 58; // Kompakter und moderner
+        const cellWidth = isVertical ? Math.round(baseCellSize * 0.62) : baseCellSize;
+        const cellHeight = isVertical ? baseCellSize : Math.round(baseCellSize * 0.62);
+        const cellGap = 2; // wie im UI
         
         const gridEl = document.createElement('div');
         gridEl.style.display = 'grid';
         gridEl.style.gap = `${cellGap}px`;
         gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellWidth}px)`;
         gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellHeight}px)`;
-        gridEl.style.padding = '20px';
-        gridEl.style.backgroundColor = '#ffffff';
-        gridEl.style.border = '2px solid #072544';
+        gridEl.style.padding = '16px';
+        gridEl.style.backgroundColor = '#f5f7fa';
+        gridEl.style.border = '1px solid #e5e7eb';
         gridEl.style.borderRadius = '12px';
-        gridEl.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+        gridEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
 
         // Grid-Zellen erstellen
         for (let y = 0; y < rows; y++) {
@@ -1008,21 +1008,21 @@
             cell.style.width = `${cellWidth}px`;
             cell.style.height = `${cellHeight}px`;
             cell.style.borderRadius = '6px';
-            cell.style.border = '1px solid #ddd';
+            cell.style.border = '1px solid #d1d5db';
             cell.style.transition = 'all 0.2s ease';
             
             if (isSelected) {
-              // Ausgewählte Zelle - Solar-Panel-Design
-              cell.style.backgroundColor = '#072544';
-              cell.style.border = '2px solid #0a4d75';
-              cell.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.2)';
+              // Ausgewählte Zelle - modernes Solar-Panel-Design (nah am UI)
+              cell.style.backgroundColor = '#0b0b0b';
+              cell.style.border = '2px solid #cccccc';
+              cell.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.25)';
               
               // Solar-Panel-Pattern hinzufügen
               const pattern = document.createElement('div');
               pattern.style.width = '100%';
               pattern.style.height = '100%';
-              pattern.style.background = `linear-gradient(135deg, 
-                #072544 0%, #0a4d75 50%, #072544 100%)`;
+              pattern.style.background = `linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 40%),
+                linear-gradient(135deg, #0b0b0b 0%, #111111 50%, #0b0b0b 100%)`;
               pattern.style.borderRadius = '4px';
               pattern.style.position = 'relative';
               
@@ -1034,17 +1034,17 @@
               gridLines.style.right = '2px';
               gridLines.style.bottom = '2px';
               gridLines.style.backgroundImage = `
-                linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)
+                linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)
               `;
               gridLines.style.backgroundSize = '33% 50%';
               
               pattern.appendChild(gridLines);
               cell.appendChild(pattern);
             } else {
-              // Unausgewählte Zelle - Neutral grau
-              cell.style.backgroundColor = '#f8f9fa';
-              cell.style.border = '1px solid #e9ecef';
+              // Unausgewählte Zelle - neutral (wie UI)
+              cell.style.backgroundColor = '#f3f4f6';
+              cell.style.border = '1px solid #e5e7eb';
             }
             
             gridEl.appendChild(cell);
@@ -1124,9 +1124,9 @@
           }
         }
         
-        // Grid-Rahmen zeichnen
-        ctx.strokeStyle = '#072544';
-        ctx.lineWidth = 2;
+        // Grid-Rahmen dezent zeichnen (moderner Look)
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 1;
         ctx.strokeRect(10, 10, totalWidth - 20, totalHeight - 20);
         
         // Canvas zu Base64 konvertieren
