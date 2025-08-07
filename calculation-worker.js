@@ -12,7 +12,7 @@ self.onmessage = function(e) {
   
   if (type === 'calculateParts') {
     workerLog('WORKER DEBUG: calculateParts called with data:', data);
-    const result = calculateParts(data.selection, data.rows, data.cols, data.cellWidth, data.cellHeight, data.orientation);
+    const result = calculateParts(data.selection, data.rows, data.cols, data.cellWidth, data.cellHeight, data.orientation, data.options);
     workerLog('WORKER DEBUG: calculateParts returning:', result);
     self.postMessage({ type: 'result', id, data: result });
   }
@@ -41,7 +41,7 @@ const VE_VALUES = {
 };
 
 // Berechne Teile für eine gegebene Auswahl
-function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientation) {
+function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientation, options = {}) {
   workerLog('WORKER DEBUG: calculateParts input:', {selection, rows, cols, cellWidth, cellHeight, orientation});
   
   const parts = {
@@ -61,24 +61,26 @@ function calculateParts(selection, rows, cols, cellWidth, cellHeight, orientatio
       }
       else if (run) { 
         workerLog(`WORKER DEBUG: Processing group with run=${run} at row ${y}`);
-        processGroup(run, parts, cellWidth, cellHeight, orientation); 
+        processGroup(run, parts, cellWidth, cellHeight, orientation, options); 
         run = 0; 
       }
     }
     if (run) {
       workerLog(`WORKER DEBUG: Processing final group with run=${run} at row ${y}`);
-      processGroup(run, parts, cellWidth, cellHeight, orientation);
+      processGroup(run, parts, cellWidth, cellHeight, orientation, options);
     }
   }
 
-  // Erdungsband-Berechnung
-  parts.Erdungsband = calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orientation);
+  // Erdungsband-Berechnung nur wenn gewünscht
+  if (options && options.erdungsband) {
+    parts.Erdungsband = calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orientation);
+  }
 
   workerLog('WORKER DEBUG: calculateParts result:', parts);
   return parts;
 }
 
-function processGroup(len, parts, cellWidth, cellHeight, orientation) {
+function processGroup(len, parts, cellWidth, cellHeight, orientation, options = {}) {
   workerLog(`WORKER DEBUG: processGroup called with len=${len}, cellWidth=${cellWidth}, cellHeight=${cellHeight}, orientation=${orientation}`);
   
   // Verwende die tatsächliche Zellbreite basierend auf Orientierung
@@ -120,7 +122,9 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
   parts.Dachhaken          += len > 1 ? len * 3 : 4;
   parts.Endkappen          += 4;  // Fix: Direkt 4 statt parts.Endklemmen
   parts.Solarmodul         += len;
-  parts.UlicaSolarBlackJadeFlow += len;
+  if (options && options.ulicaModule) {
+    parts.UlicaSolarBlackJadeFlow += len;
+  }
   // Schrauben basierend auf Dachhaken für diese Gruppe berechnen
   const dachhakenForGroup = len > 1 ? len * 3 : 4;
   parts.Schrauben          += dachhakenForGroup * 1; // M10x25: 1 pro Dachhaken (vorher 3)
@@ -131,7 +135,7 @@ function processGroup(len, parts, cellWidth, cellHeight, orientation) {
 
 // Berechne erweiterte Teile mit zusätzlichen Optionen
 function calculateExtendedParts(selection, rows, cols, cellWidth, cellHeight, orientation, options) {
-  let parts = calculateParts(selection, rows, cols, cellWidth, cellHeight, orientation);
+  let parts = calculateParts(selection, rows, cols, cellWidth, cellHeight, orientation, options);
   
   // Module entfernen wenn nicht gewünscht
   if (!options.includeModules) {
@@ -152,6 +156,11 @@ function calculateExtendedParts(selection, rows, cols, cellWidth, cellHeight, or
   // Holzunterleger hinzufügen
   if (options.woodUnderlay) {
     parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
+  }
+  
+  // Erdungsband hinzufügen
+  if (options.erdungsband) {
+    parts.Erdungsband = calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orientation);
   }
   
   return parts;

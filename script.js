@@ -189,7 +189,7 @@
       // FALLBACK: Verwende Calculation Worker direkt
       try {
         // Simuliere Worker-Aufruf synchron
-        const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
+        const { selection, rows, cols, cellWidth, cellHeight, orientation, options = {} } = data;
         const parts = {
           Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
           Dachhaken: 0, Schrauben: 0, Endkappen: 0,
@@ -204,11 +204,11 @@
           for (let x = 0; x < cols; x++) {
             if (selection[y]?.[x]) run++;
             else if (run) { 
-              this.processGroupSync(run, parts, cellWidth, cellHeight, orientation); 
+              this.processGroupSync(run, parts, cellWidth, cellHeight, orientation, options); 
               run = 0; 
             }
           }
-          if (run) this.processGroupSync(run, parts, cellWidth, cellHeight, orientation);
+          if (run) this.processGroupSync(run, parts, cellWidth, cellHeight, orientation, options);
         }
 
         return parts;
@@ -222,7 +222,7 @@
       }
     }
 
-    processGroupSync(len, parts, cellWidth, cellHeight, orientation) {
+    processGroupSync(len, parts, cellWidth, cellHeight, orientation, options = {}) {
       // FALLBACK: Kopie der Worker-Berechnung
       const isVertical = orientation === 'vertical';
       const actualCellWidth = isVertical ? cellHeight : cellWidth;
@@ -281,6 +281,11 @@
       
       if (options.woodUnderlay) {
         parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
+      }
+      
+      if (options.erdungsband) {
+        // Erdungsband-Berechnung hier hinzufügen wenn nötig
+        // parts.Erdungsband = calculateErdungsband(...);
       }
       
       return parts;
@@ -1316,7 +1321,11 @@
           cols: config.cols,
           cellWidth: config.cellWidth || 179,
           cellHeight: config.cellHeight || 113,
-          orientation: config.orientation || 'horizontal'
+          orientation: config.orientation || 'horizontal',
+          options: {
+            erdungsband: config.erdungsband || false,
+            ulicaModule: config.ulicaModule || false
+          }
         };
 
         let parts;
@@ -1464,7 +1473,11 @@
         cols: config.cols,
         cellWidth: config.cellWidth || 179,
         cellHeight: config.cellHeight || 113,
-        orientation: config.orientation
+        orientation: config.orientation,
+        options: {
+          erdungsband: config.erdungsband || false,
+          ulicaModule: config.ulicaModule || false
+        }
       };
 
       let parts;
@@ -4860,6 +4873,7 @@
         const parts = await this.calculateParts();
       if (this.incM && !this.incM.checked) delete parts.Solarmodul;
       if (this.ulicaModule && !this.ulicaModule.checked) delete parts.UlicaSolarBlackJadeFlow;
+      if (this.erdungsband && !this.erdungsband.checked) delete parts.Erdungsband;
       // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       // Sie werden nur noch in der Overview berechnet
 
@@ -5013,8 +5027,10 @@
     		if (run) this.processGroup(run, p);
   		}
 
-  		// Erdungsband-Berechnung
-  		p.Erdungsband = this.calculateErdungsband();
+  		// Erdungsband-Berechnung nur wenn gewünscht
+  		if (this.erdungsband && this.erdungsband.checked) {
+  			p.Erdungsband = this.calculateErdungsband();
+  		}
 
   		return p;
 		}
@@ -5056,7 +5072,9 @@
       p.Dachhaken          += len > 1 ? len * 3 : 4;
       p.Endkappen          += 4; // Gleich wie Endklemmen
       p.Solarmodul         += len;
-      p.UlicaSolarBlackJadeFlow += len;
+      if (this.ulicaModule && this.ulicaModule.checked) {
+        p.UlicaSolarBlackJadeFlow += len;
+      }
       p.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
       p.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
     }
@@ -6029,6 +6047,8 @@
       if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
       if (erdungsband) {
         parts.Erdungsband = this.calculateErdungsband();
+      } else {
+        delete parts.Erdungsband;
       }
       // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       // Sie werden nur noch in der Overview berechnet
