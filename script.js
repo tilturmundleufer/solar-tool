@@ -4749,7 +4749,8 @@
 				this.handleModuleCheckboxChange(checkboxId);
 			}
 			
-			this.updateSummaryOnChange();
+			// Ursprüngliche Funktion: Update aller Konfigurationen für Checkboxen
+			this.updateAllConfigurationsForCheckboxes();
 		}
 		
 		handleExpansionClick(e) {
@@ -4908,8 +4909,8 @@
   		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
   				// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
-		const inputW = parseInt(this.wIn ? this.wIn.value : '179', 10) || 179;
-		const inputH = parseInt(this.hIn ? this.hIn.value : '113', 10) || 113;
+		const inputW = parseFloat(this.wIn ? this.wIn.value : '179') || 179;
+		const inputH = parseFloat(this.hIn ? this.hIn.value : '113') || 113;
   		
   				// Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
 		const isVertical = this.orV ? this.orV.checked : false;
@@ -5220,7 +5221,7 @@
     processGroup(len, p) {
       // Verwende die korrekte Schienenlogik (wie im Worker)
       const isVertical = this.orV?.checked;
-      const actualCellWidth = isVertical ? parseInt(this.hIn?.value || '113') : parseInt(this.wIn?.value || '179');
+      const actualCellWidth = isVertical ? parseFloat(this.hIn?.value || '113') : parseFloat(this.wIn?.value || '179');
       
       const totalLen = len * actualCellWidth;
       const floor360 = Math.floor(totalLen / 360);
@@ -5269,7 +5270,7 @@
     // Erdungsband-Berechnung
     calculateErdungsband() {
       const isVertical = this.orV?.checked;
-      const moduleHeight = isVertical ? parseInt(this.wIn?.value || '179') : parseInt(this.hIn?.value || '113');
+      const moduleHeight = isVertical ? parseFloat(this.wIn?.value || '179') : parseFloat(this.hIn?.value || '113');
       const gap = 2; // 2cm Lücke zwischen Modulen
       
       // Kopiere selection Matrix für Erdungsbandlength-Tracking
@@ -5673,8 +5674,8 @@
         ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
         cols:        this.cols,
         rows:        this.rows,
-        cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
-        cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10)
+        cellWidth:   parseFloat(this.wIn ? this.wIn.value : '179'),
+        cellHeight:  parseFloat(this.hIn ? this.hIn.value : '113')
       };
     }
 
