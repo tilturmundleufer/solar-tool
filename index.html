@@ -182,10 +182,24 @@
       <!-- Checkboxen oberhalb des Grids -->
       <div class="grid-checkboxes">
         <div class="checkbox-row">
-          <label class="checkbox-item">
-            <input type="checkbox" id="include-modules">
-            <span>Module hinzufügen</span>
-          </label>
+          <!-- Module Dropdown -->
+          <div class="module-dropdown">
+            <div class="module-dropdown-header">
+              <span class="module-dropdown-title">Module hinzufügen</span>
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Dropdown" class="module-dropdown-arrow" style="width: 10px; height: 16px;">
+            </div>
+            <div class="module-dropdown-content">
+              <label class="module-checkbox">
+                <input type="checkbox" id="include-modules">
+                <span class="checkbox-label">Solarmodul</span>
+              </label>
+              <label class="module-checkbox">
+                <input type="checkbox" id="ulica-module">
+                <span class="checkbox-label">Ulica Solar Black Jade-Flow 500W</span>
+              </label>
+            </div>
+          </div>
+          
           <label class="checkbox-item">
             <input type="checkbox" id="mc4">
             <span>MC4 Stecker</span>
@@ -201,6 +215,10 @@
           <label class="checkbox-item">
             <input type="checkbox" id="quetschkabelschuhe">
             <span>Quetschkabelschuhe</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="erdungsband">
+            <span>Erdungsband</span>
           </label>
         </div>
       </div>

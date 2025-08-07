@@ -1127,6 +1127,94 @@ body {
   font-weight: 500;
 }
 
+/* Module Dropdown Styles */
+.module-dropdown {
+  position: relative;
+  display: inline-block;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.module-dropdown:hover {
+  border-color: #0e1e34;
+  box-shadow: 0 2px 8px rgba(14, 30, 52, 0.1);
+}
+
+.module-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.module-dropdown-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0e1e34;
+}
+
+.module-dropdown-arrow {
+  transition: transform 0.2s ease;
+}
+
+.module-dropdown:hover .module-dropdown-arrow {
+  transform: rotate(90deg);
+}
+
+.module-dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #0e1e34;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 8px 0;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(14, 30, 52, 0.15);
+}
+
+.module-dropdown:hover .module-dropdown-content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.module-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.module-checkbox:hover {
+  background-color: #f8f9fa;
+}
+
+.module-checkbox input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  accent-color: #0e1e34;
+}
+
+.checkbox-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0e1e34;
+}
+
 /* Config Items in Übersicht */
 .config-item {
   display: flex;
