@@ -3605,15 +3605,28 @@
     		this.updateSummaryOnChange();
   		});
       
-        		// Wenn keine Konfigurationen aus URL geladen wurden, erstelle eine Standard-Konfiguration
-  		if (this.configs.length === 0) {
-  			this.cols = this.default.cols;
-  			this.rows = this.default.rows;
-  			this.setup();
+			// Wenn keine Konfigurationen aus URL/CACHE geladen wurden, erstelle eine Standard-Konfiguration
+			if (this.configs.length === 0) {
+				this.cols = this.default.cols;
+				this.rows = this.default.rows;
+				this.setup();
 
-  			const defaultConfig = this._makeConfigObject();
-  			this.configs.push(defaultConfig);
-  			this.loadConfig(0);
+				const defaultConfig = this._makeConfigObject();
+				this.configs.push(defaultConfig);
+				this.loadConfig(0);
+
+				// Standard-Orientation nur für echte Default-Erstellung setzen
+				if (this.orH && this.orV) {
+					this.orH.checked = false;
+					this.orV.checked = true;
+					// Synchronisiere mit den Orientation Buttons
+					const orientHBtn = document.getElementById('orient-h');
+					const orientVBtn = document.getElementById('orient-v');
+					if (orientHBtn && orientVBtn) {
+						orientHBtn.classList.remove('active');
+						orientVBtn.classList.add('active');
+					}
+				}
 			}
 			
 			// Performance: Resize Observer für responsive Updates
@@ -3631,19 +3644,7 @@
 			// Initialisiere Config-Liste
 			this.initConfigList();
 			
-			// Setze Standard-Orientation auf vertikal
-			if (this.orH && this.orV) {
-				this.orH.checked = false;
-				this.orV.checked = true;
-				
-				// Synchronisiere mit den Orientation Buttons
-				const orientHBtn = document.getElementById('orient-h');
-				const orientVBtn = document.getElementById('orient-v');
-				if (orientHBtn && orientVBtn) {
-					orientHBtn.classList.remove('active');
-					orientVBtn.classList.add('active');
-				}
-			}
+			// Hinweis: Keine erzwungene Standard-Orientation hier setzen, um Cache/URL-Werte nicht zu überschreiben
 		}
 		
 		initSidebarNavigation() {
