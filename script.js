@@ -3449,7 +3449,7 @@
       }
 
   		// GLOBALE Checkbox-Event-Listener - gelten für alle Konfigurationen
-		const checkboxes = [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe].filter(el => el);
+		const checkboxes = [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule].filter(el => el);
 		checkboxes.forEach(el =>
 			el.addEventListener('change', () => {
 				this.trackInteraction();
