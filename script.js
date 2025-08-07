@@ -4726,24 +4726,34 @@
 				if (this.ulicaModule) {
 					this.ulicaModule.checked = false;
 				}
-				// Dropdown auf ulica-450 setzen (sicher)
+				// Dropdown auf ulica-450 setzen und Input-Werte anpassen
 				if (this.moduleSelect) {
 					this.moduleSelect.value = 'ulica-450';
+					// Input-Werte für ulica-450 setzen
+					if (this.wIn) this.wIn.value = '175';
+					if (this.hIn) this.hIn.value = '115';
+					this.disableInputs();
 				}
 			} else if (checkboxId === 'ulica-module' && this.ulicaModule.checked) {
 				// ulica-module wurde ausgewählt - include-modules abwählen
 				if (this.incM) {
 					this.incM.checked = false;
 				}
-				// Dropdown auf ulica-500 setzen (sicher)
+				// Dropdown auf ulica-500 setzen und Input-Werte anpassen
 				if (this.moduleSelect) {
 					this.moduleSelect.value = 'ulica-500';
+					// Input-Werte für ulica-500 setzen
+					if (this.wIn) this.wIn.value = '182';
+					if (this.hIn) this.hIn.value = '118';
+					this.disableInputs();
 				}
 			}
 			
-			// Wichtig: Update der Produktliste nach Checkbox-Änderung
+			// Grid und Berechnungen aktualisieren
+			this.updateSize();
+			this.buildGrid();
+			this.buildList();
 			this.updateSummaryOnChange();
-			this.buildList(); // Zusätzlich: Produktliste neu aufbauen
 		}
 		
 		clearModuleCheckboxes() {
@@ -5886,7 +5896,7 @@
 		calculatePartsDirectly(data) {
 			const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
 			const parts = {
-				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+				Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
 				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
 				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
 			};
@@ -5949,6 +5959,10 @@
 			parts.Dachhaken          += len > 1 ? len * 3 : 4;
 			parts.Endkappen          += 4;  // Gleich wie Endklemmen
 			parts.Solarmodul         += len;
+			// UlicaSolarBlackJadeFlow hinzufügen wenn ulica-module Checkbox aktiviert ist
+			if (this.ulicaModule && this.ulicaModule.checked) {
+				parts.UlicaSolarBlackJadeFlow += len;
+			}
 			// Schrauben basierend auf Dachhaken berechnen
 			parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
 			parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
