@@ -3505,12 +3505,12 @@
   				this.addAllToCart();
   			});
   		}
-  		if (this.resetBtn) {
-  			this.resetBtn.addEventListener('click', () => {
-  				this.trackInteraction();
-  				this.resetGridToDefault();
-  			});
-  		}
+  				if (this.resetBtn) {
+			this.resetBtn.addEventListener('click', () => {
+				this.trackInteraction();
+				this.resetGridToDefault();
+			});
+		}
   		if (this.continueLaterBtn) {
   			this.continueLaterBtn.addEventListener('click', () => {
 				this.trackInteraction();
@@ -4369,24 +4369,26 @@
 						}
 					});
 					
-					// Feld verlassen (blur) Support
+					// Feld verlassen (blur) Support - mit Verzögerung
 					quickInput.addEventListener('blur', () => {
-						const input = quickInput.value.trim();
-						if (input) {
-							try {
-								// Clear preview timeout when applying configuration
-								if (this.previewTimeout) {
-									clearTimeout(this.previewTimeout);
-									this.previewTimeout = null;
+						setTimeout(() => {
+							const input = quickInput.value.trim();
+							if (input) {
+								try {
+									// Clear preview timeout when applying configuration
+									if (this.previewTimeout) {
+										clearTimeout(this.previewTimeout);
+										this.previewTimeout = null;
+									}
+									
+									const config = this.smartParser.parseInput(input);
+									this.smartParser.applyPreviewToMainGrid(config);
+									quickInput.value = ''; // Input leeren
+								} catch (error) {
+									this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
 								}
-								
-								const config = this.smartParser.parseInput(input);
-								this.smartParser.applyPreviewToMainGrid(config);
-								quickInput.value = ''; // Input leeren
-							} catch (error) {
-								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
 							}
-						}
+						}, 100); // Kurze Verzögerung für bessere UX
 					});
 					
 					// Live-Grid-Preview bei jedem Tastendruck
@@ -5222,6 +5224,12 @@
 		if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
 		if (this.erdungsband) this.erdungsband.checked = false;
 		if (this.ulicaModule) this.ulicaModule.checked = false;
+		
+		// Module Dropdown auf Default zurücksetzen
+		if (this.moduleSelect) {
+			this.moduleSelect.value = '';
+			this.enableInputs();
+		}
 
   		this.cols = cols;
   		this.rows = rows;
