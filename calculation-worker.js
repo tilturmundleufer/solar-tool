@@ -453,12 +453,21 @@ function checkLeftFieldsRecursive(x, y, erdungsbandMatrix, selection, rows, cols
 
 // Weise Erdungsbandlength zu
 function assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap) {
-  // Markiere beide Felder als "hat Erdungsbandlength"
-  erdungsbandMatrix[y][x] = 'erdungsband';
-  erdungsbandMatrix[y + 1][x] = 'erdungsband';
+  // Prüfe ob aktuelles Feld bereits Erdungsbandlength hat
+  const currentFieldHasErdungsband = erdungsbandMatrix[y][x] === 'erdungsband';
   
-  // Berechne Erdungsbandlength: 2 × Modul-Höhe + Gap
-  return 2 * moduleHeight + gap;
+  if (currentFieldHasErdungsband) {
+    // Nur das Feld darunter markieren
+    erdungsbandMatrix[y + 1][x] = 'erdungsband';
+    // Berechne Erdungsbandlength: 1 × Modul-Höhe + Gap
+    return moduleHeight + gap;
+  } else {
+    // Beide Felder markieren
+    erdungsbandMatrix[y][x] = 'erdungsband';
+    erdungsbandMatrix[y + 1][x] = 'erdungsband';
+    // Berechne Erdungsbandlength: 2 × Modul-Höhe + Gap
+    return 2 * moduleHeight + gap;
+  }
 }
 
 // Finde alle Cluster für Erdungsband-Berechnung (echte Verbindungen)
