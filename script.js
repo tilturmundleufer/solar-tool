@@ -5746,9 +5746,22 @@
   		
   		// 2. Temporär currentConfig auf null setzen für neue Konfiguration
   		this.currentConfig = null;
+
+			// 2a. Erzwinge Default-Startzustand für neue Konfiguration: 5x5, vertikal
+			if (this.default) {
+				this.cols = this.default.cols;
+				this.rows = this.default.rows;
+				if (this.wIn) this.wIn.value = this.default.width;
+				if (this.hIn) this.hIn.value = this.default.height;
+			}
+			if (this.orH && this.orV) {
+				this.orH.checked = false;
+				this.orV.checked = true;
+				this.syncOrientationButtons?.();
+			}
   		
   		// 3. Neue Konfiguration mit leerem Grid erstellen
-  		const emptySelection = Array.from({ length: this.rows }, () =>
+			const emptySelection = Array.from({ length: this.rows }, () =>
   			Array.from({ length: this.cols }, () => false)
   		);
   		
@@ -5821,7 +5834,7 @@
     createNewConfig() {
   		// Erstelle eine neue Standard-Konfiguration
   		this.currentConfig = null;
-  		this.resetGridToDefault();
+			this.resetGridToDefault(); // Setzt 5x5 und vertikal
   		
   		// Neue Konfiguration erstellen und hinzufügen
   		const newConfig = this._makeConfigObject();
@@ -5853,7 +5866,8 @@
       return {
         name:        configName,
         selection:   this.selection.map(r => [...r]),
-        orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+        // Für neue Konfigurationen immer vertikal als Startzustand speichern
+        orientation: this.currentConfig === null ? 'vertical' : (this.orV && this.orV.checked ? 'vertical' : 'horizontal'),
         incM:        this.incM && this.incM.checked,
         mc4:         this.mc4 && this.mc4.checked,
         solarkabel:  this.solarkabel && this.solarkabel.checked,
