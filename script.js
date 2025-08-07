@@ -4691,34 +4691,38 @@
 			el.addEventListener('change', this.handleCheckboxChange.bind(this));
 		});
 			
-			// Expansion-Button-Event-Listener
+			// Expansion-Button-Event-Listener mit stabiler Referenz
+			if (!this.boundExpansionClick) {
+				this.boundExpansionClick = this.handleExpansionClick.bind(this);
+			}
 			document.querySelectorAll('[data-dir="right"]').forEach(btn => {
-				btn.removeEventListener('click', this.handleExpansionClick);
-				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+				btn.removeEventListener('click', this.boundExpansionClick);
+				btn.addEventListener('click', this.boundExpansionClick);
 			});
-			
 			document.querySelectorAll('[data-dir="left"]').forEach(btn => {
-				btn.removeEventListener('click', this.handleExpansionClick);
-				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+				btn.removeEventListener('click', this.boundExpansionClick);
+				btn.addEventListener('click', this.boundExpansionClick);
 			});
-			
 			document.querySelectorAll('[data-dir="top"]').forEach(btn => {
-				btn.removeEventListener('click', this.handleExpansionClick);
-				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+				btn.removeEventListener('click', this.boundExpansionClick);
+				btn.addEventListener('click', this.boundExpansionClick);
 			});
-			
 			document.querySelectorAll('[data-dir="bottom"]').forEach(btn => {
-				btn.removeEventListener('click', this.handleExpansionClick);
-				btn.addEventListener('click', this.handleExpansionClick.bind(this));
+				btn.removeEventListener('click', this.boundExpansionClick);
+				btn.addEventListener('click', this.boundExpansionClick);
 			});
 			
 			// Orientation-Button-Event-Listener
 			const orientHBtn = document.getElementById('orient-h');
 			const orientVBtn = document.getElementById('orient-v');
 			if (orientHBtn && orientVBtn) {
+				// Verwende eine gebundene Referenz, damit removeEventListener korrekt funktioniert
+				if (!this.boundOrientationClick) {
+					this.boundOrientationClick = this.handleOrientationButtonClick.bind(this);
+				}
 				[orientHBtn, orientVBtn].forEach(btn => {
-					btn.removeEventListener('click', this.handleOrientationButtonClick);
-					btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
+					btn.removeEventListener('click', this.boundOrientationClick);
+					btn.addEventListener('click', this.boundOrientationClick);
 				});
 				// Sofortige Synchronisation
 				this.syncOrientationButtons();
@@ -4728,9 +4732,12 @@
 					const orientHBtn = document.getElementById('orient-h');
 					const orientVBtn = document.getElementById('orient-v');
 					if (orientHBtn && orientVBtn) {
+						if (!this.boundOrientationClick) {
+							this.boundOrientationClick = this.handleOrientationButtonClick.bind(this);
+						}
 						[orientHBtn, orientVBtn].forEach(btn => {
-							btn.removeEventListener('click', this.handleOrientationButtonClick);
-							btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
+							btn.removeEventListener('click', this.boundOrientationClick);
+							btn.addEventListener('click', this.boundOrientationClick);
 						});
 						// Synchronisiere Orientation Buttons nach dem Setup
 						this.syncOrientationButtons();
@@ -4888,14 +4895,15 @@
 			if (this.orientationProcessing) return;
 			this.orientationProcessing = true;
 			
-			// Bestimme die neue Orientierung
-			const isVertical = e.target === orientVBtn;
+			// Bestimme die neue Orientierung basierend auf dem Button, der den Handler ausgelöst hat
+			const clickedBtn = e.currentTarget || e.target;
+			const isVertical = clickedBtn === orientVBtn;
 			const newOrientation = isVertical ? 'vertical' : 'horizontal';
 			
 			// Sofortige visuelle Rückmeldung
 			orientHBtn.classList.remove('active');
 			orientVBtn.classList.remove('active');
-			e.target.classList.add('active');
+			if (clickedBtn && clickedBtn.classList) clickedBtn.classList.add('active');
 			
 			// Radio-Buttons synchronisieren
 			if (this.orV) this.orV.checked = isVertical;
