@@ -4694,16 +4694,12 @@
 							btn.removeEventListener('click', this.handleOrientationButtonClick);
 							btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
 						});
-						// Synchronisiere Orientation Buttons nach dem Setup
-						this.syncOrientationButtons();
+						// Orientation Buttons sind bereits korrekt gesetzt
 					}
 				}, 100);
 			}
 			
-			// Synchronisiere Orientation Buttons nach dem Setup
-			setTimeout(() => {
-				this.syncOrientationButtons();
-			}, 200);
+			// Orientation Buttons werden direkt im Click-Handler gesetzt
 		}
 		
 		// Event-Handler-Funktionen
@@ -4833,17 +4829,15 @@
 			if (this.orientationProcessing) return;
 			this.orientationProcessing = true;
 			
-			// Entferne active Klasse von beiden Buttons
-			orientHBtn.classList.remove('active');
-			orientVBtn.classList.remove('active');
-			
-			// Füge active Klasse zum geklickten Button hinzu
-			e.target.classList.add('active');
-			
-			// Synchronisiere mit den Radio-Buttons
+			// Synchronisiere mit den Radio-Buttons ZUERST
 			const isVertical = e.target === orientVBtn;
 			if (this.orV) this.orV.checked = isVertical;
 			if (this.orH) this.orH.checked = !isVertical;
+			
+			// Dann die active Klassen setzen
+			orientHBtn.classList.remove('active');
+			orientVBtn.classList.remove('active');
+			e.target.classList.add('active');
 			
 			this.trackInteraction();
 			
@@ -6201,8 +6195,18 @@
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
 				
-				// Synchronisiere mit den Orientation Buttons (robuster)
-				this.syncOrientationButtons();
+				// Synchronisiere mit den Orientation Buttons direkt
+				const orientHBtn = document.getElementById('orient-h');
+				const orientVBtn = document.getElementById('orient-v');
+				if (orientHBtn && orientVBtn) {
+					orientHBtn.classList.remove('active');
+					orientVBtn.classList.remove('active');
+					if (data.orientation === 'horizontal') {
+						orientHBtn.classList.add('active');
+					} else if (data.orientation === 'vertical') {
+						orientVBtn.classList.add('active');
+					}
+				}
 				
 				// Aktualisiere die erste Konfiguration mit der globalen Orientation
 				this.updateFirstConfigOrientation(data.orientation);
