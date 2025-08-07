@@ -352,8 +352,11 @@ function calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orie
   // Analysiere Grid von oben nach unten, links nach rechts
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      const result = analyzeFieldForErdungsband(x, y, erdungsbandMatrix, selection, rows, cols, moduleHeight, gap);
-      erdungsbandtotal += result;
+      // Prüfe ob dieses Feld bereits eine Erdungsbandlength hat
+      if (!erdungsbandMatrix[y][x]) {
+        const result = analyzeFieldForErdungsband(x, y, erdungsbandMatrix, selection, rows, cols, moduleHeight, gap);
+        erdungsbandtotal += result;
+      }
     }
   }
   

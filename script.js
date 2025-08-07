@@ -5066,8 +5066,11 @@
       // Analysiere Grid von oben nach unten, links nach rechts
       for (let y = 0; y < this.rows; y++) {
         for (let x = 0; x < this.cols; x++) {
-          const result = this.analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
-          erdungsbandtotal += result;
+          // Prüfe ob dieses Feld bereits eine Erdungsbandlength hat
+          if (!erdungsbandMatrix[y][x]) {
+            const result = this.analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
+            erdungsbandtotal += result;
+          }
         }
       }
       
