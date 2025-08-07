@@ -233,7 +233,9 @@ body {
   font-size: 12px;
   font-weight: 500;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  width: 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 

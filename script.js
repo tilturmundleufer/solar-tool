@@ -4710,6 +4710,10 @@
 					el.removeEventListener('change', this.handleOrientationChange);
 					el.addEventListener('change', this.handleOrientationChange.bind(this));
 				});
+				// Synchronisiere Buttons nach Radio-Button Setup
+				setTimeout(() => {
+					this.syncOrientationButtons();
+				}, 10);
 			}
 			
 					// Checkbox-Event-Listener
@@ -4753,6 +4757,8 @@
 					btn.removeEventListener('click', this.handleOrientationButtonClick);
 					btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
 				});
+				// Sofortige Synchronisation
+				this.syncOrientationButtons();
 			} else {
 				// Fallback: Versuche es später nochmal
 				setTimeout(() => {
@@ -4766,16 +4772,31 @@
 						// Synchronisiere Orientation Buttons nach dem Setup
 						this.syncOrientationButtons();
 					}
-				}, 100);
+				}, 50); // Reduzierte Verzögerung
 			}
-			
-			// Synchronisiere Orientation Buttons nach dem Setup
-			setTimeout(() => {
-				this.syncOrientationButtons();
-			}, 200);
 		}
 		
 		// Event-Handler-Funktionen
+		
+		// Hilfsfunktion für robuste Orientation-Button-Synchronisation
+		ensureOrientationButtonsSync() {
+			const orientHBtn = document.getElementById('orient-h');
+			const orientVBtn = document.getElementById('orient-v');
+			
+			if (!orientHBtn || !orientVBtn || !this.orH || !this.orV) return;
+			
+			// Prüfe ob Buttons korrekt synchronisiert sind
+			const isVerticalActive = orientVBtn.classList.contains('active');
+			const isHorizontalActive = orientHBtn.classList.contains('active');
+			const radioVerticalChecked = this.orV.checked;
+			const radioHorizontalChecked = this.orH.checked;
+			
+			// Wenn Inkonsistenz festgestellt wird, korrigiere sie
+			if ((isVerticalActive !== radioVerticalChecked) || (isHorizontalActive !== radioHorizontalChecked)) {
+				this.syncOrientationButtons();
+			}
+		}
+		
 		handleModuleSelectChange() {
 			this.trackInteraction();
 			const selectedValue = this.moduleSelect.value;
@@ -4902,30 +4923,33 @@
 			if (this.orientationProcessing) return;
 			this.orientationProcessing = true;
 			
-			// Synchronisiere mit den Radio-Buttons ZUERST
+			// Bestimme die neue Orientierung
 			const isVertical = e.target === orientVBtn;
-			if (this.orV) this.orV.checked = isVertical;
-			if (this.orH) this.orH.checked = !isVertical;
+			const newOrientation = isVertical ? 'vertical' : 'horizontal';
 			
-			// Dann die active Klassen setzen - SOFORT
+			// Sofortige visuelle Rückmeldung
 			orientHBtn.classList.remove('active');
 			orientVBtn.classList.remove('active');
 			e.target.classList.add('active');
 			
+			// Radio-Buttons synchronisieren
+			if (this.orV) this.orV.checked = isVertical;
+			if (this.orH) this.orH.checked = !isVertical;
+			
 			this.trackInteraction();
 			
-			// Optimierte Update-Sequenz mit Debouncing
-			requestAnimationFrame(() => {
-				this.updateSize();
-				this.buildGrid();
-				
-				// Verzögerte Updates für bessere Performance
-				setTimeout(() => {
-					this.buildList();
-					this.updateSummaryOnChange();
-					this.orientationProcessing = false;
-				}, 50);
-			});
+			// Sofortige Grid-Updates ohne Verzögerung
+			this.updateSize();
+			this.buildGrid();
+			
+			// Verzögerte Updates für Performance
+			setTimeout(() => {
+				this.buildList();
+				this.updateSummaryOnChange();
+				this.orientationProcessing = false;
+				// Zusätzliche Synchronisation für Robustheit
+				this.ensureOrientationButtonsSync();
+			}, 10); // Reduzierte Verzögerung für bessere Reaktionszeit
 		}
 		
 		// NEUE FUNKTION: Synchronisiere Orientation Buttons
@@ -4940,9 +4964,15 @@
 			orientVBtn.classList.remove('active');
 			
 			// Setze active Klasse basierend auf Radio-Button Status
-			if (this.orH.checked) {
+			// Priorisiere orV.checked für konsistente Logik
+			if (this.orV.checked) {
+				orientVBtn.classList.add('active');
+			} else if (this.orH.checked) {
 				orientHBtn.classList.add('active');
-			} else if (this.orV.checked) {
+			} else {
+				// Fallback: Standard auf vertikal setzen
+				this.orV.checked = true;
+				this.orH.checked = false;
 				orientVBtn.classList.add('active');
 			}
 		}
