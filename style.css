@@ -4,6 +4,62 @@ html, body {
   margin: 0;
 }
 
+/* MODUL DROPDOWN STYLES */
+#module-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+#module-select:hover {
+  border-color: #ff6b35;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.15);
+}
+
+#module-select:focus {
+  outline: none;
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+#module-select option {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #2d3748;
+  background: #ffffff;
+}
+
+#module-select option:hover {
+  background: #f7fafc;
+}
+
+/* Input-Sperr-Styles */
+#width-input:disabled,
+#height-input:disabled {
+  background-color: #f8f9fa !important;
+  color: #6b7280 !important;
+  cursor: not-allowed !important;
+  border-color: #e1e5e9 !important;
+}
+
+#width-input:disabled::placeholder,
+#height-input:disabled::placeholder {
+  color: #9ca3af !important;
+}
+
 body {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: #f8f9fa;
