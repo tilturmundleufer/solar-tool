@@ -4718,6 +4718,9 @@
 				this.moduleSelect.value = 'ulica-500';
 				this.handleModuleSelectChange();
 			}
+			
+			// Wichtig: Update der Produktliste nach Checkbox-Änderung
+			this.updateSummaryOnChange();
 		}
 		
 		clearModuleCheckboxes() {
@@ -4747,10 +4750,10 @@
 			const checkboxId = event.target.id;
 			if (checkboxId === 'include-modules' || checkboxId === 'ulica-module') {
 				this.handleModuleCheckboxChange(checkboxId);
+			} else {
+				// Ursprüngliche Funktion: Update aller Konfigurationen für Checkboxen
+				this.updateAllConfigurationsForCheckboxes();
 			}
-			
-			// Ursprüngliche Funktion: Update aller Konfigurationen für Checkboxen
-			this.updateAllConfigurationsForCheckboxes();
 		}
 		
 		handleExpansionClick(e) {
