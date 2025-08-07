@@ -2071,14 +2071,6 @@
       if (config.orientation) {
         if (this.solarGrid.orV) this.solarGrid.orV.checked = config.orientation === 'vertical';
         if (this.solarGrid.orH) this.solarGrid.orH.checked = config.orientation === 'horizontal';
-        
-        // Synchronisiere mit den Orientation Buttons
-        const orientHBtn = document.getElementById('orient-h');
-        const orientVBtn = document.getElementById('orient-v');
-        if (orientHBtn && orientVBtn) {
-          orientHBtn.classList.toggle('active', config.orientation === 'horizontal');
-          orientVBtn.classList.toggle('active', config.orientation === 'vertical');
-        }
       }
 
       // NEUE ACTION PATTERNS HANDHABEN (höchste Priorität)
@@ -2180,11 +2172,11 @@
           if (config.configName) {
             // Name der aktuellen Konfiguration ändern
             this.solarGrid.renameCurrentConfig(config.configName);
-            			this.solarGrid.showToast(`Konfiguration umbenannt zu "${config.configName}"`, 2000);
+            this.solarGrid.showToast(`💾 Konfiguration umbenannt zu "${config.configName}"`, 2000);
           } else {
             // Normales Speichern
             this.solarGrid.saveNewConfig();
-            				this.solarGrid.showToast('Konfiguration gespeichert', 2000);
+            this.solarGrid.showToast('💾 Konfiguration gespeichert', 2000);
           }
           break;
           
@@ -2197,14 +2189,14 @@
           // Lösche aktuelle Konfiguration
           if (this.solarGrid.currentConfig !== null) {
             this.solarGrid.deleteConfig(this.solarGrid.currentConfig);
-            				this.solarGrid.showToast('Konfiguration gelöscht', 2000);
+            this.solarGrid.showToast('🗑️ Konfiguration gelöscht', 2000);
           }
           break;
           
         case 'deleteModules':
           // Lösche nur die Module-Auswahl, behalte Grid-Größe
           this.clearModuleSelection();
-          			this.solarGrid.showToast('Module-Auswahl gelöscht', 2000);
+          this.solarGrid.showToast('🔄 Module-Auswahl gelöscht', 2000);
           break;
           
         case 'resetGrid':
@@ -2657,13 +2649,6 @@
           this.solarGrid.trackInteraction();
           this.solarGrid.buildList();
           this.solarGrid.updateSummaryOnChange();
-          
-          // Update config-list und overview wenn eine Konfiguration ausgewählt ist
-          if (this.solarGrid.currentConfig !== null) {
-            // Speichere die Konfiguration automatisch
-            this.solarGrid.updateConfig();
-            this.solarGrid.updateConfigList();
-          }
         });
 
         newCell.addEventListener('mouseleave', () => {
@@ -2869,7 +2854,8 @@
 
       this.listHolder    = document.querySelector('.product-section');
       this.prodList      = document.getElementById('produktliste');
-
+      this.summaryHolder = document.getElementById('summary-list-holder');
+      this.summaryList   = document.getElementById('summary-list');
       this.saveBtn       = document.getElementById('save-config-btn');
       this.addBtn        = document.getElementById('add-to-cart-btn');
       this.summaryBtn    = document.getElementById('summary-add-cart-btn');
@@ -2969,8 +2955,9 @@
     getProductSummary() {
       const parts = this.calculateParts();
       if (!this.incM.checked) delete parts.Solarmodul;
-      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
-      // Sie werden nur noch in der Overview berechnet
+      if (this.mc4.checked)   parts.MC4_Stecker   = this.selection.flat().filter(v => v).length;
+      if (this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz.checked)  parts.Holzunterleger = (parts['Schiene_240_cm'] || 0) + (parts['Schiene_360_cm'] || 0);
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       let totalPrice = 0;
@@ -3038,8 +3025,10 @@
         cellHeight: parseInt(this.hIn.value, 10),
         orientation: this.orV.checked ? 'vertical' : 'horizontal',
         selection: this.selection,
-        incM: this.incM.checked
-        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        incM: this.incM.checked,
+        mc4: this.mc4.checked,
+        solarkabel: this.solarkabel.checked,
+        holz: this.holz.checked
       };
 
       const summary = this.getProductSummary();
@@ -3059,9 +3048,17 @@
         cellWidth: targetConfig.cellWidth,
         cellHeight: targetConfig.cellHeight,
         orientation: targetConfig.orientation,
-        incM: targetConfig.incM
-        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        incM: targetConfig.incM,
+        mc4: targetConfig.mc4,
+        solarkabel: targetConfig.solarkabel,
+        holz: targetConfig.holz
       });
+
+      // Stelle sicher, dass alle 12 Produkte übertragen werden, auch mit 0
+      // Zusätzliche Berechnungen basierend auf Checkbox-Einstellungen
+      if (targetConfig.mc4) parts.MC4_Stecker = targetConfig.selection.flat().filter(v => v).length;
+      if (targetConfig.solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (targetConfig.holz) parts.Holzunterleger = (parts.Schiene_240_cm || 0) + (parts.Schiene_360_cm || 0);
       
       const allProductQuantities = {
         Solarmodul: parts.Solarmodul || 0,
@@ -3072,8 +3069,10 @@
         Endkappen: parts.Endkappen || 0,
         Schienenverbinder: parts.Schienenverbinder || 0,
         Schiene240cm: parts.Schiene_240_cm || 0,
-        Schiene360cm: parts.Schiene_360_cm || 0
-        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        Schiene360cm: parts.Schiene_360_cm || 0,
+        MC4Stecker: parts.MC4_Stecker || 0,
+        Solarkabel: parts.Solarkabel || 0,
+        Holzunterleger: parts.Holzunterleger || 0
       };
       
       return {
@@ -3088,8 +3087,10 @@
           orientation: targetConfig.orientation,
           gridVisualization: gridVisualization,
           options: {
-            includeModules: targetConfig.incM
-            // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+            includeModules: targetConfig.incM,
+            mc4Connectors: targetConfig.mc4,
+            solarkabel: targetConfig.solarkabel,
+            woodUnderlay: targetConfig.holz
           }
         },
         summary: summary,
@@ -3319,13 +3320,6 @@
       // Mobile Detection und Warning
       this.checkMobileDevice();
       
-      // Prüfe zuerst den Cache (höchste Priorität)
-      if (this.loadFromCache()) {
-      	// Cache wurde erfolgreich geladen - keine weiteren Aktionen nötig
-      	return;
-      }
-      
-      // Prüfe URL-Parameter als Fallback
       const params = new URLSearchParams(window.location.search);
   		const rawData = params.get('configData');
   		if (rawData) {
@@ -3357,11 +3351,10 @@
 			})
 		);
       
-            // Prüfe ob Orientation-Elemente existieren (Radio-Buttons oder Buttons)
+            // Prüfe ob Radio-Buttons existieren bevor auf sie zugegriffen wird
       if (this.orH && this.orV) {
         let lastOrientation = this.orH.checked ? 'horizontal' : 'vertical';
 
-        // Event-Listener für Radio-Buttons (falls vorhanden)
         [this.orH, this.orV].forEach(el =>
           el.addEventListener('change', () => {
 
@@ -3378,14 +3371,6 @@
               orientHSetup.checked = el === this.orH;
               orientVSetup.checked = el === this.orV;
             }
-            
-            // Synchronisiere mit den Orientation Buttons
-            const orientHBtn = document.getElementById('orient-h');
-            const orientVBtn = document.getElementById('orient-v');
-            if (orientHBtn && orientVBtn) {
-              orientHBtn.classList.toggle('active', el === this.orH);
-              orientVBtn.classList.toggle('active', el === this.orV);
-            }
 
             // Vollständige Grid-Neuinitialisierung wie bei Smart Config
             this.trackInteraction();
@@ -3397,35 +3382,6 @@
             lastOrientation = currentOrientation;
           })
         );
-        
-        // Event-Listener für Orientation Buttons
-        const orientHBtn = document.getElementById('orient-h');
-        const orientVBtn = document.getElementById('orient-v');
-        
-        if (orientHBtn && orientVBtn) {
-          [orientHBtn, orientVBtn].forEach(btn => {
-            btn.addEventListener('click', () => {
-              // Entferne active Klasse von beiden Buttons
-              orientHBtn.classList.remove('active');
-              orientVBtn.classList.remove('active');
-              
-              // Füge active Klasse zum geklickten Button hinzu
-              btn.classList.add('active');
-              
-              // Synchronisiere mit den Radio-Buttons
-              const isVertical = btn === orientVBtn;
-              if (this.orV) this.orV.checked = isVertical;
-              if (this.orH) this.orH.checked = !isVertical;
-              
-              // Vollständige Grid-Neuinitialisierung
-              this.trackInteraction();
-              this.updateSize();
-              this.buildGrid();
-              this.buildList();
-              this.updateSummaryOnChange();
-            });
-          });
-        }
       }
 
   		// GLOBALE Checkbox-Event-Listener - gelten für alle Konfigurationen
@@ -3460,8 +3416,6 @@
 				})
 			);
 		}
-		
-
       
       // Event-Listener für die Grid-Expansion-Buttons (neue Struktur)
 			// Spalten-Buttons - rechts (fügt am Ende hinzu)
@@ -3593,20 +3547,6 @@
 			
 			// Initialisiere Config-Liste
 			this.initConfigList();
-			
-			// Setze Standard-Orientation auf vertikal
-			if (this.orH && this.orV) {
-				this.orH.checked = false;
-				this.orV.checked = true;
-				
-				// Synchronisiere mit den Orientation Buttons
-				const orientHBtn = document.getElementById('orient-h');
-				const orientVBtn = document.getElementById('orient-v');
-				if (orientHBtn && orientVBtn) {
-					orientHBtn.classList.remove('active');
-					orientVBtn.classList.add('active');
-				}
-			}
 		}
 		
 		initSidebarNavigation() {
@@ -3668,14 +3608,6 @@
 					this.generateContinueLink();
 				});
 			}
-			
-			// Add Config Button
-			const addConfigBtn = document.getElementById('add-config-btn');
-			if (addConfigBtn) {
-				addConfigBtn.addEventListener('click', () => {
-					this.saveNewConfig();
-				});
-			}
 		}
 		
 		showOverview() {
@@ -3691,33 +3623,9 @@
 				detailView.classList.remove('active');
 				overviewView.classList.add('active');
 				
-				// Alle Input-Felder entfernen
-				this.clearAllInputFields();
-				
 				// Config-Liste aktualisieren
 				this.updateConfigList();
 			}
-		}
-		
-		clearAllInputFields() {
-			// Entferne alle Input-Felder aus der Detail-Ansicht
-			const titleEl = document.getElementById('current-config-title');
-			if (titleEl) {
-				const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
-				existingInputs.forEach(input => input.remove());
-				titleEl.style.display = 'block';
-			}
-			
-			// Entferne alle Input-Felder aus der Config-Liste
-			const configItems = document.querySelectorAll('.config-item');
-			configItems.forEach(item => {
-				const nameEl = item.querySelector('.config-item-name');
-				if (nameEl) {
-					const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
-					existingInputs.forEach(input => input.remove());
-					nameEl.style.display = 'block';
-				}
-			});
 		}
 		
 		// Initialisiere Config-Liste beim Start
@@ -3725,9 +3633,6 @@
 			if (document.getElementById('config-overview')?.classList.contains('active')) {
 				this.updateConfigList();
 			}
-			
-			// Event-Listener für Zusatzprodukte-Checkboxen
-			this.initAdditionalProductsListeners();
 		}
 		
 		showDetailView(configIndex = null) {
@@ -3764,32 +3669,7 @@
 		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
-				// Isolierte Berechnung nur für die aktuelle Konfiguration
-				const parts = this.calculatePartsDirectly({
-					selection: this.selection,
-					cols: this.cols,
-					rows: this.rows,
-					cellWidth: parseInt(this.wIn?.value || '179'),
-					cellHeight: parseInt(this.hIn?.value || '113'),
-					orientation: this.orV?.checked ? 'vertical' : 'horizontal'
-				});
-				
-				// Module nur hinzufügen wenn Checkbox aktiviert ist
-				const includeModules = document.getElementById('include-modules')?.checked || false;
-				if (!includeModules) {
-					delete parts.Solarmodul;
-				}
-				
-				let totalPrice = 0;
-				
-				Object.entries(parts).forEach(([partName, quantity]) => {
-					if (quantity > 0) {
-						const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
-						const pricePerPackage = getPriceFromCache(partName);
-						totalPrice += packagesNeeded * pricePerPackage;
-					}
-				});
-				
+				const totalPrice = this.calculateCurrentTotalPrice();
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 			}
 		}
@@ -3805,7 +3685,7 @@
 				configItem.className = 'config-item';
 				
 				// Markiere aktuelle Konfiguration
-				if (index === this.currentConfig) {
+				if (index === this.activeConfig) {
 					configItem.classList.add('active');
 				}
 				
@@ -3818,14 +3698,12 @@
 					</div>
 					<div class="config-item-actions">
 						<button class="icon-btn" onclick="solarGrid.editConfigNameInList(${index})" title="Bearbeiten">
-							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
+							<span>✏️</span>
 						</button>
 						<button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${index})" title="Löschen">
-							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936c5481f2a4db850a01f5_Trashbin.png" alt="Löschen" style="width: 16px; height: 16px;">
+							<span>🗑️</span>
 						</button>
-						<div class="config-item-arrow">
-							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 10px; height: 16px;">
-						</div>
+						<div class="config-item-arrow">▶</div>
 					</div>
 				`;
 				
@@ -3838,10 +3716,6 @@
 				
 				configListEl.appendChild(configItem);
 			});
-			
-			// Update Gesamtpreis und Zusatzprodukte
-			this.updateOverviewTotalPrice();
-			this.renderAdditionalProducts();
 		}
 		
 		initAutoSaveIndicator() {
@@ -3866,168 +3740,9 @@
 			}, 1000);
 		}
 		
-		updateOverviewTotalPrice() {
-			const totalPriceEl = document.getElementById('overview-total-price');
-			if (!totalPriceEl) return;
-			
-			// Berechne Gesamtpreis aller Konfigurationen
-			let totalPrice = 0;
-			this.configs.forEach(config => {
-				totalPrice += this.calculateConfigPrice(config);
-			});
-			
-			// Füge Zusatzprodukte hinzu
-			const additionalProductsPrice = this.calculateAdditionalProductsPrice();
-			totalPrice += additionalProductsPrice;
-			
-			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
-		}
-		
-		calculateAdditionalProductsPrice() {
-			let totalPrice = 0;
-			
-			// MC4 Stecker
-			if (document.getElementById('mc4')?.checked) {
-				const moduleCount = this.configs.reduce((total, config) => {
-					return total + config.selection.flat().filter(v => v).length;
-				}, 0);
-				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
-				const pricePerPackage = getPriceFromCache('MC4_Stecker');
-				totalPrice += packagesNeeded * pricePerPackage;
-			}
-			
-			// Solarkabel
-			if (document.getElementById('solarkabel')?.checked) {
-				const packagesNeeded = 1; // 1x Solarkabel 100M
-				const pricePerPackage = getPriceFromCache('Solarkabel');
-				totalPrice += packagesNeeded * pricePerPackage;
-			}
-			
-			// Holzunterleger
-			if (document.getElementById('holz')?.checked) {
-				const packagesNeeded = 1; // 1x Unterlegholz für Dachhaken - 50 Stück
-				const pricePerPackage = getPriceFromCache('Holzunterleger');
-				totalPrice += packagesNeeded * pricePerPackage;
-			}
-			
-			// Quetschkabelschuhe
-			if (document.getElementById('quetschkabelschuhe')?.checked) {
-				const packagesNeeded = 1; // 1x Quetschkabelschuhe - 100 Stück
-				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
-				totalPrice += packagesNeeded * pricePerPackage;
-			}
-			
-			return totalPrice;
-		}
-		
-		renderAdditionalProducts() {
-			const additionalProductsListEl = document.getElementById('additional-products-list');
-			if (!additionalProductsListEl) return;
-			
-			additionalProductsListEl.innerHTML = '';
-			
-			// MC4 Stecker
-			if (document.getElementById('mc4')?.checked) {
-				const moduleCount = this.configs.reduce((total, config) => {
-					return total + config.selection.flat().filter(v => v).length;
-				}, 0);
-				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
-				const pricePerPackage = getPriceFromCache('MC4_Stecker');
-				const totalPrice = packagesNeeded * pricePerPackage;
-				
-				const item = document.createElement('div');
-				item.className = 'additional-product-item';
-				item.innerHTML = `
-					<div class="item-left">
-						<span class="item-quantity">${packagesNeeded}x</span>
-						<span class="item-name">MC4 Stecker</span>
-					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
-				`;
-				additionalProductsListEl.appendChild(item);
-			}
-			
-			// Solarkabel
-			if (document.getElementById('solarkabel')?.checked) {
-				const packagesNeeded = 1;
-				const pricePerPackage = getPriceFromCache('Solarkabel');
-				const totalPrice = packagesNeeded * pricePerPackage;
-				
-				const item = document.createElement('div');
-				item.className = 'additional-product-item';
-				item.innerHTML = `
-					<div class="item-left">
-						<span class="item-quantity">1x</span>
-						<span class="item-name">Solarkabel 100M</span>
-					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
-				`;
-				additionalProductsListEl.appendChild(item);
-			}
-			
-			// Holzunterleger
-			if (document.getElementById('holz')?.checked) {
-				const packagesNeeded = 1;
-				const pricePerPackage = getPriceFromCache('Holzunterleger');
-				const totalPrice = packagesNeeded * pricePerPackage;
-				
-				const item = document.createElement('div');
-				item.className = 'additional-product-item';
-				item.innerHTML = `
-					<div class="item-left">
-						<span class="item-quantity">1x</span>
-						<span class="item-name">Unterlegholz für Dachhaken - 50 Stück</span>
-					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
-				`;
-				additionalProductsListEl.appendChild(item);
-			}
-			
-			// Quetschkabelschuhe
-			if (document.getElementById('quetschkabelschuhe')?.checked) {
-				const packagesNeeded = 1;
-				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
-				const totalPrice = packagesNeeded * pricePerPackage;
-				
-				const item = document.createElement('div');
-				item.className = 'additional-product-item';
-				item.innerHTML = `
-					<div class="item-left">
-						<span class="item-quantity">1x</span>
-						<span class="item-name">Quetschkabelschuhe - 100 Stück</span>
-					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
-				`;
-				additionalProductsListEl.appendChild(item);
-			}
-		}
-		
-		initAdditionalProductsListeners() {
-			// Event-Listener für Zusatzprodukte-Checkboxen
-			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe'];
-			
-			additionalProductCheckboxes.forEach(checkboxId => {
-				const checkbox = document.getElementById(checkboxId);
-				if (checkbox) {
-					checkbox.addEventListener('change', () => {
-						// Update Gesamtpreis und Zusatzprodukte-Liste
-						this.updateOverviewTotalPrice();
-						this.renderAdditionalProducts();
-					});
-				}
-			});
-		}
-		
 		editConfigName() {
 			const titleEl = document.getElementById('current-config-title');
 			if (!titleEl) return;
-			
-			// Entferne alle existierenden Input-Felder
-			const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
-			existingInputs.forEach(input => input.remove());
-			
-			// Stelle sicher, dass der Titel sichtbar ist
-			titleEl.style.display = 'block';
 			
 			// Erstelle Input-Feld
 			const input = document.createElement('input');
@@ -4053,26 +3768,26 @@
 			input.select();
 			
 			// Event-Listener für Enter und Blur
-			const saveEdit = function() {
+			const saveEdit = () => {
 				const newName = input.value.trim();
-				if (newName && this.currentConfig !== null) {
-					this.configs[this.currentConfig].name = newName;
+				if (newName && this.activeConfig !== null) {
+					this.configs[this.activeConfig].name = newName;
 					titleEl.textContent = newName;
 					this.updateConfigList();
-					this.updateConfig();
+					this.saveToUrl();
 					this.showAutoSaveIndicator();
 				}
 				titleEl.style.display = 'block';
 				input.remove();
-			}.bind(this);
+			};
 			
-			const cancelEdit = function() {
+			const cancelEdit = () => {
 				titleEl.style.display = 'block';
 				input.remove();
-			}.bind(this);
+			};
 			
 			input.addEventListener('blur', saveEdit);
-			input.addEventListener('keydown', function(e) {
+			input.addEventListener('keydown', (e) => {
 				if (e.key === 'Enter') {
 					e.preventDefault();
 					saveEdit();
@@ -4087,77 +3802,13 @@
 			const config = this.configs[configIndex];
 			if (!config) return;
 			
-			// Finde das config-item Element
-			const configItems = document.querySelectorAll('.config-item');
-			const configItem = configItems[configIndex];
-			if (!configItem) return;
-			
-			// Finde das name Element
-			const nameEl = configItem.querySelector('.config-item-name');
-			if (!nameEl) return;
-			
-			// Entferne alle existierenden Input-Felder in diesem Item
-			const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
-			existingInputs.forEach(input => input.remove());
-			
-			// Stelle sicher, dass der Name sichtbar ist
-			nameEl.style.display = 'block';
-			
-			// Erstelle Input-Feld
-			const input = document.createElement('input');
-			input.type = 'text';
-			input.value = nameEl.textContent;
-			input.style.cssText = `
-				font-size: 16px;
-				font-weight: normal;
-				color: #000000;
-				background: white;
-				border: 1px solid #FFB101;
-				border-radius: 4px;
-				padding: 2px 6px;
-				width: 80%;
-				outline: none;
-			`;
-			
-			// Ersetze Name durch Input
-			nameEl.style.display = 'none';
-			nameEl.parentNode.insertBefore(input, nameEl);
-			input.focus();
-			input.select();
-			
-			// Event-Listener für Enter und Blur
-			const saveEdit = function() {
-				const newName = input.value.trim();
-				if (newName) {
-					config.name = newName;
-					nameEl.textContent = newName;
-					this.updateConfig();
-					this.showAutoSaveIndicator();
-				}
-				nameEl.style.display = 'block';
-				if (input.parentNode) {
-					input.remove();
-				}
+			const newName = prompt('Neuer Name für die Konfiguration:', config.name || `Konfiguration #${configIndex + 1}`);
+			if (newName && newName.trim()) {
+				config.name = newName.trim();
 				this.updateConfigList();
-			}.bind(this);
-			
-			const cancelEdit = function() {
-				nameEl.style.display = 'block';
-				if (input.parentNode) {
-					input.remove();
-				}
-			}.bind(this);
-			
-			input.addEventListener('blur', saveEdit);
-			input.addEventListener('keydown', function(e) {
-				if (e.key === 'Enter') {
-					e.preventDefault();
-					saveEdit();
-				} else if (e.key === 'Escape') {
-					e.preventDefault();
-					cancelEdit();
-				}
-			});
+				// Speichere in URL
+				this.saveToUrl();
+			}
 		}
 		
 		deleteCurrentConfig() {
@@ -4166,18 +3817,18 @@
 				return;
 			}
 			
-			const currentConfig = this.configs[this.currentConfig];
-			const configName = currentConfig?.name || `Konfiguration #${this.currentConfig + 1}`;
+			const currentConfig = this.configs[this.activeConfig];
+			const configName = currentConfig?.name || `Konfiguration #${this.activeConfig + 1}`;
 			
 			if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
-				this.configs.splice(this.currentConfig, 1);
+				this.configs.splice(this.activeConfig, 1);
 				
 				// Aktive Konfiguration anpassen
-				if (this.currentConfig >= this.configs.length) {
-					this.currentConfig = this.configs.length - 1;
+				if (this.activeConfig >= this.configs.length) {
+					this.activeConfig = this.configs.length - 1;
 				}
 				
-				this.loadConfig(this.currentConfig);
+				this.loadConfig(this.activeConfig);
 				this.saveToUrl();
 				
 				// Zurück zur Übersicht und Config-Liste updaten
@@ -4198,13 +3849,13 @@
 				this.configs.splice(configIndex, 1);
 				
 				// Aktive Konfiguration anpassen
-				if (this.currentConfig >= this.configs.length) {
-					this.currentConfig = this.configs.length - 1;
-				} else if (this.currentConfig > configIndex) {
-					this.currentConfig--;
+				if (this.activeConfig >= this.configs.length) {
+					this.activeConfig = this.configs.length - 1;
+				} else if (this.activeConfig > configIndex) {
+					this.activeConfig--;
 				}
 				
-				this.loadConfig(this.currentConfig);
+				this.loadConfig(this.activeConfig);
 				this.saveToUrl();
 				this.updateConfigList();
 			}
@@ -4214,37 +3865,20 @@
 		}
 		
 		calculateConfigPrice(config) {
-			// Verwende die ursprüngliche Berechnungslogik
-			const parts = {
-				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
-				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
-			};
-
-			// Berechne Teile für jede Zeile
-			for (let y = 0; y < config.rows; y++) {
-				if (!Array.isArray(config.selection[y])) continue;
-				let run = 0;
-
-				for (let x = 0; x < config.cols; x++) {
-					if (config.selection[y]?.[x]) {
-						run++;
-					}
-					else if (run) { 
-						this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical'); 
-						run = 0; 
-					}
-				}
-				if (run) {
-					this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical');
-				}
-			}
-			
-			// Module nur hinzufügen wenn Checkbox aktiviert ist
-			const includeModules = document.getElementById('include-modules')?.checked || false;
-			if (!includeModules) {
-				delete parts.Solarmodul;
-			}
+			// Verwende calculatePartsDirectly für isolierte Berechnung
+			const parts = this.calculatePartsDirectly({
+				selection: config.selection,
+				cols: config.cols,
+				rows: config.rows,
+				cellWidth: config.cellWidth || 179,
+				cellHeight: config.cellHeight || 113,
+				orientation: config.orientation || 'vertical',
+				incM: config.incM || false,
+				mc4: config.mc4 || false,
+				solarkabel: config.solarkabel || false,
+				holz: config.holz || false,
+				quetschkabelschuhe: config.quetschkabelschuhe || false
+			});
 			
 			let totalPrice = 0;
 			
@@ -4268,8 +3902,11 @@
 				cellWidth: parseInt(this.wIn?.value || '179'),
 				cellHeight: parseInt(this.hIn?.value || '113'),
 				orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-				incM: document.getElementById('include-modules')?.checked || false
-				// Zusatzprodukte werden nicht mehr berücksichtigt
+				incM: document.getElementById('include-modules')?.checked || false,
+				mc4: document.getElementById('mc4')?.checked || false,
+				solarkabel: document.getElementById('solarkabel')?.checked || false,
+				holz: document.getElementById('holz')?.checked || false,
+				quetschkabelschuhe: document.getElementById('quetschkabelschuhe')?.checked || false
 			});
 			
 			let totalPrice = 0;
@@ -4278,8 +3915,7 @@
 				if (quantity > 0) {
 					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
 					const pricePerPackage = getPriceFromCache(partName);
-					const itemTotal = packagesNeeded * pricePerPackage;
-					totalPrice += itemTotal;
+					totalPrice += packagesNeeded * pricePerPackage;
 				}
 			});
 			
@@ -4615,6 +4251,7 @@
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
+  		this.renderProductSummary();
   		this.updateSaveButtons();
 		}
 
@@ -4803,19 +4440,12 @@
         		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
         			// Direkte Referenz statt JSON.parse/stringify
         			this.configs[this.currentConfig].selection = this.selection;
-        			// Speichere die Konfiguration automatisch
-        			this.updateConfig();
         		}
         		
         		this.trackInteraction();
         		// Performance: Sofortige Produktliste Update + Debounced Summary
         		this.buildList();
         		this.updateSummaryOnChange();
-        		
-        		// Update config-list und overview wenn eine Konfiguration ausgewählt ist
-        		if (this.currentConfig !== null) {
-        			this.updateConfigList();
-        		}
       		});
        
       		// FEATURE 6: Screen Reader Support - Keyboard Navigation
@@ -4852,8 +4482,12 @@
         
         const parts = await this.calculateParts();
       if (this.incM && !this.incM.checked) delete parts.Solarmodul;
-      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
-      // Sie werden nur noch in der Overview berechnet
+      if (this.mc4 && this.mc4.checked) {
+        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      }
+      if (this.solarkabel && this.solarkabel.checked) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (this.holz && this.holz.checked)  parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
+      if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
 
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
@@ -4875,18 +4509,11 @@
           const itemTotal = packs * price;
           const div = document.createElement('div');
           div.className = 'produkt-item';
-          
-          // Spezielle Behandlung für Erdungsband: Zeige Länge statt Anzahl
-          let itemDetails = `(${v})`;
-          if (k === 'Erdungsband' && this.erdungsbandtotal) {
-            itemDetails = `(${this.erdungsbandtotal} cm)`;
-          }
-          
           div.innerHTML = `
             <div class="item-left">
               <span class="item-quantity">${packs}×</span>
               <span class="item-name">${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')}</span>
-              <span class="item-details">${itemDetails}</span>
+              <span class="item-details">(${v})</span>
             </div>
             <span class="item-price">${itemTotal.toFixed(2).replace('.', ',')} €</span>
           `;
@@ -4920,8 +4547,8 @@
   		this.wIn.value = width;
   		this.hIn.value = height;
   		
-  				// Setze Orientierung auf Standard (vertikal als Standard)
-		const defaultVertical = true; // Vertikal als Standard
+  				// Setze Orientierung auf Standard (vertikal wenn im HTML so gesetzt)
+		const defaultVertical = document.getElementById('orient-v') ? document.getElementById('orient-v').hasAttribute('checked') : false;
 		if (this.orH) this.orH.checked = !defaultVertical;
 		if (this.orV) this.orV.checked = defaultVertical;
 		
@@ -4956,8 +4583,8 @@
 		if (this.rowsIn) this.rowsIn.value = this.default.rows;
 		if (this.wIn) this.wIn.value = this.default.width;
 		if (this.hIn) this.hIn.value = this.default.height;
-		if (this.orH) this.orH.checked = false;
-		if (this.orV) this.orV.checked = true;
+		if (this.orH) this.orH.checked = true;
+		if (this.orV) this.orV.checked = false;
 
   		// Setze cols/rows synchron
   		this.cols = this.default.cols;
@@ -4983,8 +4610,7 @@
   		const p = {
     		Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
     		Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-    		Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
-    		Erdungsband: 0
+    		Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
   		};
 
   		for (let y = 0; y < this.rows; y++) {
@@ -4998,42 +4624,15 @@
     		if (run) this.processGroup(run, p);
   		}
 
-  		// Erdungsband-Berechnung
-  		p.Erdungsband = this.calculateErdungsband();
-
   		return p;
 		}
 
     processGroup(len, p) {
-      // Verwende die korrekte Schienenlogik (wie im Worker)
-      const isVertical = this.orV?.checked;
-      const actualCellWidth = isVertical ? parseInt(this.hIn?.value || '113') : parseInt(this.wIn?.value || '179');
+      // Fallback-Berechnung für Tellerkopfschraube
+      const cnt360 = Math.ceil(len * 3.6);
+      const cnt240 = Math.ceil(len * 2.4);
       
-      const totalLen = len * actualCellWidth;
-      const floor360 = Math.floor(totalLen / 360);
-      const rem360 = totalLen - floor360 * 360;
-      const floor240 = Math.ceil(rem360 / 240);
-      const pure360 = Math.ceil(totalLen / 360);
-      const pure240 = Math.ceil(totalLen / 240);
-      
-      const variants = [
-        {cnt360: floor360, cnt240: floor240},
-        {cnt360: pure360,  cnt240: 0},
-        {cnt360: 0,        cnt240: pure240}
-      ].map(v => ({
-        ...v,
-        rails: v.cnt360 + v.cnt240,
-        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
-      }));
-      
-      const minRails = Math.min(...variants.map(v => v.rails));
-      const best = variants
-        .filter(v => v.rails === minRails)
-        .reduce((a, b) => a.waste <= b.waste ? a : b);
-      
-      const {cnt360, cnt240} = best;
-      
-      p.Schiene_360_cm     += cnt360 * 2;
+      p.Schiene_360_cm     += cnt360;
       p.Schiene_240_cm     += cnt240 * 2;
       p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
       p.Endklemmen         += 4;
@@ -5049,140 +4648,6 @@
       // Verwende zentrale Produkt-Konfiguration oder Fallback
       return PRODUCT_IMAGES[key] || '';
     }
-
-    // Erdungsband-Berechnung
-    calculateErdungsband() {
-      const isVertical = this.orV?.checked;
-      const moduleHeight = isVertical ? parseInt(this.wIn?.value || '179') : parseInt(this.hIn?.value || '113');
-      const gap = 2; // 2cm Lücke zwischen Modulen
-      
-      // Kopiere selection Matrix für Erdungsbandlength-Tracking
-      const erdungsbandMatrix = this.selection.map(row => [...row]);
-      
-      let erdungsbandtotal = 0;
-      
-      // Analysiere Grid von oben nach unten, links nach rechts
-      for (let y = 0; y < this.rows; y++) {
-        for (let x = 0; x < this.cols; x++) {
-          const result = this.analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
-          erdungsbandtotal += result;
-        }
-      }
-      
-      // Speichere Erdungsbandtotal für Display
-      this.erdungsbandtotal = erdungsbandtotal;
-      
-      // Berechne Anzahl benötigter Erdungsbänder
-      return Math.ceil(erdungsbandtotal / 600);
-    }
-
-    // Analysiere ein Feld für Erdungsband
-    analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      // Schritt 1: Hat das Feld ein Modul?
-      if (!erdungsbandMatrix[y]?.[x]) {
-        return 0; // Kein Modul, nächstes Feld
-      }
-      
-      // Schritt 2: Hat das Modul ein weiteres Modul direkt darunter?
-      if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[x]) {
-        return 0; // Kein Modul darunter, nächstes Feld
-      }
-      
-      // Schritt 3: Ist links vom aktuellen Feld ein weiteres Feld mit Modul?
-      if (x === 0 || !erdungsbandMatrix[y]?.[x - 1]) {
-        // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      }
-      
-      // Schritt 4: Hat das linke Feld ein Modul darunter?
-      if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[x - 1]) {
-        // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      }
-      
-      // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
-      return this.checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
-    }
-
-    // Prüfe linke Felder auf Erdungsbandlength
-    checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      const leftUpper = erdungsbandMatrix[y]?.[x - 1];
-      const leftLower = erdungsbandMatrix[y + 1]?.[x - 1];
-      
-      if (leftUpper && leftLower) {
-        // Beide haben Module → Prüfe ob sie bereits Erdungsbandlength haben
-        if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
-          // Beide haben Erdungsbandlength → Nichts tun
-          return 0;
-        } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
-          // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        } else {
-          // Keine Erdungsbandlength links → Rekursiv weiter links prüfen
-          return this.checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap);
-        }
-      } else if (leftUpper && !leftLower) {
-        // Nur oberes Feld hat Modul → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      } else {
-        // Keine Module links → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      }
-    }
-
-    // Rekursiv weiter links prüfen
-    checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      let checkX = x - 2; // Ein Feld weiter links
-      
-      while (checkX >= 0) {
-        // Schritt 3: Hat das Feld links ein Modul?
-        if (!erdungsbandMatrix[y]?.[checkX]) {
-          // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        }
-        
-        // Schritt 4: Hat das linke Feld ein Modul darunter?
-        if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[checkX]) {
-          // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        }
-        
-        // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
-        const leftUpper = erdungsbandMatrix[y]?.[checkX];
-        const leftLower = erdungsbandMatrix[y + 1]?.[checkX];
-        
-        if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
-          // Beide haben Erdungsbandlength → Nichts tun
-          return 0;
-        } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
-          // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        } else {
-          // Keine Erdungsbandlength → Weiter nach links
-          checkX--;
-          continue;
-        }
-      }
-      
-      // Keine Module mehr links → Erdungsbandlength für aktuelles Feld + Feld darunter
-      return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-    }
-
-    // Weise Erdungsbandlength zu
-    assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      // Markiere beide Felder als "hat Erdungsbandlength"
-      erdungsbandMatrix[y][x] = 'erdungsband';
-      erdungsbandMatrix[y + 1][x] = 'erdungsband';
-      
-      // Berechne Erdungsbandlength: 2 × Modul-Höhe + Gap
-      return 2 * moduleHeight + gap;
-    }
-
-
-
-
-
-
     
     		loadConfig(idx) {
 			const cfg = this.configs[idx];
@@ -5193,14 +4658,6 @@
 			this.hIn.value = cfg.cellHeight;
 			this.orV.checked = cfg.orientation === 'vertical';
 			this.orH.checked = !this.orV.checked;
-			
-			// Synchronisiere mit den Orientation Buttons
-			const orientHBtn = document.getElementById('orient-h');
-			const orientVBtn = document.getElementById('orient-v');
-			if (orientHBtn && orientVBtn) {
-				orientHBtn.classList.toggle('active', cfg.orientation === 'horizontal');
-				orientVBtn.classList.toggle('active', cfg.orientation === 'vertical');
-			}
 			this.incM.checked = cfg.incM;
 			this.mc4.checked = cfg.mc4;
 			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
@@ -5221,12 +4678,9 @@
 
 			this.renderConfigList();
 			this.updateSaveButtons();
-			
-			// Detail-Ansicht aktualisieren wenn aktiv
-			this.updateDetailView();
 		}
     
-    		showToast(message = 'Gespeichert', duration = 1500) {
+    showToast(message = 'Gespeichert ✅', duration = 1500) {
   		const toast = document.getElementById('toast');
   		if (!toast) return;
   		toast.textContent = message;
@@ -5266,11 +4720,7 @@
   				this.renderConfigList();
 		this.updateConfigList(); // Config-Liste in Overview updaten
 		this.updateSaveButtons();
-		
-		// 6. Detail-Ansicht aktualisieren wenn aktiv
-		this.updateDetailView();
-		
-		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt`);
+		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt ✅`);
 		}
 
     renameCurrentConfig(newName) {
@@ -5433,7 +4883,7 @@
     		let deleteBtn = null;
     		if (this.configs.length > 1) {
     			deleteBtn = document.createElement('button');
-    			deleteBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986121f0519d394183f_Delete.png" alt="Löschen" style="width: 16px; height: 16px;">';
+    			deleteBtn.innerHTML = '🗑️';
     			deleteBtn.title = 'Konfiguration löschen';
     			Object.assign(deleteBtn.style, {
       			background: 'none',
@@ -5452,7 +4902,7 @@
     		}
 
     		const shareBtn = document.createElement('button');
-    		shareBtn.innerHTML = '<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Link" style="width: 16px; height: 16px;">';
+    		shareBtn.textContent = '🔗';
     		shareBtn.title = 'Später weitermachen - Link kopieren';
     		Object.assign(shareBtn.style, {
       		background: 'none',
@@ -5500,6 +4950,9 @@
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
         
+        // Performance: Nur renderProductSummary, da es buildList Funktionalität enthält
+        this.renderProductSummary();
+        
         // Auto-Save Indicator anzeigen
         this.showAutoSaveIndicator();
         
@@ -5511,19 +4964,211 @@
         // Gesamtpreis aktualisieren
         this.updateCurrentTotalPrice();
         
-        // Update config-list und overview wenn eine Konfiguration ausgewählt ist
-        if (this.currentConfig !== null) {
-          // Speichere die Konfiguration automatisch
-          this.updateConfig();
-          this.updateConfigList();
-        }
-        
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
       }, this.updateDelay);
     }
 
+        async renderProductSummary() {
+      // NEUE GLOBALE LOGIK: Verwende aktuelle Checkbox-Werte für alle Konfigurationen
+      // Performance: Reduziere Deep Copies
+      let bundles = this.configs.map((c, idx) => {
+        return {
+          selection:   c.selection, // Direkte Referenz statt Deep Copy
+          rows:        c.rows,
+          cols:        c.cols,
+          cellWidth:   c.cellWidth,
+          cellHeight:  c.cellHeight,
+          orientation: c.orientation,
+          // GLOBALE Checkbox-Werte für alle Konfigurationen
+          incM:        this.incM && this.incM.checked,
+          mc4:         this.mc4 && this.mc4.checked,
+          solarkabel:  this.solarkabel && this.solarkabel.checked,
+          holz:        this.holz && this.holz.checked,
+          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
+        };
+      });
 
+      // Verwende nur aktuelle Konfiguration wenn sie sich von der gespeicherten unterscheidet
+      if (this.currentConfig === null) {
+        // Keine gespeicherten Konfigurationen: Verwende aktuelle
+        bundles.push({
+          selection:   this.selection, // Direkte Referenz statt Deep Copy
+          rows:        this.rows,
+          cols:        this.cols,
+          cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+          cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+          orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+          // GLOBALE Checkbox-Werte
+          incM:        this.incM && this.incM.checked,
+          mc4:         this.mc4 && this.mc4.checked,
+          solarkabel:  this.solarkabel && this.solarkabel.checked,
+          holz:        this.holz && this.holz.checked,
+          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
+        });
+      } else {
+        // Gespeicherte Konfigurationen vorhanden: Prüfe ob aktuelle sich unterscheidet
+        const currentSelection = this.selection;
+        const savedSelection = this.configs[this.currentConfig].selection;
+        // Performance: Schnellerer Vergleich statt JSON.stringify
+        const selectionChanged = this.arraysEqual(currentSelection, savedSelection);
+        
+        if (selectionChanged) {
+          // Füge aktuelle Konfiguration zu den gespeicherten hinzu
+          bundles.push({
+            selection:   currentSelection, // Direkte Referenz
+            rows:        this.rows,
+            cols:        this.cols,
+            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+            // GLOBALE Checkbox-Werte
+            incM:        this.incM && this.incM.checked,
+            mc4:         this.mc4 && this.mc4.checked,
+            solarkabel:  this.solarkabel && this.solarkabel.checked,
+            holz:        this.holz && this.holz.checked,
+            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
+          });
+        } else {
+          // Keine Änderung: Füge aktuelle Konfiguration trotzdem hinzu
+          bundles.push({
+            selection:   currentSelection, // Direkte Referenz
+            rows:        this.rows,
+            cols:        this.cols,
+            cellWidth:   parseInt(this.wIn ? this.wIn.value : '179', 10),
+            cellHeight:  parseInt(this.hIn ? this.hIn.value : '113', 10),
+            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+            // GLOBALE Checkbox-Werte
+            incM:        this.incM && this.incM.checked,
+            mc4:         this.mc4 && this.mc4.checked,
+            solarkabel:  this.solarkabel && this.solarkabel.checked,
+            holz:        this.holz && this.holz.checked,
+            quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked
+          });
+        }
+      }
+  		
+  		const total = {};
+  		
+  		// ISOLIERTE Berechnungen mit calculationManager - KEINE Grid-Eigenschaften berühren!
+  		try {
+  			const allParts = await Promise.all(bundles.map(async (b) => {
+  				// Direkte Berechnung mit calculationManager ohne Grid-Modification
+  				const calculationData = {
+  					selection: b.selection,
+  					rows: b.rows,
+  					cols: b.cols,
+  					cellWidth: b.cellWidth,
+  					cellHeight: b.cellHeight,
+  					orientation: b.orientation
+  				};
+
+  				
+
+  				let parts;
+  								try {
+					parts = await calculationManager.calculate('calculateParts', calculationData);
+				} catch (error) {
+					// Fallback zu synchroner Berechnung
+					parts = this.calculatePartsDirectly(calculationData);
+				}
+
+  				// Module werden NACH der Summierung entfernt (wie in buildList)
+  				// MC4, Solarkabel und Holz werden GLOBAL nach der Summierung hinzugefügt
+
+  				return parts;
+  			}));
+
+  						// Summiere alle Parts
+			allParts.forEach((parts, index) => {
+    		Object.entries(parts).forEach(([k, v]) => {
+      		total[k] = (total[k] || 0) + v;
+    		});
+  		});
+  		
+  		// NEUE GLOBALE LOGIK: Füge pauschale Produkte zur Gesamtbestellung hinzu
+  		const totalSelectedCells = bundles.reduce((sum, bundle) => {
+  			return sum + bundle.selection.flat().filter(v => v).length;
+  		}, 0);
+  		
+  		// Module NACH der Summierung entfernen (wie in buildList)
+  		if (this.incM && !this.incM.checked) {
+  			delete total.Solarmodul;
+  		}
+  		
+  		// MC4-Stecker: Berechne basierend auf Gesamt-Modulen aller Konfigurationen
+  		if (this.mc4 && this.mc4.checked) {
+  			total.MC4_Stecker = Math.ceil(totalSelectedCells / 30);
+  		}
+  		
+  		// Solarkabel: Pauschal 1x zur Gesamtbestellung
+  		if (this.solarkabel && this.solarkabel.checked) {
+  			total.Solarkabel = 1;
+  		}
+  		
+  		// Unterlegholz: Pauschal 1x zur Gesamtbestellung (NEU: VE von 50)
+  		if (this.holz && this.holz.checked) {
+  			total.Holzunterleger = 1; // Pauschal 1x statt basierend auf Schienen
+  		}
+  		
+  		// Quetschkabelschuhe: Pauschal 1x zur Gesamtbestellung
+  		if (this.quetschkabelschuhe && this.quetschkabelschuhe.checked) {
+  			total.Quetschkabelschuhe = 1; // Pauschal 1x zur Gesamtbestellung
+  		}
+  		
+  		} catch (error) {
+  			console.error('Error in renderProductSummary:', error);
+  			// Fallback: Verwende leeres total
+  		}
+
+  				const entries = Object.entries(total).filter(([, v]) => v > 0);
+  		const itemsPerColumn = 4;
+  		const numColumns = Math.ceil(entries.length / itemsPerColumn);
+
+  		let totalPrice = 0;
+  		let html = '';
+
+  		for (let i = 0; i < numColumns; i++) {
+    		const columnEntries = entries.slice(i * itemsPerColumn, (i + 1) * itemsPerColumn);
+    		const columnHtml = columnEntries.map(([k, v]) => {
+      		const packs = Math.ceil(v / VE[k]);
+      		const price = getPriceFromCache(k);
+      		const itemTotal = packs * price;
+      		totalPrice += itemTotal;
+
+      		// Verwende neue Produktnamen
+      		const displayName = PRODUCT_NAME_MAP[k] || k.replace(/_/g, ' ');
+      		
+      		return `<div class="produkt-item">
+        		<span>${packs}×</span>
+        		<img src="${this.mapImage(k)}" alt="${displayName}" onerror="this.src='https://via.placeholder.com/32?text=${encodeURIComponent(displayName)}'">
+        		<span>${displayName} (${v})</span>
+        		<span style="margin-left:auto; font-weight:bold;">${itemTotal.toFixed(2)} €</span>
+      		</div>`;
+    		}).join('');
+
+    		html += `<div class="summary-column">${columnHtml}</div>`;
+  		}
+
+  		html += `<div class="summary-total">Gesamtpreis: ${totalPrice.toFixed(2)} €</div>`;
+  		this.summaryList.innerHTML = html;
+
+  		
+
+		// Zeige Summary List nur wenn Produkte vorhanden sind
+		this.summaryHolder.style.display = entries.length ? 'block' : 'none';
+		this.summaryList.style.display = entries.length ? 'flex' : 'none';
+		
+		// Wenn keine Produkte vorhanden sind, zeige eine Nachricht
+		if (entries.length === 0) {
+			this.summaryList.innerHTML = '<div class="summary-total">Keine Produkte berechnet. Bitte wählen Sie Module aus.</div>';
+			this.summaryList.style.display = 'flex';
+		} else {
+			// Zeige die berechneten Produkte an
+			this.summaryList.innerHTML = html;
+			this.summaryList.style.display = 'flex';
+		}
+		}
 
 		// ISOLIERTE synchrone Berechnung für Fallback
 		calculatePartsDirectly(data) {
@@ -5603,129 +5248,13 @@
     		this.updateConfig();
     	}
     	
-    	// Speichere alle Konfigurationen und Einstellungen im Cache
-    	this.saveToCache();
-    	
-    	// Erstelle Link mit allen Konfigurationen (als Backup)
+    	// Erstelle Link mit allen Konfigurationen
     	const allConfigsData = JSON.stringify(this.configs);
 			const base64 = btoa(encodeURIComponent(allConfigsData));
 			const continueUrl = `${window.location.origin}${window.location.pathname}?configData=${base64}`;
 			
 			navigator.clipboard.writeText(continueUrl);
-			this.showToast('Später-weitermachen Link kopiert', 2000);
-    }
-    
-    // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
-    saveToCache() {
-    	try {
-    		const cacheData = {
-    			configs: this.configs,
-    			currentConfig: this.currentConfig,
-    			// Aktuelle Grid-Einstellungen
-    			cols: this.cols,
-    			rows: this.rows,
-    			cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
-    			cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10),
-    			orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
-    			// Checkbox-Einstellungen
-    			includeModules: this.incM ? this.incM.checked : false,
-    			mc4: this.mc4 ? this.mc4.checked : false,
-    			solarkabel: this.solarkabel ? this.solarkabel.checked : false,
-    			holz: this.holz ? this.holz.checked : false,
-    			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
-    			// Timestamp für Cache-Gültigkeit
-    			timestamp: Date.now()
-    		};
-    		
-    		localStorage.setItem('solarTool_continueCache', JSON.stringify(cacheData));
-    	} catch (error) {
-    		console.error('Fehler beim Speichern des Caches:', error);
-    	}
-    }
-    
-    // NEUE FUNKTION: Lade Konfigurationen aus dem Cache
-    loadFromCache() {
-    	try {
-    		const cachedData = localStorage.getItem('solarTool_continueCache');
-    		if (!cachedData) return false;
-    		
-    		const data = JSON.parse(cachedData);
-    		const cacheAge = Date.now() - data.timestamp;
-    		const maxAge = 24 * 60 * 60 * 1000; // 24 Stunden
-    		
-    		// Prüfe ob Cache noch gültig ist
-    		if (cacheAge > maxAge) {
-    			localStorage.removeItem('solarTool_continueCache');
-    			return false;
-    		}
-    		
-    		// Lade Konfigurationen
-    		if (data.configs && Array.isArray(data.configs)) {
-    			this.configs = data.configs;
-    			this.currentConfig = data.currentConfig;
-    			
-    			// Lade Grid-Einstellungen
-    			if (data.cols && data.rows) {
-    				this.cols = data.cols;
-    				this.rows = data.rows;
-    			}
-    			
-    			// Lade Checkbox-Einstellungen
-    			if (this.incM && typeof data.includeModules === 'boolean') {
-    				this.incM.checked = data.includeModules;
-    			}
-    			if (this.mc4 && typeof data.mc4 === 'boolean') {
-    				this.mc4.checked = data.mc4;
-    			}
-    			if (this.solarkabel && typeof data.solarkabel === 'boolean') {
-    				this.solarkabel.checked = data.solarkabel;
-    			}
-    			if (this.holz && typeof data.holz === 'boolean') {
-    				this.holz.checked = data.holz;
-    			}
-    			if (this.quetschkabelschuhe && typeof data.quetschkabelschuhe === 'boolean') {
-    				this.quetschkabelschuhe.checked = data.quetschkabelschuhe;
-    			}
-    			
-    			// Lade Grid-Dimensionen
-    			if (this.wIn && data.cellWidth) {
-    				this.wIn.value = data.cellWidth;
-    			}
-    			if (this.hIn && data.cellHeight) {
-    				this.hIn.value = data.cellHeight;
-    			}
-    			
-    						// Lade Orientierung
-			if (this.orH && this.orV && typeof data.orientation === 'string') {
-				this.orH.checked = data.orientation === 'horizontal';
-				this.orV.checked = data.orientation === 'vertical';
-				
-				// Synchronisiere mit den Orientation Buttons
-				const orientHBtn = document.getElementById('orient-h');
-				const orientVBtn = document.getElementById('orient-v');
-				if (orientHBtn && orientVBtn) {
-					orientHBtn.classList.toggle('active', data.orientation === 'horizontal');
-					orientVBtn.classList.toggle('active', data.orientation === 'vertical');
-				}
-			}
-    			
-    			// Lade die erste Konfiguration
-    			if (this.configs.length > 0) {
-    				this.loadConfig(0);
-    			}
-    			
-    			// Cache nach dem Laden leeren
-    			localStorage.removeItem('solarTool_continueCache');
-    			
-    			this.showToast('Konfiguration aus Cache geladen', 2000);
-    			return true;
-    		}
-    	} catch (error) {
-    		console.error('Fehler beim Laden des Caches:', error);
-    		localStorage.removeItem('solarTool_continueCache');
-    	}
-    	
-    	return false;
+			this.showToast('Später-weitermachen Link kopiert ✅', 2000);
     }
     
         generateHiddenCartForms() {
@@ -5929,7 +5458,7 @@
         if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
           this.showToast('PDF wird erstellt...', 2000);
           await this.pdfGenerator.generatePDFFromSnapshot(configSnapshot);
-          			this.showToast('PDF erfolgreich erstellt', 1500);
+          this.showToast('PDF erfolgreich erstellt ✅', 1500);
         }
         
         // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
@@ -5989,8 +5518,13 @@
       this.selection = sel;
         let parts = await this.calculateParts();
       if (!incM) delete parts.Solarmodul;
-      // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
-      // Sie werden nur noch in der Overview berechnet
+      if (mc4) {
+        const panelCount = sel.flat().filter(v => v).length;
+        parts.MC4_Stecker = Math.ceil(panelCount / 30); // 1 Packung pro 30 Panele
+      }
+      if (solarkabel) parts.Solarkabel = 1; // 1x wenn ausgewählt
+      if (holz)  parts.Holzunterleger = 1; // NEU: Pauschal 1x statt basierend auf Schienen
+      if (quetschkabelschuhe) parts.Quetschkabelschuhe = 1; // 1x wenn ausgewählt
       
         return parts;
       } finally {
@@ -6042,9 +5576,6 @@
       
       // Aktualisiere Summary und Produktliste
       this.updateSummaryOnChange();
-      
-      // Aktualisiere auch die Produktliste in der detailed-overview
-      this.buildList();
     }
 
     // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF

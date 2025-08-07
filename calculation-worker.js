@@ -342,21 +342,16 @@ function calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orie
   const moduleHeight = isVertical ? cellWidth : cellHeight;
   const gap = 2; // 2cm Lücke zwischen Modulen
   
-  // Erstelle Matrix für Erdungsbandlength-Tracking
-  const erdungsbandMatrix = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => false)
-  );
+  // Kopiere selection Matrix für Erdungsbandlength-Tracking
+  const erdungsbandMatrix = selection.map(row => [...row]);
   
   let erdungsbandtotal = 0;
   
   // Analysiere Grid von oben nach unten, links nach rechts
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      // Prüfe ob dieses Feld bereits eine Erdungsbandlength hat
-      if (!erdungsbandMatrix[y][x]) {
-        const result = analyzeFieldForErdungsband(x, y, erdungsbandMatrix, selection, rows, cols, moduleHeight, gap);
-        erdungsbandtotal += result;
-      }
+      const result = analyzeFieldForErdungsband(x, y, erdungsbandMatrix, selection, rows, cols, moduleHeight, gap);
+      erdungsbandtotal += result;
     }
   }
   
@@ -367,23 +362,23 @@ function calculateErdungsband(selection, rows, cols, cellWidth, cellHeight, orie
 // Analysiere ein Feld für Erdungsband
 function analyzeFieldForErdungsband(x, y, erdungsbandMatrix, selection, rows, cols, moduleHeight, gap) {
   // Schritt 1: Hat das Feld ein Modul?
-  if (!selection[y]?.[x]) {
+  if (!erdungsbandMatrix[y]?.[x]) {
     return 0; // Kein Modul, nächstes Feld
   }
   
   // Schritt 2: Hat das Modul ein weiteres Modul direkt darunter?
-  if (y + 1 >= rows || !selection[y + 1]?.[x]) {
+  if (y + 1 >= rows || !erdungsbandMatrix[y + 1]?.[x]) {
     return 0; // Kein Modul darunter, nächstes Feld
   }
   
   // Schritt 3: Ist links vom aktuellen Feld ein weiteres Feld mit Modul?
-  if (x === 0 || !selection[y]?.[x - 1]) {
+  if (x === 0 || !erdungsbandMatrix[y]?.[x - 1]) {
     // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
     return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
   }
   
   // Schritt 4: Hat das linke Feld ein Modul darunter?
-  if (y + 1 >= rows || !selection[y + 1]?.[x - 1]) {
+  if (y + 1 >= rows || !erdungsbandMatrix[y + 1]?.[x - 1]) {
     // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
     return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
   }
@@ -397,15 +392,24 @@ function checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, selection, rows, co
   const leftUpper = erdungsbandMatrix[y]?.[x - 1];
   const leftLower = erdungsbandMatrix[y + 1]?.[x - 1];
   
-  if (!leftUpper && !leftLower) {
-    // Keine Erdungsbandlength links → Rekursiv weiter links prüfen
-    return checkLeftFieldsRecursive(x, y, erdungsbandMatrix, selection, rows, cols, moduleHeight, gap);
+  if (leftUpper && leftLower) {
+    // Beide haben Module → Prüfe ob sie bereits Erdungsbandlength haben
+    if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
+      // Beide haben Erdungsbandlength → Nichts tun
+      return 0;
+    } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
+      // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
+      return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+    } else {
+      // Keine Erdungsbandlength links → Rekursiv weiter links prüfen
+      return checkLeftFieldsRecursive(x, y, erdungsbandMatrix, selection, rows, cols, moduleHeight, gap);
+    }
   } else if (leftUpper && !leftLower) {
-    // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
+    // Nur oberes Feld hat Modul → Erdungsbandlength für aktuelles Feld + Feld darunter
     return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
   } else {
-    // Beide haben Erdungsbandlength → Nichts tun
-    return 0;
+    // Keine Module links → Erdungsbandlength für aktuelles Feld + Feld darunter
+    return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
   }
 }
 
@@ -415,13 +419,13 @@ function checkLeftFieldsRecursive(x, y, erdungsbandMatrix, selection, rows, cols
   
   while (checkX >= 0) {
     // Schritt 3: Hat das Feld links ein Modul?
-    if (!selection[y]?.[checkX]) {
+    if (!erdungsbandMatrix[y]?.[checkX]) {
       // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
       return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
     }
     
     // Schritt 4: Hat das linke Feld ein Modul darunter?
-    if (y + 1 >= rows || !selection[y + 1]?.[checkX]) {
+    if (y + 1 >= rows || !erdungsbandMatrix[y + 1]?.[checkX]) {
       // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
       return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
     }
@@ -430,16 +434,16 @@ function checkLeftFieldsRecursive(x, y, erdungsbandMatrix, selection, rows, cols
     const leftUpper = erdungsbandMatrix[y]?.[checkX];
     const leftLower = erdungsbandMatrix[y + 1]?.[checkX];
     
-    if (!leftUpper && !leftLower) {
-      // Keine Erdungsbandlength → Weiter nach links
-      checkX--;
-      continue;
-    } else if (leftUpper && !leftLower) {
+    if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
+      // Beide haben Erdungsbandlength → Nichts tun
+      return 0;
+    } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
       // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
       return assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
     } else {
-      // Beide haben Erdungsbandlength → Nichts tun
-      return 0;
+      // Keine Erdungsbandlength → Weiter nach links
+      checkX--;
+      continue;
     }
   }
   
@@ -450,8 +454,8 @@ function checkLeftFieldsRecursive(x, y, erdungsbandMatrix, selection, rows, cols
 // Weise Erdungsbandlength zu
 function assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap) {
   // Markiere beide Felder als "hat Erdungsbandlength"
-  erdungsbandMatrix[y][x] = true;
-  erdungsbandMatrix[y + 1][x] = true;
+  erdungsbandMatrix[y][x] = 'erdungsband';
+  erdungsbandMatrix[y + 1][x] = 'erdungsband';
   
   // Berechne Erdungsbandlength: 2 × Modul-Höhe + Gap
   return 2 * moduleHeight + gap;
