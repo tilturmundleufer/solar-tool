@@ -5375,6 +5375,45 @@
 			// Detail-Ansicht aktualisieren wenn aktiv
 			this.updateDetailView();
 		}
+		
+		// Spezielle Funktion für Cache-Load der ersten Konfiguration mit korrekter Orientation
+		loadFirstConfigFromCache() {
+			if (this.configs.length === 0) return;
+			
+			const cfg = this.configs[0];
+			this.currentConfig = 0;
+
+			// Input-Werte setzen
+			this.wIn.value = cfg.cellWidth;
+			this.hIn.value = cfg.cellHeight;
+			// Orientation wird NICHT gesetzt - bleibt aus dem Cache
+			
+			this.incM.checked = cfg.incM;
+			this.mc4.checked = cfg.mc4;
+			this.solarkabel.checked = cfg.solarkabel || false;
+			this.holz.checked = cfg.holz;
+			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
+			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
+			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
+
+			// STATE Werte setzen
+			this.cols = cfg.cols;
+			this.rows = cfg.rows;
+			this.selection = cfg.selection.map(r => [...r]);
+
+			// Setup aufrufen
+			this.setup();
+
+			// Produktliste und Summary aktualisieren
+			this.buildList();
+			this.updateSummaryOnChange();
+
+			this.renderConfigList();
+			this.updateSaveButtons();
+			
+			// Detail-Ansicht aktualisieren wenn aktiv
+			this.updateDetailView();
+		}
     
     		showToast(message = 'Gespeichert', duration = 1500) {
   		const toast = document.getElementById('toast');
@@ -5931,7 +5970,7 @@
     			
     			// Lade die erste Konfiguration OHNE Orientation zu überschreiben
     			if (this.configs.length > 0) {
-    				this.loadConfigFromCache(0);
+    				this.loadFirstConfigFromCache();
     			}
     			
     			// Lade Orientierung NACH dem Laden der Konfiguration
