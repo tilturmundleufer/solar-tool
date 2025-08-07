@@ -3774,8 +3774,49 @@
 		}
 		
 		updateConfigList() {
-			// Verwende die gleiche renderConfigList() Methode für konsistentes Design
-			this.renderConfigList();
+			const configListEl = document.getElementById('config-list');
+			if (!configListEl) return;
+			
+			configListEl.innerHTML = '';
+			
+			this.configs.forEach((config, index) => {
+				const configItem = document.createElement('div');
+				configItem.className = 'config-item';
+				
+				// Markiere aktuelle Konfiguration
+				if (index === this.currentConfig) {
+					configItem.classList.add('active');
+				}
+				
+				const totalPrice = this.calculateConfigPrice(config);
+				
+				configItem.innerHTML = `
+					<div class="config-item-info">
+						<div class="config-item-name">${config.name || `Konfiguration #${index + 1}`}</div>
+						<div class="config-item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+					</div>
+					<div class="config-item-actions">
+						<button class="icon-btn" onclick="solarGrid.editConfigNameInList(${index})" title="Bearbeiten">
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
+						</button>
+						<button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${index})" title="Löschen">
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936c5481f2a4db850a01f5_Trashbin.png" alt="Löschen" style="width: 16px; height: 16px;">
+						</button>
+						<div class="config-item-arrow">
+							<img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 10px; height: 16px;">
+						</div>
+					</div>
+				`;
+				
+				configItem.addEventListener('click', (e) => {
+					// Verhindere Klick wenn auf Action-Button geklickt wurde
+					if (e.target.closest('.config-item-actions')) return;
+					
+					this.showDetailView(index);
+				});
+				
+				configListEl.appendChild(configItem);
+			});
 			
 			// Update Gesamtpreis und Zusatzprodukte
 			this.updateOverviewTotalPrice();
