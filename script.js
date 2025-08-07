@@ -5108,13 +5108,13 @@
         		}
       		});
 
-      		const dx = x - centerX;
-      		const dy = y - centerY;
-      		const distance = Math.sqrt(dx * dx + dy * dy);
-      		const delay = distance * delayPerUnit;
-      		cell.style.animationDelay = `${delay}ms`;
-
-      		setTimeout(() => cell.classList.remove('animate-in'), 400);
+      		// Animation entfernt für bessere Performance
+      		// const dx = x - centerX;
+      		// const dy = y - centerY;
+      		// const distance = Math.sqrt(dx * dx + dy * dy);
+      		// const delay = distance * delayPerUnit;
+      		// cell.style.animationDelay = `${delay}ms`;
+      		// setTimeout(() => cell.classList.remove('animate-in'), 400);
       		fragment.appendChild(cell);
     		}
   		}
@@ -5122,9 +5122,6 @@
   		// Einmalige DOM-Manipulation
   		this.gridEl.innerHTML = '';
   		this.gridEl.appendChild(fragment);
-  		
-  		// FEATURE 5: Performance-Monitoring - End
-  		this.performanceMetrics.gridRenderTime = performance.now() - startTime;
 		}
     
     async buildList() {
