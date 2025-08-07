@@ -680,6 +680,40 @@
       }
     }
 
+    // Abwärtskompatibler Wrapper: ermöglicht this.pdfGenerator.generatePDF('current'|'all')
+    async generatePDF(mode = 'current') {
+      if (!this.isAvailable()) {
+        console.warn('PDF Libraries nicht verfügbar');
+        this.solarGrid?.showToast?.('PDF-Generierung nicht verfügbar', 3000);
+        return;
+      }
+      try {
+        // Erzeuge Snapshot über SolarGrid
+        const fullSnapshot = this.solarGrid?.createConfigSnapshot
+          ? this.solarGrid.createConfigSnapshot()
+          : null;
+        if (!fullSnapshot || !Array.isArray(fullSnapshot.configs) || fullSnapshot.configs.length === 0) {
+          this.solarGrid?.showToast?.('Keine Konfiguration zum Exportieren', 3000);
+          return;
+        }
+        let snapshotToExport = fullSnapshot;
+        if (mode === 'current') {
+          const idx = typeof fullSnapshot.currentConfigIndex === 'number' ? fullSnapshot.currentConfigIndex : 0;
+          const only = fullSnapshot.configs[idx] || fullSnapshot.configs[0];
+          snapshotToExport = {
+            timestamp: fullSnapshot.timestamp,
+            totalConfigs: 1,
+            currentConfigIndex: 0,
+            configs: [only]
+          };
+        }
+        await this.generatePDFFromSnapshot(snapshotToExport);
+      } catch (err) {
+        console.error('generatePDF wrapper failed:', err);
+        this.solarGrid?.showToast?.('PDF-Erstellung fehlgeschlagen', 3000);
+      }
+    }
+
     // Entfernt alte generatePDF-Umleitung: direkte Nutzung von generatePDFFromSnapshot()
 
     // Entfernt ungenutzte calculateTotalPrice (wir nutzen calculateConfigPrice zentral)
