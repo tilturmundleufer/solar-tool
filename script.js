@@ -3050,8 +3050,8 @@
       this.ulicaModule   = document.getElementById('ulica-module');
       
 
-      		this.listHolder    = document.querySelector('.produktliste-holder');
-      this.prodList      = document.getElementById('produktliste');
+      		this.listHolder    = document.querySelector('.product-section');
+      this.prodList      = document.querySelector('.product-section #produktliste');
 
       this.saveBtn       = document.getElementById('save-config-btn');
       this.addBtn        = document.getElementById('add-to-cart-btn');
