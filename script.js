@@ -4629,6 +4629,18 @@
 					btn.removeEventListener('click', this.handleOrientationButtonClick);
 					btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
 				});
+			} else {
+				// Fallback: Versuche es später nochmal
+				setTimeout(() => {
+					const orientHBtn = document.getElementById('orient-h');
+					const orientVBtn = document.getElementById('orient-v');
+					if (orientHBtn && orientVBtn) {
+						[orientHBtn, orientVBtn].forEach(btn => {
+							btn.removeEventListener('click', this.handleOrientationButtonClick);
+							btn.addEventListener('click', this.handleOrientationButtonClick.bind(this));
+						});
+					}
+				}, 100);
 			}
 		}
 		
@@ -4672,6 +4684,8 @@
 		handleOrientationButtonClick(e) {
 			const orientHBtn = document.getElementById('orient-h');
 			const orientVBtn = document.getElementById('orient-v');
+			
+			if (!orientHBtn || !orientVBtn) return;
 			
 			// Entferne active Klasse von beiden Buttons
 			orientHBtn.classList.remove('active');
@@ -5324,6 +5338,43 @@
 			// Detail-Ansicht aktualisieren wenn aktiv
 			this.updateDetailView();
 		}
+		
+		// Spezielle Funktion für Cache-Load ohne Orientation-Überschreibung
+		loadConfigFromCache(idx) {
+			const cfg = this.configs[idx];
+			this.currentConfig = idx;
+
+			// Input-Werte setzen (OHNE Orientation)
+			this.wIn.value = cfg.cellWidth;
+			this.hIn.value = cfg.cellHeight;
+			// Orientation wird NICHT gesetzt - bleibt aus dem Cache
+			
+			this.incM.checked = cfg.incM;
+			this.mc4.checked = cfg.mc4;
+			this.solarkabel.checked = cfg.solarkabel || false;
+			this.holz.checked = cfg.holz;
+			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
+			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
+			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
+
+			// STATE Werte setzen
+			this.cols = cfg.cols;
+			this.rows = cfg.rows;
+			this.selection = cfg.selection.map(r => [...r]);
+
+			// Setup aufrufen
+			this.setup();
+
+			// Produktliste und Summary aktualisieren
+			this.buildList();
+			this.updateSummaryOnChange();
+
+			this.renderConfigList();
+			this.updateSaveButtons();
+			
+			// Detail-Ansicht aktualisieren wenn aktiv
+			this.updateDetailView();
+		}
     
     		showToast(message = 'Gespeichert', duration = 1500) {
   		const toast = document.getElementById('toast');
@@ -5878,7 +5929,12 @@
     				this.hIn.value = data.cellHeight;
     			}
     			
-    			// Lade Orientierung VOR dem Laden der Konfiguration
+    			// Lade die erste Konfiguration OHNE Orientation zu überschreiben
+    			if (this.configs.length > 0) {
+    				this.loadConfigFromCache(0);
+    			}
+    			
+    			// Lade Orientierung NACH dem Laden der Konfiguration
 			if (this.orH && this.orV && typeof data.orientation === 'string') {
 				this.orH.checked = data.orientation === 'horizontal';
 				this.orV.checked = data.orientation === 'vertical';
@@ -5891,11 +5947,6 @@
 					orientVBtn.classList.toggle('active', data.orientation === 'vertical');
 				}
 			}
-    			
-    			// Lade die erste Konfiguration
-    			if (this.configs.length > 0) {
-    				this.loadConfig(0);
-    			}
     			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
