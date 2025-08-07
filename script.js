@@ -4616,11 +4616,17 @@
 				});
 			}
 			
-			// Checkbox-Event-Listener
-			[this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule].filter(el => el).forEach(el => {
-				el.removeEventListener('change', this.handleCheckboxChange);
-				el.addEventListener('change', this.handleCheckboxChange.bind(this));
-			});
+					// Checkbox-Event-Listener
+		[this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule].filter(el => el).forEach(el => {
+			el.removeEventListener('change', this.handleCheckboxChange);
+			el.addEventListener('change', this.handleCheckboxChange.bind(this));
+		});
+		
+		// Zusätzliche Event-Listener für Modul-Checkboxen im Dropdown
+		document.querySelectorAll('#include-modules, #ulica-module').forEach(el => {
+			el.removeEventListener('change', this.handleCheckboxChange);
+			el.addEventListener('change', this.handleCheckboxChange.bind(this));
+		});
 			
 			// Expansion-Button-Event-Listener
 			document.querySelectorAll('[data-dir="right"]').forEach(btn => {
@@ -4689,10 +4695,8 @@
 				this.buildList();
 				this.updateSummaryOnChange();
 				
-				// Nur für Ulica-Module: Entsprechende Checkbox abwählen
-				if (selectedValue === 'ulica-500' || selectedValue === 'ulica-450') {
-					this.clearModuleCheckboxes();
-				}
+				// Dropdown-Interaktion mit Modul-Checkboxen deaktiviert
+				// this.clearModuleCheckboxes();
 			}
 		}
 		
@@ -4706,17 +4710,11 @@
 				if (this.ulicaModule) {
 					this.ulicaModule.checked = false;
 				}
-				// Dropdown auf ulica-450 setzen
-				this.moduleSelect.value = 'ulica-450';
-				this.handleModuleSelectChange();
 			} else if (checkboxId === 'ulica-module' && this.ulicaModule.checked) {
 				// ulica-module wurde ausgewählt - include-modules abwählen
 				if (this.incM) {
 					this.incM.checked = false;
 				}
-				// Dropdown auf ulica-500 setzen
-				this.moduleSelect.value = 'ulica-500';
-				this.handleModuleSelectChange();
 			}
 			
 			// Wichtig: Update der Produktliste nach Checkbox-Änderung
