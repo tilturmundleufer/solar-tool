@@ -3876,6 +3876,15 @@
 			// Zeige Indicator
 			indicator.classList.remove('hidden');
 			
+			// Animation neu starten
+			const saveIcon = indicator.querySelector('.save-icon');
+			if (saveIcon) {
+				// Animation zurücksetzen und neu starten
+				saveIcon.style.animation = 'none';
+				saveIcon.offsetHeight; // Trigger reflow
+				saveIcon.style.animation = 'rotate360 0.8s ease-in-out';
+			}
+			
 			// Verstecke nach 1 Sekunde
 			if (this.autoSaveTimeout) {
 				clearTimeout(this.autoSaveTimeout);
