@@ -4202,7 +4202,8 @@
 			const parts = {
 				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
 				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
+				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
+				UlicaSolarBlackJadeFlow: 0
 			};
 
 			// Berechne Teile für jede Zeile
@@ -4215,19 +4216,25 @@
 						run++;
 					}
 					else if (run) { 
-						this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical'); 
+						this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical', config.ulicaModule || false); 
 						run = 0; 
 					}
 				}
 				if (run) {
-					this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical');
+					this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical', config.ulicaModule || false);
 				}
 			}
 			
 			// Module nur hinzufügen wenn Checkbox aktiviert ist
 			const includeModules = document.getElementById('include-modules')?.checked || false;
+			const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+			
 			if (!includeModules) {
 				delete parts.Solarmodul;
+			}
+			
+			if (!ulicaModule) {
+				delete parts.UlicaSolarBlackJadeFlow;
 			}
 			
 			let totalPrice = 0;
@@ -4252,7 +4259,8 @@
 				cellWidth: parseInt(this.wIn?.value || '179'),
 				cellHeight: parseInt(this.hIn?.value || '113'),
 				orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-				incM: document.getElementById('include-modules')?.checked || false
+				incM: document.getElementById('include-modules')?.checked || false,
+				ulicaModule: document.getElementById('ulica-module')?.checked || false
 				// Zusatzprodukte werden nicht mehr berücksichtigt
 			});
 			
@@ -5978,7 +5986,7 @@
 
 		// ISOLIERTE synchrone Berechnung für Fallback
 		calculatePartsDirectly(data) {
-			const { selection, rows, cols, cellWidth, cellHeight, orientation } = data;
+			const { selection, rows, cols, cellWidth, cellHeight, orientation, ulicaModule } = data;
 			const parts = {
 				Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
 				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
@@ -5994,12 +6002,12 @@
 						run++;
 					}
 					else if (run) { 
-						this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation); 
+						this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation, ulicaModule); 
 						run = 0; 
 					}
 				}
 				if (run) {
-					this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation);
+					this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation, ulicaModule);
 				}
 			}
 
@@ -6007,7 +6015,7 @@
 		}
 
 		// FALLBACK: Kopie der Worker-Berechnung
-		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation) {
+		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation, ulicaModule = false) {
 			const isVertical = orientation === 'vertical';
 			const actualCellWidth = isVertical ? cellHeight : cellWidth;
 			
@@ -6044,7 +6052,7 @@
 			parts.Endkappen          += 4;  // Gleich wie Endklemmen
 			parts.Solarmodul         += len;
 			// UlicaSolarBlackJadeFlow hinzufügen wenn ulica-module Checkbox aktiviert ist
-			if (this.ulicaModule && this.ulicaModule.checked) {
+			if (ulicaModule) {
 				parts.UlicaSolarBlackJadeFlow += len;
 			}
 			// Schrauben basierend auf Dachhaken berechnen
@@ -6630,8 +6638,8 @@
           targetCable = this.solarkabel.checked;
           targetWood = this.holz.checked;
           targetQuetschkabelschuhe = this.quetschkabelschuhe.checked;
-          targetErdungsband = this.erdungsband.checked;
-          targetUlicaModule = this.ulicaModule.checked;
+          targetErdungsband = this.erdungsband ? this.erdungsband.checked : false;
+          targetUlicaModule = this.ulicaModule ? this.ulicaModule.checked : false;
           targetCellWidth = parseInt(this.wIn.value, 10);
           targetCellHeight = parseInt(this.hIn.value, 10);
         } else {
