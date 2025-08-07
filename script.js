@@ -4369,6 +4369,26 @@
 						}
 					});
 					
+					// Feld verlassen (blur) Support
+					quickInput.addEventListener('blur', () => {
+						const input = quickInput.value.trim();
+						if (input) {
+							try {
+								// Clear preview timeout when applying configuration
+								if (this.previewTimeout) {
+									clearTimeout(this.previewTimeout);
+									this.previewTimeout = null;
+								}
+								
+								const config = this.smartParser.parseInput(input);
+								this.smartParser.applyPreviewToMainGrid(config);
+								quickInput.value = ''; // Input leeren
+							} catch (error) {
+								this.showToast(`Fehler: Konfiguration konnte nicht angewendet werden ❌`, 2000);
+							}
+						}
+					});
+					
 					// Live-Grid-Preview bei jedem Tastendruck
 					quickInput.addEventListener('input', (e) => {
 						const input = e.target.value.trim();
@@ -4707,19 +4727,8 @@
 				this.buildList();
 				this.updateSummaryOnChange();
 				
-				// Sichere Dropdown-Checkbox-Interaktion
-				if (selectedValue === 'ulica-500') {
-					// Ulica 500W ausgewählt - entsprechende Checkbox setzen
-					if (this.ulicaModule) this.ulicaModule.checked = true;
-					if (this.incM) this.incM.checked = false;
-				} else if (selectedValue === 'ulica-450') {
-					// Ulica 450W ausgewählt - entsprechende Checkbox setzen
-					if (this.incM) this.incM.checked = true;
-					if (this.ulicaModule) this.ulicaModule.checked = false;
-				} else {
-					// Andere Module - Checkboxen abwählen
-					this.clearModuleCheckboxes();
-				}
+				// Keine Checkbox-Interaktion mehr - nur Dropdown-Werte setzen
+				this.clearModuleCheckboxes();
 			}
 		}
 		
@@ -6032,14 +6041,20 @@
     		orientVBtn.classList.remove('active');
     	}
     	
-    	// Checkboxen auf Default zurücksetzen
-    	if (this.incM) this.incM.checked = true; // Module standardmäßig aktiviert
+    	// Checkboxen auf Default zurücksetzen (ALLE abwählen)
+    	if (this.incM) this.incM.checked = false;
     	if (this.mc4) this.mc4.checked = false;
     	if (this.solarkabel) this.solarkabel.checked = false;
     	if (this.holz) this.holz.checked = false;
     	if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
     	if (this.erdungsband) this.erdungsband.checked = false;
     	if (this.ulicaModule) this.ulicaModule.checked = false;
+    	
+    	// Module Dropdown auf Default zurücksetzen
+    	if (this.moduleSelect) {
+    		this.moduleSelect.value = '';
+    		this.enableInputs();
+    	}
     	
     	// Bestehende Konfigurationserstellung verwenden
     	this.createNewConfig();
