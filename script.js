@@ -5261,20 +5261,11 @@
     resetGridToDefault() {
   		const { cols, rows, width, height } = this.default;
 
-  		// Trimme bestehende Auswahl
-  		const trimmed = [];
-  		for (let y = 0; y < rows; y++) {
-    		trimmed[y] = [];
-    		for (let x = 0; x < cols; x++) {
-      		trimmed[y][x] = this.selection?.[y]?.[x] || false;
-    		}
-  		}
-
   		// Setze Inputs und interne Werte
   		this.wIn.value = width;
   		this.hIn.value = height;
   		
-  				// Setze Orientierung auf Standard (vertikal als Standard)
+  		// Setze Orientierung auf Standard (vertikal als Standard)
 		const defaultVertical = true; // Vertikal als Standard
 		if (this.orH) this.orH.checked = !defaultVertical;
 		if (this.orV) this.orV.checked = defaultVertical;
@@ -5305,9 +5296,13 @@
   		this.cols = cols;
   		this.rows = rows;
 
-  		// Aktualisiere alles ohne Checkboxen zu ändern
+  		// Leere Auswahl - alle Module abwählen
+  		this.selection = Array.from({ length: this.rows }, () =>
+    		Array.from({ length: this.cols }, () => false)
+  		);
+
+  		// Aktualisiere alles
   		this.setup();
-  		this.selection = trimmed;
   		this.buildGrid();
   		this.buildList();
   		this.updateSummaryOnChange();
