@@ -1439,21 +1439,40 @@
         }
 
         console.log('Parts calculated:', parts);
+        console.log('Config checkbox states:', {
+          includeModules: config.includeModules,
+          incM: config.incM,
+          ulicaModule: config.ulicaModule
+        });
 
         // Module nur hinzufügen wenn Checkbox aktiviert ist
-        if (!config.includeModules) {
+        if (!config.includeModules && !config.incM) {
+          console.log('Deleting Solarmodul - both checkboxes false');
           delete parts.Solarmodul;
         }
         
         if (!config.ulicaModule) {
+          console.log('Deleting UlicaSolarBlackJadeFlow - ulicaModule false');
           delete parts.UlicaSolarBlackJadeFlow;
         }
 
         // Zusatzprodukte basierend auf Checkboxen
-        if (!config.mc4) delete parts.MC4;
-        if (!config.cable) delete parts.Solarkabel;
-        if (!config.wood) delete parts.Holzunterleger;
-        if (!config.quetschkabelschuhe) delete parts.Quetschkabelschuhe;
+        if (!config.mc4) {
+          console.log('Deleting MC4 - mc4 checkbox false');
+          delete parts.MC4;
+        }
+        if (!config.cable) {
+          console.log('Deleting Solarkabel - cable checkbox false');
+          delete parts.Solarkabel;
+        }
+        if (!config.wood) {
+          console.log('Deleting Holzunterleger - wood checkbox false');
+          delete parts.Holzunterleger;
+        }
+        if (!config.quetschkabelschuhe) {
+          console.log('Deleting Quetschkabelschuhe - quetschkabelschuhe checkbox false');
+          delete parts.Quetschkabelschuhe;
+        }
 
         // Erdungsband hinzufügen wenn aktiviert
         if (config.erdungsband) {
@@ -1595,7 +1614,7 @@
       }
       
       // Entferne Module wenn nicht ausgewählt
-      if (!config.includeModules) {
+      if (!config.includeModules && !config.incM) {
         delete parts.Solarmodul;
       }
       
@@ -1603,14 +1622,17 @@
       if (config.mc4) {
         const moduleCount = config.selection.flat().filter(v => v).length;
         parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+        console.log('Added MC4_Stecker:', parts.MC4_Stecker, 'for', moduleCount, 'modules');
       }
       
       if (config.cable) {
         parts.Solarkabel = 1;
+        console.log('Added Solarkabel: 1');
       }
       
       if (config.wood) {
         parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
+        console.log('Added Holzunterleger: 1');
       }
 
       return parts;
@@ -6653,7 +6675,7 @@
           cellWidth: targetCellWidth || 179,
           cellHeight: targetCellHeight || 113,
           orientation: targetOrientation || 'horizontal',
-          includeModules: targetIncM !== false,
+          includeModules: targetIncM === true,
           mc4: targetMc4 || false,
           cable: targetCable || false,
           wood: targetWood || false,
