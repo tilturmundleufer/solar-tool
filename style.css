@@ -76,6 +76,8 @@ html, body {
   cursor: pointer;
   transition: all 0.2s ease;
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
   background-position: right 12px center;
   background-repeat: no-repeat;
@@ -131,6 +133,7 @@ html, body {
 #width-input[type=number],
 #height-input[type=number] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 body {
@@ -1410,6 +1413,7 @@ body {
   font-size: 16px;
   font-weight: bold;
   color: #000000;
+  position: relative;
 }
 
 .config-item-price {
@@ -1450,6 +1454,23 @@ body {
 
 .config-item.active .config-item-arrow {
   color: #000000;
+}
+
+/* Inline-Editing im Config-Item-Name, ohne Layout-Verschiebung */
+.config-item-name .inline-edit-input {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+  background: #ffffff;
+  border: 1px solid #FFB101;
+  border-radius: 6px;
+  padding: 6px 10px; /* mehr vertikales Padding */
+  outline: none;
+  z-index: 2;
 }
 
 /* Add Config Button */

@@ -4543,21 +4543,14 @@
 			const input = document.createElement('input');
 			input.type = 'text';
 			input.value = nameEl.textContent;
-			input.style.cssText = `
-				font-size: 16px;
-				font-weight: normal;
-				color: #000000;
-				background: white;
-				border: 1px solid #FFB101;
-				border-radius: 4px;
-				padding: 2px 6px;
-				width: 80%;
-				outline: none;
-			`;
+			input.className = 'inline-edit-input';
 			
-			// Ersetze Name durch Input
-			nameEl.style.display = 'none';
-			nameEl.parentNode.insertBefore(input, nameEl);
+			// Input absolut über dem Namen platzieren, ohne Layout zu verschieben
+			nameEl.appendChild(input);
+			// Interaktionen im Input sollen die Item-Navigation nicht auslösen
+			['click','mousedown','pointerdown'].forEach(evt => {
+				input.addEventListener(evt, (e) => e.stopPropagation());
+			});
 			input.focus();
 			input.select();
 			
@@ -4570,18 +4563,12 @@
 					this.updateConfig();
 					this.showAutoSaveIndicator();
 				}
-				nameEl.style.display = 'block';
-				if (input.parentNode) {
-					input.remove();
-				}
+				if (input.parentNode) input.remove();
 				this.updateConfigList();
 			}.bind(this);
 			
 			const cancelEdit = function() {
-				nameEl.style.display = 'block';
-				if (input.parentNode) {
-					input.remove();
-				}
+				if (input.parentNode) input.remove();
 			}.bind(this);
 			
 			input.addEventListener('blur', saveEdit);
