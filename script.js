@@ -623,7 +623,6 @@
   function getPriceFromHTML(productKey) {
     return getPriceFromCache(productKey);
   }
-
   // ===== PDF GENERATOR =====
   class SolarPDFGenerator {
     constructor(solarGrid) {
@@ -1417,7 +1416,6 @@
         return null;
       }
     }
-
     // NEUE METHODE: Grid-Bild für Webhook generieren
     async captureGridImageForWebhook(configData) {
       try {
@@ -1558,7 +1556,7 @@
                 ctx.stroke();
               }
               
-              // Horizontale Linie
+              // Horizontale Mittellinie
               const lineY = cellY + cellHeight / 2;
               ctx.beginPath();
               ctx.moveTo(cellX + 2, lineY);
@@ -2105,7 +2103,6 @@
       return `${configName}_${dateStr}_${timeStr}.pdf`;
     }
   }
-
   // ===== SMART CONFIGURATION PARSER =====
   class SmartConfigParser {
     constructor(solarGrid) {
@@ -2143,6 +2140,10 @@
         deleteConfig: /^(?:konfiguration|konfig|config)\s*(?:löschen|delete)$/i,
         // "module löschen" → Module-Auswahl löschen
         deleteModules: /^modul[e]?[n]?\s*löschen$/i,
+        // NEU: "Neue Konfiguration" → aktuelle speichern und neue erstellen
+        newConfig: /^(?:neu(?:e|en)?[\s-]*(?:konfiguration|konfig|config)(?:[\s-]*(?:erstellen|anlegen))?|(?:konfiguration|konfig|config)[\s-]*neu(?:e|en)?(?:[\s-]*(?:erstellen|anlegen))?|new[\s-]*(?:config|configuration))$/i,
+        // NEU: "Alle Konfigurationen löschen" / "von vorne beginnen" → kompletter Reset
+        deleteAllConfigs: /^(?:alle[\s-]*(?:konfigurationen|configs?|konfigs?)[\s-]*(?:löschen|entfernen)|(?:alles|alle)[\s-]*(?:löschen|zurücksetzen)|von[\s-]*(?:vorne|vorn)[\s-]*(?:beginnen|anfangen)|neu[\s-]*starten|start[\s-]*over|reset[\s-]*all)$/i,
         // "reset", "zurücksetzen" → Grid zurücksetzen
         resetGrid: /^(?:reset|zurücksetzen|zurücksetzen)$/i,
         // Intelligente Modul-Verteilung
@@ -2611,6 +2612,20 @@
         return config;
       }
       
+      // NEU: Neue Konfiguration erstellen (aktuelle wird automatisch gespeichert)
+      const newConfigMatch = input.match(this.patterns.newConfig);
+      if (newConfigMatch) {
+        config.action = 'newConfig';
+        return config;
+      }
+      
+      // NEU: Alle Konfigurationen löschen / Von vorne beginnen
+      const deleteAllConfigsMatch = input.match(this.patterns.deleteAllConfigs);
+      if (deleteAllConfigsMatch) {
+        config.action = 'resetAllConfigs';
+        return config;
+      }
+      
       // KURZE EINGABEN: Verwende aktuelles Grid als Basis
       const isShortInput = input.length < 20 && !input.match(/\d/);
       if (isShortInput) {
@@ -2841,6 +2856,18 @@
           this.solarGrid.showToast('⚡ Grid zurückgesetzt', 2000);
           break;
           
+        // NEU: Neue Konfiguration erstellen
+        case 'newConfig':
+          this.solarGrid.saveNewConfig();
+          this.solarGrid.showToast('Neue Konfiguration erstellt', 2000);
+          break;
+        
+        // NEU: Alle Konfigurationen löschen (mit Bestätigung, gleiche Funktion wie "von vorne beginnen")
+        case 'resetAllConfigs':
+          this.solarGrid.resetAllConfigurations();
+          // Bestätigungsdialog erfolgt in resetAllConfigurations(); kein zusätzliches Toast hier
+          break;
+        
         default:
           console.warn('Unbekannte Action:', action);
       }
@@ -2899,7 +2926,6 @@
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
     }
-    
     expandGridForModules(targetCount) {
       const currentCapacity = this.solarGrid.cols * this.solarGrid.rows;
       
@@ -3480,7 +3506,6 @@
       });
     }
   }
-
   class SolarGrid {
     constructor() {
       this.gridEl        = document.getElementById('grid');
@@ -4274,7 +4299,6 @@
 			// Auto-Save Indicator Setup
 			this.autoSaveTimeout = null;
 		}
-		
 		showAutoSaveIndicator() {
 			const indicator = document.getElementById('auto-save-indicator');
 			if (!indicator) return;
@@ -5049,7 +5073,6 @@
 				});
 			});
 		}
-    
     setup() {
   		// Verwende Standard-Werte falls nicht bereits gesetzt
   		if (!this.cols || !this.rows) {
@@ -5826,9 +5849,6 @@
 
   		this.setup(); // jetzt stimmt alles beim Rebuild
 		}
-    
-
-
     async calculateParts() {
       // Verwende immer den Fallback für Tellerkopfschraube-Berechnung
       return this.calculatePartsSync();
@@ -6509,7 +6529,6 @@
 			parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
 			parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
 		}
-
     resetAllConfigurations() {
     	// Bestätigungsabfrage
     	if (!confirm('Möchten Sie wirklich alle Konfigurationen löschen und von vorne anfangen?')) {
@@ -7291,7 +7310,6 @@
       // Baue Preview-Grid
       this.buildPreviewGrid(previewGrid, previewSelection, previewCols, previewRows);
     }
-    
     buildPreviewGrid(previewGrid, selection, cols, rows) {
       
       
