@@ -758,7 +758,7 @@
           if (gridImg) page.querySelector('.pdf-grid-image').src = gridImg;
         } catch {}
 
-        // Produktliste als eigene Seite
+        // Produktliste als eigene Seite (ohne Zusatzprodukte)
         const productsPage = document.createElement('div');
         productsPage.className = 'pdf-page';
         productsPage.style.width = '794px';
@@ -794,8 +794,10 @@
         `;
 
         // Produkte rendern (neues Tabellenlayout: Anzahl | Produkt+VE | benötigte Menge | Preis)
+        // Zusatzprodukte werden hier explizit ausgeschlossen – sie kommen gesammelt auf eine separate Seite
         await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), productsPage.querySelector('.pdf-total-price'), {
-          htmlLayout: true
+          htmlLayout: true,
+          excludeAdditionalProducts: true
         });
 
         // Safety: falls Tabelle leer ist, füge Platzhalterzeile ein
@@ -838,14 +840,91 @@
         root.appendChild(page);
         root.appendChild(productsPage);
       }
+
+      // Nach allen Konfigurationen: optionale Zusatzprodukte-Seite (einmal pro PDF)
+      try {
+        const additionalParts = this.computeAdditionalProductsForSnapshot(snapshot);
+        const additionalKeys = Object.keys(additionalParts).filter(k => additionalParts[k] > 0);
+        if (additionalKeys.length > 0) {
+          const dateStr2 = new Date().toLocaleDateString('de-DE');
+          const additionalPage = document.createElement('div');
+          additionalPage.className = 'pdf-page';
+          additionalPage.style.width = '794px';
+          additionalPage.style.minHeight = '1123px';
+          additionalPage.style.padding = '48px 48px 64px 48px';
+          additionalPage.style.boxSizing = 'border-box';
+          additionalPage.style.position = 'relative';
+
+          additionalPage.innerHTML = `
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
+              <div>
+                <div style="font-size:18pt; font-weight:700; color:#0e1e34;">Für alle Konfigurationen</div>
+                <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr2}</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;"><img src="${this.headerLogoBlueUrl}" alt="Logo" style="height:12mm; width:auto;"/></div>
+            </header>
+            <div style="background:#FFB101; color:#000; border-radius:8px; padding:6mm; font-weight:700; margin-bottom:6mm;">ZUSATZPRODUKTE</div>
+            <table style="width:100%; border-collapse:collapse; font-size:10pt;">
+              <thead>
+                <tr style="background:#0e1e34; color:#fff;">
+                  <th style="text-align:left; padding:3mm 4mm; border-top-left-radius:6px; width:20mm;">Anzahl</th>
+                  <th style="text-align:left; padding:3mm 4mm;">Produkt</th>
+                  <th style="text-align:right; padding:3mm 4mm; width:35mm;">Benötigte Menge</th>
+                  <th style="text-align:right; padding:3mm 4mm; border-top-right-radius:6px; width:30mm;">Preis</th>
+                </tr>
+              </thead>
+              <tbody class="pdf-additional-table-body"></tbody>
+            </table>
+            <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:700;">GESAMTPREIS</div>
+              <div class="pdf-additional-total-price" style="font-size:14pt; font-weight:700;"></div>
+            </div>
+          `;
+
+          // Render Zusatzprodukte-Tabelle
+          await this.renderAdditionalProductsIntoTable(snapshot, additionalPage.querySelector('.pdf-additional-table-body'), additionalPage.querySelector('.pdf-additional-total-price'));
+
+          // Footer
+          const footer = document.createElement('div');
+          footer.style.position = 'absolute';
+          footer.style.left = '0';
+          footer.style.right = '0';
+          footer.style.bottom = '0';
+          footer.style.height = '18mm';
+          footer.style.background = '#0e1e34';
+          footer.style.color = '#fff';
+          footer.style.display = 'flex';
+          footer.style.alignItems = 'center';
+          footer.style.justifyContent = 'space-between';
+          footer.style.padding = '0 16mm';
+          footer.style.boxSizing = 'border-box';
+          footer.style.fontSize = '8pt';
+          const left = document.createElement('div');
+          left.textContent = 'Schneider Unterkonstruktion - Solar Konfigurator';
+          const right = document.createElement('img');
+          right.src = this.companyLogoUrl;
+          right.alt = 'Logo';
+          right.style.height = '12mm';
+          right.style.width = 'auto';
+          footer.appendChild(left);
+          footer.appendChild(right);
+          additionalPage.appendChild(footer);
+
+          root.appendChild(additionalPage);
+        }
+      } catch (e) {
+        console.warn('Zusatzprodukte-Seite konnte nicht erzeugt werden:', e);
+      }
     }
 
     async renderProductsIntoTable(config, tbodyEl, totalEl, options = {}) {
       const parts = await this.calculatePartsFromSnapshot(config);
       let totalPrice = 0;
       const rows = [];
+      const ADDITIONAL_KEYS = new Set(['MC4_Stecker', 'Solarkabel', 'Holzunterleger', 'Quetschkabelschuhe']);
       for (const [key, value] of Object.entries(parts || {})) {
         if (value <= 0) continue;
+        if (options.excludeAdditionalProducts && ADDITIONAL_KEYS.has(key)) continue;
         const ve = VE[key] || 1;
         const packs = Math.ceil(value / ve);
         const price = getPriceFromCache(key);
@@ -880,6 +959,74 @@
           </tr>
         `).join('');
       }
+      if (totalEl) totalEl.textContent = `${totalPrice.toFixed(2)} €`;
+    }
+
+    // Aggregiert Zusatzprodukte einmalig über alle Konfigurationen im Snapshot
+    computeAdditionalProductsForSnapshot(snapshot) {
+      try {
+        const configs = Array.isArray(snapshot?.configs) ? snapshot.configs : [];
+        const anyMc4 = configs.some(c => c.mc4 === true);
+        const anyCable = configs.some(c => c.cable === true || c.solarkabel === true);
+        const anyWood = configs.some(c => c.wood === true || c.holz === true);
+        const anyQuetsch = configs.some(c => c.quetschkabelschuhe === true);
+
+        const totalSelectedCells = configs.reduce((sum, c) => {
+          if (typeof c.selectedCells === 'number') return sum + c.selectedCells;
+          if (Array.isArray(c.selection)) {
+            return sum + c.selection.flat().filter(Boolean).length;
+          }
+          return sum;
+        }, 0);
+
+        const result = {};
+        if (anyMc4) {
+          result.MC4_Stecker = Math.max(1, Math.ceil((totalSelectedCells || 0) / 30));
+        }
+        if (anyCable) {
+          result.Solarkabel = 1;
+        }
+        if (anyWood) {
+          result.Holzunterleger = 1;
+        }
+        if (anyQuetsch) {
+          result.Quetschkabelschuhe = 1;
+        }
+        return result;
+      } catch (err) {
+        console.warn('computeAdditionalProductsForSnapshot failed:', err);
+        return {};
+      }
+    }
+
+    // Rendert Zusatzprodukte in eine Tabelle (HTML-Modus) und zeigt Gesamtpreis
+    async renderAdditionalProductsIntoTable(snapshot, tbodyEl, totalEl) {
+      const parts = this.computeAdditionalProductsForSnapshot(snapshot);
+      let totalPrice = 0;
+      const rows = Object.entries(parts).map(([key, value]) => {
+        const ve = VE[key] || 1;
+        const packs = Math.ceil(value / ve);
+        const price = getPriceFromCache(key);
+        const rowPrice = packs * price;
+        totalPrice += rowPrice;
+        return { key, value, ve, packs, rowPrice };
+      });
+      // Reihenfolge stabil nach Name
+      rows.sort((a, b) => a.key.localeCompare(b.key));
+      tbodyEl.innerHTML = rows.map(r => {
+        const productName = PRODUCT_NAME_MAP[r.key] || r.key.replace(/_/g, ' ');
+        return `
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:3mm 4mm; width:20mm; font-weight:700;">${r.packs}x</td>
+            <td style="padding:3mm 4mm;">
+              <div style="font-weight:700; font-size:11pt;">${productName}</div>
+              <div style="color:#888; font-size:9pt;">${r.ve} Stück</div>
+            </td>
+            <td style="padding:3mm 4mm; text-align:right; width:35mm;">${r.value}</td>
+            <td style="padding:3mm 4mm; text-align:right; width:30mm;">${r.rowPrice.toFixed(2)} €</td>
+          </tr>
+        `;
+      }).join('');
       if (totalEl) totalEl.textContent = `${totalPrice.toFixed(2)} €`;
     }
 
