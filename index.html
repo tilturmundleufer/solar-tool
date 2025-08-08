@@ -162,11 +162,10 @@
             <label>Modultyp:<select id="module-select">
               <option value="">Modultyp auswählen</option>
               <option value="custom">Benutzerdefiniert</option>
-              <option value="ulica-500">Ulica Solar Black Jade-Flow 500 W</option>
-              <option value="ulica-450">Ulica Solar Black Jade-Flow 450 W</option>
-              <option value="variant-3">Modul Variante 3</option>
-              <option value="variant-4">Modul Variante 4</option>
-              <option value="variant-5">Modul Variante 5</option>
+              <option value="ulica-500">Ulica Black Jade-Flow 500W</option>
+              <option value="ulica-450">Ulica Black Jade-Flow 450W</option>
+              <option value="trina-vertex-s-plus">Trina Vertex S+</option>
+              <option value="aiko-neostar-3s-plus">Aiko Neostar 3S+</option>
             </select></label>
           </div>
           <div class="setup-row">
@@ -208,7 +207,7 @@
               </label>
               <label class="module-checkbox">
                 <input type="checkbox" id="ulica-module">
-                <span class="checkbox-label">Ulica Solar Black Jade-Flow 500W</span>
+                <span class="checkbox-label">Ulica Black Jade-Flow 500W</span>
               </label>
             </div>
           </div>
@@ -341,15 +340,15 @@
   </div>
 
   <!-- Hidden A4 PDF Template Root (html2pdf.js will capture this) -->
-  <div id="pdf-root" style="position: fixed; left: -99999px; top: -99999px; width: 210mm; background: #ffffff;">
-    <div class="pdf-page" style="width: 210mm; min-height: 297mm; padding: 16mm 16mm 22mm 16mm; box-sizing: border-box;">
+  <div id="pdf-root" style="width: 794px; min-height:1123px; background: #ffffff; left:-2000px; top:0; position:fixed;">
+    <div class="pdf-page">
       <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10mm;">
         <div>
           <div style="font-size: 18pt; font-weight: 700; color: #0e1e34;">Ihre Konfiguration</div>
           <div id="pdf-date" style="font-size: 10pt; color: #677; margin-top: 2mm;"></div>
         </div>
         <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size: 10pt;">
-          <span>unterkonstruktion.de</span>
+          <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6893249274128869974e58ec_schneider%20logo%20png.png" alt="Logo" style="height:12mm;width:auto;"/>
         </div>
       </header>
 
@@ -391,6 +390,6 @@
       </footer>
     </div>
   </div>
-  <script src="script.js?v=1.0.2"></script>
+  <script src="script.js?v=1.0.4"></script>
 </body>
 </html>

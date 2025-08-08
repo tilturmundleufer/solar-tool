@@ -1,3 +1,62 @@
+#pdf-root img { image-rendering: auto; }
+/* PDF-specific styles for html2pdf rendering */
+#pdf-root, #pdf-root .pdf-page {
+  background: #ffffff;
+  color: #000000;
+}
+/* Stelle sicher, dass Root den Inhalt nicht nach links abschneidet */
+#pdf-root {
+  width: 794px;
+  display: block;
+}
+
+#pdf-root .pdf-page {
+  width: 794px;       /* stabil für html2canvas */
+  min-height: 1123px; /* stabil für html2canvas */
+  padding: 48px 48px 64px 48px; /* reine px-Werte für Stabilität */
+  box-sizing: border-box;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10pt;
+  margin: 0 auto; /* absolute Zentrierung */
+  page-break-after: always; /* explizite Seitenumbrüche */
+}
+
+#pdf-root .pdf-page:last-child { page-break-after: auto; }
+
+#pdf-root .pdf-grid-image {
+  max-height: calc(1123px * 0.5);
+  width: 670px; /* ~170mm */
+  object-fit: contain;
+}
+
+#pdf-root .pdf-page header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10mm;
+}
+
+#pdf-root .pdf-page .pdf-total {
+  background: #0e1e34;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 6mm;
+}
+
+/* Ensure pdf-root content paints when moved on-screen for capture */
+#pdf-root * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Make sure the root is never display:none which breaks html2canvas */
+#pdf-root {
+  position: fixed;
+  left: -2000px; /* offscreen default */
+  top: 0;
+  z-index: -1; /* behind */
+  width: 794px;
+}
 /* CORE LAYOUT */
 html, body {
   height: 100%;

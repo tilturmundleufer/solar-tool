@@ -3,11 +3,7 @@
   // Global debug toggle: disable noisy logs in production
   const DEBUG_MODE = false;
   if (!DEBUG_MODE) {
-    try {
-      // Silence console.log and console.warn; keep console.error for critical issues
-      console.log = function() {};
-      console.warn = function() {};
-    } catch (_) {}
+    // Console bleibt aktiv für Debugging
   }
   
   // Cache-Manager für 24h Persistierung
@@ -418,6 +414,19 @@
     }
   }
 
+  // Warte, bis alle Bilder in einem Container geladen sind (verhindert leere html2canvas Renders)
+  function waitForImages(container) {
+    const images = Array.from(container.querySelectorAll('img'));
+    if (images.length === 0) return Promise.resolve();
+    return Promise.all(images.map(img => new Promise(resolve => {
+      if (img.complete && img.naturalWidth > 0) return resolve();
+      const done = () => resolve();
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+    })));
+  }
+
+  // (Fallback entfernt, wir setzen ausschließlich auf html2pdf.js)
   // Globale Calculation Manager Instanz
   const calculationManager = new CalculationManager();
 
@@ -622,6 +631,10 @@
       this.jsPDF = window.jspdf?.jsPDF;
       this.html2canvas = window.html2canvas;
       this.html2pdf = window.html2pdf; // html2pdf.js (optional, moderner Pfad)
+      // Weiße Footer-Logo-Variante (für dunklen Footer-Hintergrund)
+      this.companyLogoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/688f3fff157b70cefcaa97df_Schneider%20logo.png';
+      // Blaues Header-Logo
+      this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6893249274128869974e58ec_schneider%20logo%20png.png';
     }
 
     // Prüfe ob PDF-Libraries verfügbar sind
@@ -629,58 +642,72 @@
       return !!(this.jsPDF && this.html2canvas);
     }
 
-    // NEUE ISOLIERTE PDF-Generation mit Snapshot (KEINE Grid-Interaktion!)
+    // NEU: Stabile PDF-Generation per html2canvas + jsPDF (ohne html2pdf Kette)
     async generatePDFFromSnapshot(snapshot) {
-      // Moderner Weg: HTML-Template mit html2pdf.js (wenn verfügbar)
-      if (this.html2pdf) {
-        try {
-          if (!snapshot?.configs?.length) {
-            this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
-            return;
-          }
-
-          // Render ALL configs in one multi-page HTML (pdf-root)
-          await this.renderSnapshotIntoPdfTemplate(snapshot);
-
-          const fileName = this.generateFileName(snapshot.configs);
-          const root = document.getElementById('pdf-root');
-          // html2pdf Optionen: A4, hohe Qualität, mm-Einheiten
-          const opt = {
-            margin:       [0, 0, 0, 0],
-            filename:     fileName,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          };
-          await this.html2pdf().set(opt).from(root).save();
-          return;
-        } catch (err) {
-          console.error('html2pdf.js Export fehlgeschlagen, fallback auf jsPDF:', err);
-        }
-      }
-
-      // Fallback: bestehender jsPDF-Prozess
-      if (!this.isAvailable()) {
-        console.warn('PDF Libraries nicht verfügbar');
+      if (!this.jsPDF || !this.html2canvas) {
+        console.error('jsPDF/html2canvas nicht verfügbar');
         this.solarGrid.showToast('PDF-Generierung nicht verfügbar', 3000);
         return;
       }
+      if (!snapshot?.configs?.length) {
+        this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
+        return;
+      }
       try {
-        if (!snapshot?.configs?.length) {
-          this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
-          return;
+        // 1) Template rendern
+        await this.renderSnapshotIntoPdfTemplate(snapshot);
+        const rootEl = document.getElementById('pdf-root');
+        if (!rootEl) throw new Error('#pdf-root nicht gefunden');
+        const prevStyle = rootEl.getAttribute('style') || '';
+
+        // 2) Sichtbar aber unsichtbar machen (für zuverlässiges Rendering)
+        rootEl.style.position = 'fixed';
+        rootEl.style.left = '0';
+        rootEl.style.top = '0';
+        rootEl.style.opacity = '0.01';
+        rootEl.style.pointerEvents = 'none';
+        rootEl.style.zIndex = '9999';
+        rootEl.style.background = '#ffffff';
+
+        // 3) Sicherstellen, dass alle Bilder fertig sind
+        await waitForImages(rootEl);
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => setTimeout(r, 30));
+
+        const pages = Array.from(rootEl.querySelectorAll('.pdf-page'));
+        if (pages.length === 0) throw new Error('Keine .pdf-page Elemente');
+        console.log('[PDF] capturing pages:', pages.length);
+
+        // 4) PDF initialisieren – Pixel-Format exakt zu unseren CSS-Werten
+        const pdf = new this.jsPDF({ unit: 'px', format: [794, 1123], orientation: 'portrait' });
+
+        for (let i = 0; i < pages.length; i++) {
+          const pageEl = pages[i];
+          // Garantierte Maße pro Seite
+          pageEl.style.width = '794px';
+          pageEl.style.height = '1123px';
+          pageEl.style.boxSizing = 'border-box';
+
+          // Canvas erzeugen
+          const canvas = await this.html2canvas(pageEl, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            allowTaint: true,
+            logging: true
+          });
+          console.log('[PDF] canvas created', { w: canvas.width, h: canvas.height });
+          const imgData = canvas.toDataURL('image/jpeg', 0.98);
+          if (i > 0) pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, 0, 794, 1123);
         }
-        const pdf = new this.jsPDF('p', 'mm', 'a4');
-        let isFirstPage = true;
-        for (const config of snapshot.configs) {
-          if (!isFirstPage) pdf.addPage();
-          await this.addConfigurationToPDFFromSnapshot(pdf, config, isFirstPage);
-          isFirstPage = false;
-        }
+
+        // 5) Speichern und Root zurücksetzen
         const fileName = this.generateFileName(snapshot.configs);
         pdf.save(fileName);
-      } catch (error) {
-        console.error('PDF-Generierung fehlgeschlagen:', error);
+        rootEl.setAttribute('style', prevStyle);
+      } catch (err) {
+        console.error('PDF-Erstellung fehlgeschlagen:', err);
         this.solarGrid.showToast('PDF-Erstellung fehlgeschlagen', 3000);
       }
     }
@@ -698,19 +725,19 @@
         // Seite klonen
         const page = document.createElement('div');
         page.className = 'pdf-page';
-        page.style.width = '210mm';
-        page.style.minHeight = '297mm';
-        page.style.padding = '16mm 16mm 22mm 16mm';
+        page.style.width = '794px';
+        page.style.minHeight = '1123px';
+        page.style.padding = '48px 48px 64px 48px';
         page.style.boxSizing = 'border-box';
         page.style.position = 'relative';
 
         page.innerHTML = `
           <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
             <div>
-              <div style="font-size:18pt; font-weight:700; color:#0e1e34;">Ihre Konfiguration</div>
+              <div style="font-size:18pt; font-weight:700; color:#0e1e34;">${config.name || 'Konfiguration'}</div>
               <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr}</div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;">unterkonstruktion.de</div>
+            <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;"><img src="${this.headerLogoBlueUrl}" alt="Logo" style="height:12mm; width:auto;"/></div>
           </header>
           <section style="border:1px solid #e5e7eb; border-radius:8px; padding:6mm; margin-bottom:8mm;">
             <div style="font-size:12pt; font-weight:700; color:#0e1e34;">Projekt</div>
@@ -721,7 +748,7 @@
             <div style="font-size:10pt; color:#111; margin-bottom:4mm;">
               Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt) · Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}
             </div>
-            <img class="pdf-grid-image" alt="Grid" style="width:170mm; max-width:170mm; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
+            <img class="pdf-grid-image" alt="Grid" style="width:170mm; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
           </section>
         `;
 
@@ -734,28 +761,28 @@
         // Produktliste als eigene Seite
         const productsPage = document.createElement('div');
         productsPage.className = 'pdf-page';
-        productsPage.style.width = '210mm';
-        productsPage.style.minHeight = '297mm';
-        productsPage.style.padding = '16mm 16mm 22mm 16mm';
+        productsPage.style.width = '794px';
+        productsPage.style.minHeight = '1123px';
+        productsPage.style.padding = '48px 48px 64px 48px';
         productsPage.style.boxSizing = 'border-box';
         productsPage.style.position = 'relative';
 
         productsPage.innerHTML = `
           <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
             <div>
-              <div style="font-size:18pt; font-weight:700; color:#0e1e34;">Ihre Konfiguration</div>
+              <div style="font-size:18pt; font-weight:700; color:#0e1e34;">${config.name || 'Konfiguration'}</div>
               <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr}</div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;">unterkonstruktion.de</div>
+            <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;"><img src="${this.headerLogoBlueUrl}" alt="Logo" style="height:12mm; width:auto;"/></div>
           </header>
           <div style="background:#FFB101; color:#000; border-radius:8px; padding:6mm; font-weight:700; margin-bottom:6mm;">PRODUKT-LISTE</div>
           <table style="width:100%; border-collapse:collapse; font-size:10pt;">
             <thead>
               <tr style="background:#0e1e34; color:#fff;">
-                <th style="text-align:left; padding:3mm 4mm; border-top-left-radius:6px;">Produkt</th>
-                <th style="text-align:right; padding:3mm 4mm;">Menge</th>
-                <th style="text-align:right; padding:3mm 4mm;">VE</th>
-                <th style="text-align:right; padding:3mm 4mm; border-top-right-radius:6px;">Preis</th>
+                <th style="text-align:left; padding:3mm 4mm; border-top-left-radius:6px; width:20mm;">Anzahl</th>
+                <th style="text-align:left; padding:3mm 4mm;">Produkt</th>
+                <th style="text-align:right; padding:3mm 4mm; width:35mm;">Benötigte Menge</th>
+                <th style="text-align:right; padding:3mm 4mm; border-top-right-radius:6px; width:30mm;">Preis</th>
               </tr>
             </thead>
             <tbody class="pdf-table-body"></tbody>
@@ -766,34 +793,54 @@
           </div>
         `;
 
-        // Produkte rendern
-        await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), productsPage.querySelector('.pdf-total-price'));
+        // Produkte rendern (neues Tabellenlayout: Anzahl | Produkt+VE | benötigte Menge | Preis)
+        await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), productsPage.querySelector('.pdf-total-price'), {
+          htmlLayout: true
+        });
 
-        // Footer für beide Seiten
-        const footer = document.createElement('div');
-        footer.style.position = 'absolute';
-        footer.style.left = '0';
-        footer.style.right = '0';
-        footer.style.bottom = '0';
-        footer.style.height = '18mm';
-        footer.style.background = '#0e1e34';
-        footer.style.color = '#fff';
-        footer.style.display = 'flex';
-        footer.style.alignItems = 'center';
-        footer.style.padding = '0 16mm';
-        footer.style.boxSizing = 'border-box';
-        footer.style.fontSize = '8pt';
-        footer.textContent = 'Schneider Unterkonstruktion - Solar Konfigurator';
+        // Safety: falls Tabelle leer ist, füge Platzhalterzeile ein
+        const tbody = productsPage.querySelector('.pdf-table-body');
+        if (tbody && !tbody.innerHTML.trim()) {
+          tbody.innerHTML = '<tr><td style="padding:3mm 4mm;" colspan="4">Keine Produkte ausgewählt</td></tr>';
+        }
 
-        page.appendChild(footer.cloneNode(true));
-        productsPage.appendChild(footer.cloneNode(true));
+        // Footer für beide Seiten mit Logo
+        const makeFooter = () => {
+          const footer = document.createElement('div');
+          footer.style.position = 'absolute';
+          footer.style.left = '0';
+          footer.style.right = '0';
+          footer.style.bottom = '0';
+          footer.style.height = '18mm';
+          footer.style.background = '#0e1e34';
+          footer.style.color = '#fff';
+          footer.style.display = 'flex';
+          footer.style.alignItems = 'center';
+          footer.style.justifyContent = 'space-between';
+          footer.style.padding = '0 16mm';
+          footer.style.boxSizing = 'border-box';
+          footer.style.fontSize = '8pt';
+          const left = document.createElement('div');
+          left.textContent = 'Schneider Unterkonstruktion - Solar Konfigurator';
+          const right = document.createElement('img');
+          right.src = this.companyLogoUrl;
+          right.alt = 'Logo';
+          right.style.height = '12mm';
+          right.style.width = 'auto';
+          footer.appendChild(left);
+          footer.appendChild(right);
+          return footer;
+        };
+
+        page.appendChild(makeFooter());
+        productsPage.appendChild(makeFooter());
 
         root.appendChild(page);
         root.appendChild(productsPage);
       }
     }
 
-    async renderProductsIntoTable(config, tbodyEl, totalEl) {
+    async renderProductsIntoTable(config, tbodyEl, totalEl, options = {}) {
       const parts = await this.calculatePartsFromSnapshot(config);
       let totalPrice = 0;
       const rows = [];
@@ -808,14 +855,31 @@
       }
       // Sortiere nach Produktname
       rows.sort((a, b) => a.key.localeCompare(b.key));
-      tbodyEl.innerHTML = rows.map(r => `
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:3mm 4mm;">${r.key}</td>
-          <td style="padding:3mm 4mm; text-align:right;">${r.value}</td>
-          <td style="padding:3mm 4mm; text-align:right;">${r.ve}</td>
-          <td style="padding:3mm 4mm; text-align:right;">${r.rowPrice.toFixed(2)} €</td>
-        </tr>
-      `).join('');
+      if (options.htmlLayout) {
+        tbodyEl.innerHTML = rows.map(r => {
+          const productName = PRODUCT_NAME_MAP[r.key] || r.key.replace(/_/g, ' ');
+          return `
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:3mm 4mm; width:20mm; font-weight:700;">${r.packs}x</td>
+              <td style="padding:3mm 4mm;">
+                <div style="font-weight:700; font-size:11pt;">${productName}</div>
+                <div style="color:#888; font-size:9pt;">${r.ve} Stück</div>
+              </td>
+              <td style="padding:3mm 4mm; text-align:right; width:35mm;">${r.value}</td>
+              <td style="padding:3mm 4mm; text-align:right; width:30mm;">${r.rowPrice.toFixed(2)} €</td>
+            </tr>
+          `;
+        }).join('');
+      } else {
+        tbodyEl.innerHTML = rows.map(r => `
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:3mm 4mm;">${r.key}</td>
+            <td style="padding:3mm 4mm; text-align:right;">${r.value}</td>
+            <td style="padding:3mm 4mm; text-align:right;">${r.ve}</td>
+            <td style="padding:3mm 4mm; text-align:right;">${r.rowPrice.toFixed(2)} €</td>
+          </tr>
+        `).join('');
+      }
       if (totalEl) totalEl.textContent = `${totalPrice.toFixed(2)} €`;
     }
 
@@ -924,10 +988,8 @@
       
       // Logo rechts - neues PNG Logo
       try {
-        // Logo von der neuen URL laden
-        const logoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAb0AAACOCAYAAAClt9bzAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAExWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSfvu78nIGlkPSdXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQnPz4KPHg6eG1wbWV0YSB4bWxuczp4PSdhZG9iZTpuczptZXRhLyc+CjxyZGY6UkRGIHhtbG5zOnJkZj0naHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyc+CgogPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9JycKICB4bWxuczpBdHRyaWI9J2h0dHA6Ly9ucy5hdHRyaWJ1dGlvbi5jb20vYWRzLzEuMC8nPgogIDxBdHRyaWI6QWRzPgogICA8cmRmOlNlcT4KICAgIDxyZGY6bGkgcmRmOnBhcnNlVHlwZT0nUmVzb3VyY2UnPgogICAgIDxBdHRyaWI6Q3JlYXRlZD4yMDI1LTA4LTAzPC9BdHRyaWI6Q3JlYXRlZD4KICAgICA8QXR0cmliOkV4dElkPmJlZjYxZjQ1LTc4ZDEtNGYxMi1iNjdlLWJkYjlhMmNlNjVjMTwvQXR0cmliOkV4dElkPgogICAgIDxBdHRyaWI6RmJJZD41MjUyNjU5MTQxNzk1ODA8L0F0dHJpYjpGYklkPgogICAgIDxBdHRyaWI6VG91Y2hUeXBlPjI8L0F0dHJpYjpUb3VjaFR5cGU+CiAgICA8L3JkZjpsaT4KICAgPC9yZGY6U2VxPgogIDwvQXR0cmliOkFkcz4KIDwvcmRmOkRlc2NyaXB0aW9uPgoKIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PScnCiAgeG1sbnM6ZGM9J2h0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvJz4KICA8ZGM6dGl0bGU+CiAgIDxyZGY6QWx0PgogICAgPHJkZjpsaSB4bWw6bGFuZz0neC1kZWZhdWx0Jz5TY2huZWlkZXIgbG9nbyAtIDE8L3JkZjpsaT4KICAgPC9yZGY6QWx0PgogIDwvZGM6dGl0bGU+CiA8L3JkZjpEZXNjcmlwdGlvbj4KCiA8cmRmOkRlc2NyaXB0aW9u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';
-        
-        // Logo invertieren und als Bild hinzufügen - proportional skaliert
+        // Logo von bereitgestellter URL laden und invertieren
+        const logoBase64 = await this.loadImageAsBase64(this.companyLogoUrl);
         const invertedLogoBase64 = await this.getInvertedLogoBase64(logoBase64);
         const logoHeight = 15; // Feste Höhe
         const logoWidth = logoHeight * 3.1338028169; // Exaktes Verhältnis 3.1338028169:1
@@ -942,6 +1004,33 @@
         pdf.setFont('helvetica', 'bold');
         pdf.text('Schneider Unterkonstruktion', pageWidth - 120, footerY + 12);
       }
+    }
+
+    // Lädt ein Bild (CORS-fähig) von URL und gibt ein Base64 PNG zurück
+    async loadImageAsBase64(url) {
+      return new Promise((resolve, reject) => {
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width;
+              canvas.height = img.naturalHeight || img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.imageSmoothingEnabled = true;
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL('image/png'));
+            } catch (e) {
+              reject(e);
+            }
+          };
+          img.onerror = reject;
+          img.src = url;
+        } catch (e) {
+          reject(e);
+        }
+      });
     }
 
     // Hilfsmethode für Gesamtpreis-Berechnung aus Snapshot
@@ -1017,16 +1106,24 @@
       try {
         const gridImage = await this.captureGridVisualizationFromSnapshot(config);
         if (gridImage) {
-          const imgWidth = 140;  // Größeres Bild
-          const imgHeight = 105;
-          
-          await checkPageBreak(imgHeight + 15);
-          
-          // Bild zentriert ohne umlaufenden Rahmen einfügen (moderner Look)
-          const centerX = (pageWidth - imgWidth) / 2;
+          // Maximal 70% der A4-Höhe für das Grid-Bild
+          const maxHeight = Math.floor(pageHeight * 0.5); // 50% der Seite
+          const targetWidth = 170; // mm
+          // Berechne proportional die Bildhöhe anhand Zielbreite (Grid-Images werden im Verhältnis ~4:3 erzeugt)
+          let computedHeight = Math.round((targetWidth * 3) / 4);
+          if (computedHeight > maxHeight) {
+            // Skaliere runter, wenn höher als 70% der Seite
+            const scale = maxHeight / computedHeight;
+            computedHeight = Math.round(computedHeight * scale);
+          }
+
+          await checkPageBreak(computedHeight + 15);
+
+          // Zentriert platzieren
+          const centerX = (pageWidth - targetWidth) / 2;
           const centerY = positionRef.y;
-          pdf.addImage(gridImage, 'PNG', centerX, centerY, imgWidth, imgHeight);
-          positionRef.y += imgHeight + 10;
+          pdf.addImage(gridImage, 'PNG', centerX, centerY, targetWidth, computedHeight);
+          positionRef.y += computedHeight + 10;
         }
       } catch (error) {
         console.warn('Grid-Screenshot fehlgeschlagen:', error);
@@ -1578,11 +1675,11 @@
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Produkt', 20, yPosition + 3);
-        pdf.text('Menge', 70, yPosition + 3);
-        pdf.text('Pack', 100, yPosition + 3);
-        pdf.text('Preis/Pack', 130, yPosition + 3);
-        pdf.text('Gesamt', 170, yPosition + 3);
+        // Neue Spalten: Anzahl | Produkt (+VE klein) | Benötigte Menge | Preis
+        pdf.text('Anzahl', 20, yPosition + 3);
+        pdf.text('Produkt', 45, yPosition + 3);
+        pdf.text('Benötigte Menge', 120, yPosition + 3);
+        pdf.text('Preis', 170, yPosition + 3);
         
         pdf.setTextColor(0, 0, 0);
         yPosition += 15;
@@ -1606,18 +1703,36 @@
             }
 
             const productName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
-            const packsNeeded = Math.ceil(quantity / (VE[productKey] || 1));
+            const ve = VE[productKey] || 1;
+            const packsNeeded = Math.ceil(quantity / ve);
             const pricePerPack = getPriceFromCache(productKey);
             const totalForProduct = packsNeeded * pricePerPack;
             totalPrice += totalForProduct;
 
-            pdf.text(productName, 20, yPosition + 2);
-            pdf.text(quantity.toString(), 70, yPosition + 2);
-            pdf.text(`${packsNeeded}x`, 100, yPosition + 2);
-            pdf.text(`${pricePerPack.toFixed(2)} €`, 130, yPosition + 2);
-            pdf.text(`${totalForProduct.toFixed(2)} €`, 170, yPosition + 2);
+            // Spalte 1: Anzahl (z.B. 1x, 2x)
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${packsNeeded}x`, 22, yPosition + 2, { align: 'left' });
 
-            yPosition += 10;
+            // Spalte 2: Produktname + kleine VE darunter (grau)
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(10);
+            pdf.text(productName, 45, yPosition + 1);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(8);
+            pdf.setTextColor(128, 128, 128);
+            pdf.text(`${ve} Stück`, 45, yPosition + 6);
+            pdf.setTextColor(0, 0, 0);
+
+            // Spalte 3: benötigte Menge (wie bisher Menge)
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(9);
+            pdf.text(`${quantity}`, 140, yPosition + 2, { align: 'right' });
+
+            // Spalte 4: Preis (Gesamtpreis für diese Position)
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${totalForProduct.toFixed(2)} €`, 190, yPosition + 2, { align: 'right' });
+
+            yPosition += 12;
             rowCount++;
           }
         }
@@ -3323,11 +3438,10 @@
       
       // Modul-Daten
       this.moduleData = {
-        'ulica-500': { name: 'Ulica Solar Black Jade-Flow 500 W', width: 182, height: 118 },
-        'ulica-450': { name: 'Ulica Solar Black Jade-Flow 450 W', width: 175, height: 115 },
-        'variant-3': { name: 'Modul Variante 3', width: 168, height: 120 },
-        'variant-4': { name: 'Modul Variante 4', width: 185, height: 110 },
-        'variant-5': { name: 'Modul Variante 5', width: 172, height: 125 }
+        'ulica-500': { name: 'Ulica Black Jade-Flow 500W', width: 195.2, height: 113.4 },
+        'ulica-450': { name: 'Ulica Black Jade-Flow 450W', width: 176.2, height: 113.4 },
+        'trina-vertex-s-plus': { name: 'Trina Vertex S+', width: 176.2, height: 113.4 },
+        'aiko-neostar-3s-plus': { name: 'Aiko Neostar 3S+', width: 176.2, height: 113.4 }
       };
       
       // Modul-Checkbox-Mapping
@@ -3379,6 +3493,16 @@
       this.cacheManager = new CacheManager();
 
       this.init();
+    }
+
+    // No-op URL saver to avoid TypeError from old onclick bindings
+    saveToUrl() {
+      try {
+        // Optional: could push state or update query params here
+        return;
+      } catch (_) {
+        return;
+      }
     }
 
     // ===== WEBHOOK FUNKTIONEN =====
@@ -5033,6 +5157,11 @@
 				const module = this.moduleData[selectedValue];
 				this.wIn.value = module.width;
 				this.hIn.value = module.height;
+				// Aktualisiere auch die aktuelle Konfiguration mit den neuen Zellgrößen
+				if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+					this.configs[this.currentConfig].cellWidth = module.width;
+					this.configs[this.currentConfig].cellHeight = module.height;
+				}
 				this.disableInputs();
 				this.updateSize();
 				this.buildList();
@@ -5057,8 +5186,12 @@
 				if (this.moduleSelect) {
 					this.moduleSelect.value = 'ulica-450';
 					// Input-Werte für ulica-450 setzen
-					if (this.wIn) this.wIn.value = '175';
-					if (this.hIn) this.hIn.value = '115';
+					if (this.wIn) this.wIn.value = '176.2';
+					if (this.hIn) this.hIn.value = '113.4';
+					if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+						this.configs[this.currentConfig].cellWidth = 176.2;
+						this.configs[this.currentConfig].cellHeight = 113.4;
+					}
 					this.disableInputs();
 				}
 			} else if (checkboxId === 'ulica-module' && this.ulicaModule.checked) {
@@ -5070,8 +5203,12 @@
 				if (this.moduleSelect) {
 					this.moduleSelect.value = 'ulica-500';
 					// Input-Werte für ulica-500 setzen
-					if (this.wIn) this.wIn.value = '182';
-					if (this.hIn) this.hIn.value = '118';
+					if (this.wIn) this.wIn.value = '195.2';
+					if (this.hIn) this.hIn.value = '113.4';
+					if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+						this.configs[this.currentConfig].cellWidth = 195.2;
+						this.configs[this.currentConfig].cellHeight = 113.4;
+					}
 					this.disableInputs();
 				}
 			}
@@ -5081,6 +5218,7 @@
 			this.buildGrid();
 			this.buildList();
 			this.updateSummaryOnChange();
+			this.updateConfig();
 			// Neu: Modul-Checkboxen gelten global -> auf alle Konfigurationen anwenden
 			this.updateAllConfigurationsForCheckboxes();
 		}
@@ -5498,8 +5636,12 @@
           delete parts.UlicaSolarBlackJadeFlow;
         }
         
-        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
-        // Sie werden nur noch in der Overview berechnet
+        // Zusatzprodukte: Erdungsband wieder in die Produktliste aufnehmen wenn Checkbox aktiv
+        if (this.erdungsband && this.erdungsband.checked) {
+          parts.Erdungsband = this.calculateErdungsband();
+        } else {
+          delete parts.Erdungsband;
+        }
 
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
