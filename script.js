@@ -1411,9 +1411,13 @@
         // NEUES DESIGN: Produkttabelle mit Header
         await checkPageBreak(30);
         
-        // Header mit orange Hintergrund
-        pdf.setFillColor(245, 166, 35);
-        pdf.rect(15, yPosition - 5, 180, 15, 'F');
+        // Header im Stil der Sidebar (Orange, abgerundet)
+        pdf.setFillColor(255, 177, 1); // #FFB101
+        if (pdf.roundedRect) {
+          pdf.roundedRect(15, yPosition - 5, 180, 15, 3, 3, 'F');
+        } else {
+          pdf.rect(15, yPosition - 5, 180, 15, 'F');
+        }
         
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(12);
@@ -1423,10 +1427,14 @@
         pdf.setTextColor(0, 0, 0);
         yPosition += 20;
 
-        // Tabellen-Header mit dunkelblauem Hintergrund
+        // Tabellen-Header im Stil der Sidebar-Elemente (Dunkelblau, abgerundet oben)
         await checkPageBreak(15);
-        pdf.setFillColor(14, 30, 52);
-        pdf.rect(15, yPosition - 3, 180, 12, 'F');
+        pdf.setFillColor(14, 30, 52); // #0e1e34
+        if (pdf.roundedRect) {
+          pdf.roundedRect(15, yPosition - 3, 180, 12, 3, 3, 'F');
+        } else {
+          pdf.rect(15, yPosition - 3, 180, 12, 'F');
+        }
         
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(9);
@@ -1454,7 +1462,7 @@
 
             // Alternierende Zeilen-Hintergründe
             if (rowCount % 2 === 1) {
-              pdf.setFillColor(248, 249, 250);
+              pdf.setFillColor(245, 245, 245); // #f5f5f5 wie Sidebar-Panels
               pdf.rect(15, yPosition - 2, 180, 10, 'F');
             }
 
@@ -1477,7 +1485,7 @@
 
         // Gesamt-Linie
         await checkPageBreak(15);
-        pdf.setDrawColor(14, 30, 52);
+        pdf.setDrawColor(233, 236, 239); // #e9ecef Trennlinie wie UI
         pdf.setLineWidth(1);
         pdf.line(15, yPosition, 195, yPosition);
         yPosition += 5;
@@ -1587,17 +1595,19 @@
 
     // Füge Produkttabelle zum PDF hinzu
     async addProductTable(pdf, config, yPosition, checkPageBreak) {
-      // NEUES DESIGN: Produkttabelle mit Header
+      // NEUES DESIGN: Produkttabelle mit Header – Stil der Sidebar
       await checkPageBreak(30);
-      
-              // Header mit orange Hintergrund
-        pdf.setFillColor(245, 166, 35);
+      pdf.setFillColor(255, 177, 1); // #FFB101
+      if (pdf.roundedRect) {
+        pdf.roundedRect(15, yPosition - 5, 180, 15, 3, 3, 'F');
+      } else {
         pdf.rect(15, yPosition - 5, 180, 15, 'F');
-        
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('PRODUKT-LISTE', 20, yPosition + 5);
+      }
+      
+      pdf.setTextColor(14, 30, 52); // Dark Text passend zur Sidebar
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('PRODUKT-LISTE', 20, yPosition + 5);
       
       pdf.setTextColor(0, 0, 0);
       yPosition += 20;
@@ -1612,10 +1622,14 @@
         return yPosition + 10;
       }
 
-      // Tabellen-Header mit dunkelblauem Hintergrund
+      // Tabellen-Header im Stil der Sidebar (Dunkelblau, abgerundet)
       await checkPageBreak(15);
-      pdf.setFillColor(14, 30, 52);
-      pdf.rect(15, yPosition - 3, 180, 12, 'F');
+      pdf.setFillColor(14, 30, 52); // #0e1e34
+      if (pdf.roundedRect) {
+        pdf.roundedRect(15, yPosition - 3, 180, 12, 3, 3, 'F');
+      } else {
+        pdf.rect(15, yPosition - 3, 180, 12, 'F');
+      }
       
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(9);
@@ -1639,9 +1653,9 @@
         if (needed > 0) {
           await checkPageBreak(12);
 
-          // Alternierende Zeilen-Hintergründe
+          // Alternierende Zeilen-Hintergründe – Sidebar-Panel-Farbe
           if (rowCount % 2 === 1) {
-            pdf.setFillColor(248, 249, 250);
+            pdf.setFillColor(245, 245, 245); // #f5f5f5
             pdf.rect(15, yPosition - 2, 180, 10, 'F');
           }
 
@@ -1664,9 +1678,9 @@
         }
       }
 
-      // Gesamt-Linie
+      // Gesamt-Linie – dezente UI-Trennlinie
       await checkPageBreak(15);
-      pdf.setDrawColor(14, 30, 52);
+      pdf.setDrawColor(233, 236, 239); // #e9ecef
       pdf.setLineWidth(1);
       pdf.line(15, yPosition, 195, yPosition);
       yPosition += 5;
