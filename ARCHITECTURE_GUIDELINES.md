@@ -140,6 +140,14 @@ Before merging any changes that touch Grid state:
 
 ---
 
+## 10. Dokumentationsdisziplin (Agents)
+
+- Jede Architektur-/State-Änderung muss in `SOLAR_TOOL_DOCUMENTATION.md` und ggf. `README.md` reflektiert werden.
+- Neue Parser-Befehle, Checkboxen oder Zusatzprodukte in `SMART_CONFIG_EXAMPLES.md` und `PLACEHOLDER_EXAMPLES.md` ergänzen.
+- Prompt-/Workflows in `AGENT_PROMPT_TEMPLATE.md` und `AGENT_DEVELOPMENT_GUIDE.md` aktuell halten.
+
+---
+
 ## Summary
 
 The core principle is **separation of concerns with strict state isolation**. Summary calculations, PDF generation, and other auxiliary operations must NEVER modify the main Grid state directly. Instead, they should work with isolated copies of the data.

@@ -9,6 +9,11 @@ Eine Web-Anwendung zur einfachen Konfiguration und Bestellung von Solaranlagen-K
 - **[🤖 Agent Prompt Template](AGENT_PROMPT_TEMPLATE.md)** - Universal-Prompt für zukünftige AI-Entwicklung
 - **[⚙️ Development Guide](AGENT_DEVELOPMENT_GUIDE.md)** - Kritische Entwicklungsregeln (Dual-File-System!)
 
+### ⚠️ Dokumentationspflege (für alle Agents)
+- Halte bei jeder Code-Änderung die relevanten `.md`-Dateien aktuell: `README.md`, `SOLAR_TOOL_DOCUMENTATION.md`, `ARCHITECTURE_GUIDELINES.md`, `AGENT_DEVELOPMENT_GUIDE.md`, `SMART_CONFIG_EXAMPLES.md`, `PLACEHOLDER_EXAMPLES.md`, `AGENT_PROMPT_TEMPLATE.md`.
+- Prüfe insbesondere: neue/umbenannte Checkboxen, zusätzliche Produkte, Smart-Config-Kommandos, UI-Verhalten, Größen/Begriffe.
+- Füge Beispiele/Erklärungen hinzu oder aktualisiere sie, wenn sich das Verhalten ändert.
+
 ### **Feature-Details:**
 - **[🧠 Smart Config Examples](SMART_CONFIG_EXAMPLES.md)** - Alle unterstützten Eingabeformate
 - **[💬 Placeholder Examples](PLACEHOLDER_EXAMPLES.md)** - UI-Beispiele und Varianten
@@ -31,10 +36,11 @@ cp AGENT_PROMPT_TEMPLATE.md your-prompt.md
 ## 🎯 Hauptfunktionen
 
 - **Grid-Konfiguration** - Visuelle Modul-Anordnung
-- **Smart Config** - Intelligente Texteingabe (`5x4 ohne kabel`)
+- **Smart Config** - Intelligente Texteingabe (u. a. `5x4 ohne kabel`, `gleichmäßig`, `zufällig`, `kompakt`, `mit lücken`, `1 reihe abstand`, `alles außer holz`)
 - **Multi-Projekte** - Mehrere Konfigurationen parallel
 - **Webflow Integration** - Direkter Warenkorb-Export
 - **Analytics** - Nutzungsauswertung für Optimierungen
+- **Zusatzprodukte** - Quetschkabelschuhe, Erdungsband (inkl. Längenlogik/VE)
 
 ---
 

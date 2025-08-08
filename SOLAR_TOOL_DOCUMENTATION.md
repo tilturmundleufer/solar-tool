@@ -41,6 +41,9 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
   - `5x4 mit module, ohne mc4`
   - `20 module ohne kabel`
   - `3 reihen mit 6 modulen, ohne holz`
+  - `gleichmäßig`, `zufällig`, `in reihen`, `in spalten`
+  - `kompakt`, `mit lücken`, `1 reihe abstand`, `doppelter abstand`
+  - `alles außer holz`, `ohne zubehör`, `nur module und mc4`, `mit allem`
 - **Unterstützt:** Leerzeichen und Bindestriche (`ohne kabel`, `ohne-kabel`)
 
 ### **3. Komponenten-Auswahl (Checkboxes)**
@@ -48,6 +51,9 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
 - **MC4-Stecker:** Steckverbinder für Module
 - **Solarkabel:** Verkabelung der Anlage  
 - **Holzunterleger:** Montagehilfen für Holzdächer
+- **Quetschkabelschuhe:** Zusatzprodukt (100 Stück/VE)
+- **Erdungsband:** Zusatzprodukt; Längenlogik mit VE = 600 cm; Anzeige der Gesamtlänge in der Summary
+- **Ulica-Modul:** Optional zusätzliches Modul zur Stückliste
 
 **Logik:** Checkbox aktiviert = Nutzer möchte Komponente dazukaufen
 **Deaktiviert:** Nutzer hat Komponente bereits vorrätig
@@ -105,6 +111,7 @@ VE = {
 - Automatische VE-Berechnung
 - Rundung auf nächste Verpackungseinheit
 - Orientierungsabhängige Schienenlängen
+- Zusatzprodukte: Quetschkabelschuhe pauschal 1 VE; Erdungsband nach berechneter Länge (auf 600 cm aufrunden)
 
 ### **Analytics-Nutzung:**
 - **Zweck:** Tool-Optimierung basierend auf Nutzerverhalten
@@ -141,6 +148,7 @@ VE = {
 - **Reihen-Konfiguration:** `3 reihen mit 5 modulen`
 - **Orientierung:** `vertikal`, `horizontal`
 - **Checkbox-Steuerung:** `mit/ohne module/mc4/kabel/holz`
+- **Zusatzprodukte:** `quetschkabelschuhe`, `erdungsband`, `ulica module`
 - **Kombinationen:** `und`, `,` für mehrere Optionen
 
 ### **Interaktive Features:**
@@ -148,6 +156,7 @@ VE = {
 - **Shift+Click** - Rechteck-Selektion
 - **Bulk-Modus** - Effiziente Mehrfachauswahl
 - **Live-Preview** - Sofortige Kostenberechnung
+- **Smart-Config-Quick-Input** - Vorschlagsliste mit klickbaren Beispielen
 
 ---
 
@@ -169,6 +178,7 @@ VE = {
 
 ### **Häufige Probleme:**
 - **Smart Config erkennt "ohne" nicht:** Prüfe Hyphen-Unterstützung (`ohne-kabel`)
+- **Smart Config erkennt neue Begriffe nicht:** Prüfe Regex in `SmartConfigParser.patterns`
 - **Checkbox-Zustand inkorrekt:** Vergleiche parseCheckboxCombinations Logik
 - **Performance-Issues:** Prüfe Web Worker Funktionalität
 
@@ -181,7 +191,7 @@ VE = {
 
 ## 📝 Wichtige Code-Bereiche
 
-### **Smart Config Parser** (`script.js:402-632`)
+### **Smart Config Parser**
 - Hauptlogik für Texteingabe-Verarbeitung
 - Regex-Patterns für verschiedene Eingabeformate
 - Checkbox-Kombinationen und Grid-Berechnungen
@@ -199,3 +209,11 @@ VE = {
 ---
 
 *Diese Dokumentation wird kontinuierlich aktualisiert basierend auf Nutzerfeedback und Entwicklungsfortschritt.*
+
+---
+
+## 📚 Dokumentationspflege (für alle Agents)
+
+- Bei jeder Änderung an Smart Config, Checkboxen, Zusatzprodukten oder UI: relevante `.md`-Dateien aktualisieren (`README`, `SMART_CONFIG_EXAMPLES`, `PLACEHOLDER_EXAMPLES`, `AGENT_PROMPT_TEMPLATE`).
+- Änderungen an Architektur/State-Handling in `ARCHITECTURE_GUIDELINES` dokumentieren.
+- Dev/Prod-Regeln in `AGENT_DEVELOPMENT_GUIDE` aktuell halten.

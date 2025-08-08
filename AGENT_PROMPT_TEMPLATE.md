@@ -19,12 +19,13 @@ KRITISCHE CODE-REGELN:
 ⚠️ IMMER beide Dateien aktualisieren: script.js UND script.min.js
 ⚠️ Verwende terser für Minifizierung: `terser script.js -o script.min.js -c -m`
 ⚠️ Teste Smart Config Patterns gründlich (Leerzeichen + Bindestriche)
+⚠️ Pflege die `.md`-Dokumentation bei jeder Code-Änderung (siehe README / Development Guide)
 
 HAUPTKOMPONENTEN:
-- SmartConfigParser (script.js:402-632): Texteingabe → Konfiguration
+- SmartConfigParser: Texteingabe → Konfiguration (inkl. Befehle wie `gleichmäßig`, `zufällig`, `kompakt`, `mit lücken`, `1 reihe abstand`, `alles außer holz`)
 - SolarGrid Klasse: Grid-Management + Benutzerinteraktionen  
 - CalculationManager: Background-Berechnungen via Web Worker
-- Checkbox-Logik: aktiviert = dazukaufen, deaktiviert = vorrätig
+- Checkbox-Logik: aktiviert = dazukaufen, deaktiviert = vorrätig (inkl. Zusatzprodukte `quetschkabelschuhe`, `erdungsband`, `ulica-module`)
 
 DEINE AUFGABE:
 [HIER SPEZIFISCHE ÄNDERUNGSWÜNSCHE EINFÜGEN]
@@ -47,4 +48,15 @@ DEINE AUFGABE:
 Füge eine neue Smart Config Funktion hinzu, die "reihen abstand" erkennt und automatisch 
 Leerzeilen zwischen den Modulreihen einfügt. Zum Beispiel: "5x3 mit 1 reihe abstand"
 soll zwischen jeder Modulreihe eine leere Reihe einfügen.
+```
+
+### Erweiterte Beispiel-Aufgabe (Zusatzprodukte & Layout)
+
+```
+[... Universal-Prompt ...]
+
+DEINE AUFGABE:
+Erweitere die Smart-Config um kombinierbare Layout-Befehle ("kompakt", "gleichmäßig")
+und Zusatzprodukte ("quetschkabelschuhe", "erdungsband", "ulica module").
+Prüfe, dass Erdungsband die Länge berechnet und auf VE (600 cm) aufrundet.
 ```

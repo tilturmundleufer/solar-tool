@@ -2,7 +2,7 @@
 
 ## 🎯 Aktueller Placeholder
 ```
-z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen, ohne holz • 6x3 vertikal • mit mc4 und kabel • ohne module, ohne mc4 • 4x5 horizontal mit modulen
+z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen, ohne holz • 6x3 vertikal • mit mc4 und kabel • ohne module, ohne mc4 • 4x5 horizontal mit modulen • kompaktes grid • gleichmäßig verteilen • 1 reihe abstand • alles außer holz
 ```
 
 ## 📋 Vollständige Liste aller Möglichkeiten
@@ -19,6 +19,17 @@ z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modul
 - `30 module` - 30 Module, optimales Grid
 
 ### 📏 Reihen-Konfigurationen
+### 📐 Abstand & Layout
+- `kompakt` - Kompaktes Grid ohne Lücken
+- `mit lücken` - Grid mit Lücken
+- `1 reihe abstand` - Eine Leerreihe zwischen Modulreihen
+- `doppelter abstand` - Doppelte Abstände
+
+### 🔀 Verteilung
+- `gleichmäßig` - Gleichmäßige Verteilung der Module
+- `in reihen` - Verteilung bevorzugt Reihen
+- `in spalten` - Verteilung bevorzugt Spalten
+- `zufällig` - Zufällige Verteilung
 - `3 reihen mit 5 modulen` - 3 Reihen à 5 Module
 - `4 reihen mit 6 modulen` - 4 Reihen à 6 Module
 - `zwei reihen mit 8 modulen` - 2 Reihen à 8 Module
@@ -37,6 +48,9 @@ z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modul
 - `mit solarkabel` - Solarkabel-Checkbox aktivieren
 - `mit holz` - Holzunterleger-Checkbox aktivieren
 - `mit holzunterleger` - Holzunterleger-Checkbox aktivieren
+- `mit quetschkabelschuhe` - Zusatzprodukt aktivieren
+- `mit erdungsband` - Zusatzprodukt aktivieren (berechnet Länge)
+- `mit ulica module` - Ulica-Modul zusätzlich
 
 ### ❌ Deaktivieren (ohne)
 - `ohne module` - Module-Checkbox deaktivieren
@@ -46,17 +60,24 @@ z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modul
 - `ohne solarkabel` - Solarkabel-Checkbox deaktivieren
 - `ohne holz` - Holzunterleger-Checkbox deaktivieren
 - `ohne holzunterleger` - Holzunterleger-Checkbox deaktivieren
+- `ohne quetschkabelschuhe`
+- `ohne erdungsband`
 
 ### 🔗 Kombinationen mit "und"
 - `mit module und mc4` - Beide aktivieren
 - `ohne mc4 und ohne kabel` - Beide deaktivieren
 - `mit modulen und ohne holz` - Gemischt
 - `mit kabel und holz` - Beide aktivieren
+- `nur module und mc4` - Nur diese beiden aktivieren
 
 ### 🔗 Kombinationen mit Komma
 - `mit module, ohne mc4` - Module an, MC4 aus
 - `ohne kabel, mit holz` - Kabel aus, Holz an
 - `mit mc4, mit kabel, ohne holz` - Mehrere Optionen
+ 
+### 🔎 Spezialbefehle
+- `alles außer holz` - Aktiviere alles außer Holz
+- `ohne zubehör` - Deaktiviert alles außer Module
 
 ## 🚀 Beispiel-Kombinationen für Placeholder
 
@@ -84,7 +105,7 @@ z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modul
 
 **Balanced Version (empfohlen):**
 ```
-5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen • 6x3 vertikal mit mc4 • ohne module und holz • 4x5 horizontal
+5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen • 6x3 vertikal mit mc4 • ohne module und holz • 4x5 horizontal • kompakt • gleichmäßig • 1 reihe abstand
 ```
 
 **Warum diese Version:**
@@ -102,7 +123,7 @@ z.B.: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modul
 
 ### Mit Emojis:
 ```
-🔢 5x4 mit module • 📱 ohne mc4 • 🔄 vertikal • ⚡ 20 module ohne kabel • 📏 3 reihen mit 6 modulen
+🔢 5x4 mit module • 📱 ohne mc4 • 🔄 vertikal • ⚡ 20 module ohne kabel • 📏 3 reihen mit 6 modulen • 🧩 kompakt • ➗ gleichmäßig • ↕️ 1 reihe abstand
 ```
 
 ### Mit Kategorien:
@@ -112,5 +133,10 @@ Grid: 5x4, 6x3 • Module: 20 module, mit/ohne modulen • Optionen: mit/ohne mc
 
 ### Sehr kurz:
 ```
-5x4 mit module • 20 module ohne mc4 • 3 reihen vertikal • ohne kabel und holz
+5x4 mit module • 20 module ohne mc4 • 3 reihen vertikal • kompakt • gleichmäßig
 ```
+
+---
+
+### 🛠 Pflegehinweis (Agents)
+- Ändert sich das Smart-Config-Verhalten oder kommen neue Checkboxen hinzu, aktualisiere diesen Placeholder zeitnah.

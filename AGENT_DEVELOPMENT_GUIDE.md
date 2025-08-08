@@ -18,9 +18,9 @@
 
 #### File Relationship:
 ```
-script.js (2857 lines) ──minify──> script.min.js (1 line)
-     ↓                                    ↓
-Development Environment            Production Environment
+script.js (~7k lines) ──minify──> script.min.js (1 line)
+     ↓                                  ↓
+Development Environment          Production Environment
 ```
 
 ### 🛠️ Required Actions for Every JS Modification:
@@ -46,10 +46,10 @@ npx terser script.js -o script.min.js -c -m
 ```
 
 #### Step 3: Verify Both Files
-- ✅ `script.js` contains readable, properly formatted code
-- ✅ `script.min.js` contains minified, single-line code
-- ✅ Both files have identical functionality
-- ✅ File sizes: script.js (~96KB), script.min.js (~48KB)
+- ✅ `script.js` enthält lesbaren, strukturierten Code
+- ✅ `script.min.js` ist minifiziert (eine Zeile) und funktional identisch
+- ✅ Beide Dateien sind synchron (Funktionsparität)
+- ✅ Größe grob im Rahmen (minifizierte Datei ist deutlich kleiner)
 
 ### 🎯 Key Components in Both Files:
 
@@ -114,9 +114,9 @@ solar-tool/
 
 ### 🎯 Environment Usage:
 
-- **Development/Testing**: Uses `script.js`
-- **Production**: Uses `script.min.js`
-- **Both must work identically**
+- **Development/Testing**: nutzt `script.js`
+- **Production**: nutzt `script.min.js`
+- **Beide müssen identisch funktionieren**
 
 ### 🔧 Minification Tools:
 
@@ -134,7 +134,7 @@ When making changes, document:
 - Modified: [specific functions/classes]
 - Files Updated: script.js ✅, script.min.js ✅
 - Testing: [brief description]
-- Size Check: script.js (~96KB), script.min.js (~48KB)
+- Doc Update: README.md ✅, SOLAR_TOOL_DOCUMENTATION.md ✅, SMART_CONFIG_EXAMPLES.md ✅ (falls betroffen)
 ```
 
 ---
@@ -155,4 +155,16 @@ node -c script.min.js
 
 ---
 
-**Remember: The dev/prod process only works if BOTH files are kept in sync!**
+**Remember: Der Dev/Prod-Prozess funktioniert nur, wenn BEIDE Dateien synchron sind!**
+
+---
+
+## 📚 Dokumentationspflege (Pflicht für Agents)
+
+- Aktualisiere bei jeder Code-Änderung die relevanten `.md`-Dateien.
+- Prüfe und pflege insbesondere:
+  - Smart-Config-Befehle (z. B. `gleichmäßig`, `zufällig`, `kompakt`, `mit lücken`, `1 reihe abstand`, `alles außer holz`, `ohne zubehör`)
+  - Zusatzprodukte/Checkboxen (z. B. `quetschkabelschuhe`, `erdungsband`, `ulica-module`)
+  - UI-Texte/Placeholders in `index.html` vs. `PLACEHOLDER_EXAMPLES.md`
+  - Berechnungslogiken (z. B. Erdungsband-Länge und VE-Anzeige)
+- Halte `AGENT_PROMPT_TEMPLATE.md` auf Stand, damit neue Regeln/Kommandos sofort bekannt sind.

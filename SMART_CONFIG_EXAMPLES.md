@@ -1,8 +1,8 @@
 # 🧠 Smart Config Examples - Solar Tool
 
-## ✨ Neue Funktionalität: "ohne" Optionen
+## ✨ Smart Config – Befehle & Beispiele
 
-Die Smart Config unterstützt jetzt das Abwählen von Checkboxen mit "ohne":
+Die Smart Config unterstützt folgende Muster (Leerzeichen und Bindestriche sind erlaubt):
 
 ### 📋 Checkbox-Steuerung
 
@@ -22,6 +22,17 @@ Die Smart Config unterstützt jetzt das Abwählen von Checkboxen mit "ohne":
 3x6 ohne holz
 ```
 
+#### ➕ Zusatzprodukte:
+```
+mit quetschkabelschuhe
+ohne quetschkabelschuhe
+mit erdungsband
+ohne erdungsband
+mit ulica module
+```
+
+Hinweis: `erdungsband` berechnet zusätzlich eine Gesamtlänge und rundet auf VE (600 cm) auf.
+
 ### 🔄 Kombinationen
 
 #### Mit mehreren Optionen:
@@ -36,6 +47,14 @@ Die Smart Config unterstützt jetzt das Abwählen von Checkboxen mit "ohne":
 5x4 mit module, ohne mc4
 6x3 ohne kabel, mit holz
 4x5 ohne module und ohne mc4
+```
+
+#### Alles-außer / Nur:
+```
+alles außer holz
+nur module und mc4
+ohne zubehör
+mit allem
 ```
 
 ### 📝 Vollständige Beispiele
@@ -92,6 +111,10 @@ Ergebnis:
 - `mit solarkabel`
 
 #### Holzunterleger:
+#### Zusatzprodukte:
+- `quetschkabelschuhe`
+- `erdungsband`
+- `ulica module`
 - `ohne holz`
 - `ohne holzunterleger`
 - `mit holz`
@@ -106,6 +129,8 @@ Ergebnis:
 3. **Gemischte Befehle**: Du kannst "mit" und "ohne" in derselben Eingabe verwenden
 
 4. **Unveränderte Werte**: Nicht erwähnte Checkboxen bleiben unverändert
+5. **Grid-Layout**: Befehle wie `kompakt`, `mit lücken`, `1 reihe abstand`, `doppelter abstand` sind kombinierbar mit Größenangaben
+6. **Verteilung**: `gleichmäßig`, `in reihen`, `in spalten`, `zufällig`
 
 ### 🚀 Erweiterte Beispiele
 
