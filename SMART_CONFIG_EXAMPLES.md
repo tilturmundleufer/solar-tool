@@ -148,6 +148,37 @@ ohne module, ohne mc4, ohne kabel, ohne holz
 → Alle Checkboxen deaktivieren (Grid bleibt unverändert)
 ```
 
+## ➕ Neue Konfiguration erstellen
+
+Unterstützte Eingaben (Groß-/Kleinschreibung, Leerzeichen und Bindestriche sind tolerant):
+
+- `neue konfiguration`
+- `neue config`
+- `neue konfig`
+- `neue konfiguration erstellen`
+- `neue konfiguration anlegen`
+- `config neu`
+- `konfiguration neu`
+- `new config`
+
+Wirkung: Speichert die aktuelle Konfiguration und erstellt eine neue Standard-Konfiguration.
+
+## 🗑️ Alle Konfigurationen löschen / Von vorne beginnen
+
+Diese Varianten führen einen kompletten Neustart aus (entspricht dem Button „Alle Konfigurationen löschen“ / „von vorne beginnen“):
+
+- `alle konfigurationen löschen`
+- `alle configs löschen`
+- `alles löschen`
+- `alles zurücksetzen`
+- `von vorne beginnen`
+- `von vorn anfangen`
+- `neu starten`
+- `start over`
+- `reset all`
+
+Wirkung: Löscht alle Konfigurationen, setzt das Grid und alle Optionen auf den Standard zurück (mit Bestätigungsabfrage).
+
 ---
 
 **Hinweis**: Diese Funktionalität ist in beiden Dateien verfügbar:

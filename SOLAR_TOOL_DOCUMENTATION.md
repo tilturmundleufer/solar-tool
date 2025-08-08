@@ -145,6 +145,12 @@ VE = {
 ### **Smart Config Patterns:**
 - **Grid-Größen:** `5x4`, `6x3`, `8x2`
 - **Modul-Anzahl:** `20 module`, `24 modulen`
+- **Layout & Abstand:** `kompakt`, `mit lücken`, `1 reihe abstand`, `gleichmäßig`, `zufällig`
+- **Checkbox-Logik:** `mit mc4`, `ohne kabel`, `alles außer holz`, `nur module`
+- **Ulica-Module:** `ulica 500`, `black jade flow 450`
+- **Konfiguration speichern/benennen:** `speichern`, `speichern als "Dach Nord"`
+- **Neue Konfiguration:** `neue konfiguration`, `config neu`, `new config`
+- **Alle Konfigurationen löschen / Neustart:** `alle konfigurationen löschen`, `von vorne beginnen`, `reset all`
 - **Reihen-Konfiguration:** `3 reihen mit 5 modulen`
 - **Orientierung:** `vertikal`, `horizontal`
 - **Checkbox-Steuerung:** `mit/ohne module/mc4/kabel/holz`
