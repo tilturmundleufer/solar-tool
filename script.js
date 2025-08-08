@@ -6344,6 +6344,7 @@
         div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
         
         const totalPrice = this.calculateConfigPrice(cfg);
+        const canDelete = this.configs.length >= 2;
         
         div.innerHTML = `
           <div class="config-item-info">
@@ -6354,9 +6355,10 @@
             <button class="icon-btn" onclick="solarGrid.editConfigNameInList(${idx})" title="Bearbeiten">
               <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
             </button>
+            ${canDelete ? `
             <button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${idx})" title="Löschen">
               <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936c5481f2a4db850a01f5_Trashbin.png" alt="Löschen" style="width: 16px; height: 16px;">
-            </button>
+            </button>` : ''}
             <div class="config-item-arrow">
               <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 10px; height: 16px;">
             </div>
