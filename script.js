@@ -621,6 +621,7 @@
       this.solarGrid = solarGrid;
       this.jsPDF = window.jspdf?.jsPDF;
       this.html2canvas = window.html2canvas;
+      this.html2pdf = window.html2pdf; // html2pdf.js (optional, moderner Pfad)
     }
 
     // Prüfe ob PDF-Libraries verfügbar sind
@@ -630,54 +631,192 @@
 
     // NEUE ISOLIERTE PDF-Generation mit Snapshot (KEINE Grid-Interaktion!)
     async generatePDFFromSnapshot(snapshot) {
+      // Moderner Weg: HTML-Template mit html2pdf.js (wenn verfügbar)
+      if (this.html2pdf) {
+        try {
+          if (!snapshot?.configs?.length) {
+            this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
+            return;
+          }
+
+          // Render ALL configs in one multi-page HTML (pdf-root)
+          await this.renderSnapshotIntoPdfTemplate(snapshot);
+
+          const fileName = this.generateFileName(snapshot.configs);
+          const root = document.getElementById('pdf-root');
+          // html2pdf Optionen: A4, hohe Qualität, mm-Einheiten
+          const opt = {
+            margin:       [0, 0, 0, 0],
+            filename:     fileName,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, logging: false },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+          await this.html2pdf().set(opt).from(root).save();
+          return;
+        } catch (err) {
+          console.error('html2pdf.js Export fehlgeschlagen, fallback auf jsPDF:', err);
+        }
+      }
+
+      // Fallback: bestehender jsPDF-Prozess
       if (!this.isAvailable()) {
         console.warn('PDF Libraries nicht verfügbar');
         this.solarGrid.showToast('PDF-Generierung nicht verfügbar', 3000);
         return;
       }
-
       try {
-        console.log('PDF-Generation startet mit Snapshot:', {
-          totalConfigs: snapshot.totalConfigs,
-          timestamp: snapshot.timestamp,
-          configs: snapshot.configs.map(c => ({
-            name: c.name,
-            dimensions: `${c.cols}x${c.rows}`,
-            selectedCells: c.selectedCells,
-            totalCells: c.totalCells
-          }))
-        });
-        
-        if (!snapshot.configs || snapshot.configs.length === 0) {
+        if (!snapshot?.configs?.length) {
           this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
           return;
         }
-
         const pdf = new this.jsPDF('p', 'mm', 'a4');
         let isFirstPage = true;
-
-        // Generiere PDF für jede Konfiguration aus dem Snapshot
         for (const config of snapshot.configs) {
-          if (!isFirstPage) {
-            pdf.addPage();
-          }
+          if (!isFirstPage) pdf.addPage();
           await this.addConfigurationToPDFFromSnapshot(pdf, config, isFirstPage);
           isFirstPage = false;
         }
-
-        // Generiere Dateinamen
         const fileName = this.generateFileName(snapshot.configs);
-        
-        // PDF herunterladen
         pdf.save(fileName);
-        
-        console.log('PDF erfolgreich generiert:', fileName);
-
       } catch (error) {
         console.error('PDF-Generierung fehlgeschlagen:', error);
         this.solarGrid.showToast('PDF-Erstellung fehlgeschlagen', 3000);
-        throw error; // Re-throw für debugging
       }
+    }
+
+    // Rendert den Snapshot in das versteckte A4-HTML-Template (#pdf-root)
+    async renderSnapshotIntoPdfTemplate(snapshot) {
+      const root = document.getElementById('pdf-root');
+      if (!root) return;
+      // Leeren
+      root.innerHTML = '';
+      const dateStr = new Date().toLocaleDateString('de-DE');
+
+      for (let i = 0; i < snapshot.configs.length; i++) {
+        const config = snapshot.configs[i];
+        // Seite klonen
+        const page = document.createElement('div');
+        page.className = 'pdf-page';
+        page.style.width = '210mm';
+        page.style.minHeight = '297mm';
+        page.style.padding = '16mm 16mm 22mm 16mm';
+        page.style.boxSizing = 'border-box';
+        page.style.position = 'relative';
+
+        page.innerHTML = `
+          <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
+            <div>
+              <div style="font-size:18pt; font-weight:700; color:#0e1e34;">Ihre Konfiguration</div>
+              <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;">unterkonstruktion.de</div>
+          </header>
+          <section style="border:1px solid #e5e7eb; border-radius:8px; padding:6mm; margin-bottom:8mm;">
+            <div style="font-size:12pt; font-weight:700; color:#0e1e34;">Projekt</div>
+            <div style="font-size:10pt; color:#111; margin-top:2mm;">${(config.name || 'Unbenannt')}</div>
+          </section>
+          <section style="margin-bottom:8mm;">
+            <div style="font-size:11pt; font-weight:700; color:#0e1e34; margin-bottom:4mm;">Grid-Übersicht</div>
+            <div style="font-size:10pt; color:#111; margin-bottom:4mm;">
+              Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt) · Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}
+            </div>
+            <img class="pdf-grid-image" alt="Grid" style="width:170mm; max-width:170mm; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
+          </section>
+        `;
+
+        // Grid-Bild generieren
+        try {
+          const gridImg = await this.captureGridVisualizationFromSnapshot(config);
+          if (gridImg) page.querySelector('.pdf-grid-image').src = gridImg;
+        } catch {}
+
+        // Produktliste als eigene Seite
+        const productsPage = document.createElement('div');
+        productsPage.className = 'pdf-page';
+        productsPage.style.width = '210mm';
+        productsPage.style.minHeight = '297mm';
+        productsPage.style.padding = '16mm 16mm 22mm 16mm';
+        productsPage.style.boxSizing = 'border-box';
+        productsPage.style.position = 'relative';
+
+        productsPage.innerHTML = `
+          <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
+            <div>
+              <div style="font-size:18pt; font-weight:700; color:#0e1e34;">Ihre Konfiguration</div>
+              <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;">unterkonstruktion.de</div>
+          </header>
+          <div style="background:#FFB101; color:#000; border-radius:8px; padding:6mm; font-weight:700; margin-bottom:6mm;">PRODUKT-LISTE</div>
+          <table style="width:100%; border-collapse:collapse; font-size:10pt;">
+            <thead>
+              <tr style="background:#0e1e34; color:#fff;">
+                <th style="text-align:left; padding:3mm 4mm; border-top-left-radius:6px;">Produkt</th>
+                <th style="text-align:right; padding:3mm 4mm;">Menge</th>
+                <th style="text-align:right; padding:3mm 4mm;">VE</th>
+                <th style="text-align:right; padding:3mm 4mm; border-top-right-radius:6px;">Preis</th>
+              </tr>
+            </thead>
+            <tbody class="pdf-table-body"></tbody>
+          </table>
+          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:700;">GESAMTPREIS</div>
+            <div class="pdf-total-price" style="font-size:14pt; font-weight:700;"></div>
+          </div>
+        `;
+
+        // Produkte rendern
+        await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), productsPage.querySelector('.pdf-total-price'));
+
+        // Footer für beide Seiten
+        const footer = document.createElement('div');
+        footer.style.position = 'absolute';
+        footer.style.left = '0';
+        footer.style.right = '0';
+        footer.style.bottom = '0';
+        footer.style.height = '18mm';
+        footer.style.background = '#0e1e34';
+        footer.style.color = '#fff';
+        footer.style.display = 'flex';
+        footer.style.alignItems = 'center';
+        footer.style.padding = '0 16mm';
+        footer.style.boxSizing = 'border-box';
+        footer.style.fontSize = '8pt';
+        footer.textContent = 'Schneider Unterkonstruktion - Solar Konfigurator';
+
+        page.appendChild(footer.cloneNode(true));
+        productsPage.appendChild(footer.cloneNode(true));
+
+        root.appendChild(page);
+        root.appendChild(productsPage);
+      }
+    }
+
+    async renderProductsIntoTable(config, tbodyEl, totalEl) {
+      const parts = await this.calculatePartsFromSnapshot(config);
+      let totalPrice = 0;
+      const rows = [];
+      for (const [key, value] of Object.entries(parts || {})) {
+        if (value <= 0) continue;
+        const ve = VE[key] || 1;
+        const packs = Math.ceil(value / ve);
+        const price = getPriceFromCache(key);
+        const rowPrice = packs * price;
+        totalPrice += rowPrice;
+        rows.push({ key, value, ve, packs, rowPrice });
+      }
+      // Sortiere nach Produktname
+      rows.sort((a, b) => a.key.localeCompare(b.key));
+      tbodyEl.innerHTML = rows.map(r => `
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:3mm 4mm;">${r.key}</td>
+          <td style="padding:3mm 4mm; text-align:right;">${r.value}</td>
+          <td style="padding:3mm 4mm; text-align:right;">${r.ve}</td>
+          <td style="padding:3mm 4mm; text-align:right;">${r.rowPrice.toFixed(2)} €</td>
+        </tr>
+      `).join('');
+      if (totalEl) totalEl.textContent = `${totalPrice.toFixed(2)} €`;
     }
 
     // Abwärtskompatibler Wrapper: ermöglicht this.pdfGenerator.generatePDF('current'|'all')

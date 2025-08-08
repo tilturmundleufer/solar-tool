@@ -8,6 +8,8 @@
   <!-- PDF Generation Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Modern HTML-to-PDF (bundled: jsPDF+html2canvas) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
   <!-- Mobile Warning Overlay -->
@@ -336,6 +338,58 @@
     </div>
 
 
+  </div>
+
+  <!-- Hidden A4 PDF Template Root (html2pdf.js will capture this) -->
+  <div id="pdf-root" style="position: fixed; left: -99999px; top: -99999px; width: 210mm; background: #ffffff;">
+    <div class="pdf-page" style="width: 210mm; min-height: 297mm; padding: 16mm 16mm 22mm 16mm; box-sizing: border-box;">
+      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10mm;">
+        <div>
+          <div style="font-size: 18pt; font-weight: 700; color: #0e1e34;">Ihre Konfiguration</div>
+          <div id="pdf-date" style="font-size: 10pt; color: #677; margin-top: 2mm;"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size: 10pt;">
+          <span>unterkonstruktion.de</span>
+        </div>
+      </header>
+
+      <section id="pdf-project" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 6mm; margin-bottom: 8mm;">
+        <div id="pdf-project-title" style="font-size: 12pt; font-weight: 700; color: #0e1e34;">Projekt</div>
+        <div id="pdf-project-meta" style="font-size: 10pt; color: #111; margin-top: 2mm;"></div>
+      </section>
+
+      <section id="pdf-grid" style="margin-bottom: 8mm;">
+        <div style="font-size: 11pt; font-weight: 700; color: #0e1e34; margin-bottom: 4mm;">Grid-Übersicht</div>
+        <div id="pdf-grid-meta" style="font-size: 10pt; color: #111; margin-bottom: 4mm;"></div>
+        <img id="pdf-grid-image" alt="Grid" style="width: 170mm; max-width: 170mm; border-radius: 6px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" />
+      </section>
+
+      <section id="pdf-products" style="page-break-before: always;">
+        <div style="background: #FFB101; color: #000; border-radius: 8px; padding: 4mm 6mm; font-weight: 700; margin-bottom: 6mm;">PRODUKT-LISTE</div>
+        <table id="pdf-table" style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+          <thead>
+            <tr style="background: #0e1e34; color: #fff;">
+              <th style="text-align:left; padding: 3mm 4mm; border-top-left-radius: 6px;">Produkt</th>
+              <th style="text-align:right; padding: 3mm 4mm;">Menge</th>
+              <th style="text-align:right; padding: 3mm 4mm;">VE</th>
+              <th style="text-align:right; padding: 3mm 4mm; border-top-right-radius: 6px;">Preis</th>
+            </tr>
+          </thead>
+          <tbody id="pdf-table-body"></tbody>
+        </table>
+      </section>
+
+      <section id="pdf-total" style="margin-top: 8mm;">
+        <div style="background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-weight:700;">GESAMTPREIS</div>
+          <div id="pdf-total-price" style="font-size: 14pt; font-weight: 700;"></div>
+        </div>
+      </section>
+
+      <footer style="position: absolute; left: 0; right: 0; bottom: 0; height: 18mm; background: #0e1e34; color:#fff; display:flex; align-items:center; padding:0 16mm; box-sizing:border-box; font-size:8pt;">
+        <div>Schneider Unterkonstruktion - Solar Konfigurator</div>
+      </footer>
+    </div>
   </div>
   <script src="script.js?v=1.0.2"></script>
 </body>
