@@ -106,9 +106,7 @@ solar-tool/
 ├── script.min.js       ← Production version (REGENERATE FROM script.js)
 ├── calculation-worker.js
 ├── index.html
-├── test.html
-├── style.css
-├── smart-config.css
+├── style.css           ← Enthält auch Smart-Config-Styles (zusammengeführt)
 └── README.md
 ```
 
