@@ -4143,6 +4143,8 @@
 				deleteConfigBtn.addEventListener('click', () => {
 					this.deleteCurrentConfig();
 				});
+				// Sichtbarkeit abhängig von Anzahl Konfigurationen
+				deleteConfigBtn.style.display = this.configs.length >= 2 ? '' : 'none';
 			}
 			
 			// Express Checkout (alter "In den Warenkorb" Button)
@@ -4252,6 +4254,11 @@
 				
 				// Detail-Ansicht aktualisieren
 				this.updateDetailView();
+				// Sichtbarkeit des Delete-Buttons nach dem Rendern aktualisieren
+				const deleteConfigBtn = document.getElementById('delete-current-config');
+				if (deleteConfigBtn) {
+					deleteConfigBtn.style.display = this.configs.length >= 2 ? '' : 'none';
+				}
 			}
 		}
 		
@@ -4267,6 +4274,11 @@
 			
 			// Gesamtpreis aktualisieren
 			this.updateCurrentTotalPrice();
+				// Sichtbarkeit des Delete-Buttons sicherstellen
+				const deleteConfigBtn = document.getElementById('delete-current-config');
+				if (deleteConfigBtn) {
+					deleteConfigBtn.style.display = this.configs.length >= 2 ? '' : 'none';
+				}
 		}
 		
 		updateCurrentTotalPrice() {
