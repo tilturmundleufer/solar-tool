@@ -72,6 +72,7 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
 - **Grid-System** - Dynamische Modul-Anordnung
 - **Smart Parser** - Intelligente Texteingabe-Verarbeitung
 - **Web Worker** - Background-Berechnungen
+ - **PDF-Erstellung** - Dynamische A4-Seiten via `html2canvas` + `jsPDF` (Template in `#pdf-root`)
 
 ### **Backend-Integration:**
 - **Webflow E-Commerce** - Warenkorb-System
@@ -163,6 +164,13 @@ VE = {
 - **Bulk-Modus** - Effiziente Mehrfachauswahl
 - **Live-Preview** - Sofortige Kostenberechnung
 - **Smart-Config-Quick-Input** - Vorschlagsliste mit klickbaren Beispielen
+
+### **PDF-Ausgabe:**
+- Erste Seite: Titel + Datum, Abschnitt "Projekt" mit neuer zweispaltiger Kundendaten-Sektion
+  - Linke Spalte: Eingabefelder (Linien) für Name, Firma, Adresse, Telefon, E‑Mail
+  - Rechte Spalte: "Weitere Informationen:" mit mehreren Linien für längere Texte
+- Grid-Übersicht mit Bild der aktuellen Konfiguration
+- Produktliste auf separater Seite, Zusatzprodukte ggf. auf eigener Sammelseite
 
 ---
 
