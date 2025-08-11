@@ -47,3 +47,11 @@ cp AGENT_PROMPT_TEMPLATE.md your-prompt.md
 **Zielgruppe:** Planer, Endkunden, Solarteure  
 **Zweck:** Geplante Solarkonfigurationen → digitaler Nachbau → Bestellung  
 **Status:** In Entwicklung (noch nicht live)
+
+## 🧾 PDF-Ausgabe – Kundendaten-Sektion
+
+- In der `pdf-projekt`-Sektion befindet sich nun eine zweispaltige Kundendaten-Fläche:
+  - Links: Linienfelder für Name, Firma, Adresse, Telefon, E‑Mail
+  - Rechts: "Weitere Informationen:" mit mehreren Zeilen (Linien) für längere Texte
+- Dynamische Erzeugung in `script.js` (Klasse `SolarPDFGenerator`), statische Vorlage in `index.html`
+- Bei JS-Änderungen immer minifizieren: `terser script.js -o script.min.js -c -m`
