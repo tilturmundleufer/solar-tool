@@ -740,7 +740,45 @@
           </header>
           <section style="border:1px solid #e5e7eb; border-radius:8px; padding:6mm; margin-bottom:8mm;">
             <div style="font-size:12pt; font-weight:700; color:#0e1e34;">Projekt</div>
-            <div style="font-size:10pt; color:#111; margin-top:2mm;">${(config.name || 'Unbenannt')}</div>
+            <div style="font-size:10pt; color:#111; margin-top:2mm; display:flex; justify-content:space-between; gap:6mm;">
+              <div><span style="font-weight:700;">Projekttitel:</span> ${(config.name || 'Unbenannt')}</div>
+              <div><span style="font-weight:700;">Datum:</span> ${dateStr}</div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6mm; margin-top:4mm;">
+              <div>
+                <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                  <div style="width:28mm; color:#0e1e34;">Name:</div>
+                  <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                </div>
+                <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                  <div style="width:28mm; color:#0e1e34;">Firma:</div>
+                  <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                </div>
+                <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                  <div style="width:28mm; color:#0e1e34;">Adresse:</div>
+                  <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                </div>
+                <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                  <div style="width:28mm; color:#0e1e34;">Telefon:</div>
+                  <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                </div>
+                <div style="display:flex; align-items:flex-end; gap:4mm;">
+                  <div style="width:28mm; color:#0e1e34;">E-Mail:</div>
+                  <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-weight:700; color:#0e1e34; margin-bottom:2mm;">Weitere Informationen:</div>
+                <div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                </div>
+              </div>
+            </div>
           </section>
           <section style="margin-bottom:8mm;">
             <div style="font-size:11pt; font-weight:700; color:#0e1e34; margin-bottom:4mm;">Grid-Übersicht</div>
