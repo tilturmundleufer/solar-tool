@@ -3594,6 +3594,12 @@
       this.updateTimeout = null;
       this.updateDelay = 100; // ms
       
+      // Warenkorb-Queue & Observer
+      this.isAddingToCart = false;
+      this.webflowFormsObserver = null;
+      this.cartAckObserver = null;
+      this.cartAckResolve = null;
+      
       // Performance: Resize Observer für responsive Updates
       this.resizeObserver = null;
       this.resizeTimeout = null;
@@ -6862,83 +6868,123 @@
       const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
       if (qtyInput) qtyInput.value = quantity;
       
-      if (isLastItem) {
-        // Für das letzte Item: Normaler Button-Klick (Cart-Container ist bereits sichtbar)
-        button.click();
-        return;
-      }
-      
-      // Für alle anderen Items: Versteckter Submit (Cart-Container ist versteckt)
-      const iframe = document.createElement('iframe');
-      iframe.name = 'safe-cart-' + Date.now() + Math.random();
-      iframe.style.cssText = `
-        position: absolute;
-        left: -10000px;
-        top: -10000px;
-        width: 1px;
-        height: 1px;
-        border: none;
-        visibility: hidden;
-        opacity: 0;
-      `;
-      
-      document.body.appendChild(iframe);
-      
-      const originalTarget = form.target || '';
-      form.target = iframe.name;
-      
-      let hasLoaded = false;
-      iframe.onload = () => {
-        if (!hasLoaded) {
-          hasLoaded = true;
-          form.target = originalTarget;
-          
-          if (qtyInput) qtyInput.value = 1;
-          
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-          }, 1000);
-        }
-      };
-      
-      iframe.onerror = () => {
-        form.target = originalTarget;
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      };
-      
+      // Iframe-Workaround entfernt: wir klicken direkt und warten sequenziell über DOM-Änderungen/Timeouts
       button.click();
     }
 
     addPartsListToCart(parts) {
       const entries = Object.entries(parts).filter(([_, qty]) => qty > 0);
-      if (!entries.length) {
+      if (!entries.length) return;
+      
+      if (this.isAddingToCart) {
+        this.showToast('Warenkorb wird bereits befüllt… Bitte warten.', 2000);
+        return;
+      }
+      this.isAddingToCart = true;
+      
+      // Overlay verbergen bis der Prozess abgeschlossen ist
+      this.hideCartContainer();
+      
+      const items = entries.map(([key, qty]) => ({ key, qty }));
+      const processSequentially = async () => {
+        try {
+          await this.ensureCartObservers();
+          for (let i = 0; i < items.length; i++) {
+            const { key, qty } = items[i];
+            const packsNeeded = Math.ceil(qty / VE[key]);
+            await this.addSingleItemAndWait(key, packsNeeded, i === items.length - 1);
+          }
+        } finally {
+          // Nach Abschluss: Overlay zeigen und Status zurücksetzen
+          this.showCartContainer();
+          this.isAddingToCart = false;
+        }
+      };
+      processSequentially();
+    }
+
+    async addSingleItemAndWait(productKey, quantity, isLast) {
+      // Safeguards
+      const form = this.webflowFormMap ? this.webflowFormMap[productKey] : null;
+      if (!form) {
+        // Versuche, Formen neu zu sammeln, dann erneut versuchen
+        await this.ensureWebflowFormsMapped();
+      }
+      const mappedForm = this.webflowFormMap ? this.webflowFormMap[productKey] : null;
+      if (!mappedForm) {
+        this.showToast(`Produktformular nicht gefunden: ${productKey}`, 2000);
+        return;
+      }
+      const addBtn = mappedForm.querySelector('input[data-node-type="commerce-add-to-cart-button"]');
+      if (!addBtn) {
+        this.showToast(`Add-to-Cart Button fehlt: ${productKey}`, 2000);
         return;
       }
       
-      // Verstecke Cart-Container temporär
-      this.hideCartContainer();
+      // Fortschrittsmeldung optional
+      // this.showToast(`Füge hinzu: ${productKey} x${quantity}`, 1200);
       
-      // Füge alle Produkte außer dem letzten sofort hinzu (ohne Delays)
-      const allButLast = entries.slice(0, -1);
-      const lastEntry = entries[entries.length - 1];
+      // DOM-Änderung oder Timeout abwarten
+      const waitForAck = this.waitForCartAcknowledge(1500);
+      this.clickWebflowButtonSafely(mappedForm, addBtn, productKey, quantity, isLast);
+      await waitForAck;
+    }
+
+    async ensureCartObservers() {
+      // Observer für Cart-Änderungen
+      if (!this.cartAckObserver) {
+        const list = document.querySelector('.w-commerce-commercecartlist') || document.querySelector('.w-commerce-commercecartcontainerwrapper');
+        if (list) {
+          this.cartAckObserver = new MutationObserver(() => {
+            if (this.cartAckResolve) {
+              const r = this.cartAckResolve;
+              this.cartAckResolve = null;
+              r();
+            }
+          });
+          this.cartAckObserver.observe(list, { childList: true, subtree: true });
+        }
+      }
       
-      // Alle Produkte außer dem letzten sofort hinzufügen
-      allButLast.forEach(([key, qty]) => {
-        const packsNeeded = Math.ceil(qty / VE[key]);
-        this.addProductToCart(key, packsNeeded, false);
+      // Observer für Webflow-Formulare (für asynchrones Rendering)
+      if (!this.webflowFormsObserver) {
+        this.webflowFormsObserver = new MutationObserver(() => {
+          this.generateHiddenCartForms();
+        });
+        this.webflowFormsObserver.observe(document.body, { childList: true, subtree: true });
+      }
+      
+      await this.ensureWebflowFormsMapped();
+    }
+
+    waitForCartAcknowledge(timeoutMs = 1500) {
+      return new Promise((resolve) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            if (this.cartAckResolve === resolve) this.cartAckResolve = null;
+            resolve();
+          }
+        }, timeoutMs);
+        
+        this.cartAckResolve = () => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            resolve();
+          }
+        };
       });
-      
-      // Das letzte Produkt nach kurzer Verzögerung hinzufügen (zeigt Cart)
-      setTimeout(() => {
-        this.showCartContainer();
-        const [lastKey, lastQty] = lastEntry;
-        const packsNeeded = Math.ceil(lastQty / VE[lastKey]);
-        this.addProductToCart(lastKey, packsNeeded, true);
-      }, 500);
+    }
+
+    async ensureWebflowFormsMapped() {
+      // Falls Mapping leer ist, nochmal scannen
+      if (!this.webflowFormMap || Object.keys(this.webflowFormMap).length === 0) {
+        this.generateHiddenCartForms();
+        // kurze Wartezeit, falls Webflow synchron nachrendert
+        await new Promise(r => setTimeout(r, 50));
+      }
     }
 
     hideCartContainer() {

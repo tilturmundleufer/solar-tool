@@ -76,6 +76,13 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
 
 ### **Backend-Integration:**
 - **Webflow E-Commerce** - Warenkorb-System
+### **Warenkorb-Ablauf (stabiler Add-Flow)**
+- Hinzufügen zum Warenkorb erfolgt sequenziell über eine Queue.
+- Bestätigung über DOM-Änderungen des Webflow-Cart-Containers (MutationObserver), Fallback-Timeout pro Item (~1.5s).
+- Asynchrone Webflow-Forms werden per MutationObserver fortlaufend erkannt und gemappt; die Forms bleiben visuell versteckt.
+- Während der Queue ist der Cart-Overlay verborgen und wird erst am Ende gezeigt.
+- Der frühere Hidden-Iframe-Workaround wurde entfernt.
+
 - **Webhook-Analytics** - Nutzungsauswertung für Optimierungen
 - **Keine ERP-Anbindung** (noch nicht, geplant für Zukunft)
 
