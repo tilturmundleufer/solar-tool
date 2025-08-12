@@ -7107,11 +7107,28 @@
         if (!incM) delete parts.Solarmodul;
         if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
         
-        // Zusatzprodukte basierend auf Checkboxen
-        if (!mc4) delete parts.MC4;
-        if (!solarkabel) delete parts.Solarkabel;
-        if (!holz) delete parts.Holzunterleger;
-        if (!quetschkabelschuhe) delete parts.Quetschkabelschuhe;
+        // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
+        const moduleCount = (this.selection || []).flat().filter(Boolean).length;
+        if (mc4 && moduleCount > 0) {
+          parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+        } else {
+          delete parts.MC4_Stecker;
+        }
+        if (solarkabel) {
+          parts.Solarkabel = 1;
+        } else {
+          delete parts.Solarkabel;
+        }
+        if (holz) {
+          parts.Holzunterleger = 1; // pauschal 1 VE
+        } else {
+          delete parts.Holzunterleger;
+        }
+        if (quetschkabelschuhe) {
+          parts.Quetschkabelschuhe = 1; // pauschal 1 VE
+        } else {
+          delete parts.Quetschkabelschuhe;
+        }
         
         // Erdungsband hinzufügen wenn aktiviert
         if (erdungsband) {
