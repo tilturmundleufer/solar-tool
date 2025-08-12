@@ -768,15 +768,14 @@
                 </div>
               </div>
               <div>
-                <div style="font-weight:700; color:#0e1e34; margin-bottom:2mm;">Weitere Informationen:</div>
-                <div>
-                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
-                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
-                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
-                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
-                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
-                  <div style="height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                  <div style="flex:0 0 auto; font-weight:700; color:#0e1e34;">Weitere Informationen:</div>
+                  <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
                 </div>
+                <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                <div style="height:6mm; border-bottom:1px solid #e5e7eb;"></div>
               </div>
             </div>
           </section>
