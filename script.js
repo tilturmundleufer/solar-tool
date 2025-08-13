@@ -784,7 +784,7 @@
             <div style="font-size:10pt; color:#111; margin-bottom:4mm;">
               Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt) · Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}
             </div>
-            <img class="pdf-grid-image" alt="Grid" style="width:170mm; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
+            <img class="pdf-grid-image" alt="Grid" style="width:100%; max-width:100%; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
           </section>
         `;
 
@@ -1645,8 +1645,8 @@
         const cols = config.cols || 5;
         const rows = config.rows || 5;
 
-        // 1) Ziel-Box im PDF (passend zu .pdf-grid-image in CSS)
-        const maxWidthPx = 670;               // ~170mm Inhaltsbreite
+        // 1) Ziel-Box im PDF (passend zur inneren Seitenbreite: 794px - 2*48px Padding)
+        const maxWidthPx = 698;               // volle Inhaltsbreite
         const maxHeightPx = Math.floor(1123 * 0.5); // 50% der A4-Höhe
         const padding = 16;                   // Innenabstand des Grid-Rahmens
         const gapBase = 2;                    // Basisabstand zwischen Zellen
