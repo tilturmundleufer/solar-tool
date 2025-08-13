@@ -1919,6 +1919,9 @@ body {
 .example:hover { background: #1B64E0; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(23, 92, 211, 0.28); }
 .example:active { transform: translateY(0); box-shadow: 0 2px 0 rgba(23, 92, 211, 0.3); }
 .example:focus { outline: 2px solid rgba(23, 92, 211, 0.5); outline-offset: 2px; }
+/* Help visual/description blocks */
+.section-description { color: #667084; font-size: 12px; margin: 2px 0 8px; }
+.example-visual { background: #F8FAFC; border: 1px dashed #E2E8F0; border-radius: 8px; padding: 10px 12px; color: #475467; font-size: 12px; display: grid; grid-template-columns: repeat(4, auto); gap: 10px 16px; align-items: center; margin-top: 6px; }
 
 /* INPUT VALIDATION STYLES */
 .quick-input-section input.input-valid { border-color: #28a745; box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25); background-color: #f8fff9; }

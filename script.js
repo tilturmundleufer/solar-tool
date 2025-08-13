@@ -5126,13 +5126,7 @@
 				e.stopPropagation();
 			});
 			
-			// Schließe Dropdown bei Klick außerhalb
-			document.addEventListener('click', (e) => {
-				if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
-					isHovered = false;
-					hideDropdown();
-				}
-			});
+            // Entfernt: Automatisches Schließen bei Klick außerhalb – Dropdown bleibt offen, bis der Nutzer weg hovert
 			
 			// Beispiel-Click Handler für sofortige Anwendung (ohne Ctrl+Click Tipp)
 			document.querySelectorAll('.example').forEach(example => {
@@ -5155,9 +5149,7 @@
 							}
 						}
 						
-						// Schließe Dropdown nach Beispiel-Auswahl
-						isHovered = false;
-						hideDropdown();
+                        // Dropdown bleibt sichtbar, damit Nutzer weitere Beispiele wählen kann
 						
 						// Optional: Scroll zur Smart Config Section
 						setTimeout(() => {
