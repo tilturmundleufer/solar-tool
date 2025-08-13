@@ -1914,9 +1914,22 @@ body {
 .help-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid rgba(14, 30, 52, 0.1); border-radius: 12px; box-shadow: 0 8px 24px rgba(14, 30, 52, 0.15); padding: 16px; z-index: 1000; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.2s ease; max-height: 400px; overflow-y: auto; }
 .help-section { margin-bottom: 16px; }
 .help-section:last-child { margin-bottom: 0; }
-.help-section strong { display: block; color: #0e1e34; font-size: 13px; margin-bottom: 8px; font-weight: 600; }
-.example { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 6px 10px; margin: 4px 0; font-size: 12px; cursor: pointer; transition: all 0.2s ease; font-family: monospace; }
+.help-section strong { display: block; color: #0e1e34; font-size: 16px; margin-bottom: 6px; font-weight: 700; }
+.section-description { color: #667084; font-size: 13px; margin-bottom: 10px; }
+.examples-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.example { background: #175CD3; color: #fff; border: none; border-radius: 28px; padding: 10px 16px; margin: 0; font-size: 13px; cursor: pointer; transition: all 0.2s ease; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
 .example:hover { background: #007bff; color: white; border-color: #007bff; transform: translateX(2px); }
+
+/* Visual placeholder blocks (no NEW badge) */
+.example-visual { background: #F8FAFC; border: 1px dashed #E2E8F0; border-radius: 10px; padding: 16px; color: #667084; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 24px; }
+.visual-grid { height: 56px; }
+.visual-distribution { height: 56px; }
+.visual-spacing { height: 80px; }
+.visual-layout { height: 56px; }
+.visual-orientation { height: 56px; }
+.visual-checkboxes { height: 40px; }
+.example-visual .row-label { font-weight: 600; }
+.example-visual .gap-label { opacity: 0.8; }
 
 /* INPUT VALIDATION STYLES */
 .quick-input-section input.input-valid { border-color: #28a745; box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25); background-color: #f8fff9; }
