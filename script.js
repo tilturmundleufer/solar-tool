@@ -2163,8 +2163,8 @@
         quetschkabelschuhe: /(?:mit|ohne)[\s-]*(?:quetschkabelschuhe|kabelschuhe)/i,
         // "3 reihen mit 5 modulen" oder "drei reihen 5 module" oder "20 module in 4 reihen" oder "3 mal 6 module"
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))|(?:(\d+)\s*mal\s*(\d+)\s*modul[e]?[n]?)/i,
-        // "mit abstand" oder "ohne abstand" oder "1 reihe abstand"
-        spacing: /(?:(?:mit|ohne)\s*(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
+        // "mit abstand" | "ohne abstand" | "1 reihe abstand" | "mit doppeltem abstand"
+        spacing: /(?:(?:mit|ohne)\s*(?:doppelt\w*\s*)?(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
         // "kompakt" oder "mit lücken" für Grid-Syntax
         gridCompact: /(?:kompakt|ohne\s*lücken)/i,
         gridSpaced: /(?:mit\s*lücken|mit\s*abstand)/i,
@@ -2312,10 +2312,13 @@
         
         // Prüfe auf Abstand auch bei Grid-Größen-Angaben
         const spacingMatch = input.match(this.patterns.spacing);
+        const spacingDoubleMatch = input.match(this.patterns.spacingDouble);
         let spacingRows = 0;
         
         if (spacingMatch) {
-          if (spacingMatch[0].toLowerCase().includes('mit') && !spacingMatch[1]) {
+          if (spacingDoubleMatch) {
+            spacingRows = 2;
+          } else if (spacingMatch[0].toLowerCase().includes('mit') && !spacingMatch[1]) {
             spacingRows = 1; // Standard-Abstand
           } else if (spacingMatch[1]) {
             spacingRows = parseInt(spacingMatch[1]);
@@ -2369,10 +2372,13 @@
       
       if (!hasOtherPatterns) {
         const spacingOnlyMatch = input.match(this.patterns.spacing);
+        const spacingDoubleOnlyMatch = input.match(this.patterns.spacingDouble);
         if (spacingOnlyMatch) {
           let spacingRows = 0;
           
-          if (spacingOnlyMatch[0].toLowerCase().includes('ohne')) {
+          if (spacingDoubleOnlyMatch) {
+            spacingRows = 2; // "mit doppeltem abstand"
+          } else if (spacingOnlyMatch[0].toLowerCase().includes('ohne')) {
             spacingRows = 0; // "ohne abstand"
           } else if (spacingOnlyMatch[0].toLowerCase().includes('mit') && !spacingOnlyMatch[1]) {
             spacingRows = 1; // "mit abstand" (Standard)
@@ -2473,7 +2479,7 @@
       }
       
       // Module-Anzahl parsen (nur wenn keine Reihen-Konfiguration)
-      else {
+      if (!rowMatch) {
         const moduleMatch = input.match(this.patterns.moduleCount);
         if (moduleMatch) {
           config.moduleCount = parseInt(moduleMatch[1]);
@@ -2835,7 +2841,11 @@
       }
       // Wenn Module-Anzahl angegeben, automatisch auswählen
       else if (config.moduleCount) {
-        this.autoSelectModules(config.moduleCount);
+        if (config.distribution) {
+          this.distributeModules(config.moduleCount, config.distribution, config);
+        } else {
+          this.autoSelectModules(config.moduleCount);
+        }
       }
       
       // Verstecke Tipps nach erster Nutzung
@@ -3148,6 +3158,81 @@
       
       
       // Grid neu aufbauen
+      this.solarGrid.buildGrid();
+      this.solarGrid.buildList();
+      this.solarGrid.updateSummaryOnChange();
+    }
+
+    // NEU: Verteile Module gemäß gewünschtem Modus
+    distributeModules(totalModules, mode, config = {}) {
+      // Stelle sicher, dass das Grid groß genug ist
+      const capacity = this.solarGrid.cols * this.solarGrid.rows;
+      if (capacity < totalModules) {
+        this.expandGridForModules(totalModules);
+      }
+
+      // Leere Auswahlmatrix aufbauen
+      this.solarGrid.selection = Array.from({ length: this.solarGrid.rows }, () =>
+        Array.from({ length: this.solarGrid.cols }, () => false)
+      );
+
+      const rows = this.solarGrid.rows;
+      const cols = this.solarGrid.cols;
+
+      const placeRowWise = (rowCounts) => {
+        for (let y = 0; y < rows; y++) {
+          let count = rowCounts[y] || 0;
+          for (let x = 0; x < cols && count > 0; x++) {
+            this.solarGrid.selection[y][x] = true;
+            count--;
+          }
+        }
+      };
+
+      if (mode === 'equal') {
+        // Verteile möglichst quadratisch
+        const numRows = Math.min(rows, Math.ceil(Math.sqrt(totalModules)));
+        const base = Math.floor(totalModules / numRows);
+        const extra = totalModules % numRows;
+        const rowCounts = Array.from({ length: rows }, (_, y) => (y < numRows ? base + (y < extra ? 1 : 0) : 0));
+        placeRowWise(rowCounts);
+      } else if (mode === 'rows') {
+        const base = Math.floor(totalModules / rows);
+        const extra = totalModules % rows;
+        const rowCounts = Array.from({ length: rows }, (_, y) => base + (y < extra ? 1 : 0));
+        placeRowWise(rowCounts);
+      } else if (mode === 'columns') {
+        // Spaltenweise gleichmäßig
+        const base = Math.floor(totalModules / cols);
+        const extra = totalModules % cols;
+        for (let x = 0; x < cols; x++) {
+          let count = base + (x < extra ? 1 : 0);
+          for (let y = 0; y < rows && count > 0; y++) {
+            this.solarGrid.selection[y][x] = true;
+            count--;
+          }
+        }
+      } else if (mode === 'random') {
+        let placed = 0;
+        const cells = [];
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) cells.push([y, x]);
+        }
+        // Shuffle
+        for (let i = cells.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [cells[i], cells[j]] = [cells[j], cells[i]];
+        }
+        for (const [y, x] of cells) {
+          if (placed >= totalModules) break;
+          this.solarGrid.selection[y][x] = true;
+          placed++;
+        }
+      } else {
+        // Fallback
+        this.autoSelectModules(totalModules);
+      }
+
       this.solarGrid.buildGrid();
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
