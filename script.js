@@ -3459,6 +3459,33 @@
       cells.forEach(cell => cell.classList.remove('first-click-marker'));
     }
     
+    // Ermittelt die dem Zeiger nächstgelegene Zelle; klemmt außerhalb auf Grid-Rand
+    getClampedCellFromPointer(event) {
+      const gridRect = this.solarGrid.gridEl.getBoundingClientRect();
+      // Unterstützt Maus und Touch
+      const point = (event && (event.touches && event.touches[0])) || (event && (event.changedTouches && event.changedTouches[0])) || event;
+      const clientX = point ? point.clientX : 0;
+      const clientY = point ? point.clientY : 0;
+
+      const relativeX = Math.min(Math.max(clientX - gridRect.left, 0), gridRect.width);
+      const relativeY = Math.min(Math.max(clientY - gridRect.top, 0), gridRect.height);
+
+      const colWidth = gridRect.width / this.solarGrid.cols;
+      const rowHeight = gridRect.height / this.solarGrid.rows;
+
+      // Verhindere Division durch 0
+      const x = Math.min(
+        this.solarGrid.cols - 1,
+        Math.max(0, colWidth > 0 ? Math.floor(relativeX / colWidth) : 0)
+      );
+      const y = Math.min(
+        this.solarGrid.rows - 1,
+        Math.max(0, rowHeight > 0 ? Math.floor(relativeY / rowHeight) : 0)
+      );
+
+      return { x, y };
+    }
+
     // FEATURE 1: Snap-to-Grid + Touch-Optimierung - Neue Methoden
     handleDragStart(e, x, y, cell) {
       // Erfasse aktuellen Status der Start-Zelle für intelligentes Toggle
@@ -3496,36 +3523,48 @@
     
     // FEATURE 1: Snap-to-Grid + Touch-Optimierung - Globale Events
     setupGlobalMouseEvents() {
-      // Globaler Mouse-Up Event um Drag-Operations außerhalb des Grids zu beenden
+      // Globaler Mouse-Move: Während Drag immer Range-Preview updaten, auch außerhalb
+      document.addEventListener('mousemove', (e) => {
+        if (this.mousePressed && this.dragStart) {
+          this.isDragging = true;
+          const endCell = this.getClampedCellFromPointer(e);
+          this.highlightRange(this.dragStart, endCell);
+        }
+      });
+
+      // Globaler Mouse-Up: Auswahl auch außerhalb committen
       document.addEventListener('mouseup', (e) => {
-        if (this.mousePressed) {
-          // Drag wurde außerhalb des Grids beendet - ohne Auswahl
-          this.resetDragState();
+        if (this.mousePressed && this.dragStart) {
+          const endCell = this.getClampedCellFromPointer(e);
+          this.handleDragEnd(e, endCell.x, endCell.y);
         }
       });
       
       // Touch-End für Mobile
+      document.addEventListener('touchmove', (e) => {
+        if (this.mousePressed && this.dragStart) {
+          e.preventDefault();
+          this.isDragging = true;
+          const endCell = this.getClampedCellFromPointer(e);
+          this.highlightRange(this.dragStart, endCell);
+        }
+      }, { passive: false });
+
       document.addEventListener('touchend', (e) => {
-        if (this.mousePressed) {
-          // Touch wurde außerhalb des Grids beendet - ohne Auswahl
-          this.resetDragState();
+        if (this.mousePressed && this.dragStart) {
+          const endCell = this.getClampedCellFromPointer(e);
+          this.handleDragEnd(e, endCell.x, endCell.y);
         }
       });
       
-      // Grid-Leave Event um Drag-Preview zu stoppen
+      // Grid-Leave: Kein Reset mehr – globale Events übernehmen die Vorschau außerhalb
       this.solarGrid.gridEl.addEventListener('mouseleave', () => {
-        if (this.mousePressed && !this.isDragging) {
-          // Mouse verlässt Grid während Drag-Start - Reset ohne Auswahl
-          this.resetDragState();
-        }
+        // bewusst leer: Drag bleibt aktiv, Vorschau wird global aktualisiert
       });
       
-      // Touch-Leave für Mobile
+      // Touch-Leave für Mobile: ebenfalls kein Reset
       this.solarGrid.gridEl.addEventListener('touchcancel', () => {
-        if (this.mousePressed && !this.isDragging) {
-          // Touch verlässt Grid während Drag-Start - Reset ohne Auswahl
-          this.resetDragState();
-        }
+        // bewusst leer
       });
       
       // Verhindere Kontext-Menu während Drag-Operationen

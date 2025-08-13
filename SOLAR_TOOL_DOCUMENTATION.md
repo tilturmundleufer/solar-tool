@@ -167,6 +167,8 @@ VE = {
 
 ### **Interaktive Features:**
 - **Drag & Drop** - Bereichsauswahl durch Ziehen
+  - Beim Ziehen außerhalb des Grids bleibt die Vorschau aktiv und klemmt auf die nächstliegende Rand‑Zelle.
+  - Beim Loslassen außerhalb des Grids wird die aktuell sichtbare Auswahl übernommen (Commit außerhalb möglich).
 - **Shift+Click** - Rechteck-Selektion
 - **Bulk-Modus** - Effiziente Mehrfachauswahl
 - **Live-Preview** - Sofortige Kostenberechnung
