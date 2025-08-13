@@ -2910,6 +2910,7 @@
           break;
           
         case 'resetGrid':
+          // Gleiches Verhalten wie der UI-Button "Zurücksetzen"
           this.solarGrid.resetGridToDefault();
           this.solarGrid.showToast('⚡ Grid zurückgesetzt', 2000);
           break;
