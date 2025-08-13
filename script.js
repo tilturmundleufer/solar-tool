@@ -2174,7 +2174,7 @@
         // "Konfiguration speichern", "config speichern", "speichern", "save"
         saveConfig: /^(?:(?:konfiguration|konfig|config)\s*)?(?:speichern|save)$/i,
         // "Konfiguration löschen", "config löschen" (NICHT nur "löschen" oder "delete")
-        deleteConfig: /^(?:konfiguration|konfig|config)\s*(?:löschen|delete)$/i,
+        deleteConfig: /^(?:(?:konfiguration|konfig|config)\s*)?(?:löschen|delete)$/i,
         // "module löschen" → Module-Auswahl löschen
         deleteModules: /^modul[e]?[n]?\s*löschen$/i,
         // NEU: "Neue Konfiguration" → aktuelle speichern und neue erstellen
@@ -2197,6 +2197,8 @@
         checkboxOnly: /(?:nur|only)/i,
         checkboxWithout: /(?:ohne\s*zubehör|ohne\s*extras)/i,
         checkboxWithAll: /(?:mit\s*allem|alles\s*mit)/i,
+        // Einfaches "alles" aktiviert alle Zusatzprodukte und Module
+        allSimple: /^(?:alles)$/i,
         // Speichern mit Namen
         saveWithName: /(?:speichern\s*als\s*['"]?([^'"]+)['"]?)/i,
         // Ulica Modul Auswahl (500/450 W) inkl. Synonyme
@@ -2580,6 +2582,15 @@
         config.cable = true;
         config.wood = true;
         config.quetschkabelschuhe = true;
+        config.erdungsband = true;
+      } else if (input.match(this.patterns.allSimple)) {
+        // "alles" → wie "mit allem"
+        config.includeModules = true;
+        config.mc4 = true;
+        config.cable = true;
+        config.wood = true;
+        config.quetschkabelschuhe = true;
+        config.erdungsband = true;
       } else {
         // Checkbox-Kombinationen parsen (hat Priorität vor einzelnen Patterns)
         const checkboxCombinations = this.parseCheckboxCombinations(input);
@@ -6434,6 +6445,16 @@
       if (this.currentConfig !== null && this.currentConfig >= 0 && this.currentConfig < this.configs.length) {
         // Aktuelle Konfiguration umbenennen
         this.configs[this.currentConfig].name = newName;
+        // Sofort DOM aktualisieren
+        const titleEl = document.getElementById('current-config-title');
+        if (titleEl) titleEl.textContent = newName;
+        if (this.configListEl) {
+          const items = this.configListEl.querySelectorAll('.config-item');
+          if (items && items[this.currentConfig]) {
+            const nameEl = items[this.currentConfig].querySelector('.config-item-name');
+            if (nameEl) nameEl.textContent = newName;
+          }
+        }
         this.renderConfigList();
         this.updateSaveButtons();
       }
