@@ -5727,10 +5727,10 @@
   		const originalCellH = isVertical ? inputW : inputH;
   		
   				// Maximale verfügbare Größe
-		// 70px Abstand auf allen Seiten: links, rechts, oben, unten
-		// Insgesamt 140px für Breite (70px links + 70px rechts) und 140px für Höhe (70px oben + 70px unten)
-		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 140 : 800; // grid-wrapper Breite - 140px (70px links + 70px rechts)
-		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 140 : 600; // grid-wrapper Höhe - 140px (70px oben + 70px unten)
+		// 80px Abstand auf allen Seiten: links, rechts, oben, unten
+		// Insgesamt 160px für Breite (80px links + 80px rechts) und 160px für Höhe (80px oben + 80px unten)
+		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 160 : 800; // grid-wrapper Breite - 160px (80px links + 80px rechts)
+		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 160 : 600; // grid-wrapper Höhe - 160px (80px oben + 80px unten)
   		
   		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
   		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * RAIL_GAP;
@@ -7578,9 +7578,9 @@
       
       
       
-      // Maximale verfügbare Größe (wie im Hauptgrid)
-		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 140 : 800;
-		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 140 : 600;
+		// Maximale verfügbare Größe (wie im Hauptgrid)
+		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 160 : 800;
+		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 160 : 600;
       
       // Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
       const totalWidthWithRailGaps = cols * originalCellW + (cols - 1) * RAIL_GAP;
