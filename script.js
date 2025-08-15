@@ -3769,6 +3769,10 @@
       // Cache Manager für 24h Persistierung
       this.cacheManager = new CacheManager();
 
+      // Loading Overlay Elemente
+      this.loadingOverlay = null;
+      this.loadingTextEl = null;
+
       this.init();
     }
 
@@ -4247,6 +4251,10 @@
 		// Neue Sidebar Navigation
 		this.initSidebarNavigation();
 
+		// Loading Overlay referenzen
+		this.loadingOverlay = document.getElementById('loading-overlay');
+		this.loadingTextEl = document.getElementById('loading-text');
+
   		window.addEventListener('resize', () => {
     		this.updateSize();
     		this.buildGrid();
@@ -4286,6 +4294,10 @@
 			
 			// Initialisiere Smart Config Features
 			this.initSmartConfigFeatures();
+
+			// Loading Overlay referenzen
+			this.loadingOverlay = document.getElementById('loading-overlay');
+			this.loadingTextEl = document.getElementById('loading-text');
 			
 			// Initialisiere Auto-Save Indicator
 			this.initAutoSaveIndicator();
@@ -7025,6 +7037,7 @@
         return;
       }
       this.isAddingToCart = true;
+      this.showLoading('Warenkorb wird befüllt… bitte warten');
       
       // Overlay verbergen bis der Prozess abgeschlossen ist
       this.hideCartContainer();
@@ -7041,6 +7054,7 @@
         } finally {
           // Nach Abschluss: Overlay zeigen und Status zurücksetzen
           this.showCartContainer();
+          this.hideLoading();
           this.isAddingToCart = false;
         }
       };
@@ -7147,11 +7161,13 @@
 
     async addCurrentToCart() {
       try {
+        this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
         const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
       const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
       
       if (itemCount === 0) {
         this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
+        this.hideLoading();
         return;
       }
       
@@ -7173,12 +7189,14 @@
         }
       } catch (error) {
         this.showToast('Fehler beim Berechnen der Produkte ❌', 2000);
+        this.hideLoading();
       }
     }
 
     async addAllToCart() {
       try {
       // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
+      this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
       
         // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
         const configSnapshot = this.createConfigSnapshot();
@@ -7235,6 +7253,7 @@
       } catch (error) {
         console.error('Fehler in addAllToCart:', error);
         this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
+        this.hideLoading();
       }
     }
 
