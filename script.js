@@ -5934,7 +5934,7 @@
           let itemDetails = `(${v})`;
           let itemVE = `${VE[k]} Stück`;
           if (k === 'Erdungsband' && this.erdungsbandtotal) {
-            itemDetails = `(${this.erdungsbandtotal} cm)`;
+            itemDetails = `(${Number(this.erdungsbandtotal).toFixed(2)} cm)`;
             itemVE = `600 cm`;
           }
           
