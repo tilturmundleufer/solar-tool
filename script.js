@@ -4713,6 +4713,7 @@
 					titleEl.textContent = newName;
 					this.updateConfigList();
 					this.updateConfig();
+					this.saveToCache();
 					this.showAutoSaveIndicator();
 				}
 				input.remove();
@@ -4776,6 +4777,7 @@
 					config.name = newName;
 					nameEl.textContent = newName;
 					this.updateConfig();
+					this.saveToCache();
 					this.showAutoSaveIndicator();
 				}
 				if (input.parentNode) input.remove();
@@ -6458,6 +6460,10 @@
         }
         this.renderConfigList();
         this.updateSaveButtons();
+        // Neu: Direkt in Cache sichern, damit der Name nach Reload erhalten bleibt
+        this.updateConfig();
+        this.saveToCache();
+        this.showAutoSaveIndicator();
       }
     }
 
