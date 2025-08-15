@@ -3786,6 +3786,28 @@
       }
     }
 
+    showLoading(message = 'Vorgang läuft… bitte warten') {
+      try {
+        if (!this.loadingOverlay) this.loadingOverlay = document.getElementById('loading-overlay');
+        if (!this.loadingTextEl) this.loadingTextEl = document.getElementById('loading-text');
+        if (this.loadingTextEl && typeof message === 'string') {
+          this.loadingTextEl.textContent = message;
+        }
+        if (this.loadingOverlay) {
+          this.loadingOverlay.style.display = 'flex';
+        }
+      } catch (_) {}
+    }
+
+    hideLoading() {
+      try {
+        if (!this.loadingOverlay) this.loadingOverlay = document.getElementById('loading-overlay');
+        if (this.loadingOverlay) {
+          this.loadingOverlay.style.display = 'none';
+        }
+      } catch (_) {}
+    }
+
     // ===== WEBHOOK FUNKTIONEN =====
     
     generateSessionId() {
