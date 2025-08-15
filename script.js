@@ -1687,22 +1687,32 @@
         canvasLike.style.boxSizing = 'border-box';
 
         const overflow = document.createElement('div');
-        overflow.className = 'grid-overflow';
+        overflow.style.overflow = 'hidden';
+        overflow.style.display = 'flex';
+        overflow.style.alignItems = 'center';
+        overflow.style.justifyContent = 'center';
 
         const grid = document.createElement('div');
-        grid.className = 'grid';
-        grid.style.setProperty('--cols', String(cols));
-        grid.style.setProperty('--rows', String(rows));
-        grid.style.setProperty('--cell-size', `${cellW}px`);
-        grid.style.setProperty('--cell-height', `${cellH}px`);
-        grid.style.setProperty('--cell-gap', `${gap}px`);
+        grid.style.display = 'grid';
+        grid.style.gap = `${gap}px`;
+        grid.style.gridTemplateColumns = `repeat(${cols}, ${Math.round(cellW)}px)`;
+        grid.style.gridTemplateRows = `repeat(${rows}, ${Math.round(cellH)}px)`;
 
         for (let y = 0; y < rows; y++) {
           for (let x = 0; x < cols; x++) {
             const cell = document.createElement('div');
-            cell.className = 'cell';
+            cell.style.width = `${Math.round(cellW)}px`;
+            cell.style.height = `${Math.round(cellH)}px`;
+            cell.style.borderRadius = '6px';
+            cell.style.boxSizing = 'border-box';
             const isSelected = !!(selection[y] && selection[y][x]);
-            if (isSelected) cell.classList.add('selected');
+            if (isSelected) {
+              cell.style.background = '#0b0b0b';
+              cell.style.border = '2px solid #cccccc';
+            } else {
+              cell.style.background = '#f3f4f6';
+              cell.style.border = '1px solid #e5e7eb';
+            }
             grid.appendChild(cell);
           }
         }
