@@ -1638,96 +1638,90 @@
       }
     }
 
-    // NEUE ISOLIERTE Grid-Capture mit echtem Seitenverhältnis und Fit-in-Box
+    // NEUE ISOLIERTE Grid-Capture im UI-Design (gleiches Layout/Design wie Hauptgrid)
     async captureGridVisualizationFromSnapshot(config) {
       try {
         const selection = config.selection || [];
         const cols = config.cols || 5;
         const rows = config.rows || 5;
 
-        // 1) Ziel-Box im PDF (passend zur inneren Seitenbreite: 794px - 2*48px Padding)
-        const maxWidthPx = 698;               // volle Inhaltsbreite
-        const maxHeightPx = Math.floor(1123 * 0.5); // 50% der A4-Höhe
-        const padding = 16;                   // Innenabstand des Grid-Rahmens
-        const gapBase = 2;                    // Basisabstand zwischen Zellen
+        // Zielgröße im PDF
+        const maxWidthPx = 698;
+        const maxHeightPx = Math.floor(1123 * 0.5);
 
-        // 2) Seitenverhältnis der Module aus realen Modulmaßen
+        // Modulverhältnis aus echten Maßen und Orientierung
         const modW = Number(config.cellWidth || 179);
         const modH = Number(config.cellHeight || 113);
         const orientVertical = config.orientation === 'vertical';
-        const unitW = orientVertical ? modH : modW; // Rotation = Maße tauschen
+        const unitW = orientVertical ? modH : modW;
         const unitH = orientVertical ? modW : modH;
+        const baseGap = 2;
+        const wrapperPadding = 16; // wie .canvas
 
-        // 3) Rohmaße ohne Skalierung (nur Verhältnis, daher beliebige Einheit)
-        const rawGridW = unitW * cols + gapBase * (cols - 1) + padding * 2;
-        const rawGridH = unitH * rows + gapBase * (rows - 1) + padding * 2;
-        const scale = Math.min(maxWidthPx / rawGridW, maxHeightPx / rawGridH, 1);
+        // Skaliere, um in die Zielbox zu passen (inkl. Padding)
+        const rawW = unitW * cols + baseGap * (cols - 1) + wrapperPadding * 2;
+        const rawH = unitH * rows + baseGap * (rows - 1) + wrapperPadding * 2;
+        const scale = Math.min(maxWidthPx / rawW, maxHeightPx / rawH, 1);
+        const cellW = Math.max(1, unitW * scale);
+        const cellH = Math.max(1, unitH * scale);
+        const gap = Math.max(1, Math.round(baseGap * scale));
 
-        const cellW = unitW * scale;
-        const cellH = unitH * scale;
-        const gap = Math.max(1, Math.round(gapBase * scale));
+        // Offscreen-Container im UI-Stil aufbauen
+        const tempRoot = document.createElement('div');
+        tempRoot.style.position = 'absolute';
+        tempRoot.style.left = '-10000px';
+        tempRoot.style.top = '-10000px';
+        tempRoot.style.width = `${Math.ceil(cols * cellW + (cols - 1) * gap + wrapperPadding * 2)}px`;
+        tempRoot.style.height = `${Math.ceil(rows * cellH + (rows - 1) * gap + wrapperPadding * 2)}px`;
 
-        const actualW = Math.ceil(cols * cellW + (cols - 1) * gap + padding * 2);
-        const actualH = Math.ceil(rows * cellH + (rows - 1) * gap + padding * 2);
+        const canvasLike = document.createElement('div');
+        canvasLike.className = 'canvas';
+        canvasLike.style.width = '100%';
+        canvasLike.style.height = '100%';
+        canvasLike.style.padding = `${wrapperPadding}px`;
+        canvasLike.style.background = '#d0d0d0';
+        canvasLike.style.borderRadius = '6px';
+        canvasLike.style.display = 'flex';
+        canvasLike.style.alignItems = 'center';
+        canvasLike.style.justifyContent = 'center';
+        canvasLike.style.boxSizing = 'border-box';
 
-        // 4) Zeichne direkt auf Canvas für exakte Kontrolle
-        const canvas = document.createElement('canvas');
-        canvas.width = actualW;
-        canvas.height = actualH;
-        const ctx = canvas.getContext('2d');
+        const overflow = document.createElement('div');
+        overflow.className = 'grid-overflow';
 
-        // Hintergrund + Rahmen
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, actualW, actualH);
-        ctx.strokeStyle = '#e5e7eb';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(0.5, 0.5, actualW - 1, actualH - 1);
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+        grid.style.setProperty('--cols', String(cols));
+        grid.style.setProperty('--rows', String(rows));
+        grid.style.setProperty('--cell-size', `${cellW}px`);
+        grid.style.setProperty('--cell-height', `${cellH}px`);
+        grid.style.setProperty('--cell-gap', `${gap}px`);
 
-        // Startkoordinaten
-        const startX = padding;
-        const startY = padding;
-
-        // 5) Zellen zeichnen (mit echten Proportionen)
         for (let y = 0; y < rows; y++) {
           for (let x = 0; x < cols; x++) {
-            const cellX = Math.round(startX + x * (cellW + gap));
-            const cellY = Math.round(startY + y * (cellH + gap));
+            const cell = document.createElement('div');
+            cell.className = 'cell';
             const isSelected = !!(selection[y] && selection[y][x]);
-
-            // Hintergrund
-            if (isSelected) {
-              ctx.fillStyle = '#0b0b0b';
-              ctx.fillRect(cellX, cellY, Math.round(cellW), Math.round(cellH));
-              // Rahmen
-              ctx.strokeStyle = '#cccccc';
-              ctx.lineWidth = 2;
-              ctx.strokeRect(cellX + 0.5, cellY + 0.5, Math.round(cellW) - 1, Math.round(cellH) - 1);
-              // dezentes Panel-Muster
-              ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-              ctx.lineWidth = 1;
-              // vertikale Linien (2)
-              const third = Math.round(cellW / 3);
-              ctx.beginPath();
-              ctx.moveTo(cellX + third, cellY + 2);
-              ctx.lineTo(cellX + third, cellY + Math.round(cellH) - 2);
-              ctx.moveTo(cellX + 2 * third, cellY + 2);
-              ctx.lineTo(cellX + 2 * third, cellY + Math.round(cellH) - 2);
-              ctx.stroke();
-              // horizontale Mittellinie
-              ctx.beginPath();
-              ctx.moveTo(cellX + 2, cellY + Math.round(cellH / 2));
-              ctx.lineTo(cellX + Math.round(cellW) - 2, cellY + Math.round(cellH / 2));
-              ctx.stroke();
-            } else {
-              ctx.fillStyle = '#f3f4f6';
-              ctx.fillRect(cellX, cellY, Math.round(cellW), Math.round(cellH));
-              ctx.strokeStyle = '#e5e7eb';
-              ctx.lineWidth = 1;
-              ctx.strokeRect(cellX + 0.5, cellY + 0.5, Math.round(cellW) - 1, Math.round(cellH) - 1);
-            }
+            if (isSelected) cell.classList.add('selected');
+            grid.appendChild(cell);
           }
         }
 
+        overflow.appendChild(grid);
+        canvasLike.appendChild(overflow);
+        tempRoot.appendChild(canvasLike);
+        document.body.appendChild(tempRoot);
+
+        // Rendern lassen und Screenshot erstellen
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => setTimeout(r, 50));
+        const canvas = await this.html2canvas(tempRoot, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true,
+          logging: false
+        });
+        document.body.removeChild(tempRoot);
         return canvas.toDataURL('image/png');
       } catch (error) {
         console.error('Grid-Screenshot fehlgeschlagen:', error);
