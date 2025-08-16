@@ -4227,7 +4227,25 @@
         overlay.setAttribute('aria-hidden', 'false');
         closeBtn?.addEventListener('click', close);
         okBtn?.addEventListener('click', close);
+        // Outside-Click schließt Overlay
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        // Delegation: Klick auf "Verstanden – Start" (auch bei verschachtelten Elementen)
+        overlay.addEventListener('click', (e) => {
+          const t = e.target;
+          if (t && (t.id === 'intro-ok' || (t.closest && t.closest('#intro-ok')))) {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+          }
+        });
+        // Tastaturbedienung: ESC zum Schließen, Enter auf Primär-Button
+        overlay.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') { e.preventDefault(); close(); }
+          if (e.key === 'Enter' && document.activeElement && (document.activeElement.id === 'intro-ok')) {
+            e.preventDefault();
+            close();
+          }
+        });
       } catch (err) {
         console.warn('Intro Overlay konnte nicht initialisiert werden:', err);
       }
