@@ -4208,23 +4208,21 @@
       }
     }
 
-    // Desktop Intro Overlay (nur Desktop, nur wenn kein Cache/URL-Config, nur einmalig)
+    // Desktop Intro Overlay (Desktop only; zeigt bei leerem Cache/ohne URL jedes Mal)
     maybeShowIntroOverlay(cacheLoaded, hasUrlConfig) {
       try {
         const overlay = document.getElementById('intro-overlay');
         if (!overlay) return;
-        const seen = localStorage.getItem('intro-overlay-seen') === 'true';
-        if (seen) return;
+        // Desktop-Erkennung: echte Mobile-UserAgents oder Touch+kleine Breite gelten als mobil
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                         window.innerWidth <= 768 ||
-                         ('ontouchstart' in window && window.innerWidth <= 1024);
+                         (('ontouchstart' in window) && window.innerWidth <= 1024);
         if (isMobile) return;
+        // Nur anzeigen, wenn KEIN Cache geladen wurde und KEINE URL-Konfiguration vorhanden ist
         if (cacheLoaded || hasUrlConfig) return;
         const closeBtn = document.getElementById('intro-close');
         const close = () => {
           overlay.classList.add('hidden');
           overlay.setAttribute('aria-hidden', 'true');
-          localStorage.setItem('intro-overlay-seen', 'true');
         };
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
