@@ -2141,7 +2141,7 @@ body {
 .intro-header h2 { margin: 0; color: #0e1e34; font-size: 24px; letter-spacing: 0.2px; }
 .intro-sub { margin: 6px 0 14px 0; color: #4b5563; font-size: 15px; }
 
-.intro-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+.intro-sections { display: grid; grid-template-columns: 1fr; gap: 14px 18px; }
 .intro-section { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; }
 .intro-section h3 { margin: 0 0 8px 0; font-size: 16px; color: #0e1e34; }
 .intro-section ul { margin: 0 0 0 18px; color: #1f2937; }
@@ -2160,10 +2160,7 @@ body {
 .intro-primary:hover { background: #152b4a; }
 .intro-note { margin-top: 6px; font-size: 12px; color: #6b7280; }
 
-/* Responsive Layout: mehr Spalten auf großen Screens, vertikal auf Mobile */
-@media (min-width: 1200px) {
-  .intro-sections { grid-template-columns: 1fr 1fr 1fr; }
-}
+/* Einspaltiges Layout auch auf großen Screens (bessere Lesbarkeit) */
 
 @media (max-width: 1024px) {
   .intro-modal { width: min(760px, 94vw); }
