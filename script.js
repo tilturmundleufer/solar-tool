@@ -4208,6 +4208,33 @@
       }
     }
 
+    // Desktop Intro Overlay (nur Desktop, nur wenn kein Cache/URL-Config, nur einmalig)
+    maybeShowIntroOverlay(cacheLoaded, hasUrlConfig) {
+      try {
+        const overlay = document.getElementById('intro-overlay');
+        if (!overlay) return;
+        const seen = localStorage.getItem('intro-overlay-seen') === 'true';
+        if (seen) return;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                         window.innerWidth <= 768 ||
+                         ('ontouchstart' in window && window.innerWidth <= 1024);
+        if (isMobile) return;
+        if (cacheLoaded || hasUrlConfig) return;
+        const closeBtn = document.getElementById('intro-close');
+        const close = () => {
+          overlay.classList.add('hidden');
+          overlay.setAttribute('aria-hidden', 'true');
+          localStorage.setItem('intro-overlay-seen', 'true');
+        };
+        overlay.classList.remove('hidden');
+        overlay.setAttribute('aria-hidden', 'false');
+        closeBtn?.addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      } catch (err) {
+        console.warn('Intro Overlay konnte nicht initialisiert werden:', err);
+      }
+    }
+
     init() {
       // Mobile Detection und Warning
       this.checkMobileDevice();
@@ -4235,10 +4262,16 @@
       		} catch (e) {
       		}
     		}
-      }
+            }
 
-  		// Event-Listener für alle UI-Elemente setzen
-		this.setupAllEventListeners();
+      // Desktop Intro nur anzeigen, wenn kein Cache/URL
+      try {
+        const hasUrlConfig = new URLSearchParams(window.location.search).has('configData');
+        this.maybeShowIntroOverlay(cacheLoaded, hasUrlConfig);
+      } catch (_) {}
+ 
+       // Event-Listener für alle UI-Elemente setzen
+ 		this.setupAllEventListeners();
 
   		// Prüfe ob Buttons existieren bevor Event-Listener hinzugefügt werden
   		if (this.saveBtn) {
