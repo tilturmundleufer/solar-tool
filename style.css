@@ -2173,3 +2173,29 @@ body {
   .intro-sub { font-size: 14px; }
   .intro-actions { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+/* Micro-Interactions: sanfte Hover-Elevation für Karten */
+.intro-section { transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease; }
+.intro-section:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(14, 30, 52, 0.08); border-color: #d9dee6; background-color: #f8fafc; }
+.intro-section:active { transform: translateY(0); box-shadow: 0 4px 12px rgba(14, 30, 52, 0.06); }
+
+/* ... existing code ... */
+.intro-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+.intro-primary { background: #0e1e34; color: #ffffff; border: 1px solid #0e1e34; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-size: 15px; box-shadow: 0 3px 10px rgba(14, 30, 52, 0.15); transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease, border-color 0.12s ease; }
+.intro-primary:hover { background: #152b4a; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(14, 30, 52, 0.22); }
+.intro-primary:active { transform: translateY(0) scale(0.99); box-shadow: 0 3px 10px rgba(14, 30, 52, 0.16); }
+.intro-primary:focus-visible { outline: 2px solid #f5a623; outline-offset: 2px; }
+.intro-note { margin-top: 6px; font-size: 12px; color: #6b7280; }
+/* ... existing code ... */
+.intro-close { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; color: #0e1e34; font-size: 20px; line-height: 30px; text-align: center; cursor: pointer; box-shadow: 0 2px 6px rgba(14, 30, 52, 0.08); transition: background-color 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease, border-color 0.12s ease; }
+.intro-close:hover { background: #f7f7f7; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(14, 30, 52, 0.18); }
+.intro-close:active { transform: translateY(0) scale(0.98); box-shadow: 0 2px 6px rgba(14, 30, 52, 0.12); }
+.intro-close:focus-visible { outline: 2px solid #f5a623; outline-offset: 2px; }
+/* ... existing code ... */
+@media (prefers-reduced-motion: reduce) {
+  .intro-section,
+  .intro-primary,
+  .intro-close,
+  .intro-modal { transition: none !important; animation: none !important; }
+}
+/* ... existing code ... */
