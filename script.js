@@ -4220,6 +4220,7 @@
         // Nur anzeigen, wenn KEIN Cache geladen wurde und KEINE URL-Konfiguration vorhanden ist
         if (cacheLoaded || hasUrlConfig) return;
         const closeBtn = document.getElementById('intro-close');
+        const okBtn = document.getElementById('intro-ok');
         const close = () => {
           overlay.classList.add('hidden');
           overlay.setAttribute('aria-hidden', 'true');
@@ -4227,6 +4228,7 @@
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
         closeBtn?.addEventListener('click', close);
+        okBtn?.addEventListener('click', close);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
       } catch (err) {
         console.warn('Intro Overlay konnte nicht initialisiert werden:', err);

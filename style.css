@@ -2102,11 +2102,11 @@ body {
 
 .intro-modal {
   background: #ffffff;
-  border-radius: 14px;
-  padding: 20px 22px;
-  width: min(520px, 86vw);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
-  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px 26px;
+  width: min(740px, 90vw);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+  border: 1px solid #e6eaf0;
   position: relative;
   animation: fadeInScale 0.18s ease-out;
 }
@@ -2134,11 +2134,14 @@ body {
 
 .intro-close:hover { background: #f7f7f7; }
 
-.intro-modal h2 {
-  margin: 0 0 10px 0;
-  color: #0e1e34;
-  font-size: 20px;
-}
+.intro-header h2 { margin: 0; color: #0e1e34; font-size: 24px; letter-spacing: 0.2px; }
+.intro-sub { margin: 6px 0 14px 0; color: #4b5563; font-size: 15px; }
+
+.intro-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+.intro-section { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; }
+.intro-section h3 { margin: 0 0 8px 0; font-size: 16px; color: #0e1e34; }
+.intro-section ul { margin: 0 0 0 18px; color: #1f2937; }
+.intro-section li { margin: 6px 0; }
 
 .intro-list {
   margin: 10px 0 8px 18px;
@@ -2148,11 +2151,10 @@ body {
 
 .intro-list li { margin: 6px 0; }
 
-.intro-note {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #6b7280;
-}
+.intro-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+.intro-primary { background: #0e1e34; color: #ffffff; border: 1px solid #0e1e34; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-size: 15px; }
+.intro-primary:hover { background: #152b4a; }
+.intro-note { margin-top: 6px; font-size: 12px; color: #6b7280; }
 
 /* Never show intro on small screens; desktop only */
 @media (max-width: 768px) {

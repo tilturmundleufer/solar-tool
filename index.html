@@ -26,19 +26,56 @@
     </div>
   </div>
  
-  <!-- Desktop Intro Overlay (desktop only, first time without cache) -->
+  <!-- Desktop Intro Overlay (desktop only, shows whenever cache is empty) -->
   <div id="intro-overlay" class="intro-overlay hidden" aria-hidden="true">
     <div class="intro-modal" role="dialog" aria-modal="true" aria-labelledby="intro-title">
       <button id="intro-close" class="intro-close" aria-label="Schließen">×</button>
-      <h2 id="intro-title">Schnellstart</h2>
-      <ul class="intro-list">
-        <li>Linke Maustaste: Module setzen/entfernen</li>
-        <li>Maus ziehen: Bereiche markieren und belegen</li>
-        <li>🧠 Smart Konfiguration: z. B. "5x4 kompakt", "20 module gleichmäßig"</li>
-        <li>Ausrichtung ändern: Buttons Horizontal/Vertikal</li>
-        <li>Warenkorb: Aktuelle oder alle Konfigurationen hinzufügen</li>
-      </ul>
-      <div class="intro-note">Hinweis: Dieses Fenster erscheint nur beim ersten Start ohne gespeicherte Daten.</div>
+      <div class="intro-header">
+        <h2 id="intro-title">Kurzanleitung – gut lesbar für einen schnellen Start</h2>
+        <p class="intro-sub">In 2 Minuten erklärt: Grid bedienen, Buttons nutzen, Checkboxen verstehen.</p>
+      </div>
+      <div class="intro-sections">
+        <div class="intro-section">
+          <h3>1. Grid bedienen</h3>
+          <ul>
+            <li>Linke Maustaste: Modul setzen oder entfernen</li>
+            <li>Mit gedrückter Maustaste ziehen: Bereich markieren und belegen</li>
+            <li>Shift + Klick: Rechteck zwischen zwei Punkten auswählen</li>
+          </ul>
+        </div>
+        <div class="intro-section">
+          <h3>2. Buttons am Grid</h3>
+          <ul>
+            <li>Plus/Minus an den Rändern: Zeilen oder Spalten hinzufügen/entfernen</li>
+            <li>Ausrichtung „Horizontal/Vertikal“: beeinflusst Schienenlängen</li>
+          </ul>
+        </div>
+        <div class="intro-section">
+          <h3>3. Smart Konfiguration (optional)</h3>
+          <ul>
+            <li>Beispiele: „5x4 kompakt“ • „20 module gleichmäßig“ • „3 reihen mit 6 modulen“</li>
+            <li>Auch möglich: „alles außer holz“, „nur module und mc4“, „ohne zubehör“</li>
+          </ul>
+        </div>
+        <div class="intro-section">
+          <h3>4. Checkboxen & Zusatzprodukte</h3>
+          <ul>
+            <li>Wichtig: Haken gesetzt = wird gekauft • Haken entfernt = bereits vorrätig</li>
+            <li>Zusatzprodukte: Quetschkabelschuhe, Erdungsband, Ulica‑Module</li>
+          </ul>
+        </div>
+        <div class="intro-section">
+          <h3>5. Warenkorb</h3>
+          <ul>
+            <li>Aktuelle Konfiguration in den Warenkorb legen oder</li>
+            <li>„Gesamte Auswahl“ wählen, um alle Konfigurationen zu übernehmen</li>
+          </ul>
+        </div>
+      </div>
+      <div class="intro-actions">
+        <button id="intro-ok" class="intro-primary">Verstanden – Start</button>
+        <div class="intro-note">Dieses Fenster erscheint, wenn keine gespeicherten Daten vorhanden sind (z. B. Inkognito).</div>
+      </div>
     </div>
   </div>
 
