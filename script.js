@@ -4214,9 +4214,7 @@
         const overlay = document.getElementById('intro-overlay');
         if (!overlay) return;
         // Desktop-Erkennung: echte Mobile-UserAgents oder Touch+kleine Breite gelten als mobil
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                         (('ontouchstart' in window) && window.innerWidth <= 1024);
-        if (isMobile) return;
+        // Auf allen Geräten anzeigen; Layout ist nun responsiv (horizontal/vertikal)
         // Nur anzeigen, wenn KEIN Cache geladen wurde und KEINE URL-Konfiguration vorhanden ist
         if (cacheLoaded || hasUrlConfig) return;
         const closeBtn = document.getElementById('intro-close');

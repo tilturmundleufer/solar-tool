@@ -2096,6 +2096,7 @@ body {
   justify-content: center;
   z-index: 9999;
   backdrop-filter: blur(2px);
+  padding: 16px; /* verhindert Rand-Cutoff auf kleinen Screens */
 }
 
 .intro-overlay:not(.hidden) { display: flex; }
@@ -2104,7 +2105,10 @@ body {
   background: #ffffff;
   border-radius: 16px;
   padding: 24px 26px;
-  width: min(740px, 90vw);
+  width: min(900px, 94vw);
+  max-height: 92vh; /* verhindert, dass das Modal zu hoch wird */
+  overflow-y: auto; /* Modal-internes Scrollen */
+  overscroll-behavior: contain;
   box-shadow: 0 24px 60px rgba(0,0,0,0.28);
   border: 1px solid #e6eaf0;
   position: relative;
@@ -2156,7 +2160,19 @@ body {
 .intro-primary:hover { background: #152b4a; }
 .intro-note { margin-top: 6px; font-size: 12px; color: #6b7280; }
 
-/* Never show intro on small screens; desktop only */
-@media (max-width: 768px) {
-  .intro-overlay { display: none !important; }
+/* Responsive Layout: mehr Spalten auf großen Screens, vertikal auf Mobile */
+@media (min-width: 1200px) {
+  .intro-sections { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+@media (max-width: 1024px) {
+  .intro-modal { width: min(760px, 94vw); }
+}
+
+@media (max-width: 820px) {
+  .intro-sections { grid-template-columns: 1fr; }
+  .intro-modal { width: 94vw; max-height: 92vh; padding: 18px; }
+  .intro-header h2 { font-size: 20px; }
+  .intro-sub { font-size: 14px; }
+  .intro-actions { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
