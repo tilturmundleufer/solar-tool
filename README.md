@@ -41,6 +41,7 @@ cp AGENT_PROMPT_TEMPLATE.md your-prompt.md
 - **Webflow Integration** - Direkter Warenkorb-Export
 - **Analytics** - Nutzungsauswertung für Optimierungen
 - **Zusatzprodukte** - Quetschkabelschuhe, Erdungsband (inkl. Längenlogik/VE)
+- **Desktop-Intro** - Kurzes Schnellstart-Popup erscheint nur beim ersten Desktop-Start ohne Cache/URL; schließbar per × und Klick außerhalb; auf Mobile nicht sichtbar
 
 ---
 

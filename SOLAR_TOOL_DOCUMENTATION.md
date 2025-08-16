@@ -29,6 +29,12 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
 
 ## 🛠️ Hauptfunktionen
 
+### Desktop-Schnellstart (Intro)
+- Beim ersten Start auf Desktop-Rechnern erscheint ein kurzes Intro mit den wichtigsten Bedienhinweisen.
+- Es wird nur angezeigt, wenn weder Cache-Daten noch URL-Konfigurationen vorhanden sind.
+- Schließen über × oder Klick außerhalb des Fensters; anschließend wird es nicht erneut gezeigt (`localStorage:intro-overlay-seen`).
+- Auf mobilen Geräten erscheint dieses Intro nicht (dort gibt es bereits einen separaten Mobile-Hinweis).
+
 ### **1. Grid-Konfiguration**
 - **Zweck:** Nachbau der geplanten Modul-Anordnung
 - **Standard:** 5×5 Grid (kann sich nach Datenauswertung ändern)

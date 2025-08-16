@@ -166,3 +166,9 @@ node -c script.min.js
   - UI-Texte/Placeholders in `index.html` vs. `PLACEHOLDER_EXAMPLES.md`
   - Berechnungslogiken (z. B. Erdungsband-Länge und VE-Anzeige)
 - Halte `AGENT_PROMPT_TEMPLATE.md` auf Stand, damit neue Regeln/Kommandos sofort bekannt sind.
+
+## Changes Made - [Heute]
+- Modified: `init()`, added `maybeShowIntroOverlay()` for desktop-only first-use intro
+- Files Updated: script.js ✅, script.min.js ✅
+- Testing: Desktop shows intro when kein Cache/URL; mobile still shows mobile-warning; outside click and × close work
+- Doc Update: SOLAR_TOOL_DOCUMENTATION.md ✅ (Hinweis zur Intro-Overlay-Anzeige), README.md ✅ (Kurzbeschreibung)
