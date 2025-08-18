@@ -174,11 +174,11 @@
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
     'UlicaSolarBlackJadeFlow': 'Ulica Solar Black Jade-Flow 500 W',
     'Schrauben': 'Schraube M10x25',
-    'Solarkabel': 'Solarkabel 100M',
-    'Holzunterleger': 'Unterlegholz für Dachhaken - 50 Stück',
+    'Solarkabel': 'Solarkabel',
+    'Holzunterleger': 'Unterlegholz für Dachhaken',
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     'Erdungsklemme': 'Erdungsklemme - ?? Stücl',
-    'Quetschkabelschuhe': 'Quetschkabelschuhe - 100 Stück',
+    'Quetschkabelschuhe': 'Quetschkabelschuhe',
     'Erdungsband': 'Erdungsband',
     'Tellerkopfschraube': 'Tellerkopfschraube 8x100'
   };
@@ -4673,13 +4673,16 @@
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
-				item.className = 'additional-product-item';
+				item.className = 'additional-product-item produkt-item';
 				item.innerHTML = `
 					<div class="item-left">
-						<span class="item-quantity">${packagesNeeded}x</span>
-						<span class="item-name">MC4 Stecker</span>
+						<span class="item-quantity">${packagesNeeded}×</span>
+						<div class="item-info">
+							<span class="item-name">MC4 Stecker</span>
+							<span class="item-ve">50 Stück</span>
+						</div>
 					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
 				`;
 				additionalProductsListEl.appendChild(item);
 			}
@@ -4691,13 +4694,16 @@
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
-				item.className = 'additional-product-item';
+				item.className = 'additional-product-item produkt-item';
 				item.innerHTML = `
 					<div class="item-left">
-						<span class="item-quantity">1x</span>
-						<span class="item-name">Solarkabel 100M</span>
+						<span class="item-quantity">1×</span>
+						<div class="item-info">
+							<span class="item-name">Solarkabel</span>
+							<span class="item-ve">100 m</span>
+						</div>
 					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
 				`;
 				additionalProductsListEl.appendChild(item);
 			}
@@ -4709,13 +4715,16 @@
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
-				item.className = 'additional-product-item';
+				item.className = 'additional-product-item produkt-item';
 				item.innerHTML = `
 					<div class="item-left">
-						<span class="item-quantity">1x</span>
-						<span class="item-name">Unterlegholz für Dachhaken - 50 Stück</span>
+						<span class="item-quantity">1×</span>
+						<div class="item-info">
+							<span class="item-name">Unterlegholz für Dachhaken</span>
+							<span class="item-ve">50 Stück</span>
+						</div>
 					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
 				`;
 				additionalProductsListEl.appendChild(item);
 			}
@@ -4727,13 +4736,16 @@
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
-				item.className = 'additional-product-item';
+				item.className = 'additional-product-item produkt-item';
 				item.innerHTML = `
 					<div class="item-left">
-						<span class="item-quantity">1x</span>
-						<span class="item-name">Quetschkabelschuhe - 100 Stück</span>
+						<span class="item-quantity">1×</span>
+						<div class="item-info">
+							<span class="item-name">Quetschkabelschuhe</span>
+							<span class="item-ve">100 Stück</span>
+						</div>
 					</div>
-					<div class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
 				`;
 				additionalProductsListEl.appendChild(item);
 			}
@@ -6025,6 +6037,13 @@
           if (k === 'Erdungsband' && this.erdungsbandtotal) {
             itemDetails = `(${Number(this.erdungsbandtotal).toFixed(2)} cm)`;
             itemVE = `600 cm`;
+          }
+          // Zusätzliche Formatierungen für bestimmte Zusatzprodukte
+          if (k === 'Solarkabel') {
+            itemVE = '100 m';
+          }
+          if (k === 'MC4_Stecker') {
+            itemVE = '50 Stück';
           }
           
           div.innerHTML = `

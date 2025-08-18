@@ -64,6 +64,16 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
 **Logik:** Checkbox aktiviert = Nutzer möchte Komponente dazukaufen
 **Deaktiviert:** Nutzer hat Komponente bereits vorrätig
 
+#### Anzeige der Zusatzprodukte (Übersicht vs. Detail)
+- In der Konfigurations-Übersicht werden Zusatzprodukte identisch zur Produktliste in der Detailansicht gerendert: links die Paketanzahl (×), darunter die VE-Angabe.
+- Es wird keine in Klammern stehende „echte“ Stückzahl zwischen Name und Preis angezeigt, da sie für Zusatzprodukte nicht berechnet wird.
+- Einheitliche VE-Anzeigen:
+  - MC4 Stecker: 50 Stück je Paket (Paketanzahl = ⌈Module/30⌉)
+  - Solarkabel: 100 m
+  - Unterlegholz für Dachhaken: 50 Stück
+  - Quetschkabelschuhe: 100 Stück
+  - Erdungsband: 600 cm; in der Detailansicht wird zusätzlich die berechnete Gesamtlänge angezeigt
+
 ### **4. Multi-Konfiguration**
 - **Zweck:** Mehrere separate Projekte verwalten
 - **Nicht für:** Vergleiche, sondern getrennte Bestellungen
@@ -115,9 +125,10 @@ VE = {
   Schiene_240_cm: 8,
   Schiene_360_cm: 8,
   Solarmodul: 1,
-  MC4_Stecker: 1,
-  Solarkabel: 1,
-  Holzunterleger: 1
+  MC4_Stecker: /* Anzeige/VE im UI: 50 Stück, Berechnung in Paketen */ 1,
+  Solarkabel: /* Anzeige/VE im UI: 100 m */ 1,
+  Holzunterleger: 50,
+  Quetschkabelschuhe: 100
 }
 ```
 
