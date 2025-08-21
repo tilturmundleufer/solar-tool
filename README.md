@@ -33,6 +33,40 @@ cp AGENT_PROMPT_TEMPLATE.md your-prompt.md
 # - Generiere script.min.js: terser script.js -o script.min.js -c -m
 ```
 
+## ✅ Arbeitsweise in Cursor (verbindlicher Workflow)
+
+1) Kontext lesen (parallel): `SOLAR_TOOL_DOCUMENTATION.md`, `AGENT_DEVELOPMENT_GUIDE.md`, `SMART_CONFIG_EXAMPLES.md`, relevante Dateien (`script.js`, `index.html`).
+
+2) Aufgaben strukturieren: In Cursor eine TODO-Liste anlegen (Analyse, Implementierung, Minify, Doku, Git).
+
+3) Änderungen implementieren:
+- Änderungen ausschließlich in `script.js` vornehmen.
+- Webflow-Produktforms: Immer alle `form[data-node-type="commerce-add-to-cart-form"]` global verstecken (UI-Konflikte vermeiden).
+- Logging: In Produktion `console.log/info/debug` stummschalten, `warn/error` beibehalten.
+
+4) Minifizierung:
+```bash
+npx terser script.js -o script.min.js -c -m
+```
+
+5) Git-Konventionen (separat, kein Kombi-Commit):
+```bash
+git add script.js
+git commit -m "<präzise Änderung in script.js>"
+git add script.min.js
+git commit -m "Regenerate script.min.js"
+git add <.md-Dateien>
+git commit -m "Docs: <kurzer Hinweis>"
+git push origin main
+```
+
+6) Checkliste vor Push:
+- [ ] `script.js` bearbeitet, keine linter errors
+- [ ] `script.min.js` via terser regeneriert
+- [ ] Doku-Updates in `.md` gepflegt
+- [ ] Smart-Config-Patterns unverändert/erweitert getestet
+- [ ] Webflow-Forms unsichtbar, Queue/Observer funktionsfähig
+
 ## 🎯 Hauptfunktionen
 
 - **Grid-Konfiguration** - Visuelle Modul-Anordnung
