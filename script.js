@@ -7076,7 +7076,9 @@
     }
 
     hideWebflowForms() {
-      Object.values(this.webflowFormMap).forEach(form => {
+      // Immer ALLE Webflow Add-to-Cart Forms verstecken – auch wenn sie nicht im Konfigurator genutzt werden
+      const allForms = document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]');
+      allForms.forEach(form => {
         if (form && form.style) {
           form.style.cssText = `
             position: absolute !important;
@@ -7092,6 +7094,8 @@
             padding: 0 !important;
             visibility: hidden !important;
           `;
+          form.setAttribute('aria-hidden', 'true');
+          form.setAttribute('tabindex', '-1');
         }
       });
     }
