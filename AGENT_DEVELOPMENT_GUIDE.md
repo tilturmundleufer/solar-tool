@@ -137,6 +137,36 @@ When making changes, document:
 
 ---
 
+## 🧭 Cursor-Workflow (verbindlich)
+
+1) Kontextaufnahme (parallel lesen): `SOLAR_TOOL_DOCUMENTATION.md`, `SMART_CONFIG_EXAMPLES.md`, `script.js`, `index.html`.
+
+2) TODOs in Cursor anlegen: Analyse → Implementierung → Minify → Doku → Git.
+
+3) Implementierungsregeln:
+- Änderungen ausschließlich in `script.js`; niemals direkt nur `script.min.js` editieren.
+- Webflow-Produktformulare: Alle `form[data-node-type="commerce-add-to-cart-form"]` global unsichtbar setzen (auch nicht gemappte), Queue/Mapping unverändert lassen.
+- Logging: In Produktion `console.log`, `console.info`, `console.debug` global zu No-Ops machen; `console.warn/error` behalten.
+
+4) Minify strikt mit terser: `npx terser script.js -o script.min.js -c -m`.
+
+5) Git-Regeln (kein Kombinieren von add+commit; Dateien getrennt committen):
+```bash
+git add script.js
+git commit -m "<Änderungsbeschreibung>"
+git add script.min.js
+git commit -m "Regenerate script.min.js"
+git add <.md-Dateien>
+git commit -m "Docs: <Hinweis>"
+git push origin main
+```
+
+6) Vor-Abschluss-Checks:
+- [ ] Smart-Config-Patterns weiter funktionsfähig (Leerzeichen/Bindestrich-Varianten)
+- [ ] Warenkorb-Queue/Observer arbeiten, Webflow-Forms unsichtbar
+- [ ] Keine neuen Linterfehler
+- [ ] Doku aktualisiert (`README`, `SOLAR_TOOL_DOCUMENTATION`, ggf. `SMART_CONFIG_EXAMPLES`)
+
 ## 🚀 Quick Reference Commands:
 
 ```bash
