@@ -21,6 +21,12 @@ KRITISCHE CODE-REGELN:
 ⚠️ Teste Smart Config Patterns gründlich (Leerzeichen + Bindestriche)
 ⚠️ Pflege die `.md`-Dokumentation bei jeder Code-Änderung (siehe README / Development Guide)
 
+⚠️ Cursor-Workflow (Kurzfassung):
+- Änderungen nur in `script.js`, danach `npx terser script.js -o script.min.js -c -m`
+- Webflow-Forms: Alle `form[data-node-type="commerce-add-to-cart-form"]` global verstecken; Queue/Observer bleiben aktiv
+- Logging: `console.log/info/debug` in Produktion stummschalten; `warn/error` belassen
+- Git: `git add` und `git commit` separat; `script.js`, dann `script.min.js`, dann `.md` nacheinander committen
+
 HAUPTKOMPONENTEN:
 - SmartConfigParser: Texteingabe → Konfiguration (inkl. Befehle wie `gleichmäßig`, `zufällig`, `kompakt`, `mit lücken`, `1 reihe abstand`, `alles außer holz`)
 - SolarGrid Klasse: Grid-Management + Benutzerinteraktionen  
@@ -60,3 +66,10 @@ Erweitere die Smart-Config um kombinierbare Layout-Befehle ("kompakt", "gleichm�
 und Zusatzprodukte ("quetschkabelschuhe", "erdungsband", "ulica module").
 Prüfe, dass Erdungsband die Länge berechnet und auf VE (600 cm) aufrundet.
 ```
+
+### Abschluss-Checkliste (Cursor)
+- [ ] `script.js` geändert, linterfrei
+- [ ] `script.min.js` mit terser regeneriert
+- [ ] Doku aktualisiert (`README`, `SOLAR_TOOL_DOCUMENTATION`, ggf. andere)
+- [ ] Webflow-Forms unsichtbar, Warenkorb-Queue/Observer ok
+- [ ] Smart-Config-Patterns funktionieren weiterhin
