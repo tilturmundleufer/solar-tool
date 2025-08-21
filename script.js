@@ -3,7 +3,17 @@
   // Global debug toggle: disable noisy logs in production
   const DEBUG_MODE = false;
   if (!DEBUG_MODE) {
-    // Console bleibt aktiv für Debugging
+    // In Produktion: laute Debug-Logs stummschalten, Warnungen/Fehler beibehalten
+    try {
+      const noop = function(){};
+      if (typeof console !== 'undefined') {
+        console.log = noop;
+        console.info = noop;
+        console.debug = noop;
+      }
+    } catch (e) {
+      // Ignorieren – falls Konsole nicht überschreibbar ist
+    }
   }
   
   // Cache-Manager für 24h Persistierung
