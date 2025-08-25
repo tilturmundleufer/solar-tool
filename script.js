@@ -3978,6 +3978,24 @@
         Schiene360cm: parts.Schiene_360_cm || 0
         // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       };
+
+      // Kompakte Produktliste: nur Einträge > 0
+      const productQuantitiesCompact = Object.fromEntries(
+        Object.entries(allProductQuantities).filter(([, v]) => v > 0)
+      );
+
+      // Auswahl-Metadaten: gezielte Koordinaten + Anzahl
+      const selectedCoords = [];
+      for (let y = 0; y < targetConfig.rows; y++) {
+        const row = targetConfig.selection[y] || [];
+        for (let x = 0; x < targetConfig.cols; x++) {
+          if (row[x]) selectedCoords.push([x, y]);
+        }
+      }
+      const selectionMeta = {
+        selectedCount: selectedCoords.length,
+        selectedCoords
+      };
       
       return {
         timestamp: new Date().toISOString(),
@@ -3997,6 +4015,8 @@
         },
         summary: summary,
         productQuantities: allProductQuantities,
+        productQuantitiesCompact: productQuantitiesCompact,
+        selectionMeta: selectionMeta,
         totalPrice: summary.totalPrice, // Verwende den korrekten Gesamtpreis aus getProductSummary
         analytics: {
           totalCells: targetConfig.cols * targetConfig.rows,
@@ -4010,50 +4030,30 @@
 
     async sendConfigToWebhook(configData) {
       try {
-        // FEATURE 10: Analytics zum Webhook hinzufügen
-        const analyticsData = {
-          ...configData,
-          analytics: {
-            sessionData: this.getSessionData(),
-            performanceMetrics: this.performanceMetrics,
-            userAgent: navigator.userAgent,
-            screenResolution: `${screen.width}x${screen.height}`,
-            timestamp: new Date().toISOString(),
-            featureUsage: {
-              dragToSelect: this.interactionCount > 0,
-              smartConfig: configData.smartConfigUsed || false,
-              mobileDevice: this.checkMobileDevice(),
-              zoomLevel: this.zoomLevel || 1
-            }
-          }
+        // Kompakte Payload: nur essentielle Felder senden
+        const minimalPayload = {
+          sessionId: configData.sessionId,
+          timestamp: configData.timestamp,
+          config: {
+            cols: configData?.config?.cols,
+            rows: configData?.config?.rows,
+            cellWidth: configData?.config?.cellWidth,
+            cellHeight: configData?.config?.cellHeight,
+            orientation: configData?.config?.orientation
+          },
+          // Auswahl-Metadaten sind optional und klein
+          selection: configData.selectionMeta || undefined,
+          // Nur Produkte mit Menge > 0 übermitteln
+          productQuantities: configData.productQuantitiesCompact || configData.productQuantities,
+          totalPrice: configData.totalPrice
         };
 
-        // NEUE: Füge Grid-Bild zu Webhook-Daten hinzu
-        const gridImage = await this.pdfGenerator.captureGridImageForWebhook(configData);
-        if (gridImage) {
-          // Berechne die tatsächlichen Canvas-Dimensionen
-          const cols = configData.cols || 5;
-          const rows = configData.rows || 5;
-          const cellWidth = 60;
-          const cellHeight = 60;
-          const cellGap = 2;
-          const padding = 40;
-          
-          const width = cols * cellWidth + (cols - 1) * cellGap + padding;
-          const height = rows * cellHeight + (rows - 1) * cellGap + padding;
-          
-          console.log('Grid Image Dimensions:', { cols, rows, width, height });
-          
-          // Erstelle sowohl Data-URL als auch reinen Base64-String für Kompatibilität
-          const base64Only = gridImage.split(',')[1];
-          
-          analyticsData.gridImage = {
-            data: gridImage, // Vollständiger Data-URL: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...
-            base64: base64Only, // Reiner Base64-String für Fallback
-            format: 'data-url',
-            mimeType: 'image/png',
-            width: width,
-            height: height
+        // Falls Metadaten von sendAllConfigsToWebhook vorhanden sind, beilegen
+        if (typeof configData.configIndex === 'number' || configData.configName || typeof configData.totalConfigsInSession === 'number') {
+          minimalPayload.meta = {
+            configIndex: configData.configIndex,
+            configName: configData.configName,
+            totalConfigsInSession: configData.totalConfigsInSession
           };
         }
 
@@ -4062,14 +4062,10 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(analyticsData)
+          body: JSON.stringify(minimalPayload)
         });
 
-        if (response.ok) {
-          return true;
-        } else {
-          return false;
-        }
+        return response.ok;
       } catch (error) {
         console.error('Webhook send error:', error);
         return false;
