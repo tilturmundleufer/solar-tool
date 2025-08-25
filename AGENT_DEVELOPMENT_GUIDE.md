@@ -166,6 +166,7 @@ git push origin main
 - [ ] Warenkorb-Queue/Observer arbeiten, Webflow-Forms unsichtbar
 - [ ] Keine neuen Linterfehler
 - [ ] Doku aktualisiert (`README`, `SOLAR_TOOL_DOCUMENTATION`, ggf. `SMART_CONFIG_EXAMPLES`)
+- [ ] Webhook-Payload kompakt (keine `gridImage`-Base64, nur essenzielle Felder)
 
 ## 🚀 Quick Reference Commands:
 
@@ -202,3 +203,9 @@ node -c script.min.js
 - Files Updated: script.js ✅, script.min.js ✅
 - Testing: Desktop shows intro when kein Cache/URL; mobile still shows mobile-warning; outside click and × close work
 - Doc Update: SOLAR_TOOL_DOCUMENTATION.md ✅ (Hinweis zur Intro-Overlay-Anzeige), README.md ✅ (Kurzbeschreibung)
+
+## Changes Made - [2025-08-25]
+- Modified: `getConfigData`, `sendConfigToWebhook` (kompakte Webhook-Payload, ohne Bilddaten)
+- Files Updated: script.js ✅, script.min.js ✅
+- Testing: Verifiziert, dass nur Produkte > 0 übertragen werden, `gridImage` entfällt
+- Doc Update: SOLAR_TOOL_DOCUMENTATION.md ✅ (Payload-Spezifikation und Empfehlungen zur externen Bildgenerierung)

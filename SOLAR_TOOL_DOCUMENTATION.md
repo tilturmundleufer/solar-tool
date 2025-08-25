@@ -92,6 +92,7 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
 
 ### **Backend-Integration:**
 - **Webflow E-Commerce** - Warenkorb-System
+ - **Webhook (kompakt)** - Übertragung nur essenzieller Daten (siehe unten)
 ### **Warenkorb-Ablauf (stabiler Add-Flow)**
 - Hinzufügen zum Warenkorb erfolgt sequenziell über eine Queue.
 - Bestätigung über DOM-Änderungen des Webflow-Cart-Containers (MutationObserver), Fallback-Timeout pro Item (~1.5s).
@@ -109,6 +110,59 @@ Planung (Papier) → Solar-Tool → Warenkorb → Webflow Shop → Bestellung �
                               ↓
                          Webhook Analytics → Optimierungen
 ```
+
+### 📦 Webhook-Payload (kompakt)
+- Ziel: kleinere Payloads, schnellere Übertragung, geringere Kosten in Integrations-Tools.
+- Es werden nur essenzielle Felder gesendet; große Binärdaten (z. B. Grid-Bild/Base64) entfallen.
+
+Beispiel:
+```json
+{
+  "sessionId": "session_abcd123",
+  "timestamp": "2025-08-25T10:00:00.000Z",
+  "config": {
+    "cols": 6,
+    "rows": 4,
+    "cellWidth": 60,
+    "cellHeight": 60,
+    "orientation": "horizontal"
+  },
+  "selection": {
+    "selectedCount": 12,
+    "selectedCoords": [[0,0],[1,0],[2,0]]
+  },
+  "productQuantities": {
+    "Solarmodul": 12,
+    "Endklemmen": 24
+  },
+  "totalPrice": 1234.56,
+  "meta": {
+    "configIndex": 0,
+    "configName": "Sued-Dach",
+    "totalConfigsInSession": 2
+  }
+}
+```
+
+Hinweise:
+- `productQuantities` enthält nur Produkte mit Menge > 0.
+- `selection.selectedCoords` ist optional nutzbar zur externen Bildgenerierung.
+- Keine Einbettung von `gridImage` (Base64) mehr.
+
+### 🖼️ Bildgenerierung nach Webhook (Empfehlungen)
+- Make.com: HTTP Trigger → Code (JS) baut HTML-Grid → Screenshot via Browserless/Apify → URL/Base64 speichern.
+- Alternativ Cloudinary: Koordinaten als Overlays (Sprite/Tile) zusammensetzen → transformierte PNG-URL.
+- Alternativ QuickChart: Heatmap/Matrix rendern über API (für einfache Visualisierung ausreichend).
+- Vorteil: Bilder on-demand generieren und cachen; keine großen Payloads im Browser.
+
+### ✅ Tests (Webhook)
+- Content-Type `application/json` und Response `2xx` prüfen.
+- Sicherstellen, dass `gridImage` nicht gesendet wird.
+- Prüfen, dass nur Produkte > 0 in `productQuantities` enthalten sind.
+- `selection.selectedCount` stimmt mit `selectedCoords.length` überein.
+
+### 📓 Changelog
+- 2025-08-25: Webhook-Payload verschlankt (ohne Bilddaten), hinzugefügt: `selection`-Metadaten und kompaktes `productQuantities`.
 
 ---
 
