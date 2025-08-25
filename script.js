@@ -3937,8 +3937,8 @@
       const targetConfig = config || {
         cols: this.cols,
         rows: this.rows,
-        cellWidth: parseInt(this.wIn.value, 10),
-        cellHeight: parseInt(this.hIn.value, 10),
+        cellWidth: parseFloat(this.wIn.value),
+        cellHeight: parseFloat(this.hIn.value),
         orientation: this.orV.checked ? 'vertical' : 'horizontal',
         selection: this.selection,
         incM: this.incM.checked
@@ -3997,6 +3997,15 @@
         selectedCoords
       };
       
+      // totalPrice robust aus kompakten Mengen berechnen (VE * Preis je Pack)
+      const totalPriceFromCompact = Object.entries(productQuantitiesCompact).reduce((sum, [key, qty]) => {
+        const veKey = key === 'Schiene240cm' ? 'Schiene_240_cm' : key === 'Schiene360cm' ? 'Schiene_360_cm' : key;
+        const ve = VE[veKey] || 1;
+        const packs = Math.ceil(qty / ve);
+        const price = getPriceFromCache(veKey);
+        return sum + packs * price;
+      }, 0);
+      
       return {
         timestamp: new Date().toISOString(),
         sessionId: this.sessionId,
@@ -4017,7 +4026,7 @@
         productQuantities: allProductQuantities,
         productQuantitiesCompact: productQuantitiesCompact,
         selectionMeta: selectionMeta,
-        totalPrice: summary.totalPrice, // Verwende den korrekten Gesamtpreis aus getProductSummary
+        totalPrice: Number.isFinite(totalPriceFromCompact) ? totalPriceFromCompact : summary.totalPrice,
         analytics: {
           totalCells: targetConfig.cols * targetConfig.rows,
           selectedCells: targetConfig.selection.flat().filter(v => v).length,
@@ -4045,7 +4054,12 @@
           selection: configData.selectionMeta || undefined,
           // Nur Produkte mit Menge > 0 übermitteln
           productQuantities: configData.productQuantitiesCompact || configData.productQuantities,
-          totalPrice: configData.totalPrice
+          totalPrice: configData.totalPrice,
+          // Sessiondaten nur einmalig (kompakt)
+          session: {
+            duration: configData.sessionData?.sessionDuration,
+            interactions: configData.sessionData?.interactionCount
+          }
         };
 
         // Falls Metadaten von sendAllConfigsToWebhook vorhanden sind, beilegen
@@ -4091,8 +4105,8 @@
           currentConfig = {
             cols: this.cols,
             rows: this.rows,
-            cellWidth: parseInt(this.wIn.value, 10),
-            cellHeight: parseInt(this.hIn.value, 10),
+            cellWidth: parseFloat(this.wIn.value),
+            cellHeight: parseFloat(this.hIn.value),
             orientation: this.orV.checked ? 'vertical' : 'horizontal',
             selection: this.selection,
             incM: this.incM.checked,
@@ -4104,8 +4118,8 @@
           currentConfig = {
             cols: cfg.cols,
             rows: cfg.rows,
-            cellWidth: cfg.cellWidth,
-            cellHeight: cfg.cellHeight,
+            cellWidth: parseFloat(cfg.cellWidth),
+            cellHeight: parseFloat(cfg.cellHeight),
             orientation: cfg.orientation,
             selection: cfg.selection,
             incM: cfg.incM,
