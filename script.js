@@ -2163,6 +2163,8 @@
         gridSize: /(\d+)\s*[x×]\s*(\d+)(?!\s*mal)/i,
         // "20 module" → Anzahl Module
         moduleCount: /(\d+)\s*modul[e]?[n]?/i,
+        // Alternative Schreibweisen: "modulanzahl 18", "anzahl module 24"
+        moduleCountAlt: /(?:modul\s*anzahl|modulanzahl|anzahl\s*modul(?:e|en)?|module\s*anzahl)\s*(\d+)/i,
         // "mit modulen" oder "ohne module" → Module-Checkbox
         moduleCheckbox: /(?:mit|ohne)[\s-]*modul[e]?[n]?(?!\s*\d)/i,
         // "horizontal" oder "vertikal"
@@ -2177,6 +2179,8 @@
         quetschkabelschuhe: /(?:mit|ohne)[\s-]*(?:quetschkabelschuhe|kabelschuhe)/i,
         // "3 reihen mit 5 modulen" oder "drei reihen 5 module" oder "20 module in 4 reihen" oder "3 mal 6 module"
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))|(?:(\d+)\s*mal\s*(\d+)\s*modul[e]?[n]?)/i,
+        // Reine Reihenangabe: "reihen 3"
+        rowsOnly: /(?:reihen?|zeilen?)\s*(\d+)/i,
         // "mit abstand" | "ohne abstand" | "1 reihe abstand" | "mit doppeltem abstand"
         spacing: /(?:(?:mit|ohne)\s*(?:doppelt\w*\s*)?(?:abstand|lücke))|(?:(\d+)\s*(?:reihen?|zeilen?)\s*(?:abstand|lücke))/i,
         // "kompakt" oder "mit lücken" für Grid-Syntax
@@ -2510,9 +2514,16 @@
       
       // Module-Anzahl parsen (nur wenn keine Reihen-Konfiguration)
       if (!rowMatch) {
-        const moduleMatch = input.match(this.patterns.moduleCount);
+        let moduleMatch = input.match(this.patterns.moduleCount);
+        if (!moduleMatch) {
+          const moduleAlt = input.match(this.patterns.moduleCountAlt);
+          if (moduleAlt) {
+            moduleMatch = [, moduleAlt[1], moduleAlt[1]]; // Dummy to enter branch
+            config.moduleCount = parseInt(moduleAlt[1]);
+          }
+        }
         if (moduleMatch) {
-          config.moduleCount = parseInt(moduleMatch[1]);
+          if (!config.moduleCount) config.moduleCount = parseInt(moduleMatch[1]);
           
           // Prüfe auf Abstand auch bei einfacher Module-Anzahl
           const spacingMatch = input.match(this.patterns.spacing);
@@ -2559,6 +2570,74 @@
             config.cols = Math.max(config.cols, modulesPerRow);
           }
         }
+      }
+
+      // Reine Reihenangabe mit bekannter Modulanzahl → automatische rowConfig
+      const rowsOnlyMatch = input.match(this.patterns.rowsOnly);
+      if (!config.rowConfig && rowsOnlyMatch && config.moduleCount) {
+        const numRows = parseInt(rowsOnlyMatch[1], 10);
+        if (Number.isInteger(numRows) && numRows > 0) {
+          const modulesPerRow = Math.ceil(config.moduleCount / numRows);
+          config.rowConfig = { rows: numRows, modulesPerRow, spacing: 0, totalModules: config.moduleCount };
+          config.intelligentDistribution = {
+            totalModules: config.moduleCount,
+            numRows,
+            baseModulesPerRow: Math.floor(config.moduleCount / numRows),
+            extraModules: config.moduleCount % numRows
+          };
+          // Passen Grid-Abmessungen an
+          config.rows = numRows;
+          config.cols = Math.max(this.solarGrid?.cols || 0, modulesPerRow);
+        }
+      }
+
+      // Rahmen außen leeren
+      if (/\b(?:rahmen|rand)\s*(?:außen|aussen)\s*leer\b/i.test(input)) {
+        config.clearFrame = true;
+      }
+
+      // Innenbereich: reihen R und spalten S füllen
+      const insideAreaMatch = input.match(/\b(?:innen(?:bereich)?)\s*(?:reihe[n]?\s*([0-9\s,und–—-bis]+))\s*(?:und|,)?\s*spalte[n]?\s*([0-9\s,und–—-bis]+)/i);
+      if (insideAreaMatch) {
+        const parseRangeList = (str) => {
+          const normalized = (str || '')
+            .replace(/[–—]/g, '-')
+            .replace(/\bund\b/gi, ',')
+            .replace(/\bbis\b/gi, '-');
+          const tokens = normalized.split(',').map(s => s.trim()).filter(Boolean);
+          const out = [];
+          for (const t of tokens) {
+            const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+            if (m) {
+              let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+              if (Number.isInteger(a) && Number.isInteger(b)) {
+                const start = Math.min(a, b), end = Math.max(a, b);
+                for (let n = start; n <= end; n++) out.push(n);
+              }
+            } else {
+              const n = parseInt(t, 10);
+              if (Number.isInteger(n) && n > 0) out.push(n);
+            }
+          }
+          return Array.from(new Set(out));
+        };
+        config.selectAreaRows = parseRangeList(insideAreaMatch[1]);
+        config.selectAreaCols = parseRangeList(insideAreaMatch[2]);
+      }
+
+      // Hälften: linke/rechte Hälfte
+      if (/\blink[e]?\s*h[aä]lfte\s*f[üu]llen\b/i.test(input)) {
+        config.fillLeftHalf = true;
+      }
+      if (/\brecht[e]?\s*h[aä]lfte\s*leer\b/i.test(input)) {
+        config.clearRightHalf = true;
+      }
+
+      // Jede zweite Reihe füllen, optionaler Start
+      const everySecondMatch = input.match(/\bjede\s*zweite\s*reihe\s*f[üu]llen(?:.*?start\s*bei\s*(\d+))?/i);
+      if (everySecondMatch) {
+        const start = parseInt(everySecondMatch[1] || '1', 10);
+        config.everySecondRowsStart = Number.isInteger(start) && start > 0 ? start : 1;
       }
 
       // Orientierung parsen (nur wenn explizit erwähnt)
@@ -3047,11 +3126,27 @@
         this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
       }
       // Explizite Reihen-/Spalten-Selektion und Lücken (1-basiert)
-      else if (config.selectRows || config.gapRows || config.selectColumns || config.gapColumns) {
+      else if (config.selectRows || config.gapRows || config.selectColumns || config.gapColumns || config.clearFrame || (config.selectAreaRows && config.selectAreaCols) || config.fillLeftHalf || config.clearRightHalf || config.everySecondRowsStart) {
         // Falls Grid zuvor geändert wurde: Auswahl bereits leer bzw. erhalten je nach Logik
         // Wir arbeiten auf aktueller Selection weiter (additiv, außer Grid-Change)
         const maxRows = this.solarGrid.rows;
         const maxCols = this.solarGrid.cols;
+        const ensureRow = (y) => {
+          if (!this.solarGrid.selection[y]) {
+            this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
+          }
+        };
+        // Rahmen außen leeren
+        if (config.clearFrame) {
+          for (let y = 0; y < maxRows; y++) {
+            ensureRow(y);
+            for (let x = 0; x < maxCols; x++) {
+              if (y === 0 || y === maxRows - 1 || x === 0 || x === maxCols - 1) {
+                this.solarGrid.selection[y][x] = false;
+              }
+            }
+          }
+        }
         // Selektiere Reihen
         if (Array.isArray(config.selectRows)) {
           for (const row1Based of config.selectRows) {
@@ -3060,9 +3155,7 @@
               this.solarGrid.showToast(`⚠️ Reihe ${row1Based} existiert nicht (Grid ${maxCols}×${maxRows}).`, 3000);
               continue;
             }
-            if (!this.solarGrid.selection[y]) {
-              this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
-            }
+            ensureRow(y);
             for (let x = 0; x < maxCols; x++) {
               this.solarGrid.selection[y][x] = true;
             }
@@ -3076,9 +3169,7 @@
               this.solarGrid.showToast(`⚠️ Reihe ${row1Based} existiert nicht (Grid ${maxCols}×${maxRows}).`, 3000);
               continue;
             }
-            if (!this.solarGrid.selection[y]) {
-              this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
-            }
+            ensureRow(y);
             for (let x = 0; x < maxCols; x++) {
               this.solarGrid.selection[y][x] = false;
             }
@@ -3093,9 +3184,7 @@
               continue;
             }
             for (let y = 0; y < maxRows; y++) {
-              if (!this.solarGrid.selection[y]) {
-                this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
-              }
+              ensureRow(y);
               this.solarGrid.selection[y][x] = true;
             }
           }
@@ -3109,11 +3198,47 @@
               continue;
             }
             for (let y = 0; y < maxRows; y++) {
-              if (!this.solarGrid.selection[y]) {
-                this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
-              }
+              ensureRow(y);
               this.solarGrid.selection[y][x] = false;
             }
+          }
+        }
+        // Innenbereich füllen (Kreuzprodukt aus angegebenen Reihen und Spalten)
+        if (Array.isArray(config.selectAreaRows) && Array.isArray(config.selectAreaCols)) {
+          for (const row1Based of config.selectAreaRows) {
+            const y = row1Based - 1;
+            if (y < 0 || y >= maxRows) continue;
+            ensureRow(y);
+            for (const col1Based of config.selectAreaCols) {
+              const x = col1Based - 1;
+              if (x < 0 || x >= maxCols) continue;
+              this.solarGrid.selection[y][x] = true;
+            }
+          }
+        }
+        // Linke Hälfte füllen
+        if (config.fillLeftHalf) {
+          const endX = Math.floor(maxCols / 2) - 1;
+          for (let y = 0; y < maxRows; y++) {
+            ensureRow(y);
+            for (let x = 0; x <= endX; x++) this.solarGrid.selection[y][x] = true;
+          }
+        }
+        // Rechte Hälfte leeren
+        if (config.clearRightHalf) {
+          const startX = Math.ceil(maxCols / 2);
+          for (let y = 0; y < maxRows; y++) {
+            ensureRow(y);
+            for (let x = startX; x < maxCols; x++) this.solarGrid.selection[y][x] = false;
+          }
+        }
+        // Jede zweite Reihe füllen
+        if (config.everySecondRowsStart) {
+          const start = Math.max(1, config.everySecondRowsStart);
+          for (let row1Based = start; row1Based <= maxRows; row1Based += 2) {
+            const y = row1Based - 1;
+            ensureRow(y);
+            for (let x = 0; x < maxCols; x++) this.solarGrid.selection[y][x] = true;
           }
         }
         this.solarGrid.buildGrid();
