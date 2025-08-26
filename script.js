@@ -2345,10 +2345,19 @@
     }
 
     parseInput(input) {
-      // TESTMODUS: Smart Config vorübergehend deaktiviert für Neuaufbau
-      try { this.solarGrid && this.solarGrid.showToast && this.solarGrid.showToast('Smart Config im Neuaufbau – Eingaben deaktiviert', 2500); } catch(e) {}
-      return {};
-      console.log('Parsing input:', input);
+      // NEU (Testmodus, Schritt 1): Unterstütze ausschließlich Grid-Größe wie "5x5"
+      try {
+        const m = input.match(this.patterns.gridSize);
+        if (m) {
+          const cols = parseInt(m[1], 10);
+          const rows = parseInt(m[2], 10);
+          return { cols, rows, forceClearSelection: true };
+        }
+        return {};
+      } catch (e) {
+        console.error('SmartConfig parseInput error (test step 1):', e);
+        return {};
+      }
       const config = {};
       
       try {
@@ -3103,6 +3112,12 @@
       if (config.cols && config.rows) {
         this.solarGrid.cols = config.cols;
         this.solarGrid.rows = config.rows;
+        // Wenn explizit gefordert: Auswahl vollständig zurücksetzen
+        if (config.forceClearSelection === true) {
+          this.solarGrid.selection = Array.from({ length: this.solarGrid.rows }, () =>
+            Array.from({ length: this.solarGrid.cols }, () => false)
+          );
+        }
       }
 
       // Orientierung setzen (nur wenn angegeben)
