@@ -2345,6 +2345,9 @@
     }
 
     parseInput(input) {
+      // TESTMODUS: Smart Config vorübergehend deaktiviert für Neuaufbau
+      try { this.solarGrid && this.solarGrid.showToast && this.solarGrid.showToast('Smart Config im Neuaufbau – Eingaben deaktiviert', 2500); } catch(e) {}
+      return {};
       console.log('Parsing input:', input);
       const config = {};
       
