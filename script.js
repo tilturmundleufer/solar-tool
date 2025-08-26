@@ -2211,11 +2211,11 @@
         spacingRowsOnly: /(?:nur\s*)?(?:zwischen\s*)?reihen/i,
         spacingColumnsOnly: /(?:nur\s*)?(?:zwischen\s*)?spalten/i,
         // Explizite Reihen-Selektion und Reihen-Lücken (1-basiert)
-        selectRowsExplicit: /mit\s*modul\w*\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,und]+)/i,
-        gapRowsExplicit: /mit\s*l[üu]cken\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,und]+)/i,
+        selectRowsExplicit: /mit\s*modul\w*\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,–—\-a-z]+)/i,
+        gapRowsExplicit: /mit\s*l[üu]cken\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,–—\-a-z]+)/i,
         // Explizite Spalten-Selektion und Spalten-Lücken (1-basiert)
-        selectColumnsExplicit: /mit\s*modul\w*\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
-        gapColumnsExplicit: /mit\s*l[üu]cken\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
+        selectColumnsExplicit: /mit\s*modul\w*\s*in\s*(?:spalte|spalten)\s*([0-9\s,–—\-a-z]+)/i,
+        gapColumnsExplicit: /mit\s*l[üu]cken\s*in\s*(?:spalte|spalten)\s*([0-9\s,–—\-a-z]+)/i,
         // Alle Reihen/Spalten außer ... (1-basiert, erlaubt Bereiche)
         allRowsExcept: /alle\s*(?:reihen|zeilen)\s*(?:außer|ausser)\s*([0-9\s,–—\-a-z]+)/i,
         allColumnsExcept: /alle\s*spalten\s*(?:außer|ausser)\s*([0-9\s,–—\-a-z]+)/i,
