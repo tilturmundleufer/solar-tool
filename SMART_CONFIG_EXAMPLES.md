@@ -198,6 +198,12 @@ nur rand füllen
 
 block 2x3 ab reihe 3, spalte 4
 → Rechteck von 2 Reihen Höhe × 3 Spalten Breite ab (3,4) füllen
+
+erste 3 spalten leer
+→ Spalten 1–3 leeren
+
+block 2x2 ab reihe von unten 3, spalte von rechts 2
+→ Rechteck relativ vom unteren/rechten Rand aus füllen
 ```
 
 Hinweis: Reihen/Spalten sind 1-basiert (Reihe 1 = oberste Zeile, Spalte 1 = linke Spalte). Out-of-Range Eingaben führen zu einem freundlichen Hinweis.
