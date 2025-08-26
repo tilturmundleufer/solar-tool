@@ -3034,7 +3034,7 @@
       if (fillLastRows) config.fillLastNRows = this.parseWordNumber((fillLastRows[1] || '1'));
       const clearLastRows = input.match(this.patterns.clearLastNRows);
       if (clearLastRows) config.clearLastNRows = this.parseWordNumber((clearLastRows[1] || '1'));
-
+      
       // KURZE EINGABEN: Verwende aktuelles Grid als Basis
       const isShortInput = input.length < 20 && !input.match(/\d/);
       if (isShortInput) {
@@ -5841,7 +5841,15 @@
 			console.log('Showing config preview:', config);
 			
 			// Grid-Preview für alle Konfigurationen die das Grid beeinflussen
-			if (config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig) {
+			if (
+				config.cols || config.rows || config.moduleCount || config.orientation || config.adjustSpacing || config.rowConfig ||
+				config.selectRows || config.gapRows || config.selectColumns || config.gapColumns ||
+				config.selectAreaRows || config.selectAreaCols || config.fillOnlyFrame || config.clearFrame ||
+				config.fillLeftHalf || config.clearRightHalf || config.everySecondRowsStart ||
+				config.clearTopRow || config.clearBottomRow || config.fillFirstNColumns || config.clearFirstNColumns || config.clearLastNColumns ||
+				config.fillFirstNRows || config.clearFirstNRows || config.fillLastNRows || config.clearLastNRows ||
+				config.fillBlock || config.fillBlockRelative
+			) {
 				// this ist die SolarGrid Instanz selbst, also können wir direkt auf ihre Methoden zugreifen
 				if (this && typeof this.showGridPreview === 'function') {
 					try {
