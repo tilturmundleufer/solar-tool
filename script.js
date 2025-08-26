@@ -2229,7 +2229,10 @@
         // Speichern mit Namen
         saveWithName: /(?:speichern\s*als\s*['"]?([^'"]+)['"]?)/i,
         // Ulica Modul Auswahl (500/450 W) inkl. Synonyme
-        ulicaModule: /ulica(?:\s*(500|450)\s*w?)?|black\s*jade(?:[-\s]*flow)?\s*(500|450)?/i
+        ulicaModule: /ulica(?:\s*(500|450)\s*w?)?|black\s*jade(?:[-\s]*flow)?\s*(500|450)?/i,
+        // NEU: "hinzufügen"-Befehle
+        addModulesWatt: /\b(450|500)\s*(?:watt|w)\s*modul(?:e|en)?\s*hinzuf(?:ügen|uegen)\b/i,
+        addComponents: /\b(?:mc4|kabel|holz|quetschkabelschuhe|erdungsband)(?:\s*(?:,|und)\s*(?:mc4|kabel|holz|quetschkabelschuhe|erdungsband))*\s*hinzuf(?:ügen|uegen)\b/i
       };
     }
 
@@ -2757,6 +2760,31 @@
         }
         // Ulica schließt allgemeine Module aus
         config.includeModules = false;
+      }
+
+      // NEU: "450/500 W module hinzufügen"
+      const addModulesWatt = input.match(this.patterns.addModulesWatt);
+      if (addModulesWatt) {
+        const watt = addModulesWatt[1];
+        config.ulicaModule = true;
+        config.selectedModule = watt === '450' ? 'ulica-450' : 'ulica-500';
+        // Exklusivität: keine allgemeinen Module
+        config.includeModules = false;
+      }
+
+      // NEU: "mc4 und holz hinzufügen" (Liste erlaubt)
+      const addComponents = input.match(this.patterns.addComponents);
+      if (addComponents) {
+        const list = input
+          .toLowerCase()
+          .match(/(?:mc4|kabel|holz|quetschkabelschuhe|erdungsband)/g);
+        if (list) {
+          if (list.includes('mc4')) config.mc4 = true;
+          if (list.includes('kabel')) config.cable = true;
+          if (list.includes('holz')) config.wood = true;
+          if (list.includes('quetschkabelschuhe')) config.quetschkabelschuhe = true;
+          if (list.includes('erdungsband')) config.erdungsband = true;
+        }
       }
 
       // NEUE ACTION PATTERNS PRÜFEN (höchste Priorität - vor allen anderen Patterns)
