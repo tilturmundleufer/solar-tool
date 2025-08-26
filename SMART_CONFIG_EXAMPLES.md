@@ -180,6 +180,24 @@ mit lücken in spalte 1
 
 mit lücken in spalten 2 bis 4
 → Spalten 2, 3, 4 vollständig geleert
+
+oberste reihe leer
+→ Reihe 1 leeren
+
+unterste reihe leer
+→ letzte Reihe leeren
+
+erste 2 spalten füllen
+→ Spalten 1 und 2 vollständig setzen
+
+letzte spalte leer
+→ rechte Randspalte leeren
+
+nur rand füllen
+→ Außenrahmen füllen, Innenbereich leeren
+
+block 2x3 ab reihe 3, spalte 4
+→ Rechteck von 2 Reihen Höhe × 3 Spalten Breite ab (3,4) füllen
 ```
 
 Hinweis: Reihen/Spalten sind 1-basiert (Reihe 1 = oberste Zeile, Spalte 1 = linke Spalte). Out-of-Range Eingaben führen zu einem freundlichen Hinweis.
