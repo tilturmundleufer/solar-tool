@@ -47,7 +47,7 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
   - `5x4 mit module, ohne mc4`
   - `20 module ohne kabel`
   - `3 reihen mit 6 modulen, ohne holz`
-  - `gleichmäßig`, `zufällig`, `in reihen`, `in spalten`
+  - `zufällig`, `in reihen`, `in spalten`
   - `kompakt`, `mit lücken`, `1 reihe abstand`, `doppelter abstand`
   - `alles außer holz`, `ohne zubehör`, `nur module und mc4`, `mit allem`
 - **Unterstützt:** Leerzeichen und Bindestriche (`ohne kabel`, `ohne-kabel`)
@@ -163,6 +163,7 @@ Hinweise:
 
 ### 📓 Changelog
 - 2025-08-25: Webhook-Payload verschlankt (ohne Bilddaten), hinzugefügt: `selection`-Metadaten und kompaktes `productQuantities`.
+- 2025-08-26: Smart Config – Verteilungsmodus `gleichmäßig` deaktiviert; Nutzerhinweis ergänzt und Beispiele angepasst.
 
 ---
 
@@ -225,7 +226,7 @@ VE = {
 ### **Smart Config Patterns:**
 - **Grid-Größen:** `5x4`, `6x3`, `8x2`
 - **Modul-Anzahl:** `20 module`, `24 modulen`
-- **Layout & Abstand:** `kompakt`, `mit lücken`, `1 reihe abstand`, `gleichmäßig`, `zufällig`
+- **Layout & Abstand:** `kompakt`, `mit lücken`, `1 reihe abstand`, `zufällig`
 - **Checkbox-Logik:** `mit mc4`, `ohne kabel`, `alles außer holz`, `nur module`
 - **Ulica-Module:** `ulica 500`, `black jade flow 450`
 - **Konfiguration speichern/benennen:** `speichern`, `speichern als "Dach Nord"`
@@ -236,6 +237,8 @@ VE = {
 - **Checkbox-Steuerung:** `mit/ohne module/mc4/kabel/holz`
 - **Zusatzprodukte:** `quetschkabelschuhe`, `erdungsband`, `ulica module`
 - **Kombinationen:** `und`, `,` für mehrere Optionen
+
+Hinweis: Der Verteilungsmodus `gleichmäßig` ist deaktiviert. Bitte verwenden Sie präzise Angaben wie `X reihen mit Y modulen` oder `N module in M reihen`.
 
 ### **Interaktive Features:**
 - **Drag & Drop** - Bereichsauswahl durch Ziehen
