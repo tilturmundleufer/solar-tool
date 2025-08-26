@@ -2222,12 +2222,12 @@
         // Neue präzise Befehle
         clearTopRow: /\b(?:oberste|oberer)\s*reihe\s*leer\b/i,
         clearBottomRow: /\b(?:unterste|unterer)\s*reihe\s*leer\b/i,
-        fillFirstNColumns: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*spalten?\s*f[üu]llen\b/i,
-        clearFirstNColumns: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*spalten?\s*leer\b/i,
+        fillFirstNColumns: /\berst(?:e|en|er)?\s*(\d+|ein|eine|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*spalten?\s*f[üu]llen\b/i,
+        clearFirstNColumns: /\berst(?:e|en|er)?\s*(\d+|ein|eine|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*spalten?\s*leer\b/i,
         clearLastNColumns: /\bletzte[nr]?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*spalten?\s*leer\b/i,
         // Reihen füllen/leeren (erste/letzte N)
-        fillFirstNRows: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*reihen?\s*f[üu]llen\b/i,
-        clearFirstNRows: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*reihen?\s*leer\b/i,
+        fillFirstNRows: /\berst(?:e|en|er)?\s*(\d+|ein|eine|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*reihen?\s*f[üu]llen\b/i,
+        clearFirstNRows: /\berst(?:e|en|er)?\s*(\d+|ein|eine|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*reihen?\s*leer\b/i,
         fillLastNRows: /\bletzte[nr]?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*reihen?\s*f[üu]llen\b/i,
         clearLastNRows: /\bletzte[nr]?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*reihen?\s*leer\b/i,
         fillOnlyFrame: /\bnur\s*rand\s*f[üu]llen\b/i,
@@ -3001,9 +3001,9 @@
       if (this.patterns.clearTopRow.test(input)) config.clearTopRow = true;
       if (this.patterns.clearBottomRow.test(input)) config.clearBottomRow = true;
       const fillFirstN = input.match(this.patterns.fillFirstNColumns);
-      if (fillFirstN) config.fillFirstNColumns = this.parseWordNumber(fillFirstN[1]);
+      if (fillFirstN) config.fillFirstNColumns = this.parseWordNumber(fillFirstN[1] || '1');
       const clearFirstN = input.match(this.patterns.clearFirstNColumns);
-      if (clearFirstN) config.clearFirstNColumns = this.parseWordNumber(clearFirstN[1]);
+      if (clearFirstN) config.clearFirstNColumns = this.parseWordNumber(clearFirstN[1] || '1');
       const clearLastN = input.match(this.patterns.clearLastNColumns);
       if (clearLastN) config.clearLastNColumns = parseInt(clearLastN[1] || '1', 10);
       if (this.patterns.fillOnlyFrame.test(input)) config.fillOnlyFrame = true;
@@ -3027,9 +3027,9 @@
       }
       // Reihen erste/letzte N füllen/leer
       const fillFirstRows = input.match(this.patterns.fillFirstNRows);
-      if (fillFirstRows) config.fillFirstNRows = this.parseWordNumber(fillFirstRows[1]);
+      if (fillFirstRows) config.fillFirstNRows = this.parseWordNumber(fillFirstRows[1] || '1');
       const clearFirstRows = input.match(this.patterns.clearFirstNRows);
-      if (clearFirstRows) config.clearFirstNRows = this.parseWordNumber(clearFirstRows[1]);
+      if (clearFirstRows) config.clearFirstNRows = this.parseWordNumber(clearFirstRows[1] || '1');
       const fillLastRows = input.match(this.patterns.fillLastNRows);
       if (fillLastRows) config.fillLastNRows = this.parseWordNumber((fillLastRows[1] || '1'));
       const clearLastRows = input.match(this.patterns.clearLastNRows);
