@@ -2614,7 +2614,7 @@
       }
 
       // Innenbereich: reihen R und spalten S füllen
-      const insideAreaMatch = input.match(/\b(?:innen(?:bereich)?)\s*(?:reihe[n]?\s*([0-9\s,und–—-bis]+))\s*(?:und|,)?\s*spalte[n]?\s*([0-9\s,und–—-bis]+)/i);
+      const insideAreaMatch = input.match(/\b(?:innen(?:bereich)?)\s*(?:reihe[n]?\s*([0-9\s,–—\-a-z]+))\s*(?:und|,)?\s*spalte[n]?\s*([0-9\s,–—\-a-z]+)/i);
       if (insideAreaMatch) {
         const parseRangeList = (str) => {
           const normalized = (str || '')
