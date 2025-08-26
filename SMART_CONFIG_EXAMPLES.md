@@ -130,7 +130,10 @@ Ergebnis:
 
 4. **Unveränderte Werte**: Nicht erwähnte Checkboxen bleiben unverändert
 5. **Grid-Layout**: Befehle wie `kompakt`, `mit lücken`, `1 reihe abstand`, `doppelter abstand` sind kombinierbar mit Größenangaben
-6. **Verteilung**: `gleichmäßig`, `in reihen`, `in spalten`, `zufällig`
+6. **Verteilung**: `in reihen`, `in spalten`, `zufällig` (Hinweis: `gleichmäßig` ist deaktiviert)
+
+### ⚠️ Hinweis zur Verteilung "gleichmäßig"
+`gleichmäßig` (inkl. Varianten wie `gleich-mäßig`, `gleichmaessig`, `optimal`) ist deaktiviert. Bitte nutzen Sie spezifische Eingaben wie `3 reihen mit 5 modulen` oder geben Sie die Modulanzahl mit Reihen/Spalten an.
 
 ### 🚀 Erweiterte Beispiele
 
