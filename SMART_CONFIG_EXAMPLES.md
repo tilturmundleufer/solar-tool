@@ -149,7 +149,23 @@ Ergebnis:
 
 ohne module, ohne mc4, ohne kabel, ohne holz
 → Alle Checkboxen deaktivieren (Grid bleibt unverändert)
+
+# Präzise Reihen-/Spalten-Auswahl (1-basiert)
+
+5x5, mit modulen in reihe 1, 2 und 4
+→ Reihen 1, 2 und 4 vollständig ausgewählt
+
+mit lücken in reihe 3
+→ Reihe 3 vollständig geleert (ähnlich „1 reihe abstand“)
+
+mit modulen in spalte 2 und 4
+→ Spalten 2 und 4 vollständig ausgewählt
+
+mit lücken in spalte 1
+→ Spalte 1 vollständig geleert
 ```
+
+Hinweis: Reihen/Spalten sind 1-basiert (Reihe 1 = oberste Zeile, Spalte 1 = linke Spalte). Out-of-Range Eingaben führen zu einem freundlichen Hinweis.
 
 ## ➕ Neue Konfiguration erstellen
 
