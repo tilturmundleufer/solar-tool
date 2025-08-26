@@ -2206,6 +2206,9 @@
         spacingDouble: /(?:doppelter|doppeltem)\s*abstand/i,
         spacingRowsOnly: /(?:nur\s*)?(?:zwischen\s*)?reihen/i,
         spacingColumnsOnly: /(?:nur\s*)?(?:zwischen\s*)?spalten/i,
+        // Explizite Reihen-Selektion und Reihen-Lücken (1-basiert)
+        selectRowsExplicit: /mit\s*modul\w*\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,und]+)/i,
+        gapRowsExplicit: /mit\s*l[üu]cken\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,und]+)/i,
         // Kombinierte Checkbox-Syntax
         checkboxAllExcept: /(?:alles\s*außer|alle\s*außer)/i,
         checkboxOnly: /(?:nur|only)/i,
@@ -2697,6 +2700,32 @@
         return config;
       }
       
+      // Explizite Reihen-Selektion / Lücken (1-basiert)
+      const selectRowsMatch = input.match(this.patterns.selectRowsExplicit);
+      if (selectRowsMatch) {
+        const rowsString = selectRowsMatch[1] || '';
+        const rowsList = rowsString
+          .replace(/\bund\b/gi, ',')
+          .split(',')
+          .map(s => parseInt(s.trim(), 10))
+          .filter(n => Number.isInteger(n) && n > 0);
+        if (rowsList.length > 0) {
+          config.selectRows = Array.from(new Set(rowsList));
+        }
+      }
+      const gapRowsMatch = input.match(this.patterns.gapRowsExplicit);
+      if (gapRowsMatch) {
+        const rowsString = gapRowsMatch[1] || '';
+        const rowsList = rowsString
+          .replace(/\bund\b/gi, ',')
+          .split(',')
+          .map(s => parseInt(s.trim(), 10))
+          .filter(n => Number.isInteger(n) && n > 0);
+        if (rowsList.length > 0) {
+          config.gapRows = Array.from(new Set(rowsList));
+        }
+      }
+      
       // KURZE EINGABEN: Verwende aktuelles Grid als Basis
       const isShortInput = input.length < 20 && !input.match(/\d/);
       if (isShortInput) {
@@ -2866,6 +2895,48 @@
       // Wenn Reihen-Konfiguration angegeben, verwende spezielle Selektion
       else if (config.rowConfig) {
         this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
+      }
+      // Explizite Reihen-Selektion: wählt vollständige Reihen (1-basiert)
+      else if (config.selectRows || config.gapRows) {
+        // Falls Grid zuvor geändert wurde: Auswahl bereits leer bzw. erhalten je nach Logik
+        // Wir arbeiten auf aktueller Selection weiter (additiv, außer Grid-Change)
+        const maxRows = this.solarGrid.rows;
+        const maxCols = this.solarGrid.cols;
+        // Selektiere Reihen
+        if (Array.isArray(config.selectRows)) {
+          for (const row1Based of config.selectRows) {
+            const y = row1Based - 1; // 1-basiert → 0-basiert
+            if (y < 0 || y >= maxRows) {
+              this.solarGrid.showToast(`⚠️ Reihe ${row1Based} existiert nicht (Grid ${maxCols}×${maxRows}).`, 3000);
+              continue;
+            }
+            if (!this.solarGrid.selection[y]) {
+              this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
+            }
+            for (let x = 0; x < maxCols; x++) {
+              this.solarGrid.selection[y][x] = true;
+            }
+          }
+        }
+        // Leere Reihen (Lücken)
+        if (Array.isArray(config.gapRows)) {
+          for (const row1Based of config.gapRows) {
+            const y = row1Based - 1;
+            if (y < 0 || y >= maxRows) {
+              this.solarGrid.showToast(`⚠️ Reihe ${row1Based} existiert nicht (Grid ${maxCols}×${maxRows}).`, 3000);
+              continue;
+            }
+            if (!this.solarGrid.selection[y]) {
+              this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
+            }
+            for (let x = 0; x < maxCols; x++) {
+              this.solarGrid.selection[y][x] = false;
+            }
+          }
+        }
+        this.solarGrid.buildGrid();
+        this.solarGrid.buildList();
+        this.solarGrid.updateSummaryOnChange();
       }
       // Wenn Module-Anzahl angegeben, automatisch auswählen
       else if (config.moduleCount) {
