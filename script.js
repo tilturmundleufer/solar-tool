@@ -2217,8 +2217,8 @@
         selectColumnsExplicit: /mit\s*modul\w*\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
         gapColumnsExplicit: /mit\s*l[üu]cken\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
         // Alle Reihen/Spalten außer ... (1-basiert, erlaubt Bereiche)
-        allRowsExcept: /alle\s*(?:reihen|zeilen)\s*(?:außer|ausser)\s*([0-9\s,und–—-bis]+)/i,
-        allColumnsExcept: /alle\s*spalten\s*(?:außer|ausser)\s*([0-9\s,und–—-bis]+)/i,
+        allRowsExcept: /alle\s*(?:reihen|zeilen)\s*(?:außer|ausser)\s*([0-9\s,–—\-a-z]+)/i,
+        allColumnsExcept: /alle\s*spalten\s*(?:außer|ausser)\s*([0-9\s,–—\-a-z]+)/i,
         // Neue präzise Befehle
         clearTopRow: /\b(?:oberste|oberer)\s*reihe\s*leer\b/i,
         clearBottomRow: /\b(?:unterste|unterer)\s*reihe\s*leer\b/i,
