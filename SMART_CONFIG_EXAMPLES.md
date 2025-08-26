@@ -152,6 +152,15 @@ Bitte nutzen Sie präzise Angaben wie `3 reihen mit 5 modulen` oder konkrete Rei
 ohne module, ohne mc4, ohne kabel, ohne holz
 → Alle Checkboxen deaktivieren (Grid bleibt unverändert)
 
+450 watt module hinzufügen
+→ Ulica 450 ausgewählt (exklusive allgemeiner Module)
+
+500 w module hinzufügen
+→ Ulica 500 ausgewählt (exklusive allgemeiner Module)
+
+mc4 und holz hinzufügen
+→ Aktiviert MC4 und Holzunterleger
+
 # Präzise Reihen-/Spalten-Auswahl (1-basiert)
 
 5x5, mit modulen in reihe 1, 2 und 4
