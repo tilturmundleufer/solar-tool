@@ -2222,14 +2222,14 @@
         // Neue präzise Befehle
         clearTopRow: /\b(?:oberste|oberer)\s*reihe\s*leer\b/i,
         clearBottomRow: /\b(?:unterste|unterer)\s*reihe\s*leer\b/i,
-        fillFirstNColumns: /\berste\s*(\d+)\s*spalten?\s*f[üu]llen\b/i,
-        clearFirstNColumns: /\berste\s*(\d+)\s*spalten?\s*leer\b/i,
-        clearLastNColumns: /\bletzte[nr]?\s*(\d+)?\s*spalten?\s*leer\b/i,
+        fillFirstNColumns: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*spalten?\s*f[üu]llen\b/i,
+        clearFirstNColumns: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*spalten?\s*leer\b/i,
+        clearLastNColumns: /\bletzte[nr]?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*spalten?\s*leer\b/i,
         // Reihen füllen/leeren (erste/letzte N)
-        fillFirstNRows: /\berste\s*(\d+)\s*reihen?\s*f[üu]llen\b/i,
-        clearFirstNRows: /\berste\s*(\d+)\s*reihen?\s*leer\b/i,
-        fillLastNRows: /\bletzte[nr]?\s*(\d+)?\s*reihen?\s*f[üu]llen\b/i,
-        clearLastNRows: /\bletzte[nr]?\s*(\d+)?\s*reihen?\s*leer\b/i,
+        fillFirstNRows: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*reihen?\s*f[üu]llen\b/i,
+        clearFirstNRows: /\berste\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*reihen?\s*leer\b/i,
+        fillLastNRows: /\bletzte[nr]?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*reihen?\s*f[üu]llen\b/i,
+        clearLastNRows: /\bletzte[nr]?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)?\s*reihen?\s*leer\b/i,
         fillOnlyFrame: /\bnur\s*rand\s*f[üu]llen\b/i,
         fillBlock: /\bblock\s*(\d+)\s*[x×]\s*(\d+)\s*ab\s*reihe\s*(\d+)\s*,?\s*spalte\s*(\d+)\b/i,
         fillBlockRelative: /\bblock\s*(\d+)\s*[x×]\s*(\d+)\s*ab\s*reihe\s*von\s*unten\s*(\d+)\s*,?\s*spalte\s*von\s*rechts\s*(\d+)\b/i,
@@ -3001,39 +3001,39 @@
       if (this.patterns.clearTopRow.test(input)) config.clearTopRow = true;
       if (this.patterns.clearBottomRow.test(input)) config.clearBottomRow = true;
       const fillFirstN = input.match(this.patterns.fillFirstNColumns);
-      if (fillFirstN) config.fillFirstNColumns = parseInt(fillFirstN[1], 10);
+      if (fillFirstN) config.fillFirstNColumns = this.parseWordNumber(fillFirstN[1]);
       const clearFirstN = input.match(this.patterns.clearFirstNColumns);
-      if (clearFirstN) config.clearFirstNColumns = parseInt(clearFirstN[1], 10);
+      if (clearFirstN) config.clearFirstNColumns = this.parseWordNumber(clearFirstN[1]);
       const clearLastN = input.match(this.patterns.clearLastNColumns);
       if (clearLastN) config.clearLastNColumns = parseInt(clearLastN[1] || '1', 10);
       if (this.patterns.fillOnlyFrame.test(input)) config.fillOnlyFrame = true;
       const blockMatch = input.match(this.patterns.fillBlock);
       if (blockMatch) {
         config.fillBlock = {
-          height: parseInt(blockMatch[1], 10),
-          width: parseInt(blockMatch[2], 10),
-          startRow: parseInt(blockMatch[3], 10),
-          startCol: parseInt(blockMatch[4], 10)
+          height: this.parseWordNumber(blockMatch[1]),
+          width: this.parseWordNumber(blockMatch[2]),
+          startRow: this.parseWordNumber(blockMatch[3]),
+          startCol: this.parseWordNumber(blockMatch[4])
         };
       }
       const blockRel = input.match(this.patterns.fillBlockRelative);
       if (blockRel) {
         config.fillBlockRelative = {
-          height: parseInt(blockRel[1], 10),
-          width: parseInt(blockRel[2], 10),
-          fromBottom: parseInt(blockRel[3], 10),
-          fromRight: parseInt(blockRel[4], 10)
+          height: this.parseWordNumber(blockRel[1]),
+          width: this.parseWordNumber(blockRel[2]),
+          fromBottom: this.parseWordNumber(blockRel[3]),
+          fromRight: this.parseWordNumber(blockRel[4])
         };
       }
       // Reihen erste/letzte N füllen/leer
       const fillFirstRows = input.match(this.patterns.fillFirstNRows);
-      if (fillFirstRows) config.fillFirstNRows = parseInt(fillFirstRows[1], 10);
+      if (fillFirstRows) config.fillFirstNRows = this.parseWordNumber(fillFirstRows[1]);
       const clearFirstRows = input.match(this.patterns.clearFirstNRows);
-      if (clearFirstRows) config.clearFirstNRows = parseInt(clearFirstRows[1], 10);
+      if (clearFirstRows) config.clearFirstNRows = this.parseWordNumber(clearFirstRows[1]);
       const fillLastRows = input.match(this.patterns.fillLastNRows);
-      if (fillLastRows) config.fillLastNRows = parseInt((fillLastRows[1] || '1'), 10);
+      if (fillLastRows) config.fillLastNRows = this.parseWordNumber((fillLastRows[1] || '1'));
       const clearLastRows = input.match(this.patterns.clearLastNRows);
-      if (clearLastRows) config.clearLastNRows = parseInt((clearLastRows[1] || '1'), 10);
+      if (clearLastRows) config.clearLastNRows = this.parseWordNumber((clearLastRows[1] || '1'));
 
       // KURZE EINGABEN: Verwende aktuelles Grid als Basis
       const isShortInput = input.length < 20 && !input.match(/\d/);
@@ -3201,12 +3201,12 @@
       if (config.adjustSpacing) {
         this.adjustGridSpacing(config.adjustSpacing);
       }
-      // Wenn Reihen-Konfiguration angegeben, verwende spezielle Selektion
-      else if (config.rowConfig) {
+      // Führe Reihen-Konfiguration falls vorhanden zuerst aus
+      if (config.rowConfig) {
         this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
       }
-      // Explizite Reihen-/Spalten-Selektion und Lücken (1-basiert)
-      else if (config.selectRows || config.gapRows || config.selectColumns || config.gapColumns || config.clearFrame || (config.selectAreaRows && config.selectAreaCols) || config.fillLeftHalf || config.clearRightHalf || config.everySecondRowsStart || config.clearTopRow || config.clearBottomRow || config.fillFirstNColumns || config.clearFirstNColumns || config.clearLastNColumns || config.fillFirstNRows || config.clearFirstNRows || config.fillLastNRows || config.clearLastNRows || config.fillOnlyFrame || config.fillBlock || config.fillBlockRelative) {
+      // Explizite Reihen-/Spalten-Selektion und Layout-Operationen additiv anwenden
+      if (config.selectRows || config.gapRows || config.selectColumns || config.gapColumns || config.clearFrame || (config.selectAreaRows && config.selectAreaCols) || config.fillLeftHalf || config.clearRightHalf || config.everySecondRowsStart || config.clearTopRow || config.clearBottomRow || config.fillFirstNColumns || config.clearFirstNColumns || config.clearLastNColumns || config.fillFirstNRows || config.clearFirstNRows || config.fillLastNRows || config.clearLastNRows || config.fillOnlyFrame || config.fillBlock || config.fillBlockRelative) {
         // Falls Grid zuvor geändert wurde: Auswahl bereits leer bzw. erhalten je nach Logik
         // Wir arbeiten auf aktueller Selection weiter (additiv, außer Grid-Change)
         const maxRows = this.solarGrid.rows;
@@ -3422,8 +3422,8 @@
         this.solarGrid.buildList();
         this.solarGrid.updateSummaryOnChange();
       }
-      // Wenn Module-Anzahl angegeben, automatisch auswählen
-      else if (config.moduleCount) {
+      // Wenn Module-Anzahl angegeben, automatisch auswählen (nur wenn keine expliziten Selektions-Flags gesetzt wurden)
+      if (config.moduleCount && !(config.selectRows || config.gapRows || config.selectColumns || config.gapColumns || config.selectAreaRows || config.selectAreaCols || config.fillBlock || config.fillBlockRelative || config.fillFirstNRows || config.clearFirstNRows || config.fillLastNRows || config.clearLastNRows || config.fillFirstNColumns || config.clearFirstNColumns || config.clearLastNColumns)) {
         if (config.suppressAutoSelection) {
           // "gleichmäßig" ist deprecated → keine Auto-Verteilung/Selektion
           this.solarGrid.showToast('Hinweis: "gleichmäßig" ist nicht mehr verfügbar. Bitte geben Sie Reihen/Spalten oder Module pro Reihe an.', 3500);
