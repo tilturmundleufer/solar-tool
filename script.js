@@ -2209,6 +2209,9 @@
         // Explizite Reihen-Selektion und Reihen-Lücken (1-basiert)
         selectRowsExplicit: /mit\s*modul\w*\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,und]+)/i,
         gapRowsExplicit: /mit\s*l[üu]cken\s*in\s*(?:reihe|zeile)n?\s*([0-9\s,und]+)/i,
+        // Explizite Spalten-Selektion und Spalten-Lücken (1-basiert)
+        selectColumnsExplicit: /mit\s*modul\w*\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
+        gapColumnsExplicit: /mit\s*l[üu]cken\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
         // Kombinierte Checkbox-Syntax
         checkboxAllExcept: /(?:alles\s*außer|alle\s*außer)/i,
         checkboxOnly: /(?:nur|only)/i,
@@ -2725,6 +2728,31 @@
           config.gapRows = Array.from(new Set(rowsList));
         }
       }
+      // Explizite Spalten-Selektion / Lücken (1-basiert)
+      const selectColsMatch = input.match(this.patterns.selectColumnsExplicit);
+      if (selectColsMatch) {
+        const colsString = selectColsMatch[1] || '';
+        const colsList = colsString
+          .replace(/\bund\b/gi, ',')
+          .split(',')
+          .map(s => parseInt(s.trim(), 10))
+          .filter(n => Number.isInteger(n) && n > 0);
+        if (colsList.length > 0) {
+          config.selectColumns = Array.from(new Set(colsList));
+        }
+      }
+      const gapColsMatch = input.match(this.patterns.gapColumnsExplicit);
+      if (gapColsMatch) {
+        const colsString = gapColsMatch[1] || '';
+        const colsList = colsString
+          .replace(/\bund\b/gi, ',')
+          .split(',')
+          .map(s => parseInt(s.trim(), 10))
+          .filter(n => Number.isInteger(n) && n > 0);
+        if (colsList.length > 0) {
+          config.gapColumns = Array.from(new Set(colsList));
+        }
+      }
       
       // KURZE EINGABEN: Verwende aktuelles Grid als Basis
       const isShortInput = input.length < 20 && !input.match(/\d/);
@@ -2896,8 +2924,8 @@
       else if (config.rowConfig) {
         this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
       }
-      // Explizite Reihen-Selektion: wählt vollständige Reihen (1-basiert)
-      else if (config.selectRows || config.gapRows) {
+      // Explizite Reihen-/Spalten-Selektion und Lücken (1-basiert)
+      else if (config.selectRows || config.gapRows || config.selectColumns || config.gapColumns) {
         // Falls Grid zuvor geändert wurde: Auswahl bereits leer bzw. erhalten je nach Logik
         // Wir arbeiten auf aktueller Selection weiter (additiv, außer Grid-Change)
         const maxRows = this.solarGrid.rows;
@@ -2930,6 +2958,38 @@
               this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
             }
             for (let x = 0; x < maxCols; x++) {
+              this.solarGrid.selection[y][x] = false;
+            }
+          }
+        }
+        // Selektiere Spalten
+        if (Array.isArray(config.selectColumns)) {
+          for (const col1Based of config.selectColumns) {
+            const x = col1Based - 1;
+            if (x < 0 || x >= maxCols) {
+              this.solarGrid.showToast(`⚠️ Spalte ${col1Based} existiert nicht (Grid ${maxCols}×${maxRows}).`, 3000);
+              continue;
+            }
+            for (let y = 0; y < maxRows; y++) {
+              if (!this.solarGrid.selection[y]) {
+                this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
+              }
+              this.solarGrid.selection[y][x] = true;
+            }
+          }
+        }
+        // Leere Spalten (Lücken)
+        if (Array.isArray(config.gapColumns)) {
+          for (const col1Based of config.gapColumns) {
+            const x = col1Based - 1;
+            if (x < 0 || x >= maxCols) {
+              this.solarGrid.showToast(`⚠️ Spalte ${col1Based} existiert nicht (Grid ${maxCols}×${maxRows}).`, 3000);
+              continue;
+            }
+            for (let y = 0; y < maxRows; y++) {
+              if (!this.solarGrid.selection[y]) {
+                this.solarGrid.selection[y] = Array.from({ length: maxCols }, () => false);
+              }
               this.solarGrid.selection[y][x] = false;
             }
           }
