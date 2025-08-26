@@ -3163,16 +3163,25 @@
       const gridSizeChanged = (config.cols && config.cols !== oldCols) || 
                              (config.rows && config.rows !== oldRows);
       
+      // Prüfe, ob explizite Selektions-Operationen angefragt sind
+      const hasExplicitOps = (
+        config.selectRows || config.gapRows || config.selectColumns || config.gapColumns ||
+        (config.selectAreaRows && config.selectAreaCols) || config.fillOnlyFrame || config.clearFrame ||
+        config.fillLeftHalf || config.clearRightHalf || config.everySecondRowsStart ||
+        config.clearTopRow || config.clearBottomRow || config.fillFirstNColumns || config.clearFirstNColumns ||
+        config.clearLastNColumns || config.fillFirstNRows || config.clearFirstNRows ||
+        config.fillLastNRows || config.clearLastNRows || config.fillBlock || config.fillBlockRelative
+      );
+      
       let newSelection;
       if (gridSizeChanged) {
-        // Grid-Größe geändert: Verhalten hängt davon ab ob moduleCount/rowConfig folgt
-        if (config.moduleCount || config.rowConfig) {
-          // Wenn moduleCount oder rowConfig folgt: LEERE Matrix (autoSelect übernimmt)
+        // Grid-Größe geändert: Leere Matrix, wenn automatische oder explizite Selektion folgt
+        if (config.moduleCount || config.rowConfig || hasExplicitOps) {
           newSelection = Array.from({ length: this.solarGrid.rows }, () =>
             Array.from({ length: this.solarGrid.cols }, () => false)
           );
         } else {
-          // Nur Grid-Größe ohne Auto-Selection: Behalte was möglich ist
+          // Nur Grid-Größe ohne weitere Selektion: Behalte was möglich ist
           newSelection = Array.from({ length: this.solarGrid.rows }, (_, y) =>
             Array.from({ length: this.solarGrid.cols }, (_, x) => {
               if (oldSelection && y < oldSelection.length && x < oldSelection[y].length) {
@@ -3416,6 +3425,47 @@
             const y = row1Based - 1;
             ensureRow(y);
             for (let x = 0; x < maxCols; x++) this.solarGrid.selection[y][x] = true;
+          }
+        }
+        // Sonderfall: moduleCount + rowsOnly + Spalten-Lücken → nach dem Leeren wieder bis zur Zielmenge auffüllen (nur auf erlaubten Spalten)
+        if (config.moduleCount && config.rowConfig && !config.selectRows && !config.gapRows) {
+          const prohibitedCols = new Set();
+          if (config.clearFirstNColumns && config.clearFirstNColumns > 0) {
+            for (let x = 0; x < Math.min(this.solarGrid.cols, config.clearFirstNColumns); x++) prohibitedCols.add(x);
+          }
+          if (Array.isArray(config.gapColumns)) {
+            for (const col1Based of config.gapColumns) {
+              const x = col1Based - 1; if (x >= 0 && x < this.solarGrid.cols) prohibitedCols.add(x);
+            }
+          }
+          // Prüfe Kapazität auf erlaubten Spalten; erweitere ggf. die Spaltenzahl
+          const allowedPerRow = this.solarGrid.cols - prohibitedCols.size;
+          const rows = this.solarGrid.rows;
+          const neededColsIfExpand = Math.ceil((config.moduleCount + prohibitedCols.size) / rows);
+          if (allowedPerRow * rows < config.moduleCount) {
+            // Erweitere Spaltenzahl so, dass erlaubte Spalten genug Kapazität haben
+            this.solarGrid.cols = Math.max(this.solarGrid.cols, neededColsIfExpand);
+            // Erweiterte Auswahlmatrix vorbereiten
+            for (let y = 0; y < this.solarGrid.rows; y++) {
+              if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+              for (let x = this.solarGrid.selection[y].length; x < this.solarGrid.cols; x++) this.solarGrid.selection[y][x] = false;
+            }
+          }
+          // Neu auffüllen bis moduleCount erreicht – nur erlaubte Spalten
+          // Zuerst alles auf erlaubten Spalten leeren, damit keine Lücken bleiben
+          for (let y = 0; y < this.solarGrid.rows; y++) {
+            for (let x = 0; x < this.solarGrid.cols; x++) {
+              if (!prohibitedCols.has(x)) this.solarGrid.selection[y][x] = false;
+            }
+          }
+          let placed = 0;
+          outer: for (let y = 0; y < this.solarGrid.rows; y++) {
+            for (let x = 0; x < this.solarGrid.cols; x++) {
+              if (prohibitedCols.has(x)) continue;
+              this.solarGrid.selection[y][x] = true;
+              placed++;
+              if (placed >= config.moduleCount) break outer;
+            }
           }
         }
         this.solarGrid.buildGrid();
