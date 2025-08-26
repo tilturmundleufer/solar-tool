@@ -2212,6 +2212,9 @@
         // Explizite Spalten-Selektion und Spalten-Lücken (1-basiert)
         selectColumnsExplicit: /mit\s*modul\w*\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
         gapColumnsExplicit: /mit\s*l[üu]cken\s*in\s*(?:spalte|spalten)\s*([0-9\s,und]+)/i,
+        // Alle Reihen/Spalten außer ... (1-basiert, erlaubt Bereiche)
+        allRowsExcept: /alle\s*(?:reihen|zeilen)\s*(?:außer|ausser)\s*([0-9\s,und–—-bis]+)/i,
+        allColumnsExcept: /alle\s*spalten\s*(?:außer|ausser)\s*([0-9\s,und–—-bis]+)/i,
         // Kombinierte Checkbox-Syntax
         checkboxAllExcept: /(?:alles\s*außer|alle\s*außer)/i,
         checkboxOnly: /(?:nur|only)/i,
@@ -2703,6 +2706,63 @@
       if (deleteAllConfigsMatch) {
         config.action = 'resetAllConfigs';
         return config;
+      }
+      // Alle Reihen/Spalten außer ... → erzeugt vollständige Liste minus Ausnahmen
+      const allRowsExceptMatch = input.match(this.patterns.allRowsExcept);
+      if (allRowsExceptMatch) {
+        const maxRows = this.solarGrid.rows;
+        const base = Array.from({ length: maxRows }, (_, i) => i + 1);
+        const str = allRowsExceptMatch[1] || '';
+        const normalized = str
+          .replace(/[–—]/g, '-')
+          .replace(/\bund\b/gi, ',')
+          .replace(/\bbis\b/gi, '-');
+        const tokens = normalized.split(',').map(s => s.trim()).filter(Boolean);
+        const except = new Set();
+        for (const t of tokens) {
+          const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m) {
+            let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+            if (Number.isInteger(a) && Number.isInteger(b)) {
+              const start = Math.min(a, b);
+              const end = Math.max(a, b);
+              for (let n = start; n <= end; n++) except.add(n);
+            }
+          } else {
+            const n = parseInt(t, 10);
+            if (Number.isInteger(n) && n > 0) except.add(n);
+          }
+        }
+        const result = base.filter(n => !except.has(n));
+        if (result.length > 0) config.selectRows = result;
+      }
+      const allColumnsExceptMatch = input.match(this.patterns.allColumnsExcept);
+      if (allColumnsExceptMatch) {
+        const maxCols = this.solarGrid.cols;
+        const base = Array.from({ length: maxCols }, (_, i) => i + 1);
+        const str = allColumnsExceptMatch[1] || '';
+        const normalized = str
+          .replace(/[–—]/g, '-')
+          .replace(/\bund\b/gi, ',')
+          .replace(/\bbis\b/gi, '-');
+        const tokens = normalized.split(',').map(s => s.trim()).filter(Boolean);
+        const except = new Set();
+        for (const t of tokens) {
+          const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m) {
+            let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+            if (Number.isInteger(a) && Number.isInteger(b)) {
+              const start = Math.min(a, b);
+              const end = Math.max(a, b);
+              for (let n = start; n <= end; n++) except.add(n);
+            }
+          } else {
+            const n = parseInt(t, 10);
+            if (Number.isInteger(n) && n > 0) except.add(n);
+          }
+        }
+        const result = base.filter(n => !except.has(n));
+        if (result.length > 0) config.selectColumns = result;
       }
       
       // Explizite Reihen-Selektion / Lücken (1-basiert)
