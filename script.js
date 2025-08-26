@@ -2219,6 +2219,13 @@
         // Alle Reihen/Spalten außer ... (1-basiert, erlaubt Bereiche)
         allRowsExcept: /alle\s*(?:reihen|zeilen)\s*(?:außer|ausser)\s*([0-9\s,und–—-bis]+)/i,
         allColumnsExcept: /alle\s*spalten\s*(?:außer|ausser)\s*([0-9\s,und–—-bis]+)/i,
+        // Neue präzise Befehle
+        clearTopRow: /\b(?:oberste|oberer)\s*reihe\s*leer\b/i,
+        clearBottomRow: /\b(?:unterste|unterer)\s*reihe\s*leer\b/i,
+        fillFirstNColumns: /\berste\s*(\d+)\s*spalten?\s*f[üu]llen\b/i,
+        clearLastNColumns: /\bletzte[nr]?\s*(\d+)?\s*spalten?\s*leer\b/i,
+        fillOnlyFrame: /\bnur\s*rand\s*f[üu]llen\b/i,
+        fillBlock: /\bblock\s*(\d+)\s*[x×]\s*(\d+)\s*ab\s*reihe\s*(\d+)\s*,?\s*spalte\s*(\d+)\b/i,
         // Kombinierte Checkbox-Syntax
         checkboxAllExcept: /(?:alles\s*außer|alle\s*außer)/i,
         checkboxOnly: /(?:nur|only)/i,
@@ -2983,6 +2990,24 @@
         }
       }
       
+      // Neue präzise Befehle parsen
+      if (this.patterns.clearTopRow.test(input)) config.clearTopRow = true;
+      if (this.patterns.clearBottomRow.test(input)) config.clearBottomRow = true;
+      const fillFirstN = input.match(this.patterns.fillFirstNColumns);
+      if (fillFirstN) config.fillFirstNColumns = parseInt(fillFirstN[1], 10);
+      const clearLastN = input.match(this.patterns.clearLastNColumns);
+      if (clearLastN) config.clearLastNColumns = parseInt(clearLastN[1] || '1', 10);
+      if (this.patterns.fillOnlyFrame.test(input)) config.fillOnlyFrame = true;
+      const blockMatch = input.match(this.patterns.fillBlock);
+      if (blockMatch) {
+        config.fillBlock = {
+          height: parseInt(blockMatch[1], 10),
+          width: parseInt(blockMatch[2], 10),
+          startRow: parseInt(blockMatch[3], 10),
+          startCol: parseInt(blockMatch[4], 10)
+        };
+      }
+
       // KURZE EINGABEN: Verwende aktuelles Grid als Basis
       const isShortInput = input.length < 20 && !input.match(/\d/);
       if (isShortInput) {
@@ -3154,7 +3179,7 @@
         this.applyRowConfiguration(config.rowConfig, config.intelligentDistribution);
       }
       // Explizite Reihen-/Spalten-Selektion und Lücken (1-basiert)
-      else if (config.selectRows || config.gapRows || config.selectColumns || config.gapColumns || config.clearFrame || (config.selectAreaRows && config.selectAreaCols) || config.fillLeftHalf || config.clearRightHalf || config.everySecondRowsStart) {
+      else if (config.selectRows || config.gapRows || config.selectColumns || config.gapColumns || config.clearFrame || (config.selectAreaRows && config.selectAreaCols) || config.fillLeftHalf || config.clearRightHalf || config.everySecondRowsStart || config.clearTopRow || config.clearBottomRow || config.fillFirstNColumns || config.clearLastNColumns || config.fillOnlyFrame || config.fillBlock) {
         // Falls Grid zuvor geändert wurde: Auswahl bereits leer bzw. erhalten je nach Logik
         // Wir arbeiten auf aktueller Selection weiter (additiv, außer Grid-Change)
         const maxRows = this.solarGrid.rows;
@@ -3258,6 +3283,53 @@
           for (let y = 0; y < maxRows; y++) {
             ensureRow(y);
             for (let x = startX; x < maxCols; x++) this.solarGrid.selection[y][x] = false;
+          }
+        }
+        // Oberste/unterste Reihe leeren
+        if (config.clearTopRow) {
+          const y = 0; ensureRow(y);
+          for (let x = 0; x < maxCols; x++) this.solarGrid.selection[y][x] = false;
+        }
+        if (config.clearBottomRow) {
+          const y = maxRows - 1; ensureRow(y);
+          for (let x = 0; x < maxCols; x++) this.solarGrid.selection[y][x] = false;
+        }
+        // Erste N Spalten füllen
+        if (config.fillFirstNColumns && config.fillFirstNColumns > 0) {
+          const endX = Math.min(maxCols - 1, config.fillFirstNColumns - 1);
+          for (let y = 0; y < maxRows; y++) {
+            ensureRow(y);
+            for (let x = 0; x <= endX; x++) this.solarGrid.selection[y][x] = true;
+          }
+        }
+        // Letzte N Spalten leeren (Default 1)
+        if (config.clearLastNColumns && config.clearLastNColumns > 0) {
+          const startX = Math.max(0, maxCols - config.clearLastNColumns);
+          for (let y = 0; y < maxRows; y++) {
+            ensureRow(y);
+            for (let x = startX; x < maxCols; x++) this.solarGrid.selection[y][x] = false;
+          }
+        }
+        // Nur Rand füllen (innen leeren)
+        if (config.fillOnlyFrame) {
+          for (let y = 0; y < maxRows; y++) {
+            ensureRow(y);
+            for (let x = 0; x < maxCols; x++) {
+              const isFrame = y === 0 || y === maxRows - 1 || x === 0 || x === maxCols - 1;
+              this.solarGrid.selection[y][x] = isFrame;
+            }
+          }
+        }
+        // Block AxB ab Start (R,S)
+        if (config.fillBlock) {
+          const { height, width, startRow, startCol } = config.fillBlock;
+          const y0 = Math.max(1, startRow) - 1;
+          const x0 = Math.max(1, startCol) - 1;
+          for (let y = y0; y < Math.min(maxRows, y0 + height); y++) {
+            ensureRow(y);
+            for (let x = x0; x < Math.min(maxCols, x0 + width); x++) {
+              this.solarGrid.selection[y][x] = true;
+            }
           }
         }
         // Jede zweite Reihe füllen
