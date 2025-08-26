@@ -2197,8 +2197,8 @@
         deleteAllConfigs: /^(?:alle[\s-]*(?:konfigurationen|configs?|konfigs?)[\s-]*(?:löschen|entfernen)|(?:alles|alle)[\s-]*(?:löschen|zurücksetzen)|von[\s-]*(?:vorne|vorn)[\s-]*(?:beginnen|anfangen)|neu[\s-]*starten|start[\s-]*over|reset[\s-]*all)$/i,
         // "reset", "zurücksetzen" → Grid zurücksetzen
         resetGrid: /^(?:reset|zurücksetzen|zurücksetzen)$/i,
-        // Intelligente Modul-Verteilung
-        distributionEqual: /(?:gleichmäßig|gleich|optimal)/i,
+        // Intelligente Modul-Verteilung ("gleichmäßig" wird deprecated behandelt)
+        distributionEqual: /(?:gleich[-\s]*m[aä]ßig|gleichmaessig|gleich|optimal)/i,
         distributionRows: /(?:in\s*reihen|reihenweise)/i,
         distributionColumns: /(?:in\s*spalten|spaltenweise)/i,
         distributionRandom: /(?:zufällig|random)/i,
@@ -2485,7 +2485,10 @@
       const distributionRandomMatch = input.match(this.patterns.distributionRandom);
       
       if (distributionEqualMatch) {
-        config.distribution = 'equal';
+        // Deprecatet: "gleichmäßig" führt nicht mehr zu Auto-Verteilung
+        // Stattdessen: Nutzerhinweis und Auto-Selection unterdrücken
+        config.suppressAutoSelection = true;
+        config.deprecatedNotice = 'distributionEqual';
       } else if (distributionRowsMatch) {
         config.distribution = 'rows';
       } else if (distributionColumnsMatch) {
@@ -2866,11 +2869,20 @@
       }
       // Wenn Module-Anzahl angegeben, automatisch auswählen
       else if (config.moduleCount) {
-        if (config.distribution) {
+        if (config.suppressAutoSelection) {
+          // "gleichmäßig" ist deprecated → keine Auto-Verteilung/Selektion
+          this.solarGrid.showToast('Hinweis: "gleichmäßig" ist nicht mehr verfügbar. Bitte geben Sie Reihen/Spalten oder Module pro Reihe an.', 3500);
+          // Nichts weiter tun
+        } else if (config.distribution) {
           this.distributeModules(config.moduleCount, config.distribution, config);
         } else {
           this.autoSelectModules(config.moduleCount);
         }
+      }
+
+      // Globaler Hinweis, falls "gleichmäßig" erkannt wurde, aber keine Modulanzahl vorhanden war
+      if (!config.moduleCount && config.deprecatedNotice === 'distributionEqual') {
+        this.solarGrid.showToast('Hinweis: "gleichmäßig" ist nicht mehr verfügbar. Nutzen Sie z. B. "3 Reihen mit 6 Modulen".', 3500);
       }
       
       // Verstecke Tipps nach erster Nutzung
