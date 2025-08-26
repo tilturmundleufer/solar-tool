@@ -132,8 +132,10 @@ Ergebnis:
 5. **Grid-Layout**: Befehle wie `kompakt`, `mit lücken`, `1 reihe abstand`, `doppelter abstand` sind kombinierbar mit Größenangaben
 6. **Verteilung**: `in reihen`, `in spalten`, `zufällig` (Hinweis: `gleichmäßig` ist deaktiviert)
 
-### ⚠️ Hinweis zur Verteilung "gleichmäßig"
-`gleichmäßig` (inkl. Varianten wie `gleich-mäßig`, `gleichmaessig`, `optimal`) ist deaktiviert. Bitte nutzen Sie spezifische Eingaben wie `3 reihen mit 5 modulen` oder geben Sie die Modulanzahl mit Reihen/Spalten an.
+### ⚠️ Hinweise zur Verteilung
+`gleichmäßig` (inkl. Varianten wie `gleich-mäßig`, `gleichmaessig`, `optimal`) ist deaktiviert.
+`zufällig` (inkl. `random`, `zufaellig`) ist deaktiviert.
+Bitte nutzen Sie präzise Angaben wie `3 reihen mit 5 modulen` oder konkrete Reihen/Spalten.
 
 ### 🚀 Erweiterte Beispiele
 
@@ -158,11 +160,17 @@ ohne module, ohne mc4, ohne kabel, ohne holz
 mit lücken in reihe 3
 → Reihe 3 vollständig geleert (ähnlich „1 reihe abstand“)
 
+mit modulen in reihen 2-4
+→ Reihen 2, 3, 4 vollständig ausgewählt
+
 mit modulen in spalte 2 und 4
 → Spalten 2 und 4 vollständig ausgewählt
 
 mit lücken in spalte 1
 → Spalte 1 vollständig geleert
+
+mit lücken in spalten 2 bis 4
+→ Spalten 2, 3, 4 vollständig geleert
 ```
 
 Hinweis: Reihen/Spalten sind 1-basiert (Reihe 1 = oberste Zeile, Spalte 1 = linke Spalte). Out-of-Range Eingaben führen zu einem freundlichen Hinweis.
