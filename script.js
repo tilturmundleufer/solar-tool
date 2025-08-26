@@ -2201,7 +2201,7 @@
         distributionEqual: /(?:gleich[-\s]*m[aä]ßig|gleichmaessig|gleich|optimal)/i,
         distributionRows: /(?:in\s*reihen|reihenweise)/i,
         distributionColumns: /(?:in\s*spalten|spaltenweise)/i,
-        distributionRandom: /(?:zufällig|random)/i,
+        distributionRandom: /(?:zuf[aä]llig|zufaellig|random)/i,
         // Erweiterte Abstand-Logik
         spacingDouble: /(?:doppelter|doppeltem)\s*abstand/i,
         spacingRowsOnly: /(?:nur\s*)?(?:zwischen\s*)?reihen/i,
@@ -2500,7 +2500,9 @@
       } else if (distributionColumnsMatch) {
         config.distribution = 'columns';
       } else if (distributionRandomMatch) {
-        config.distribution = 'random';
+        // Deprecatet: "zufällig" führt nicht mehr zu Auto-Verteilung
+        config.suppressAutoSelection = true;
+        config.deprecatedNotice = 'distributionRandom';
       }
       
       // Module-Anzahl parsen (nur wenn keine Reihen-Konfiguration)
@@ -2707,50 +2709,110 @@
       const selectRowsMatch = input.match(this.patterns.selectRowsExplicit);
       if (selectRowsMatch) {
         const rowsString = selectRowsMatch[1] || '';
-        const rowsList = rowsString
+        const normalized = rowsString
+          .replace(/[–—]/g, '-')
           .replace(/\bund\b/gi, ',')
-          .split(',')
-          .map(s => parseInt(s.trim(), 10))
-          .filter(n => Number.isInteger(n) && n > 0);
-        if (rowsList.length > 0) {
-          config.selectRows = Array.from(new Set(rowsList));
+          .replace(/\bbis\b/gi, '-');
+        const tokens = normalized.split(',').map(s => s.trim()).filter(Boolean);
+        const numbers = [];
+        for (const t of tokens) {
+          const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m) {
+            let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+            if (Number.isInteger(a) && Number.isInteger(b)) {
+              const start = Math.min(a, b);
+              const end = Math.max(a, b);
+              for (let n = start; n <= end; n++) numbers.push(n);
+            }
+          } else {
+            const n = parseInt(t, 10);
+            if (Number.isInteger(n) && n > 0) numbers.push(n);
+          }
+        }
+        if (numbers.length > 0) {
+          config.selectRows = Array.from(new Set(numbers));
         }
       }
       const gapRowsMatch = input.match(this.patterns.gapRowsExplicit);
       if (gapRowsMatch) {
         const rowsString = gapRowsMatch[1] || '';
-        const rowsList = rowsString
+        const normalized = rowsString
+          .replace(/[–—]/g, '-')
           .replace(/\bund\b/gi, ',')
-          .split(',')
-          .map(s => parseInt(s.trim(), 10))
-          .filter(n => Number.isInteger(n) && n > 0);
-        if (rowsList.length > 0) {
-          config.gapRows = Array.from(new Set(rowsList));
+          .replace(/\bbis\b/gi, '-');
+        const tokens = normalized.split(',').map(s => s.trim()).filter(Boolean);
+        const numbers = [];
+        for (const t of tokens) {
+          const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m) {
+            let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+            if (Number.isInteger(a) && Number.isInteger(b)) {
+              const start = Math.min(a, b);
+              const end = Math.max(a, b);
+              for (let n = start; n <= end; n++) numbers.push(n);
+            }
+          } else {
+            const n = parseInt(t, 10);
+            if (Number.isInteger(n) && n > 0) numbers.push(n);
+          }
+        }
+        if (numbers.length > 0) {
+          config.gapRows = Array.from(new Set(numbers));
         }
       }
       // Explizite Spalten-Selektion / Lücken (1-basiert)
       const selectColsMatch = input.match(this.patterns.selectColumnsExplicit);
       if (selectColsMatch) {
         const colsString = selectColsMatch[1] || '';
-        const colsList = colsString
+        const normalized = colsString
+          .replace(/[–—]/g, '-')
           .replace(/\bund\b/gi, ',')
-          .split(',')
-          .map(s => parseInt(s.trim(), 10))
-          .filter(n => Number.isInteger(n) && n > 0);
-        if (colsList.length > 0) {
-          config.selectColumns = Array.from(new Set(colsList));
+          .replace(/\bbis\b/gi, '-');
+        const tokens = normalized.split(',').map(s => s.trim()).filter(Boolean);
+        const numbers = [];
+        for (const t of tokens) {
+          const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m) {
+            let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+            if (Number.isInteger(a) && Number.isInteger(b)) {
+              const start = Math.min(a, b);
+              const end = Math.max(a, b);
+              for (let n = start; n <= end; n++) numbers.push(n);
+            }
+          } else {
+            const n = parseInt(t, 10);
+            if (Number.isInteger(n) && n > 0) numbers.push(n);
+          }
+        }
+        if (numbers.length > 0) {
+          config.selectColumns = Array.from(new Set(numbers));
         }
       }
       const gapColsMatch = input.match(this.patterns.gapColumnsExplicit);
       if (gapColsMatch) {
         const colsString = gapColsMatch[1] || '';
-        const colsList = colsString
+        const normalized = colsString
+          .replace(/[–—]/g, '-')
           .replace(/\bund\b/gi, ',')
-          .split(',')
-          .map(s => parseInt(s.trim(), 10))
-          .filter(n => Number.isInteger(n) && n > 0);
-        if (colsList.length > 0) {
-          config.gapColumns = Array.from(new Set(colsList));
+          .replace(/\bbis\b/gi, '-');
+        const tokens = normalized.split(',').map(s => s.trim()).filter(Boolean);
+        const numbers = [];
+        for (const t of tokens) {
+          const m = t.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m) {
+            let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+            if (Number.isInteger(a) && Number.isInteger(b)) {
+              const start = Math.min(a, b);
+              const end = Math.max(a, b);
+              for (let n = start; n <= end; n++) numbers.push(n);
+            }
+          } else {
+            const n = parseInt(t, 10);
+            if (Number.isInteger(n) && n > 0) numbers.push(n);
+          }
+        }
+        if (numbers.length > 0) {
+          config.gapColumns = Array.from(new Set(numbers));
         }
       }
       
@@ -3014,6 +3076,9 @@
       // Globaler Hinweis, falls "gleichmäßig" erkannt wurde, aber keine Modulanzahl vorhanden war
       if (!config.moduleCount && config.deprecatedNotice === 'distributionEqual') {
         this.solarGrid.showToast('Hinweis: "gleichmäßig" ist nicht mehr verfügbar. Nutzen Sie z. B. "3 Reihen mit 6 Modulen".', 3500);
+      }
+      if (!config.moduleCount && config.deprecatedNotice === 'distributionRandom') {
+        this.solarGrid.showToast('Hinweis: "zufällig" ist nicht mehr verfügbar. Nutzen Sie konkrete Reihen/Spalten-Angaben.', 3500);
       }
       
       // Verstecke Tipps nach erster Nutzung
