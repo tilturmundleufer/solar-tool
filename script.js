@@ -453,7 +453,7 @@
       const {cnt360, cnt240} = best;
       parts.Schiene_360_cm     += cnt360 * 2;
       parts.Schiene_240_cm     += cnt240 * 2;
-      parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+      parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 8;
       parts.Endklemmen         += 4;
       parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
       parts.Dachhaken          += len > 1 ? len * 3 : 4;
@@ -6956,7 +6956,7 @@
       
       p.Schiene_360_cm     += cnt360 * 2;
       p.Schiene_240_cm     += cnt240 * 2;
-      p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+      p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 8;
       p.Endklemmen         += 4;
       p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
       p.Dachhaken          += len > 1 ? len * 3 : 4;
@@ -7572,7 +7572,7 @@
 			
 			parts.Schiene_360_cm     += cnt360 * 2;
 			parts.Schiene_240_cm     += cnt240 * 2;
-			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 8;
 			parts.Endklemmen         += 4;
 			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
 			parts.Dachhaken          += len > 1 ? len * 3 : 4;
