@@ -118,46 +118,132 @@
   
   // Zentrale Produkt-Konfiguration (direkt eingebettet)
   const VE = {
-    Endklemmen: 100,
+    Endklemmen: 50,
     Schrauben: 100,
     Dachhaken: 20,
-    Mittelklemmen: 100,
+    Mittelklemmen: 50,
     Endkappen: 50,
     Schienenverbinder: 50,
-    Schiene_240_cm: 8,
-    Schiene_360_cm: 8,
+    Schiene_240_cm: 1,
+    Schiene_360_cm: 1,
     Solarmodul: 1,
     UlicaSolarBlackJadeFlow: 1,
-    MC4_Stecker: 1,
+    MC4_Stecker: 50,
     Solarkabel: 1,
     Holzunterleger: 50,
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     Erdungsklemme: 1,
-    Quetschkabelschuhe: 100,
+    Quetschkabelschuhe: 1,
     Erdungsband: 1,
     Tellerkopfschraube: 100
   };
   
   const PRICE_MAP = {
-    Solarmodul: 59.00,
-    UlicaSolarBlackJadeFlow: 89.00,
-    Endklemmen: 9.99,
-    Schrauben: 9.99,
-    Dachhaken: 9.99,
-    Mittelklemmen: 4.99,
-    Endkappen: 9.99,
-    Schienenverbinder: 9.99,
-    Schiene_240_cm: 8.99,
-    Schiene_360_cm: 9.99,
-    MC4_Stecker: 99.00,
-    Solarkabel: 29.99,
-    Holzunterleger: 25.00,
+    // VK pro VE (Fallbackpreise)
+    Solarmodul: 59.70,
+    UlicaSolarBlackJadeFlow: 67.90,
+    Endklemmen: 49.50,
+    Schrauben: 22.00,
+    Dachhaken: 69.00,
+    Mittelklemmen: 49.50,
+    Endkappen: 7.00,
+    Schienenverbinder: 65.00,
+    Schiene_240_cm: 11.99,
+    Schiene_360_cm: 17.49,
+    MC4_Stecker: 39.50,
+    Solarkabel: 86.90,
+    Holzunterleger: 17.50,
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     Erdungsklemme: 25.00,
-    Quetschkabelschuhe: 10.00,
-    Erdungsband: 0.00,
-    Tellerkopfschraube: 30.00
+    Quetschkabelschuhe: 18.50,
+    Erdungsband: 8.70,
+    Tellerkopfschraube: 26.00
   };
+
+  // Staffelpreis-Konfiguration: thresholds immer in Stück (benötigte Menge),
+  // pricePerPiece = Stückpreis auf dieser Stufe; alternativ packPrice für VE=1/packbasierte Stufen
+  const TIER_PRICING = {
+    Schiene_240_cm: [
+      { minPieces: 40, pricePerPiece: 11.59 },
+      { minPieces: 80, pricePerPiece: 11.25 }
+    ],
+    Schiene_360_cm: [
+      { minPieces: 40, pricePerPiece: 16.99 },
+      { minPieces: 80, pricePerPiece: 16.49 }
+    ],
+    Mittelklemmen: [
+      { minPieces: 300, pricePerPiece: 0.95 },
+      { minPieces: 1200, pricePerPiece: 0.79 }
+    ],
+    Endklemmen: [
+      { minPieces: 300, pricePerPiece: 0.95 },
+      { minPieces: 1200, pricePerPiece: 0.79 }
+    ],
+    Endkappen: [
+      { minPieces: 300, pricePerPiece: 0.13 },
+      { minPieces: 1200, pricePerPiece: 0.12 }
+    ],
+    Dachhaken: [
+      { minPieces: 100, pricePerPiece: 3.42 },
+      { minPieces: 720, pricePerPiece: 3.39 }
+    ],
+    Schienenverbinder: [
+      { minPieces: 200, pricePerPiece: 1.19 },
+      { minPieces: 1000, pricePerPiece: 0.99 }
+    ],
+    Schrauben: [
+      { minPieces: 1000, pricePerPiece: 0.19 },
+      { minPieces: 5000, pricePerPiece: 0.18 }
+    ],
+    Tellerkopfschraube: [
+      { minPieces: 1000, pricePerPiece: 0.25 },
+      { minPieces: 5000, pricePerPiece: 0.24 }
+    ],
+    Solarmodul: [
+      { minPieces: 36, pricePerPiece: 55.90 },
+      { minPieces: 360, pricePerPiece: 54.90 }
+    ],
+    UlicaSolarBlackJadeFlow: [
+      { minPieces: 36, pricePerPiece: 62.90 },
+      { minPieces: 360, pricePerPiece: 61.90 }
+    ],
+    MC4_Stecker: [
+      { minPieces: 1000, pricePerPiece: 0.69 },
+      { minPieces: 3000, pricePerPiece: 0.65 }
+    ],
+    Solarkabel: [
+      { minPieces: 10, pricePerPiece: 83.90 },
+      { minPieces: 30, pricePerPiece: 79.90 }
+    ],
+    Quetschkabelschuhe: [
+      // Staffelpreise hier als Packpreise (VE=1) definiert
+      { minPieces: 5, packPrice: 17.90 },
+      { minPieces: 20, packPrice: 17.50 }
+    ],
+    Holzunterleger: [
+      { minPieces: 500, pricePerPiece: 0.29 },
+      { minPieces: 2000, pricePerPiece: 0.28 }
+    ]
+  };
+
+  // Liefert den wirksamen VE-Preis (Packpreis) basierend auf benötigter Stückzahl und Staffelung
+  function getPackPriceForQuantity(productKey, requiredPieces) {
+    const ve = VE[productKey] || 1;
+    const basePackPrice = getPriceFromCache(productKey) || 0;
+    const tiers = TIER_PRICING[productKey];
+    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return basePackPrice;
+    const qty = Number(requiredPieces) || 0;
+    let best = null;
+    for (const tier of tiers) {
+      if (qty >= tier.minPieces) {
+        if (!best || tier.minPieces > best.minPieces) best = tier;
+      }
+    }
+    if (!best) return basePackPrice;
+    if (typeof best.packPrice === 'number') return best.packPrice;
+    if (typeof best.pricePerPiece === 'number') return best.pricePerPiece * ve;
+    return basePackPrice;
+  }
   
   const PRODUCT_MAP = {
     Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
@@ -973,8 +1059,8 @@
         if (options.excludeAdditionalProducts && ADDITIONAL_KEYS.has(key)) continue;
         const ve = VE[key] || 1;
         const packs = Math.ceil(value / ve);
-        const price = getPriceFromCache(key);
-        const rowPrice = packs * price;
+        const pricePerPack = getPackPriceForQuantity(key, value);
+        const rowPrice = packs * pricePerPack;
         totalPrice += rowPrice;
         rows.push({ key, value, ve, packs, rowPrice });
       }
@@ -1052,8 +1138,8 @@
       const rows = Object.entries(parts).map(([key, value]) => {
         const ve = VE[key] || 1;
         const packs = Math.ceil(value / ve);
-        const price = getPriceFromCache(key);
-        const rowPrice = packs * price;
+        const pricePerPack = getPackPriceForQuantity(key, value);
+        const rowPrice = packs * pricePerPack;
         totalPrice += rowPrice;
         return { key, value, ve, packs, rowPrice };
       });
@@ -1234,8 +1320,8 @@
       Object.entries(parts).forEach(([key, value]) => {
         if (value > 0) {
           const packs = Math.ceil(value / (VE[key] || 1));
-          const price = getPriceFromCache(key);
-          totalPrice += packs * price;
+          const pricePerPack = getPackPriceForQuantity(key, value);
+          totalPrice += packs * pricePerPack;
         }
       });
 
@@ -1827,7 +1913,7 @@
             const productName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
             const ve = VE[productKey] || 1;
             const packsNeeded = Math.ceil(quantity / ve);
-            const pricePerPack = getPriceFromCache(productKey);
+            const pricePerPack = getPackPriceForQuantity(productKey, quantity);
             const totalForProduct = packsNeeded * pricePerPack;
             totalPrice += totalForProduct;
 
@@ -2037,7 +2123,7 @@
 
           const ve = VE[productKey] || 1;
           const packs = Math.ceil(needed / ve);
-          const pricePerPack = getPriceFromCache(productKey);
+          const pricePerPack = getPackPriceForQuantity(productKey, needed);
           const totalProductPrice = packs * pricePerPack;
           totalPrice += totalProductPrice;
 
@@ -4520,7 +4606,7 @@
       // Berechne Preise und sammle Quantities
       entries.forEach(([k,v]) => {
         const packs = Math.ceil(v / VE[k]);
-        const price = getPriceFromCache(k);
+        const price = getPackPriceForQuantity(k, v);
         const itemTotal = packs * price;
         totalPrice += itemTotal;
         
@@ -4640,8 +4726,8 @@
         const veKey = key === 'Schiene240cm' ? 'Schiene_240_cm' : key === 'Schiene360cm' ? 'Schiene_360_cm' : key;
         const ve = VE[veKey] || 1;
         const packs = Math.ceil(qty / ve);
-        const price = getPriceFromCache(veKey);
-        return sum + packs * price;
+        const pricePerPack = getPackPriceForQuantity(veKey, qty);
+        return sum + packs * pricePerPack;
       }, 0);
       
       return {
@@ -5287,28 +5373,28 @@
 					return total + config.selection.flat().filter(v => v).length;
 				}, 0);
 				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
-				const pricePerPackage = getPriceFromCache('MC4_Stecker');
+				const pricePerPackage = getPackPriceForQuantity('MC4_Stecker', moduleCount);
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
 			// Solarkabel
 			if (document.getElementById('solarkabel')?.checked) {
 				const packagesNeeded = 1; // 1x Solarkabel 100M
-				const pricePerPackage = getPriceFromCache('Solarkabel');
+				const pricePerPackage = getPackPriceForQuantity('Solarkabel', 1);
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
 			// Holzunterleger
 			if (document.getElementById('holz')?.checked) {
 				const packagesNeeded = 1; // 1x Unterlegholz für Dachhaken - 50 Stück
-				const pricePerPackage = getPriceFromCache('Holzunterleger');
+				const pricePerPackage = getPackPriceForQuantity('Holzunterleger', VE['Holzunterleger']);
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
 			// Quetschkabelschuhe
 			if (document.getElementById('quetschkabelschuhe')?.checked) {
 				const packagesNeeded = 1; // 1x Quetschkabelschuhe - 100 Stück
-				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
+				const pricePerPackage = getPackPriceForQuantity('Quetschkabelschuhe', 1);
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
@@ -5327,7 +5413,7 @@
 					return total + config.selection.flat().filter(v => v).length;
 				}, 0);
 				const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
-				const pricePerPackage = getPriceFromCache('MC4_Stecker');
+				const pricePerPackage = getPackPriceForQuantity('MC4_Stecker', moduleCount);
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
@@ -5348,7 +5434,7 @@
 			// Solarkabel
 			if (document.getElementById('solarkabel')?.checked) {
 				const packagesNeeded = 1;
-				const pricePerPackage = getPriceFromCache('Solarkabel');
+				const pricePerPackage = getPackPriceForQuantity('Solarkabel', 1);
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
@@ -5369,7 +5455,7 @@
 			// Holzunterleger
 			if (document.getElementById('holz')?.checked) {
 				const packagesNeeded = 1;
-				const pricePerPackage = getPriceFromCache('Holzunterleger');
+				const pricePerPackage = getPackPriceForQuantity('Holzunterleger', VE['Holzunterleger']);
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
@@ -5390,7 +5476,7 @@
 			// Quetschkabelschuhe
 			if (document.getElementById('quetschkabelschuhe')?.checked) {
 				const packagesNeeded = 1;
-				const pricePerPackage = getPriceFromCache('Quetschkabelschuhe');
+				const pricePerPackage = getPackPriceForQuantity('Quetschkabelschuhe', 1);
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
@@ -5655,7 +5741,7 @@
 			Object.entries(parts).forEach(([partName, quantity]) => {
 				if (quantity > 0) {
 					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
-					const pricePerPackage = getPriceFromCache(partName);
+					const pricePerPackage = getPackPriceForQuantity(partName, quantity);
 					totalPrice += packagesNeeded * pricePerPackage;
 				}
 			});
@@ -6692,7 +6778,7 @@
         const fragment = document.createDocumentFragment();
         entries.forEach(([k,v]) => {
           const packs = Math.ceil(v / VE[k]);
-          const price = getPriceFromCache(k);
+          const price = getPackPriceForQuantity(k, v);
           const itemTotal = packs * price;
           const div = document.createElement('div');
           div.className = 'produkt-item';
