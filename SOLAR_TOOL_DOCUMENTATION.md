@@ -315,3 +315,22 @@ Hinweis: Der Verteilungsmodus `gleichmäßig` ist deaktiviert. Bitte verwenden S
 - Bei jeder Änderung an Smart Config, Checkboxen, Zusatzprodukten oder UI: relevante `.md`-Dateien aktualisieren (`README`, `SMART_CONFIG_EXAMPLES`, `PLACEHOLDER_EXAMPLES`, `AGENT_PROMPT_TEMPLATE`).
 - Änderungen an Architektur/State-Handling in `ARCHITECTURE_GUIDELINES` dokumentieren.
 - Dev/Prod-Regeln in `AGENT_DEVELOPMENT_GUIDE` aktuell halten.
+
+## Changelog (Preislogik)
+
+- Neu: Preis- und VE-Update für alle Kernprodukte gemäß aktueller Tabelle.
+- Neu: Staffelpreise pro Produkt (mengenbasiert). Sobald eine Staffelmengen-Schwelle erreicht ist, wird der VE-Preis dynamisch aus dem Stückpreis der Staffel × VE berechnet. Beim Unterschreiten der Schwelle wird automatisch wieder der Basispreis verwendet.
+
+## Staffelpreis-Logik (Kurz)
+
+- Quelle: `script.js` → `TIER_PRICING` (pro Produkt Liste aus `{ minPieces, pricePerPiece | packPrice }`).
+- Berechnung: `getPackPriceForQuantity(productKey, requiredPieces)` ermittelt den wirksamen Preis je VE.
+- Verwendung: Alle Preisstellen rufen nun diese Funktion auf (PDF, Sidebar-Listen, Snapshots, Zusatzprodukte).
+
+## Testhinweise
+
+- Schwellen überschreiten/unterschreiten und prüfen, dass Preise live wechseln.
+- Beispiele:
+  - 40× `Schiene_240_cm` → 11,59 € pro Stück (VE=1).
+  - 300× `Mittelklemmen` → 0,95 € pro Stück, VE=50 → Packpreis 47,50 €.
+  - 36× `Solarmodul` → 55,90 € pro Stück.

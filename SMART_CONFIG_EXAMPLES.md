@@ -244,3 +244,13 @@ Wirkung: Löscht alle Konfigurationen, setzt das Grid und alle Optionen auf den 
 **Hinweis**: Diese Funktionalität ist in beiden Dateien verfügbar:
 - `script.js` (Development)
 - `script.min.js` (Production)
+
+### Preis-/Staffel-Testfälle (Kurz)
+
+Eingabe → Erwartung (Auszug)
+
+- "40 schiene 240" → Preis je VE aus Staffel (11,59 €).
+- "80 schiene-360" → Preis je VE 16,49 €.
+- "300 mittel-klemmen" → VE=50; Stückpreis 0,95 € → Packpreis 47,50 €.
+- "unter 300 mittelklemmen" → Basispreis pro VE wieder aktiv.
+- Unbekanntes Kommando: klare Meldung im UI, keine Preisänderung.

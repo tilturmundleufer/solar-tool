@@ -209,3 +209,8 @@ node -c script.min.js
 - Files Updated: script.js ✅, script.min.js ✅
 - Testing: Verifiziert, dass nur Produkte > 0 übertragen werden, `gridImage` entfällt
 - Doc Update: SOLAR_TOOL_DOCUMENTATION.md ✅ (Payload-Spezifikation und Empfehlungen zur externen Bildgenerierung)
+
+### Preisberechnung
+
+- Verwende `getPackPriceForQuantity(productKey, requiredPieces)` statt direktem `getPriceFromCache` für alle positionsbezogenen Preisberechnungen.
+- Staffeldefinitionen stehen in `TIER_PRICING`. `pricePerPiece` × `VE` ergibt dynamischen VE-Preis; alternativ `packPrice` nutzen.
