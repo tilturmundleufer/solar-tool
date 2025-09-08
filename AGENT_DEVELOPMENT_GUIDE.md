@@ -214,3 +214,9 @@ node -c script.min.js
 
 - Verwende `getPackPriceForQuantity(productKey, requiredPieces)` statt direktem `getPriceFromCache` für alle positionsbezogenen Preisberechnungen.
 - Staffeldefinitionen stehen in `TIER_PRICING`. `pricePerPiece` × `VE` ergibt dynamischen VE-Preis; alternativ `packPrice` nutzen.
+
+## Changes Made - [2025-09-08]
+- Modified: Preislogik (`getPackPriceForQuantity`), neue Konstanten `BUSINESS_MODE`, `BUSINESS_VAT_RATE`, Helper `maybeApplyBusinessVat`, Brutto‑Varianten‑Map `GROSS_PRODUCT_MAP`, UI‑Setup `setupBusinessModeToggle()`, Warenkorb‑Mapping (`generateHiddenCartForms`, `_buildCartItems`).
+- Files Updated: script.js ✅, script.min.js ✅
+- Testing: „Firmenkunde“ on/off → UI‑Preis wechselt ×1,19; Warenkorb nutzt je nach Modus Netto/Brutto‑Varianten (Brutto: Platzhalter‑IDs).
+- Doc Update: SOLAR_TOOL_DOCUMENTATION.md ✅, SMART_CONFIG_EXAMPLES.md ✅

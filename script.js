@@ -226,12 +226,26 @@
     ]
   };
 
+  // ===== BUSINESS CUSTOMER MODE (VAT) =====
+  // Reasoning: medium – extend local logic (no new workers/threads)
+  // When enabled, display prices include 19% VAT and cart uses gross variants
+  let BUSINESS_MODE = false; // false = net (default), true = gross for business customers
+  const BUSINESS_VAT_RATE = 0.19; // 19% VAT
+  function maybeApplyBusinessVat(amount) {
+    try {
+      const n = Number(amount) || 0;
+      return BUSINESS_MODE ? (n * (1 + BUSINESS_VAT_RATE)) : n;
+    } catch (_) {
+      return amount;
+    }
+  }
+
   // Liefert den wirksamen VE-Preis (Packpreis) basierend auf benötigter Stückzahl und Staffelung
   function getPackPriceForQuantity(productKey, requiredPieces) {
     const ve = VE[productKey] || 1;
     const basePackPrice = getPriceFromCache(productKey) || 0;
     const tiers = TIER_PRICING[productKey];
-    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return basePackPrice;
+    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return maybeApplyBusinessVat(basePackPrice);
     const qty = Number(requiredPieces) || 0;
     let best = null;
     for (const tier of tiers) {
@@ -239,10 +253,10 @@
         if (!best || tier.minPieces > best.minPieces) best = tier;
       }
     }
-    if (!best) return basePackPrice;
-    if (typeof best.packPrice === 'number') return best.packPrice;
-    if (typeof best.pricePerPiece === 'number') return best.pricePerPiece * ve;
-    return basePackPrice;
+    if (!best) return maybeApplyBusinessVat(basePackPrice);
+    if (typeof best.packPrice === 'number') return maybeApplyBusinessVat(best.packPrice);
+    if (typeof best.pricePerPiece === 'number') return maybeApplyBusinessVat(best.pricePerPiece * ve);
+    return maybeApplyBusinessVat(basePackPrice);
   }
   
   const PRODUCT_MAP = {
@@ -264,6 +278,28 @@
     Quetschkabelschuhe: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
     Erdungsband: { productId:'688760e01c9c7973ee287386', variantId:'688760e0835845affc493354' },
     Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' }
+  };
+
+  // ===== GROSS (VAT-INCLUDED) VARIANT PLACEHOLDERS =====
+  // These placeholders must be replaced with real Webflow product/variant IDs
+  const GROSS_PRODUCT_MAP = {
+    Solarmodul: { productId:'GROSS_PRODUCT_ID_Solarmodul', variantId:'GROSS_VARIANT_ID_Solarmodul' },
+    UlicaSolarBlackJadeFlow: { productId:'GROSS_PRODUCT_ID_UlicaSolarBlackJadeFlow', variantId:'GROSS_VARIANT_ID_UlicaSolarBlackJadeFlow' },
+    Endklemmen: { productId:'GROSS_PRODUCT_ID_Endklemmen', variantId:'GROSS_VARIANT_ID_Endklemmen' },
+    Schrauben: { productId:'GROSS_PRODUCT_ID_Schrauben', variantId:'GROSS_VARIANT_ID_Schrauben' },
+    Dachhaken: { productId:'GROSS_PRODUCT_ID_Dachhaken', variantId:'GROSS_VARIANT_ID_Dachhaken' },
+    Mittelklemmen: { productId:'GROSS_PRODUCT_ID_Mittelklemmen', variantId:'GROSS_VARIANT_ID_Mittelklemmen' },
+    Endkappen: { productId:'GROSS_PRODUCT_ID_Endkappen', variantId:'GROSS_VARIANT_ID_Endkappen' },
+    Schienenverbinder: { productId:'GROSS_PRODUCT_ID_Schienenverbinder', variantId:'GROSS_VARIANT_ID_Schienenverbinder' },
+    Schiene_240_cm: { productId:'GROSS_PRODUCT_ID_Schiene_240_cm', variantId:'GROSS_VARIANT_ID_Schiene_240_cm' },
+    Schiene_360_cm: { productId:'GROSS_PRODUCT_ID_Schiene_360_cm', variantId:'GROSS_VARIANT_ID_Schiene_360_cm' },
+    MC4_Stecker: { productId:'GROSS_PRODUCT_ID_MC4_Stecker', variantId:'GROSS_VARIANT_ID_MC4_Stecker' },
+    Solarkabel: { productId:'GROSS_PRODUCT_ID_Solarkabel', variantId:'GROSS_VARIANT_ID_Solarkabel' },
+    Holzunterleger: { productId:'GROSS_PRODUCT_ID_Holzunterleger', variantId:'GROSS_VARIANT_ID_Holzunterleger' },
+    Erdungsklemme: { productId:'GROSS_PRODUCT_ID_Erdungsklemme', variantId:'GROSS_VARIANT_ID_Erdungsklemme' },
+    Quetschkabelschuhe: { productId:'GROSS_PRODUCT_ID_Quetschkabelschuhe', variantId:'GROSS_VARIANT_ID_Quetschkabelschuhe' },
+    Erdungsband: { productId:'GROSS_PRODUCT_ID_Erdungsband', variantId:'GROSS_VARIANT_ID_Erdungsband' },
+    Tellerkopfschraube: { productId:'GROSS_PRODUCT_ID_Tellerkopfschraube', variantId:'GROSS_VARIANT_ID_Tellerkopfschraube' }
   };
   
   const PRODUCT_NAME_MAP = {
@@ -301,7 +337,6 @@
   };
   
   // Zentrale Konfiguration ist jetzt direkt eingebettet
-
   // ===== BACKGROUND CALCULATION MANAGER =====
   class CalculationManager {
     constructor() {
@@ -1213,7 +1248,6 @@
       pdf.setTextColor(0, 0, 0);
       return 28; // Y-Start nach Header
     }
-
     // Interne Hilfsfunktion: invertiert ein Base64 PNG und cached das Ergebnis
     async getInvertedLogoBase64(originalBase64) {
       if (this._invertedLogoBase64Promise) return this._invertedLogoBase64Promise;
@@ -1438,7 +1472,6 @@
       // Footer mit Logo auf der letzten Seite
       await this.addFooter(pdf, pageWidth, pageHeight);
     }
-
     // Erfasse Grid-Visualisierung als Bild
     async captureGridVisualization(config) {
       // Alternative Methode: Erstelle temporäres Grid-Element für Screenshot
@@ -1959,7 +1992,6 @@
         return yPosition;
       }
     }
-
     // Isolierte Produktberechnung aus Snapshot
     async calculatePartsFromSnapshot(config) {
       try {
@@ -2429,7 +2461,6 @@
 
       return checkboxes;
     }
-
     parseInput(input) {
       // NEU (Testmodus, Schritt 1): Unterstütze ausschließlich Grid-Größe wie "5x5"
       try {
@@ -2825,7 +2856,7 @@
           if (checkboxCombinations.cable !== null) config.cable = checkboxCombinations.cable;
           if (checkboxCombinations.wood !== null) config.wood = checkboxCombinations.wood;
           if (checkboxCombinations.quetschkabelschuhe !== null) config.quetschkabelschuhe = checkboxCombinations.quetschkabelschuhe;
-                } else {
+        } else {
           // Fallback: Einzelne Checkbox-Patterns parsen
           
           // Module-Checkbox parsen (getrennt von moduleCount)
@@ -3764,7 +3795,6 @@
       // Grid neu aufbauen
       this.solarGrid.updateSize();
     }
-    
     // NEUE METHODE: Dynamische Abstand-Anpassung für bestehende Grids
     adjustGridSpacing(spacingConfig) {
       const { spacing, targetCols, targetRows } = spacingConfig;
@@ -4257,7 +4287,6 @@
         }
       }
     }
-
     clearHighlight() {
       // Entferne alle Highlight- und Preview-Klassen
       const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight, .drag-preview-select, .drag-preview-deselect');
@@ -4432,6 +4461,7 @@
       this.quetschkabelschuhe = document.getElementById('quetschkabelschuhe');
       this.erdungsband   = document.getElementById('erdungsband');
       this.ulicaModule   = document.getElementById('ulica-module');
+      this.firmenkunde   = document.getElementById('firmenkunde');
       
 
       		this.listHolder    = document.querySelector('.product-section');
@@ -4656,7 +4686,6 @@
       
       return { html, css };
     }
-
     getConfigData(config = null) {
       const targetConfig = config || {
         cols: this.cols,
@@ -5029,8 +5058,11 @@
         const hasUrlConfig = new URLSearchParams(window.location.search).has('configData');
         this.maybeShowIntroOverlay(cacheLoaded, hasUrlConfig);
       } catch (_) {}
++
++      // Firmenkunde Toggle UI/Event einrichten
++      this.setupBusinessModeToggle();
  
-       // Event-Listener für alle UI-Elemente setzen
+        // Event-Listener für alle UI-Elemente setzen
  		this.setupAllEventListeners();
 
   		// Prüfe ob Buttons existieren bevor Event-Listener hinzugefügt werden
@@ -5126,7 +5158,6 @@
 			
 			// Hinweis: Keine erzwungene Standard-Orientation hier setzen, um Cache/URL-Werte nicht zu überschreiben
 		}
-		
 		initSidebarNavigation() {
 			// Navigation zwischen Detail-Ansicht und Übersicht
 			const backToOverviewBtn = document.getElementById('back-to-overview');
@@ -5577,7 +5608,6 @@
 				}
 			});
 		}
-		
 		editConfigNameInList(configIndex) {
 			const config = this.configs[configIndex];
 			if (!config) return;
@@ -5823,9 +5853,6 @@
 				}
 			}, 600);
 		}
-
-
-
 		initQuickConfigInterface() {
 			// Verbesserte Initialisierung mit mehreren Versuchen
 			const initSmartConfig = () => {
@@ -6019,7 +6046,6 @@
 				console.log('No grid-affecting config found, skipping preview');
 			}
 		}
-		
 		// Smart Config Help Dropdown Initialisierung
 		initializeSmartConfigHelp() {
 			// Trigger wird auch in setupSmartConfig aufgerufen
@@ -6109,416 +6135,6 @@
 				});
 			});
 		}
-    setup() {
-  		// Verwende Standard-Werte falls nicht bereits gesetzt
-  		if (!this.cols || !this.rows) {
-  			this.cols = this.default.cols;
-  			this.rows = this.default.rows;
-  		}
-  		if (!this.cols || !this.rows) {
-    		alert('Spalten und Zeilen müssen > 0 sein');
-    		return;
-  		}
-
-  		// Nur dann eine neue leere Auswahl erstellen, wenn noch keine existiert oder die Dimensionen nicht stimmen
-    	if (
-    		!Array.isArray(this.selection) ||
-    		this.selection.length !== this.rows ||
-    		this.selection[0]?.length !== this.cols
-  		) {
-    		const oldSel = this.selection;
-    		this.selection = Array.from({ length: this.rows }, (_, y) =>
-      		Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
-    		);
-  		}
-
-  		if (this.listHolder) {
-  			this.listHolder.style.display = 'block';
-  		}
-  		this.updateSize();
-  		this.buildGrid();
-  		this.buildList();
-  		this.updateSaveButtons();
-		}
-		
-		// Neue Funktion für Grid-Event-Listener
-
-		
-		// Neue Funktion für alle Event-Listener
-		setupAllEventListeners() {
-			// Input-Event-Listener
-			const inputs = [this.wIn, this.hIn].filter(el => el);
-			inputs.forEach(el => {
-				el.removeEventListener('change', this.handleInputChange);
-				el.addEventListener('change', this.handleInputChange.bind(this));
-			});
-			
-			// Modul-Auswahl-Event-Listener
-			if (this.moduleSelect) {
-				this.moduleSelect.removeEventListener('change', this.handleModuleSelectChange);
-				this.moduleSelect.addEventListener('change', this.handleModuleSelectChange.bind(this));
-			}
-			
-			// Orientation-Event-Listener
-			if (this.orH && this.orV) {
-				[this.orH, this.orV].forEach(el => {
-					el.removeEventListener('change', this.handleOrientationChange);
-					el.addEventListener('change', this.handleOrientationChange.bind(this));
-				});
-				// Synchronisiere Buttons nach Radio-Button Setup
-				setTimeout(() => {
-					this.syncOrientationButtons();
-				}, 10);
-			}
-			
-					// Checkbox-Event-Listener
-		[this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule].filter(el => el).forEach(el => {
-			el.removeEventListener('change', this.handleCheckboxChange);
-			el.addEventListener('change', this.handleCheckboxChange.bind(this));
-		});
-		
-		// Zusätzliche Event-Listener für Modul-Checkboxen im Dropdown
-		document.querySelectorAll('#include-modules, #ulica-module').forEach(el => {
-			el.removeEventListener('change', this.handleCheckboxChange);
-			el.addEventListener('change', this.handleCheckboxChange.bind(this));
-		});
-			
-			// Expansion-Button-Event-Listener mit stabiler Referenz
-			if (!this.boundExpansionClick) {
-				this.boundExpansionClick = this.handleExpansionClick.bind(this);
-			}
-			document.querySelectorAll('[data-dir="right"]').forEach(btn => {
-				btn.removeEventListener('click', this.boundExpansionClick);
-				btn.addEventListener('click', this.boundExpansionClick);
-			});
-			document.querySelectorAll('[data-dir="left"]').forEach(btn => {
-				btn.removeEventListener('click', this.boundExpansionClick);
-				btn.addEventListener('click', this.boundExpansionClick);
-			});
-			document.querySelectorAll('[data-dir="top"]').forEach(btn => {
-				btn.removeEventListener('click', this.boundExpansionClick);
-				btn.addEventListener('click', this.boundExpansionClick);
-			});
-			document.querySelectorAll('[data-dir="bottom"]').forEach(btn => {
-				btn.removeEventListener('click', this.boundExpansionClick);
-				btn.addEventListener('click', this.boundExpansionClick);
-			});
-			
-			// Orientation-Button-Event-Listener
-			const orientHBtn = document.getElementById('orient-h');
-			const orientVBtn = document.getElementById('orient-v');
-			if (orientHBtn && orientVBtn) {
-				// Verwende eine gebundene Referenz, damit removeEventListener korrekt funktioniert
-				if (!this.boundOrientationClick) {
-					this.boundOrientationClick = this.handleOrientationButtonClick.bind(this);
-				}
-				[orientHBtn, orientVBtn].forEach(btn => {
-					btn.removeEventListener('click', this.boundOrientationClick);
-					btn.addEventListener('click', this.boundOrientationClick);
-				});
-				// Sofortige Synchronisation
-				this.syncOrientationButtons();
-			} else {
-				// Fallback: Versuche es später nochmal
-				setTimeout(() => {
-					const orientHBtn = document.getElementById('orient-h');
-					const orientVBtn = document.getElementById('orient-v');
-					if (orientHBtn && orientVBtn) {
-						if (!this.boundOrientationClick) {
-							this.boundOrientationClick = this.handleOrientationButtonClick.bind(this);
-						}
-						[orientHBtn, orientVBtn].forEach(btn => {
-							btn.removeEventListener('click', this.boundOrientationClick);
-							btn.addEventListener('click', this.boundOrientationClick);
-						});
-						// Synchronisiere Orientation Buttons nach dem Setup
-						this.syncOrientationButtons();
-					}
-				}, 50); // Reduzierte Verzögerung
-			}
-		}
-		
-		// Event-Handler-Funktionen
-		
-		// Hilfsfunktion für robuste Orientation-Button-Synchronisation
-		ensureOrientationButtonsSync() {
-			const orientHBtn = document.getElementById('orient-h');
-			const orientVBtn = document.getElementById('orient-v');
-			
-			if (!orientHBtn || !orientVBtn || !this.orH || !this.orV) return;
-			
-			// Prüfe ob Buttons korrekt synchronisiert sind
-			const isVerticalActive = orientVBtn.classList.contains('active');
-			const isHorizontalActive = orientHBtn.classList.contains('active');
-			const radioVerticalChecked = this.orV.checked;
-			const radioHorizontalChecked = this.orH.checked;
-			
-			// Wenn Inkonsistenz festgestellt wird, korrigiere sie
-			if ((isVerticalActive !== radioVerticalChecked) || (isHorizontalActive !== radioHorizontalChecked)) {
-				this.syncOrientationButtons();
-			}
-		}
-		
-		handleModuleSelectChange() {
-			this.trackInteraction();
-			const selectedValue = this.moduleSelect.value;
-			
-			if (selectedValue === '' || selectedValue === 'custom') {
-				// Kein Modul ausgewählt oder Benutzerdefiniert - Inputs freigeben
-				this.enableInputs();
-				this.updateSize();
-				this.buildList();
-				this.updateSummaryOnChange();
-				// Alle Modul-Checkboxen abwählen
-				this.clearModuleCheckboxes();
-			} else if (this.moduleData[selectedValue]) {
-				// Modul ausgewählt - Werte setzen und Inputs sperren
-				const module = this.moduleData[selectedValue];
-				this.wIn.value = module.width;
-				this.hIn.value = module.height;
-				// Aktualisiere auch die aktuelle Konfiguration mit den neuen Zellgrößen
-				if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-					this.configs[this.currentConfig].cellWidth = module.width;
-					this.configs[this.currentConfig].cellHeight = module.height;
-				}
-				this.disableInputs();
-				this.updateSize();
-				this.buildList();
-				this.updateSummaryOnChange();
-				
-				// Keine Checkbox-Interaktion mehr - nur Dropdown-Werte setzen
-				this.clearModuleCheckboxes();
-			}
-		}
-		
-		// Neue Funktionen für Modul-Checkbox-Synchronisation
-		handleModuleCheckboxChange(checkboxId) {
-			this.trackInteraction();
-			
-			// Nur eine Modul-Checkbox darf ausgewählt sein
-			if (checkboxId === 'include-modules' && this.incM.checked) {
-				// include-modules wurde ausgewählt - ulica-module abwählen
-				if (this.ulicaModule) {
-					this.ulicaModule.checked = false;
-				}
-				// Dropdown auf ulica-450 setzen und Input-Werte anpassen
-				if (this.moduleSelect) {
-					this.moduleSelect.value = 'ulica-450';
-					// Input-Werte für ulica-450 setzen
-					if (this.wIn) this.wIn.value = '176.2';
-					if (this.hIn) this.hIn.value = '113.4';
-					if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-						this.configs[this.currentConfig].cellWidth = 176.2;
-						this.configs[this.currentConfig].cellHeight = 113.4;
-					}
-					this.disableInputs();
-				}
-			} else if (checkboxId === 'ulica-module' && this.ulicaModule.checked) {
-				// ulica-module wurde ausgewählt - include-modules abwählen
-				if (this.incM) {
-					this.incM.checked = false;
-				}
-				// Dropdown auf ulica-500 setzen und Input-Werte anpassen
-				if (this.moduleSelect) {
-					this.moduleSelect.value = 'ulica-500';
-					// Input-Werte für ulica-500 setzen
-					if (this.wIn) this.wIn.value = '195.2';
-					if (this.hIn) this.hIn.value = '113.4';
-					if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-						this.configs[this.currentConfig].cellWidth = 195.2;
-						this.configs[this.currentConfig].cellHeight = 113.4;
-					}
-					this.disableInputs();
-				}
-			}
-			
-			// Grid und Berechnungen aktualisieren
-			this.updateSize();
-			this.buildGrid();
-			this.buildList();
-			this.updateSummaryOnChange();
-			this.updateConfig();
-			// Neu: Modul-Checkboxen gelten global -> auf alle Konfigurationen anwenden
-			this.updateAllConfigurationsForCheckboxes();
-		}
-		
-		clearModuleCheckboxes() {
-			if (this.incM) this.incM.checked = false;
-			if (this.ulicaModule) this.ulicaModule.checked = false;
-		}
-		
-		handleInputChange() {
-			this.trackInteraction();
-			this.updateSize();
-			this.buildList();
-			this.updateSummaryOnChange();
-		}
-		
-		handleOrientationChange() {
-			this.trackInteraction();
-			this.updateSize();
-			this.buildGrid();
-			this.buildList();
-			this.updateSummaryOnChange();
-		}
-		
-		handleCheckboxChange() {
-			this.trackInteraction();
-			
-			// Prüfe ob es sich um eine Modul-Checkbox handelt
-			const checkboxId = event.target.id;
-			if (checkboxId === 'include-modules' || checkboxId === 'ulica-module') {
-				this.handleModuleCheckboxChange(checkboxId);
-			} else {
-				// Ursprüngliche Funktion: Update aller Konfigurationen für Checkboxen
-				this.updateAllConfigurationsForCheckboxes();
-			}
-		}
-		
-		handleExpansionClick(e) {
-			this.trackInteraction();
-			const dir = e.target.dataset.dir;
-			const isPlus = e.target.classList.contains('plus-btn');
-			
-			if (dir === 'right') {
-				isPlus ? this.addColumnRight() : this.removeColumnRight();
-			} else if (dir === 'left') {
-				isPlus ? this.addColumnLeft() : this.removeColumnLeft();
-			} else if (dir === 'top') {
-				isPlus ? this.addRowTop() : this.removeRowTop();
-			} else if (dir === 'bottom') {
-				isPlus ? this.addRowBottom() : this.removeRowBottom();
-			}
-		}
-		
-		handleOrientationButtonClick(e) {
-			const orientHBtn = document.getElementById('orient-h');
-			const orientVBtn = document.getElementById('orient-v');
-			
-			if (!orientHBtn || !orientVBtn) return;
-			
-			// Verhindere mehrfache Klicks während der Verarbeitung
-			if (this.orientationProcessing) return;
-			this.orientationProcessing = true;
-			
-			// Bestimme die neue Orientierung basierend auf dem Button, der den Handler ausgelöst hat
-			const clickedBtn = e.currentTarget || e.target;
-			const isVertical = clickedBtn === orientVBtn;
-			const newOrientation = isVertical ? 'vertical' : 'horizontal';
-			
-			// Sofortige visuelle Rückmeldung
-			orientHBtn.classList.remove('active');
-			orientVBtn.classList.remove('active');
-			if (clickedBtn && clickedBtn.classList) clickedBtn.classList.add('active');
-			
-			// Radio-Buttons synchronisieren
-			if (this.orV) this.orV.checked = isVertical;
-			if (this.orH) this.orH.checked = !isVertical;
-			
-			this.trackInteraction();
-			
-			// Sofortige Grid-Updates ohne Verzögerung
-			this.updateSize();
-			this.buildGrid();
-			
-			// Verzögerte Updates für Performance
-			setTimeout(() => {
-				this.buildList();
-				this.updateSummaryOnChange();
-				this.orientationProcessing = false;
-				// Zusätzliche Synchronisation für Robustheit
-				this.ensureOrientationButtonsSync();
-			}, 10); // Reduzierte Verzögerung für bessere Reaktionszeit
-		}
-		
-		// NEUE FUNKTION: Synchronisiere Orientation Buttons
-		syncOrientationButtons() {
-			const orientHBtn = document.getElementById('orient-h');
-			const orientVBtn = document.getElementById('orient-v');
-			
-			if (!orientHBtn || !orientVBtn || !this.orH || !this.orV) return;
-			
-			// Entferne active Klasse von beiden Buttons
-			orientHBtn.classList.remove('active');
-			orientVBtn.classList.remove('active');
-			
-			// Setze active Klasse basierend auf Radio-Button Status
-			// Priorisiere orV.checked für konsistente Logik
-			if (this.orV.checked) {
-				orientVBtn.classList.add('active');
-			} else if (this.orH.checked) {
-				orientHBtn.classList.add('active');
-			} else {
-				// Fallback: Standard auf vertikal setzen
-				this.orV.checked = true;
-				this.orH.checked = false;
-				orientVBtn.classList.add('active');
-			}
-		}
-		
-		// Input-Sperr-Funktionen
-		disableInputs() {
-			if (this.wIn) {
-				this.wIn.disabled = true;
-				this.wIn.style.backgroundColor = '#f0f0f0';
-				this.wIn.style.cursor = 'not-allowed';
-			}
-			if (this.hIn) {
-				this.hIn.disabled = true;
-				this.hIn.style.backgroundColor = '#f0f0f0';
-				this.hIn.style.cursor = 'not-allowed';
-			}
-		}
-		
-		enableInputs() {
-			if (this.wIn) {
-				this.wIn.disabled = false;
-				this.wIn.style.backgroundColor = '';
-				this.wIn.style.cursor = '';
-			}
-			if (this.hIn) {
-				this.hIn.disabled = false;
-				this.hIn.style.backgroundColor = '';
-				this.hIn.style.cursor = '';
-			}
-		}
-
-    updateSaveButtons() {
-  		// Immer den "Neue Konfiguration speichern" Button anzeigen
-  		if (this.saveBtn) {
-  			this.saveBtn.style.display = 'inline-block';
-  		}
-		}
-    
-
-    
-    // Spalten-Methoden - Rechts (am Ende)
-    addColumnRight() {
-  		this.cols += 1;
-  		for (let row of this.selection) {
-    		row.push(false);
-  		}
-  		this.updateGridAfterStructureChange();
-		}
-
-		removeColumnRight() {
-  		if (this.cols <= 1) return;
-  		this.cols -= 1;
-  		for (let row of this.selection) {
-    		row.pop();
-  		}
-  		this.updateGridAfterStructureChange();
-		}
-
-		// Spalten-Methoden - Links (am Anfang)
-		addColumnLeft() {
-  		this.cols += 1;
-  		for (let row of this.selection) {
-    		row.unshift(false);
-  		}
-  		this.updateGridAfterStructureChange();
-		}
-
 		removeColumnLeft() {
   		if (this.cols <= 1) return;
   		this.cols -= 1;
@@ -6527,34 +6143,6 @@
   		}
   		this.updateGridAfterStructureChange();
 		}
-
-		// Zeilen-Methoden - Unten (am Ende)
-		addRowBottom() {
-  		this.rows += 1;
-  		this.selection.push(Array(this.cols).fill(false));
-  		this.updateGridAfterStructureChange();
-		}
-
-		removeRowBottom() {
-  		if (this.rows <= 1) return;
-  		this.rows -= 1;
-  		this.selection.pop();
-  		this.updateGridAfterStructureChange();
-		}
-
-		// Zeilen-Methoden - Oben (am Anfang)
-		addRowTop() {
-  		this.rows += 1;
-  		this.selection.unshift(Array(this.cols).fill(false));
-  		this.updateGridAfterStructureChange();
-		}
-
-		removeRowTop() {
-  		if (this.rows <= 1) return;
-  		this.rows -= 1;
-  		this.selection.shift();
-  		this.updateGridAfterStructureChange();
-				}
 
     updateGridAfterStructureChange() {
   		this.updateSize();
@@ -6924,7 +6512,6 @@
 
   		return p;
 		}
-
     processGroup(len, p) {
       // Verwende die korrekte Schienenlogik (wie im Worker)
       const isVertical = this.orV?.checked;
@@ -7374,7 +6961,6 @@
   		this.renderConfigList();
   		this.updateSaveButtons();
 		}
-
     _makeConfigObject(customName = null) {
       // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
       let configName;
@@ -7776,7 +7362,6 @@
 				// Aktualisiere die erste Konfiguration mit der globalen Orientation
 				this.updateFirstConfigOrientation(data.orientation);
 			}
-    			
     			// Lade die erste Konfiguration
     			if (this.configs.length > 0) {
     				this.loadFirstConfigFromCache();
@@ -7810,19 +7395,25 @@
         generateHiddenCartForms() {
       const webflowForms = document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]');
       this.webflowFormMap = {};
+      this.webflowFormMapNet = {};
+      this.webflowFormMapGross = {};
       
       webflowForms.forEach((form) => {
         const productId = form.getAttribute('data-commerce-product-id');
         const skuId = form.getAttribute('data-commerce-sku-id');
         
-        const productKey = Object.keys(PRODUCT_MAP).find(key => 
+        const netKey = Object.keys(PRODUCT_MAP).find(key => 
           PRODUCT_MAP[key].productId === productId || PRODUCT_MAP[key].variantId === skuId
         );
-        
-        if (productKey) {
-          this.webflowFormMap[productKey] = form;
-        }
+        const grossKey = Object.keys(GROSS_PRODUCT_MAP || {}).find(key =>
+          (GROSS_PRODUCT_MAP[key] && (GROSS_PRODUCT_MAP[key].productId === productId || GROSS_PRODUCT_MAP[key].variantId === skuId))
+        );
+
+        if (netKey) this.webflowFormMapNet[netKey] = form;
+        if (grossKey) this.webflowFormMapGross[grossKey] = form;
       });
+      // Choose active map based on BUSINESS_MODE
+      this.webflowFormMap = BUSINESS_MODE ? this.webflowFormMapGross : this.webflowFormMapNet;
       
       this.hideWebflowForms();
     }
@@ -8159,7 +7750,9 @@
 
     _buildCartItems(parts) {
       return Object.entries(parts).map(([k,v]) => {
-        const packs = Math.ceil(v / VE[k]), m = PRODUCT_MAP[k];
+        const packs = Math.ceil(v / VE[k]);
+        const activeMap = BUSINESS_MODE ? GROSS_PRODUCT_MAP : PRODUCT_MAP;
+        const m = activeMap[k];
         return (!m || packs <= 0) ? null : {
           productId: m.productId,
           variantId: m.variantId,
@@ -8208,7 +7801,6 @@
       // Aktualisiere auch die Produktliste in der detailed-overview
       this.buildList();
     }
-
     // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF
     createConfigSnapshot() {
       // Auto-Save der aktuellen Konfiguration falls nötig
@@ -8348,7 +7940,6 @@
         this.showMainGrid();
       }
     }
-    
     createPreviewGrid(config) {
       console.log('createPreviewGrid called with config:', config);
       
@@ -8695,7 +8286,6 @@
       this.wrapper.style.transform = `scale(${zoomLevel})`;
       this.wrapper.style.transformOrigin = 'center center';
     }
-    
     cleanup() {
       // Memory-Leak Prävention: Timeouts löschen
       if (this.updateTimeout) {

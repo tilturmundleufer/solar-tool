@@ -336,3 +336,22 @@ Hinweis: Der Verteilungsmodus `gleichmäßig` ist deaktiviert. Bitte verwenden S
   - 40× `Schiene_240_cm` → 11,59 € pro Stück (VE=1).
   - 300× `Mittelklemmen` → 0,95 € pro Stück, VE=50 → Packpreis 47,50 €.
   - 36× `Solarmodul` → 55,90 € pro Stück.
+
+## 📓 Changelog (Ergänzung)
+- 2025-09-08: Neue Checkbox „Firmenkunde“. Aktiviert Bruttopreise (19% MwSt) im UI und verwendet Brutto‑Varianten im Warenkorb. Platzhalter‑IDs in Code hinterlegt; bitte in Webflow ersetzen.
+
+## 💼 Firmenkunde (MwSt.)
+- Checkbox: „Firmenkunde“ in der Checkbox-Zeile über dem Grid.
+- Verhalten:
+  - UI‑Preise werden mit 1,19 multipliziert und als Bruttopreise angezeigt.
+  - Warenkorb nutzt Brutto‑Varianten (Map `GROSS_PRODUCT_MAP`, Platzhalter‑IDs).
+- Technische Details:
+  - Globaler Schalter: `BUSINESS_MODE` und Satz `BUSINESS_VAT_RATE = 0.19` in `script.js`.
+  - Preisfunktion: `getPackPriceForQuantity` ruft intern `maybeApplyBusinessVat` auf (nur Anzeige/Calculation).
+  - Warenkorb: Auswahl der Varianten erfolgt über aktive Map (Netto `PRODUCT_MAP` vs. Brutto `GROSS_PRODUCT_MAP`).
+- Annahmen: Webflow enthält parallele Brutto‑Varianten je Produkt. IDs müssen in `GROSS_PRODUCT_MAP` ersetzt werden.
+
+## ✅ Tests (MwSt./Smart Config)
+- Bruttopreis-Anzeige: Einfache 5×4‑Konfiguration, „Firmenkunde“ an/aus → Summe wechselt faktor 1,19.
+- Warenkorb: Mit aktivem „Firmenkunde“ werden Brutto‑Varianten hinzugefügt (Form‑Mapping vorhanden).
+- Smart‑Config: Bestehende Hyphen/Whitespace‑Varianten weiterhin funktionsfähig. Unbekannte Kommandos → freundlicher Hinweis (unverändert).
