@@ -335,7 +335,6 @@
     Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Tellerkopfschraube: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg'
   };
-  
   // Zentrale Konfiguration ist jetzt direkt eingebettet
   // ===== BACKGROUND CALCULATION MANAGER =====
   class CalculationManager {
@@ -556,11 +555,9 @@
       img.addEventListener('error', done, { once: true });
     })));
   }
-
   // (Fallback entfernt, wir setzen ausschließlich auf html2pdf.js)
   // Globale Calculation Manager Instanz
   const calculationManager = new CalculationManager();
-
   // ===== PRICE CACHING SYSTEM =====
   class PriceCache {
     constructor() {
@@ -1196,7 +1193,6 @@
       }).join('');
       if (totalEl) totalEl.textContent = `${totalPrice.toFixed(2)} €`;
     }
-
     // Abwärtskompatibler Wrapper: ermöglicht this.pdfGenerator.generatePDF('current'|'all')
     async generatePDF(mode = 'current') {
       if (!this.isAvailable()) {
@@ -1766,7 +1762,6 @@
         return null;
       }
     }
-
     // NEUE ISOLIERTE Grid-Capture im UI-Design (gleiches Layout/Design wie Hauptgrid)
     async captureGridVisualizationFromSnapshot(config) {
       try {
@@ -2914,7 +2909,6 @@
         // Exklusivität: keine allgemeinen Module
         config.includeModules = false;
       }
-
       // NEU: "mc4 und holz hinzufügen" (Liste erlaubt)
       const addComponents = input.match(this.patterns.addComponents);
       if (addComponents) {
@@ -3216,7 +3210,6 @@
 
       return { cols: Math.max(best[0], best[1]), rows: Math.min(best[0], best[1]) };
     }
-
     applyConfiguration(config) {
       
       // Speichere bestehende Auswahl
@@ -5058,10 +5051,10 @@
         const hasUrlConfig = new URLSearchParams(window.location.search).has('configData');
         this.maybeShowIntroOverlay(cacheLoaded, hasUrlConfig);
       } catch (_) {}
-+
-+      // Firmenkunde Toggle UI/Event einrichten
-+      this.setupBusinessModeToggle();
- 
+
+      // Firmenkunde Toggle UI/Event einrichten
+      this.setupBusinessModeToggle();
+
         // Event-Listener für alle UI-Elemente setzen
  		this.setupAllEventListeners();
 
@@ -5096,7 +5089,6 @@
 				this.generateContinueLink();
 			});
 		}
-
 		// Sidebar Toggle Funktionalität
 		const sidebarToggle = document.getElementById('sidebar-toggle');
 		// Neue Sidebar Navigation
@@ -5228,7 +5220,6 @@
 				});
 			}
 		}
-		
 		showOverview() {
 			// Aktuelle Konfiguration speichern um Progress nicht zu verlieren
 			if (this.currentConfig !== null) {
@@ -5541,7 +5532,6 @@
 				}
 			});
 		}
-		
 		editConfigName() {
 			const titleEl = document.getElementById('current-config-title');
 			if (!titleEl) return;
@@ -5725,7 +5715,6 @@
 			// Event propagation stoppen
 			event.stopPropagation();
 		}
-		
 		calculateConfigPrice(config) {
 			// Verwende die ursprüngliche Berechnungslogik
 			const parts = {
@@ -6017,7 +6006,6 @@
 				}
 			}, 100);
 		}
-
 		showConfigPreview(config) {
 			console.log('Showing config preview:', config);
 			
@@ -6045,921 +6033,6 @@
 			} else {
 				console.log('No grid-affecting config found, skipping preview');
 			}
-		}
-		// Smart Config Help Dropdown Initialisierung
-		initializeSmartConfigHelp() {
-			// Trigger wird auch in setupSmartConfig aufgerufen
-			const trigger = document.getElementById('smart-help-trigger');
-			const dropdown = document.getElementById('smart-help-dropdown');
-			
-			if (!trigger || !dropdown) return; // Falls die Elemente nicht existieren
-			
-			let isHovered = false;
-			let hoverTimeout = null;
-			
-			// JavaScript-basierte Hover-Funktionalität (überschreibt CSS)
-			const showDropdown = () => {
-				dropdown.style.opacity = '1';
-				dropdown.style.visibility = 'visible';
-				dropdown.style.transform = 'translateY(0)';
-			};
-			
-			const hideDropdown = () => {
-				dropdown.style.opacity = '0';
-				dropdown.style.visibility = 'hidden';
-				dropdown.style.transform = 'translateY(-10px)';
-			};
-			
-			// Hover Events für Trigger
-			trigger.addEventListener('mouseenter', () => {
-				isHovered = true;
-				if (hoverTimeout) clearTimeout(hoverTimeout);
-				showDropdown();
-			});
-			
-			trigger.addEventListener('mouseleave', () => {
-				isHovered = false;
-				hoverTimeout = setTimeout(() => {
-					if (!isHovered) hideDropdown();
-				}, 100); // Kleine Verzögerung für sanfteren Übergang
-			});
-			
-			// Hover Events für Dropdown selbst
-			dropdown.addEventListener('mouseenter', () => {
-				isHovered = true;
-				if (hoverTimeout) clearTimeout(hoverTimeout);
-			});
-			
-			dropdown.addEventListener('mouseleave', () => {
-				isHovered = false;
-				hoverTimeout = setTimeout(() => {
-					if (!isHovered) hideDropdown();
-				}, 100);
-			});
-			
-			// Verhindere dass Dropdown schließt wenn darauf geklickt wird
-			dropdown.addEventListener('click', (e) => {
-				e.stopPropagation();
-			});
-			
-            // Entfernt: Automatisches Schließen bei Klick außerhalb – Dropdown bleibt offen, bis der Nutzer weg hovert
-			
-			// Beispiel-Click Handler für sofortige Anwendung (ohne Ctrl+Click Tipp)
-			document.querySelectorAll('.example').forEach(example => {
-				example.addEventListener('click', (e) => {
-					e.stopPropagation(); // Verhindere Click-Outside-Handler
-					
-					const quickInput = document.getElementById('quick-config-input');
-					if (quickInput) {
-						// Entferne Anführungszeichen und setze Wert
-						quickInput.value = example.textContent.replace(/"/g, '');
-						quickInput.focus();
-						
-						// Zeige Vorschau
-						if (quickInput.value.length > 3) {
-							try {
-								const config = this.smartParser.parseInput(quickInput.value);
-								this.showConfigPreview(config);
-							} catch (error) {
-								// Ignoriere Parsing-Fehler
-							}
-						}
-						
-                        // Dropdown bleibt sichtbar, damit Nutzer weitere Beispiele wählen kann
-						
-						// Optional: Scroll zur Smart Config Section
-						setTimeout(() => {
-							quickInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-						}, 100);
-					}
-				});
-			});
-		}
-		removeColumnLeft() {
-  		if (this.cols <= 1) return;
-  		this.cols -= 1;
-  		for (let row of this.selection) {
-    		row.shift();
-  		}
-  		this.updateGridAfterStructureChange();
-		}
-
-    updateGridAfterStructureChange() {
-  		this.updateSize();
-  		this.buildGrid();
-  		this.buildList();
-  		this.updateSummaryOnChange();
-		}
-    
-
-    
-
-    updateSize() {
-  		const RAIL_GAP = 2; // Immer 2cm für Schienen-Berechnungen
-  		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
-
-  				// Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
-		const inputW = parseFloat(this.wIn ? this.wIn.value : '179') || 179;
-		const inputH = parseFloat(this.hIn ? this.hIn.value : '113') || 113;
-  		
-  				// Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
-		const isVertical = this.orV ? this.orV.checked : false;
-  		const originalCellW = isVertical ? inputH : inputW;
-  		const originalCellH = isVertical ? inputW : inputH;
-  		
-  				// Maximale verfügbare Größe
-		// 80px Abstand auf allen Seiten: links, rechts, oben, unten
-		// Insgesamt 160px für Breite (80px links + 80px rechts) und 160px für Höhe (80px oben + 80px unten)
-		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 160 : 800; // grid-wrapper Breite - 160px (80px links + 80px rechts)
-		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 160 : 600; // grid-wrapper Höhe - 160px (80px oben + 80px unten)
-  		
-  		// Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
-  		const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * RAIL_GAP;
-  		const totalHeightWithRailGaps = this.rows * originalCellH + (this.rows - 1) * RAIL_GAP;
-  		
-  		// Berechne Skalierungsfaktoren für beide Dimensionen
-  		const scaleX = maxWidth / totalWidthWithRailGaps;
-  		const scaleY = maxHeight / totalHeightWithRailGaps;
-  		
-  		// Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
-  		// und sicherzustellen, dass das Grid nie die Grenzen überschreitet
-  		const scale = Math.min(scaleX, scaleY, 1);
-  		
-  		// Berechne finale Zellgrößen
-  		const w = originalCellW * scale;
-  		const h = originalCellH * scale;
-
-  		// Bestimme visuelle Gap: 0 wenn viele Spalten/Zeilen, sonst RAIL_GAP * scale
-  		// Gap verschwindet horizontal ab 15 Spalten, vertikal ab 10 Zeilen
-  		const shouldHideGap = this.cols >= 15 || this.rows >= 10;
-  		const visualGap = shouldHideGap ? 0 : RAIL_GAP * scale;
-
-  		// CSS Variablen setzen
-  		document.documentElement.style.setProperty('--cell-size', w + 'px');
-  		document.documentElement.style.setProperty('--cell-width',  w + 'px');
-  		document.documentElement.style.setProperty('--cell-height', h + 'px');
-  		document.documentElement.style.setProperty('--cell-gap', visualGap + 'px');
-
-  		// Grid-Größe direkt setzen - niemals größer als die maximalen Grenzen
-  		const finalWidth = Math.min(this.cols * w + (this.cols - 1) * visualGap, maxWidth);
-  		const finalHeight = Math.min(this.rows * h + (this.rows - 1) * visualGap, maxHeight);
-  		
-  				if (this.gridEl) {
-			this.gridEl.style.width = finalWidth + 'px';
-			this.gridEl.style.height = finalHeight + 'px';
-		}
-		}
-
-    buildGrid() {
-  		if (!Array.isArray(this.selection)) return;
-  		
-  		// Performance: Verwende DocumentFragment für bessere Performance
-  		const fragment = document.createDocumentFragment();
-  		
-  		// CSS-Variablen setzen
-  		document.documentElement.style.setProperty('--cols', this.cols);
-  		document.documentElement.style.setProperty('--rows', this.rows);
-
-  		// Batch-Erstellung aller Zellen - optimiert für Orientation Changes
-  		for (let y = 0; y < this.rows; y++) {
-    		if (!Array.isArray(this.selection[y])) continue;
-
-    		for (let x = 0; x < this.cols; x++) {
-      		const cell = document.createElement('div');
-      		cell.className = 'grid-cell';
-      		if (this.selection[y]?.[x]) cell.classList.add('selected');
-      		
-      		// FEATURE 6: Screen Reader Support - ARIA-Labels
-      		cell.setAttribute('role', 'button');
-      		cell.setAttribute('tabindex', '0');
-      		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y]?.[x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
-      		cell.setAttribute('aria-pressed', this.selection[y]?.[x] ? 'true' : 'false');
-
-      		// Event-Listener optimiert
-      		cell.addEventListener('click', () => {
-        		if (!this.selection[y]) this.selection[y] = [];
-        		this.selection[y][x] = !this.selection[y][x];
-        		cell.classList.toggle('selected');
-        		
-        		// FEATURE 6: Screen Reader Support - Update ARIA
-        		cell.setAttribute('aria-pressed', this.selection[y][x] ? 'true' : 'false');
-        		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
-        		
-        		// Performance: Update aktuelle Konfiguration ohne Deep Copy
-        		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-        			// Direkte Referenz statt JSON.parse/stringify
-        			this.configs[this.currentConfig].selection = this.selection;
-        			// Speichere die Konfiguration automatisch
-        			this.updateConfig();
-        		}
-        		
-        		this.trackInteraction();
-        		// Performance: Sofortige Produktliste Update + Debounced Summary
-        		this.buildList();
-        		this.updateSummaryOnChange();
-        		
-        		// Update config-list und overview wenn eine Konfiguration ausgewählt ist
-        		if (this.currentConfig !== null) {
-        			this.updateConfigList();
-        		}
-      		});
-       
-      		// FEATURE 6: Screen Reader Support - Keyboard Navigation
-      		cell.addEventListener('keydown', (e) => {
-        		if (e.key === 'Enter' || e.key === ' ') {
-        			e.preventDefault();
-        			cell.click();
-        		}
-      		});
-
-      		// Animation entfernt für bessere Performance
-      		// const dx = x - centerX;
-      		// const dy = y - centerY;
-      		// const distance = Math.sqrt(dx * dx + dy * dy);
-      		// const delay = distance * delayPerUnit;
-      		// cell.style.animationDelay = `${delay}ms`;
-      		// setTimeout(() => cell.classList.remove('animate-in'), 400);
-      		fragment.appendChild(cell);
-    		}
-  		}
-  		
-  		// Einmalige DOM-Manipulation
-  		this.gridEl.innerHTML = '';
-  		this.gridEl.appendChild(fragment);
-		}
-    
-    async buildList() {
-      try {
-        // Performance: Cached panel count calculation
-        const panelCount = this.selection.flat().filter(v => v).length;
-        
-        // Verwende die gleiche Berechnungslogik wie calculateConfigPrice für Konsistenz
-        const currentConfig = {
-          selection: this.selection,
-          cols: this.cols,
-          rows: this.rows,
-          cellWidth: parseInt(this.wIn?.value || '179'),
-          cellHeight: parseInt(this.hIn?.value || '113'),
-          orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-          ulicaModule: document.getElementById('ulica-module')?.checked || false
-        };
-        
-        // Verwende calculateConfigPrice Logik für die Teile-Berechnung
-        const parts = {
-          Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
-          Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-          Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
-          UlicaSolarBlackJadeFlow: 0
-        };
-
-        // Berechne Teile für jede Zeile (gleiche Logik wie calculateConfigPrice)
-        for (let y = 0; y < currentConfig.rows; y++) {
-          if (!Array.isArray(currentConfig.selection[y])) continue;
-          let run = 0;
-
-          for (let x = 0; x < currentConfig.cols; x++) {
-            if (currentConfig.selection[y]?.[x]) {
-              run++;
-            }
-            else if (run) { 
-              this.processGroupDirectly(run, parts, currentConfig.cellWidth || 179, currentConfig.cellHeight || 113, currentConfig.orientation || 'vertical', currentConfig.ulicaModule || false); 
-              run = 0; 
-            }
-          }
-          if (run) {
-            this.processGroupDirectly(run, parts, currentConfig.cellWidth || 179, currentConfig.cellHeight || 113, currentConfig.orientation || 'vertical', currentConfig.ulicaModule || false);
-          }
-        }
-        
-        // Module nur hinzufügen wenn Checkbox aktiviert ist (gleiche Logik wie calculateConfigPrice)
-        const includeModules = document.getElementById('include-modules')?.checked || false;
-        const ulicaModule = document.getElementById('ulica-module')?.checked || false;
-        
-        if (!includeModules) {
-          delete parts.Solarmodul;
-        }
-        
-        if (!ulicaModule) {
-          delete parts.UlicaSolarBlackJadeFlow;
-        }
-        
-        // Zusatzprodukte: Erdungsband wieder in die Produktliste aufnehmen wenn Checkbox aktiv
-        if (this.erdungsband && this.erdungsband.checked) {
-          parts.Erdungsband = this.calculateErdungsband();
-        } else {
-          delete parts.Erdungsband;
-        }
-
-
-      const entries = Object.entries(parts).filter(([,v]) => v > 0);
-      if (!entries.length) {
-        if (this.listHolder) {
-          this.listHolder.style.display = 'none';
-        }
-        return;
-      }
-      if (this.listHolder) {
-        this.listHolder.style.display = 'block';
-      }
-      if (this.prodList) {
-        // Performance: Reduziere DOM-Manipulation
-        const fragment = document.createDocumentFragment();
-        entries.forEach(([k,v]) => {
-          const packs = Math.ceil(v / VE[k]);
-          const price = getPackPriceForQuantity(k, v);
-          const itemTotal = packs * price;
-          const div = document.createElement('div');
-          div.className = 'produkt-item';
-          
-          // Spezielle Behandlung für Erdungsband: Zeige Länge statt Anzahl
-          let itemDetails = `(${v})`;
-          let itemVE = `${VE[k]} Stück`;
-          if (k === 'Erdungsband' && this.erdungsbandtotal) {
-            itemDetails = `(${Number(this.erdungsbandtotal).toFixed(2)} cm)`;
-            itemVE = `600 cm`;
-          }
-          // Zusätzliche Formatierungen für bestimmte Zusatzprodukte
-          if (k === 'Solarkabel') {
-            itemVE = '100 m';
-          }
-          if (k === 'MC4_Stecker') {
-            itemVE = '50 Stück';
-          }
-          
-          div.innerHTML = `
-            <div class="item-left">
-              <span class="item-quantity">${packs}×</span>
-              <div class="item-info">
-                <span class="item-name">${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')}</span>
-                <span class="item-ve">${itemVE}</span>
-              </div>
-              <span class="item-details">${itemDetails}</span>
-            </div>
-            <span class="item-price">${itemTotal.toFixed(2).replace('.', ',')} €</span>
-          `;
-          fragment.appendChild(div);
-        });
-        this.prodList.innerHTML = '';
-        this.prodList.appendChild(fragment);
-        this.prodList.style.display = 'block';
-      }
-      } catch (error) {
-        // Fallback: Verstecke Liste bei Fehler
-        if (this.listHolder) {
-          this.listHolder.style.display = 'none';
-        }
-      }
-    }
-    
-    resetGridToDefault() {
-  		const { cols, rows, width, height } = this.default;
-
-  		// Setze Inputs und interne Werte
-  		this.wIn.value = width;
-  		this.hIn.value = height;
-  		
-  		// Setze Orientierung auf Standard (vertikal als Standard)
-		const defaultVertical = true; // Vertikal als Standard
-		if (this.orH) this.orH.checked = !defaultVertical;
-		if (this.orV) this.orV.checked = defaultVertical;
-		
-		// Synchronisiere Setup-Container Radio-Buttons
-		const orientHSetup = document.getElementById('orient-h-setup');
-		const orientVSetup = document.getElementById('orient-v-setup');
-		if (orientHSetup && orientVSetup) {
-			orientHSetup.checked = !defaultVertical;
-			orientVSetup.checked = defaultVertical;
-		}
-
-		// Setze alle Checkboxen zurück für neue Konfiguration
-		if (this.incM) this.incM.checked = false;
-		if (this.mc4) this.mc4.checked = false;
-		if (this.solarkabel) this.solarkabel.checked = false;
-		if (this.holz) this.holz.checked = false;
-		if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
-		if (this.erdungsband) this.erdungsband.checked = false;
-		if (this.ulicaModule) this.ulicaModule.checked = false;
-		
-		// Module Dropdown auf Default zurücksetzen
-		if (this.moduleSelect) {
-			this.moduleSelect.value = '';
-			this.enableInputs();
-		}
-
-  		this.cols = cols;
-  		this.rows = rows;
-
-  		// Leere Auswahl - alle Module abwählen
-  		this.selection = Array.from({ length: this.rows }, () =>
-    		Array.from({ length: this.cols }, () => false)
-  		);
-
-  		// Aktualisiere alles
-  		this.setup();
-  		this.buildGrid();
-  		this.buildList();
-  		this.updateSummaryOnChange();
-		}
-    
-    	resetToDefaultGrid() {
-		if (this.colsIn) this.colsIn.value = this.default.cols;
-		if (this.rowsIn) this.rowsIn.value = this.default.rows;
-		if (this.wIn) this.wIn.value = this.default.width;
-		if (this.hIn) this.hIn.value = this.default.height;
-		if (this.orH) this.orH.checked = false;
-		if (this.orV) this.orV.checked = true;
-
-  		// Setze cols/rows synchron
-  		this.cols = this.default.cols;
-  		this.rows = this.default.rows;
-
-  		// Leere Auswahl
-  		this.selection = Array.from({ length: this.rows }, () =>
-    		Array.from({ length: this.cols }, () => false)
-  		);
-
-  		this.setup(); // jetzt stimmt alles beim Rebuild
-		}
-    async calculateParts() {
-      // Verwende immer den Fallback für Tellerkopfschraube-Berechnung
-      return this.calculatePartsSync();
-    }
-
-    // Fallback synchrone Berechnung (ursprüngliche Methode)
-    calculatePartsSync() {
-  		const p = {
-    		Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
-    		Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-    		Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
-    		Erdungsband: 0
-  		};
-
-  		for (let y = 0; y < this.rows; y++) {
-    		if (!Array.isArray(this.selection[y])) continue;
-    		let run = 0;
-
-    		for (let x = 0; x < this.cols; x++) {
-      		if (this.selection[y]?.[x]) run++;
-      		else if (run) { this.processGroup(run, p); run = 0; }
-    		}
-    		if (run) this.processGroup(run, p);
-  		}
-
-  		// Erdungsband-Berechnung nur wenn gewünscht
-  		if (this.erdungsband && this.erdungsband.checked) {
-  			p.Erdungsband = this.calculateErdungsband();
-  		}
-
-  		return p;
-		}
-    processGroup(len, p) {
-      // Verwende die korrekte Schienenlogik (wie im Worker)
-      const isVertical = this.orV?.checked;
-      const actualCellWidth = isVertical ? parseFloat(this.hIn?.value || '113') : parseFloat(this.wIn?.value || '179');
-      
-      const totalLen = len * actualCellWidth;
-      const floor360 = Math.floor(totalLen / 360);
-      const rem360 = totalLen - floor360 * 360;
-      const floor240 = Math.ceil(rem360 / 240);
-      const pure360 = Math.ceil(totalLen / 360);
-      const pure240 = Math.ceil(totalLen / 240);
-      
-      const variants = [
-        {cnt360: floor360, cnt240: floor240},
-        {cnt360: pure360,  cnt240: 0},
-        {cnt360: 0,        cnt240: pure240}
-      ].map(v => ({
-        ...v,
-        rails: v.cnt360 + v.cnt240,
-        waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
-      }));
-      
-      const minRails = Math.min(...variants.map(v => v.rails));
-      const best = variants
-        .filter(v => v.rails === minRails)
-        .reduce((a, b) => a.waste <= b.waste ? a : b);
-      
-      const {cnt360, cnt240} = best;
-      
-      p.Schiene_360_cm     += cnt360 * 2;
-      p.Schiene_240_cm     += cnt240 * 2;
-      p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
-      p.Endklemmen         += 4;
-      p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-      p.Dachhaken          += len > 1 ? len * 3 : 4;
-      p.Endkappen          += 4; // Gleich wie Endklemmen
-      p.Solarmodul         += len;
-      if (this.ulicaModule && this.ulicaModule.checked) {
-        p.UlicaSolarBlackJadeFlow += len;
-      }
-      p.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
-      p.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
-    }
-
-    mapImage(key) {
-      // Verwende zentrale Produkt-Konfiguration oder Fallback
-      return PRODUCT_IMAGES[key] || '';
-    }
-
-    // Erdungsband-Berechnung
-    calculateErdungsband() {
-      const isVertical = this.orV?.checked;
-      const moduleHeight = isVertical ? parseFloat(this.wIn?.value || '179') : parseFloat(this.hIn?.value || '113');
-      const gap = 2; // 2cm Lücke zwischen Modulen
-      
-      // Kopiere selection Matrix für Erdungsbandlength-Tracking
-      const erdungsbandMatrix = this.selection.map(row => [...row]);
-      
-      let erdungsbandtotal = 0;
-      
-      // Analysiere Grid von oben nach unten, links nach rechts
-      for (let y = 0; y < this.rows; y++) {
-        for (let x = 0; x < this.cols; x++) {
-          const result = this.analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
-          erdungsbandtotal += result;
-        }
-      }
-      
-      // Speichere Erdungsbandtotal für Display
-      this.erdungsbandtotal = erdungsbandtotal;
-      
-      // Berechne Anzahl benötigter Erdungsbänder
-      return Math.ceil(erdungsbandtotal / 600);
-    }
-
-    // Analysiere ein Feld für Erdungsband
-    analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      // Schritt 1: Hat das Feld ein Modul?
-      if (!erdungsbandMatrix[y]?.[x]) {
-        return 0; // Kein Modul, nächstes Feld
-      }
-      
-      // Schritt 2: Hat das Modul ein weiteres Modul direkt darunter?
-      if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[x]) {
-        return 0; // Kein Modul darunter, nächstes Feld
-      }
-      
-      // Schritt 3: Ist links vom aktuellen Feld ein weiteres Feld mit Modul?
-      if (x === 0 || !erdungsbandMatrix[y]?.[x - 1]) {
-        // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      }
-      
-      // Schritt 4: Hat das linke Feld ein Modul darunter?
-      if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[x - 1]) {
-        // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      }
-      
-      // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
-      return this.checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
-    }
-
-    // Prüfe linke Felder auf Erdungsbandlength
-    checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      const leftUpper = erdungsbandMatrix[y]?.[x - 1];
-      const leftLower = erdungsbandMatrix[y + 1]?.[x - 1];
-      
-      if (leftUpper && leftLower) {
-        // Beide haben Module → Prüfe ob sie bereits Erdungsbandlength haben
-        if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
-          // Beide haben Erdungsbandlength → Nichts tun
-          return 0;
-        } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
-          // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        } else {
-          // Keine Erdungsbandlength links → Rekursiv weiter links prüfen
-          return this.checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap);
-        }
-      } else if (leftUpper && !leftLower) {
-        // Nur oberes Feld hat Modul → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      } else {
-        // Keine Module links → Erdungsbandlength für aktuelles Feld + Feld darunter
-        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-      }
-    }
-
-    // Rekursiv weiter links prüfen
-    checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      let checkX = x - 2; // Ein Feld weiter links
-      
-      while (checkX >= 0) {
-        // Schritt 3: Hat das Feld links ein Modul?
-        if (!erdungsbandMatrix[y]?.[checkX]) {
-          // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        }
-        
-        // Schritt 4: Hat das linke Feld ein Modul darunter?
-        if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[checkX]) {
-          // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        }
-        
-        // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
-        const leftUpper = erdungsbandMatrix[y]?.[checkX];
-        const leftLower = erdungsbandMatrix[y + 1]?.[checkX];
-        
-        if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
-          // Beide haben Erdungsbandlength → Nichts tun
-          return 0;
-        } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
-          // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
-          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-        } else {
-          // Keine Erdungsbandlength → Weiter nach links
-          checkX--;
-          continue;
-        }
-      }
-      
-      // Keine Module mehr links → Erdungsbandlength für aktuelles Feld + Feld darunter
-      return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
-    }
-
-    // Weise Erdungsbandlength zu
-    assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap) {
-      // Prüfe ob aktuelles Feld bereits Erdungsbandlength hat
-      const currentFieldHasErdungsband = erdungsbandMatrix[y][x] === 'erdungsband';
-      
-      if (currentFieldHasErdungsband) {
-        // Nur das Feld darunter markieren
-        erdungsbandMatrix[y + 1][x] = 'erdungsband';
-        // Berechne Erdungsbandlength: 1 × Modul-Höhe + Gap
-        return moduleHeight + gap;
-      } else {
-        // Beide Felder markieren
-        erdungsbandMatrix[y][x] = 'erdungsband';
-        erdungsbandMatrix[y + 1][x] = 'erdungsband';
-        // Berechne Erdungsbandlength: 2 × Modul-Höhe + Gap
-        return 2 * moduleHeight + gap;
-      }
-    }
-
-
-
-
-
-
-    
-    		loadConfig(idx) {
-			const cfg = this.configs[idx];
-			this.currentConfig = idx;
-
-			// Input-Werte setzen
-			this.wIn.value = cfg.cellWidth;
-			this.hIn.value = cfg.cellHeight;
-			this.orV.checked = cfg.orientation === 'vertical';
-			this.orH.checked = !this.orV.checked;
-			
-			// Synchronisiere mit den Orientation Buttons
-			this.syncOrientationButtons();
-			this.incM.checked = cfg.incM;
-			this.mc4.checked = cfg.mc4;
-			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
-			this.holz.checked = cfg.holz;
-			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
-			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false; // Fallback für alte Konfigurationen
-			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false; // Fallback für alte Konfigurationen
-
-			// STATE Werte setzen - WICHTIG: Vor setup() setzen
-			this.cols = cfg.cols;
-			this.rows = cfg.rows;
-			this.selection = cfg.selection.map(r => [...r]);
-
-			// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
-			this.setup();
-
-			// Produktliste und Summary aktualisieren
-			this.buildList();
-			this.updateSummaryOnChange();
-
-			this.renderConfigList();
-			this.updateSaveButtons();
-			
-			// Detail-Ansicht aktualisieren wenn aktiv
-			this.updateDetailView();
-		}
-		
-		// Spezielle Funktion für Cache-Load ohne Orientation-Überschreibung
-		loadConfigFromCache(idx) {
-			const cfg = this.configs[idx];
-			this.currentConfig = idx;
-
-			// Input-Werte setzen (OHNE Orientation)
-			this.wIn.value = cfg.cellWidth;
-			this.hIn.value = cfg.cellHeight;
-			// Orientation wird NICHT gesetzt - bleibt aus dem Cache
-			
-			this.incM.checked = cfg.incM;
-			this.mc4.checked = cfg.mc4;
-			this.solarkabel.checked = cfg.solarkabel || false;
-			this.holz.checked = cfg.holz;
-			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
-			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
-			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
-
-			// STATE Werte setzen
-			this.cols = cfg.cols;
-			this.rows = cfg.rows;
-			this.selection = cfg.selection.map(r => [...r]);
-
-			// Setup aufrufen
-			this.setup();
-
-			// Produktliste und Summary aktualisieren
-			this.buildList();
-			this.updateSummaryOnChange();
-
-			this.renderConfigList();
-			this.updateSaveButtons();
-			
-			// Detail-Ansicht aktualisieren wenn aktiv
-			this.updateDetailView();
-		}
-		
-		// Spezielle Funktion für Cache-Load der ersten Konfiguration mit korrekter Orientation
-		loadFirstConfigFromCache() {
-			if (this.configs.length === 0) return;
-			
-			const cfg = this.configs[0];
-			this.currentConfig = 0;
-
-			// Input-Werte setzen
-			this.wIn.value = cfg.cellWidth;
-			this.hIn.value = cfg.cellHeight;
-			// Orientation wird NICHT gesetzt - bleibt aus dem Cache
-			
-			this.incM.checked = cfg.incM;
-			this.mc4.checked = cfg.mc4;
-			this.solarkabel.checked = cfg.solarkabel || false;
-			this.holz.checked = cfg.holz;
-			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
-			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
-			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
-
-			// STATE Werte setzen
-			this.cols = cfg.cols;
-			this.rows = cfg.rows;
-			this.selection = cfg.selection.map(r => [...r]);
-
-			// Setup aufrufen
-			this.setup();
-
-			// Produktliste und Summary aktualisieren
-			this.buildList();
-			this.updateSummaryOnChange();
-
-			this.renderConfigList();
-			this.updateSaveButtons();
-			
-			// Detail-Ansicht aktualisieren wenn aktiv
-			this.updateDetailView();
-		}
-		
-		// Funktion um die erste Konfiguration mit der globalen Orientation zu aktualisieren
-		updateFirstConfigOrientation(globalOrientation) {
-			if (this.configs.length > 0) {
-				this.configs[0].orientation = globalOrientation;
-			}
-		}
-    
-    		showToast(message = 'Gespeichert', duration = 1500) {
-  		const toast = document.getElementById('toast');
-  		if (!toast) return;
-  		toast.textContent = message;
-  		toast.classList.remove('hidden');
-
-  		clearTimeout(this.toastTimeout);
-  		this.toastTimeout = setTimeout(() => {
-    		toast.classList.add('hidden');
-  		}, duration);
-		}
-
-    saveNewConfig(customName = null) {
-  		// 1. Aktuelle Auswahl in der vorherigen Konfiguration speichern
-  		if (this.currentConfig !== null) {
-  			this.updateConfig(); // Speichere aktuelle Änderungen in vorheriger Config
-  		}
-  		
-  		// 2. Temporär currentConfig auf null setzen für neue Konfiguration
-  		this.currentConfig = null;
-
-			// 2a. Erzwinge Default-Startzustand für neue Konfiguration: 5x5, vertikal
-			if (this.default) {
-				this.cols = this.default.cols;
-				this.rows = this.default.rows;
-				if (this.wIn) this.wIn.value = this.default.width;
-				if (this.hIn) this.hIn.value = this.default.height;
-			}
-			if (this.orH && this.orV) {
-				this.orH.checked = false;
-				this.orV.checked = true;
-				this.syncOrientationButtons?.();
-			}
-  		
-  		// 3. Neue Konfiguration mit leerem Grid erstellen
-			const emptySelection = Array.from({ length: this.rows }, () =>
-  			Array.from({ length: this.cols }, () => false)
-  		);
-  		
-  		// 4. Aktuelle Auswahl temporär speichern und durch leere ersetzen
-  		const originalSelection = this.selection;
-  		this.selection = emptySelection;
-  		
-  		const cfg = this._makeConfigObject(customName);
-  		this.configs.push(cfg);
-  		
-    		// 5. Neue Konfiguration auswählen und Grid neu aufbauen
-    		this.currentConfig = this.configs.length - 1;
-    		this.setup(); // Baut Grid mit leerer Auswahl neu auf
-
-    		// Direkt zur Detail-Ansicht der neuen Konfiguration wechseln
-    		this.showDetailView(this.currentConfig);
-  		
-  				this.renderConfigList();
-		this.updateConfigList(); // Config-Liste in Overview updaten
-		this.updateSaveButtons();
-		
-		// 6. Detail-Ansicht aktualisieren wenn aktiv
-		this.updateDetailView();
-		
-		this.showToast(`Neue Konfiguration "${cfg.name}" erstellt`);
-		}
-
-    renameCurrentConfig(newName) {
-      if (this.currentConfig !== null && this.currentConfig >= 0 && this.currentConfig < this.configs.length) {
-        // Aktuelle Konfiguration umbenennen
-        this.configs[this.currentConfig].name = newName;
-        // Sofort DOM aktualisieren
-        const titleEl = document.getElementById('current-config-title');
-        if (titleEl) titleEl.textContent = newName;
-        if (this.configListEl) {
-          const items = this.configListEl.querySelectorAll('.config-item');
-          if (items && items[this.currentConfig]) {
-            const nameEl = items[this.currentConfig].querySelector('.config-item-name');
-            if (nameEl) nameEl.textContent = newName;
-          }
-        }
-        this.renderConfigList();
-        this.updateSaveButtons();
-        // Neu: Direkt in Cache sichern, damit der Name nach Reload erhalten bleibt
-        this.updateConfig();
-        this.saveToCache();
-        this.showAutoSaveIndicator();
-      }
-    }
-
-    updateConfig() {
-      const idx = this.currentConfig;
-      this.configs[idx] = this._makeConfigObject();
-      this.renderConfigList();
-      this.updateSaveButtons();
-    }
-    
-    deleteConfig(configIndex) {
-  		const configName = this.configs[configIndex].name;
-  		if (!confirm(`Willst du "${configName}" wirklich löschen?`)) return;
-
-  		this.configs.splice(configIndex, 1);
-  		
-  		// Nach dem Löschen: Wähle die nächste Konfiguration oder erstelle eine neue
-  		if (this.configs.length > 0) {
-  			// Wenn die gelöschte Konfiguration die aktuelle war
-  			if (configIndex === this.currentConfig) {
-  				// Wähle die nächste Konfiguration (oder die vorherige wenn es die letzte war)
-  				const newIndex = Math.min(configIndex, this.configs.length - 1);
-  				this.loadConfig(newIndex);
-  			} else if (configIndex < this.currentConfig) {
-  				// Eine Konfiguration vor der aktuellen wurde gelöscht, Index anpassen
-  				this.currentConfig--;
-  				this.renderConfigList();
-  			} else {
-  				// Eine Konfiguration nach der aktuellen wurde gelöscht, nur Liste neu rendern
-  				this.renderConfigList();
-  			}
-  		} else {
-  			// Keine Konfigurationen mehr - erstelle eine neue
-  			this.createNewConfig();
-  		}
-
-  		this.updateSaveButtons();
-		}
-
-    createNewConfig() {
-  		// Erstelle eine neue Standard-Konfiguration
-  		this.currentConfig = null;
-			this.resetGridToDefault(); // Setzt 5x5 und vertikal
-  		
-  		// Neue Konfiguration erstellen und hinzufügen
-  		const newConfig = this._makeConfigObject();
-  		this.configs.push(newConfig);
-  		this.currentConfig = this.configs.length - 1;
-  		
-  		this.renderConfigList();
-  		this.updateSaveButtons();
 		}
     _makeConfigObject(customName = null) {
       // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
@@ -7094,84 +6167,6 @@
       }, this.updateDelay);
     }
 
-
-
-		// ISOLIERTE synchrone Berechnung für Fallback
-		calculatePartsDirectly(data) {
-			const { selection, rows, cols, cellWidth, cellHeight, orientation, options } = data;
-			const ulicaModule = options?.ulicaModule === true;
-			const parts = {
-				Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
-				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
-				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
-			};
-
-			for (let y = 0; y < rows; y++) {
-				if (!Array.isArray(selection[y])) continue;
-				let run = 0;
-
-				for (let x = 0; x < cols; x++) {
-					if (selection[y]?.[x]) {
-						run++;
-					}
-					else if (run) { 
-						this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation, ulicaModule); 
-						run = 0; 
-					}
-				}
-				if (run) {
-					this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation, ulicaModule);
-				}
-			}
-
-			return parts;
-		}
-
-		// FALLBACK: Kopie der Worker-Berechnung
-		processGroupDirectly(len, parts, cellWidth, cellHeight, orientation, ulicaModule = false) {
-			const isVertical = orientation === 'vertical';
-			const actualCellWidth = isVertical ? cellHeight : cellWidth;
-			
-			const totalLen = len * actualCellWidth;
-			const floor360 = Math.floor(totalLen / 360);
-			const rem360 = totalLen - floor360 * 360;
-			const floor240 = Math.ceil(rem360 / 240);
-			const pure360 = Math.ceil(totalLen / 360);
-			const pure240 = Math.ceil(totalLen / 240);
-			
-			const variants = [
-				{cnt360: floor360, cnt240: floor240},
-				{cnt360: pure360,  cnt240: 0},
-				{cnt360: 0,        cnt240: pure240}
-			].map(v => ({
-				...v,
-				rails: v.cnt360 + v.cnt240,
-				waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
-			}));
-			
-			const minRails = Math.min(...variants.map(v => v.rails));
-			const best = variants
-				.filter(v => v.rails === minRails)
-				.reduce((a, b) => a.waste <= b.waste ? a : b);
-			
-			const {cnt360, cnt240} = best;
-			
-			parts.Schiene_360_cm     += cnt360 * 2;
-			parts.Schiene_240_cm     += cnt240 * 2;
-			parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
-			parts.Endklemmen         += 4;
-			parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
-			parts.Dachhaken          += len > 1 ? len * 3 : 4;
-			parts.Endkappen          += 4;  // Gleich wie Endklemmen
-			parts.Solarmodul         += len;
-			// UlicaSolarBlackJadeFlow hinzufügen wenn ulica-module Checkbox aktiviert ist
-			if (ulicaModule) {
-				parts.UlicaSolarBlackJadeFlow += len;
-			}
-			// Schrauben basierend auf Dachhaken berechnen
-			parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
-			parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
-		}
     resetAllConfigurations() {
     	// Bestätigungsabfrage
     	if (!confirm('Möchten Sie wirklich alle Konfigurationen löschen und von vorne anfangen?')) {
@@ -7299,9 +6294,9 @@
     			this.currentConfig = data.currentConfig;
     			
     			// Lade Grid-Auswahl
-    		if (data.selection && Array.isArray(data.selection)) {
-    			this.selection = data.selection;
-    		}
+    			if (data.selection && Array.isArray(data.selection)) {
+    				this.selection = data.selection;
+    			}
     			
     			// Lade Grid-Einstellungen
     			if (data.cols && data.rows) {
@@ -7328,479 +6323,53 @@
     			if (this.erdungsband && typeof data.erdungsband === 'boolean') {
     				this.erdungsband.checked = data.erdungsband;
     			}
-    						if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
-				this.ulicaModule.checked = data.ulicaModule;
-			}
-			
-			// Lade Module Dropdown Auswahl
-			if (this.moduleSelect && typeof data.moduleSelectValue === 'string') {
-				this.moduleSelect.value = data.moduleSelectValue;
-				// Wenn ein Modul ausgewählt ist, Inputs entsprechend sperren/freigeben
-				if (data.moduleSelectValue && data.moduleSelectValue !== 'custom') {
-					this.disableInputs();
-				} else {
-					this.enableInputs();
-				}
-			}
-			
-			// Lade Grid-Dimensionen
-			if (this.wIn && data.cellWidth) {
-				this.wIn.value = data.cellWidth;
-			}
-			if (this.hIn && data.cellHeight) {
-				this.hIn.value = data.cellHeight;
-			}
+    			if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
+    				this.ulicaModule.checked = data.ulicaModule;
+    			}
+    			
+    			// Lade Module Dropdown Auswahl
+    			if (this.moduleSelect && typeof data.moduleSelectValue === 'string') {
+    				this.moduleSelect.value = data.moduleSelectValue;
+    				// Wenn ein Modul ausgewählt ist, Inputs entsprechend sperren/freigeben
+    				if (data.moduleSelectValue && data.moduleSelectValue !== 'custom') {
+    					this.disableInputs();
+    				} else {
+    					this.enableInputs();
+    				}
+    			}
+    			
+    			// Lade Grid-Dimensionen
+    			if (this.wIn && data.cellWidth) {
+    				this.wIn.value = data.cellWidth;
+    			}
+    			if (this.hIn && data.cellHeight) {
+    				this.hIn.value = data.cellHeight;
+    			}
     			
     			// Lade Orientierung VOR dem Laden der Konfiguration
-			if (this.orH && this.orV && typeof data.orientation === 'string') {
-				this.orH.checked = data.orientation === 'horizontal';
-				this.orV.checked = data.orientation === 'vertical';
-				
-				// Synchronisiere mit den Orientation Buttons (robuster)
-				this.syncOrientationButtons();
-				
-				// Aktualisiere die erste Konfiguration mit der globalen Orientation
-				this.updateFirstConfigOrientation(data.orientation);
-			}
+    			if (this.orH && this.orV && typeof data.orientation === 'string') {
+    				this.orH.checked = data.orientation === 'horizontal';
+    				this.orV.checked = data.orientation === 'vertical';
+    				// Synchronisiere mit den Orientation Buttons (robuster)
+    				this.syncOrientationButtons();
+    				// Aktualisiere die erste Konfiguration mit der globalen Orientation
+    				this.updateFirstConfigOrientation(data.orientation);
+    			}
+    			
     			// Lade die erste Konfiguration
     			if (this.configs.length > 0) {
     				this.loadFirstConfigFromCache();
     			}
-    			
-    			// Grid und UI nach dem Laden wiederherstellen
-    			this.setup(); // Grid-Event-Listener wiederherstellen
-    			this.buildGrid(); // Grid visuell wiederherstellen
-    			this.buildList(); // Produktliste wiederherstellen
-    			
-    			// Event-Listener für alle UI-Elemente wiederherstellen
-    			this.setupAllEventListeners();
-    			
-    			// Aktualisiere UI nach dem Laden
-    			this.updateConfigList();
-    			this.updateCurrentTotalPrice();
-    			this.updateOverviewTotalPrice();
-    			
-    			this.showToast('Konfiguration aus Cache geladen', 2000);
-    			return true;
     		}
+    		return true;
     	} catch (error) {
     		console.error('Fehler beim Laden des Caches:', error);
     		this.cacheManager.clearCache();
     		this.showToast('Datei im Speicher ist beschädigt und konnte nicht geladen werden!', 3000);
+    		return false;
     	}
-    	
-    	return false;
     }
     
-        generateHiddenCartForms() {
-      const webflowForms = document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]');
-      this.webflowFormMap = {};
-      this.webflowFormMapNet = {};
-      this.webflowFormMapGross = {};
-      
-      webflowForms.forEach((form) => {
-        const productId = form.getAttribute('data-commerce-product-id');
-        const skuId = form.getAttribute('data-commerce-sku-id');
-        
-        const netKey = Object.keys(PRODUCT_MAP).find(key => 
-          PRODUCT_MAP[key].productId === productId || PRODUCT_MAP[key].variantId === skuId
-        );
-        const grossKey = Object.keys(GROSS_PRODUCT_MAP || {}).find(key =>
-          (GROSS_PRODUCT_MAP[key] && (GROSS_PRODUCT_MAP[key].productId === productId || GROSS_PRODUCT_MAP[key].variantId === skuId))
-        );
-
-        if (netKey) this.webflowFormMapNet[netKey] = form;
-        if (grossKey) this.webflowFormMapGross[grossKey] = form;
-      });
-      // Choose active map based on BUSINESS_MODE
-      this.webflowFormMap = BUSINESS_MODE ? this.webflowFormMapGross : this.webflowFormMapNet;
-      
-      this.hideWebflowForms();
-    }
-
-    hideWebflowForms() {
-      // Immer ALLE Webflow Add-to-Cart Forms verstecken – auch wenn sie nicht im Konfigurator genutzt werden
-      const allForms = document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]');
-      allForms.forEach(form => {
-        if (form && form.style) {
-          form.style.cssText = `
-            position: absolute !important;
-            left: -9999px !important;
-            top: -9999px !important;
-            width: 1px !important;
-            height: 1px !important;
-            overflow: hidden !important;
-            clip: rect(0, 0, 0, 0) !important;
-            white-space: nowrap !important;
-            border: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            visibility: hidden !important;
-          `;
-          form.setAttribute('aria-hidden', 'true');
-          form.setAttribute('tabindex', '-1');
-        }
-      });
-    }
-
-    addProductToCart(productKey, quantity, isLastItem = false) {
-      const product = PRODUCT_MAP[productKey];
-      if (!product) return;
-      
-      const form = this.webflowFormMap[productKey];
-      if (!form) return;
-      
-      const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
-      if (qtyInput) {
-        qtyInput.value = quantity;
-      }
-      
-      const addToCartButton = form.querySelector('input[data-node-type="commerce-add-to-cart-button"]');
-      if (addToCartButton) {
-        this.clickWebflowButtonSafely(form, addToCartButton, productKey, quantity, isLastItem);
-      }
-    }
-
-    clickWebflowButtonSafely(form, button, productKey, quantity, isLastItem) {
-      const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
-      if (qtyInput) qtyInput.value = quantity;
-      
-      // Iframe-Workaround entfernt: wir klicken direkt und warten sequenziell über DOM-Änderungen/Timeouts
-      button.click();
-    }
-
-    addPartsListToCart(parts) {
-      const entries = Object.entries(parts).filter(([_, qty]) => qty > 0);
-      if (!entries.length) return;
-      
-      if (this.isAddingToCart) {
-        this.showToast('Warenkorb wird bereits befüllt… Bitte warten.', 2000);
-        return;
-      }
-      this.isAddingToCart = true;
-      this.showLoading('Warenkorb wird befüllt… bitte warten');
-      
-      // Overlay verbergen bis der Prozess abgeschlossen ist
-      this.hideCartContainer();
-      
-      const items = entries.map(([key, qty]) => ({ key, qty }));
-      const processSequentially = async () => {
-        try {
-          await this.ensureCartObservers();
-          for (let i = 0; i < items.length; i++) {
-            const { key, qty } = items[i];
-            const packsNeeded = Math.ceil(qty / VE[key]);
-            await this.addSingleItemAndWait(key, packsNeeded, i === items.length - 1);
-          }
-        } finally {
-          // Nach Abschluss: Overlay zeigen und Status zurücksetzen
-          this.showCartContainer();
-          this.hideLoading();
-          this.isAddingToCart = false;
-        }
-      };
-      processSequentially();
-    }
-
-    async addSingleItemAndWait(productKey, quantity, isLast) {
-      // Safeguards
-      const form = this.webflowFormMap ? this.webflowFormMap[productKey] : null;
-      if (!form) {
-        // Versuche, Formen neu zu sammeln, dann erneut versuchen
-        await this.ensureWebflowFormsMapped();
-      }
-      const mappedForm = this.webflowFormMap ? this.webflowFormMap[productKey] : null;
-      if (!mappedForm) {
-        this.showToast(`Produktformular nicht gefunden: ${productKey}`, 2000);
-        return;
-      }
-      const addBtn = mappedForm.querySelector('input[data-node-type="commerce-add-to-cart-button"]');
-      if (!addBtn) {
-        this.showToast(`Add-to-Cart Button fehlt: ${productKey}`, 2000);
-        return;
-      }
-      
-      // Fortschrittsmeldung optional
-      // this.showToast(`Füge hinzu: ${productKey} x${quantity}`, 1200);
-      
-      // DOM-Änderung oder Timeout abwarten
-      const waitForAck = this.waitForCartAcknowledge(1500);
-      this.clickWebflowButtonSafely(mappedForm, addBtn, productKey, quantity, isLast);
-      await waitForAck;
-    }
-
-    async ensureCartObservers() {
-      // Observer für Cart-Änderungen
-      if (!this.cartAckObserver) {
-        const list = document.querySelector('.w-commerce-commercecartlist') || document.querySelector('.w-commerce-commercecartcontainerwrapper');
-        if (list) {
-          this.cartAckObserver = new MutationObserver(() => {
-            if (this.cartAckResolve) {
-              const r = this.cartAckResolve;
-              this.cartAckResolve = null;
-              r();
-            }
-          });
-          this.cartAckObserver.observe(list, { childList: true, subtree: true });
-        }
-      }
-      
-      // Observer für Webflow-Formulare (für asynchrones Rendering)
-      if (!this.webflowFormsObserver) {
-        this.webflowFormsObserver = new MutationObserver(() => {
-          this.generateHiddenCartForms();
-        });
-        this.webflowFormsObserver.observe(document.body, { childList: true, subtree: true });
-      }
-      
-      await this.ensureWebflowFormsMapped();
-    }
-
-    waitForCartAcknowledge(timeoutMs = 1500) {
-      return new Promise((resolve) => {
-        let settled = false;
-        const timer = setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            if (this.cartAckResolve === resolve) this.cartAckResolve = null;
-            resolve();
-          }
-        }, timeoutMs);
-        
-        this.cartAckResolve = () => {
-          if (!settled) {
-            settled = true;
-            clearTimeout(timer);
-            resolve();
-          }
-        };
-      });
-    }
-
-    async ensureWebflowFormsMapped() {
-      // Falls Mapping leer ist, nochmal scannen
-      if (!this.webflowFormMap || Object.keys(this.webflowFormMap).length === 0) {
-        this.generateHiddenCartForms();
-        // kurze Wartezeit, falls Webflow synchron nachrendert
-        await new Promise(r => setTimeout(r, 50));
-      }
-    }
-
-    hideCartContainer() {
-      const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
-      if (cartContainer) {
-        cartContainer.style.display = 'none';
-      }
-    }
-
-    showCartContainer() {
-      const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
-      if (cartContainer) {
-        cartContainer.style.display = '';
-      }
-    }
-
-    async addCurrentToCart() {
-      try {
-        this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
-        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
-      const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
-      
-      if (itemCount === 0) {
-        this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
-        this.hideLoading();
-        return;
-      }
-      
-      // Sende Daten an Webhook
-      this.sendCurrentConfigToWebhook().then(success => {
-        if (success) {
-        } else {
-        }
-      });
-      
-      this.addPartsListToCart(parts);
-      this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
-        
-        // PDF für aktuelle Konfiguration generieren
-        if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
-          setTimeout(() => {
-            this.pdfGenerator.generatePDF('current');
-          }, 500); // Kurze Verzögerung damit Warenkorb-Toast zuerst angezeigt wird
-        }
-      } catch (error) {
-        this.showToast('Fehler beim Berechnen der Produkte ❌', 2000);
-        this.hideLoading();
-      }
-    }
-
-    async addAllToCart() {
-      try {
-      // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
-      this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
-      
-        // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
-        const configSnapshot = this.createConfigSnapshot();
-        
-        // SCHRITT 2: PDF ZUERST mit isolierten Daten erstellen
-        if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
-          this.showToast('PDF wird erstellt...', 2000);
-          await this.pdfGenerator.generatePDFFromSnapshot(configSnapshot);
-          			this.showToast('PDF erfolgreich erstellt', 1500);
-        }
-        
-        // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
-        const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
-        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
-        if (idx === this.currentConfig) {
-                      return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
-      } else {
-        return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz, cfg.quetschkabelschuhe, cfg.erdungsband, cfg.ulicaModule);
-        }
-        }));
-      
-      // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
-      if (this.currentConfig === null && this.configs.length === 0) {
-            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
-            allBundles.push(currentParts);
-      }
-      
-      const total = {};
-      allBundles.forEach(parts => {
-        Object.entries(parts).forEach(([k, v]) => {
-          total[k] = (total[k] || 0) + v;
-        });
-      });
-      
-      const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
-      
-      if (totalItemCount === 0) {
-        this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
-        return;
-      }
-      
-        // SCHRITT 4: Sende alle Konfigurationen an Webhook (NACH PDF)
-        const webhookSuccess = await this.sendAllConfigsToWebhook();
-        if (webhookSuccess) {
-          // Success handling if needed
-        } else {
-          // Error handling if needed  
-        }
-      
-        // SCHRITT 5: Füge zum Warenkorb hinzu
-      this.addPartsListToCart(total);
-      this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
-        
-      } catch (error) {
-        console.error('Fehler in addAllToCart:', error);
-        this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
-        this.hideLoading();
-      }
-    }
-
-    async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe, erdungsband, ulicaModule) {
-      // Speichere aktuelle Auswahl
-      const originalSelection = this.selection.map(r => [...r]);
-      
-      try {
-        // Temporär setzen für Berechnung
-        this.selection = sel;
-        let parts = await this.calculateParts();
-        
-        // Module nur hinzufügen wenn Checkbox aktiviert ist
-        if (!incM) delete parts.Solarmodul;
-        if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
-        
-        // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
-        const moduleCount = (this.selection || []).flat().filter(Boolean).length;
-        if (mc4 && moduleCount > 0) {
-          parts.MC4_Stecker = Math.ceil(moduleCount / 30);
-        } else {
-          delete parts.MC4_Stecker;
-        }
-        if (solarkabel) {
-          parts.Solarkabel = 1;
-        } else {
-          delete parts.Solarkabel;
-        }
-        if (holz) {
-          parts.Holzunterleger = 1; // pauschal 1 VE
-        } else {
-          delete parts.Holzunterleger;
-        }
-        if (quetschkabelschuhe) {
-          parts.Quetschkabelschuhe = 1; // pauschal 1 VE
-        } else {
-          delete parts.Quetschkabelschuhe;
-        }
-        
-        // Erdungsband hinzufügen wenn aktiviert
-        if (erdungsband) {
-          parts.Erdungsband = this.calculateErdungsband();
-        } else {
-          delete parts.Erdungsband;
-        }
-        
-        return parts;
-      } finally {
-        // Ursprüngliche Auswahl wiederherstellen
-        this.selection = originalSelection;
-      }
-    }
-
-    _buildCartItems(parts) {
-      return Object.entries(parts).map(([k,v]) => {
-        const packs = Math.ceil(v / VE[k]);
-        const activeMap = BUSINESS_MODE ? GROSS_PRODUCT_MAP : PRODUCT_MAP;
-        const m = activeMap[k];
-        return (!m || packs <= 0) ? null : {
-          productId: m.productId,
-          variantId: m.variantId,
-          quantity:  packs
-        };
-      }).filter(Boolean);
-    }
-
-    // ===== PDF HELPER METHODS =====
-    
-    // Hole aktuelle Konfigurationsdaten für PDF
-    getCurrentConfigData() {
-      return {
-        name: this.currentConfig !== null && this.configs[this.currentConfig] ? 
-              this.configs[this.currentConfig].name : 'Aktuelle Konfiguration',
-        cols: this.cols,
-        rows: this.rows,
-        selection: this.selection.map(row => [...row]), // Deep copy
-        orientation: this.orV.checked ? 'vertical' : 'horizontal',
-        includeModules: this.incM.checked,
-        mc4: this.mc4.checked,
-        cable: this.solarkabel.checked,
-        wood: this.holz.checked,
-        quetschkabelschuhe: this.quetschkabelschuhe.checked,
-        erdungsband: this.erdungsband ? this.erdungsband.checked : false,
-        ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false
-      };
-    }
-
-    // NEUE METHODE: Globale Checkbox-Logik - aktualisiert alle Konfigurationen
-    updateAllConfigurationsForCheckboxes() {
-      // Aktualisiere alle gespeicherten Konfigurationen mit aktuellen Checkbox-Werten
-      this.configs.forEach((config, index) => {
-        config.incM = this.incM.checked;
-        config.mc4 = this.mc4.checked;
-        config.solarkabel = this.solarkabel.checked;
-        config.holz = this.holz.checked;
-        config.quetschkabelschuhe = this.quetschkabelschuhe.checked;
-        if (this.erdungsband) config.erdungsband = this.erdungsband.checked;
-        if (this.ulicaModule) config.ulicaModule = this.ulicaModule.checked;
-      });
-      
-      // Aktualisiere Summary und Produktliste
-      this.updateSummaryOnChange();
-      
-      // Aktualisiere auch die Produktliste in der detailed-overview
-      this.buildList();
-    }
     // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF
     createConfigSnapshot() {
       // Auto-Save der aktuellen Konfiguration falls nötig
@@ -8042,10 +6611,8 @@
       const originalCellW = isVertical ? inputH : inputW;
       const originalCellH = isVertical ? inputW : inputH;
       
-      
-      
-		// Maximale verfügbare Größe (wie im Hauptgrid)
-		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 160 : 800;
+      // Maximale verfügbare Größe (wie im Hauptgrid)
+      const maxWidth = this.wrapper ? this.wrapper.clientWidth - 160 : 800;
 		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 160 : 600;
       
       // Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
@@ -8240,52 +6807,6 @@
         this.resizeObserver.observe(this.wrapper);
       }
     }
-    
-    // FEATURE 8: Pinch-to-Zoom Setup
-    setupPinchToZoom() {
-      if (!this.wrapper) return;
-      
-      let initialDistance = 0;
-      let initialZoom = 1;
-      
-      this.wrapper.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-          e.preventDefault();
-          initialDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
-          initialZoom = this.zoomLevel;
-        }
-      });
-      
-      this.wrapper.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-          e.preventDefault();
-          const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
-          const scale = currentDistance / initialDistance;
-          const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, initialZoom * scale));
-          
-          this.setZoom(newZoom);
-        }
-      });
-      
-      this.wrapper.addEventListener('touchend', (e) => {
-        if (e.touches.length < 2) {
-          initialDistance = 0;
-          initialZoom = 1;
-        }
-      });
-    }
-    
-    getTouchDistance(touch1, touch2) {
-      const dx = touch1.clientX - touch2.clientX;
-      const dy = touch1.clientY - touch2.clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
-    
-    setZoom(zoomLevel) {
-      this.zoomLevel = zoomLevel;
-      this.wrapper.style.transform = `scale(${zoomLevel})`;
-      this.wrapper.style.transformOrigin = 'center center';
-    }
     cleanup() {
       // Memory-Leak Prävention: Timeouts löschen
       if (this.updateTimeout) {
@@ -8330,7 +6851,6 @@
       }
     }
   }
-
   document.addEventListener('DOMContentLoaded', () => {
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
