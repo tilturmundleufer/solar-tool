@@ -254,3 +254,8 @@ Eingabe → Erwartung (Auszug)
 - "300 mittel-klemmen" → VE=50; Stückpreis 0,95 € → Packpreis 47,50 €.
 - "unter 300 mittelklemmen" → Basispreis pro VE wieder aktiv.
 - Unbekanntes Kommando: klare Meldung im UI, keine Preisänderung.
+
+## Hinweis – Firmenkunde (MwSt.)
+- Die neue Checkbox „Firmenkunde“ wird nicht per Smart‑Config gesteuert.
+- Smart‑Config‑Befehle (Leerzeichen/Bindestrich‑Varianten) bleiben unverändert und funktionieren wie gehabt.
+- Negative Fälle (unbekannte Kommandos) zeigen weiterhin klare, nutzerfreundliche Hinweise.
