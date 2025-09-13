@@ -247,26 +247,10 @@
     return getStoredCustomerType() === 'private';
   }
 
-  function applyVatIfPrivate(amount) {
+  function applyVatIfBusiness(amount) {
     if (!Number.isFinite(amount)) return amount;
-    return isPrivateCustomer() ? Math.round(amount * 119) / 100 : amount;
-  }
-
-  // Brutto-Produkt-Mapping (Platzhalter) für Zusatzprodukte bei Privatkunden
-  const PRODUCT_MAP_BRUTTO_ADDITIONAL = {
-    MC4_Stecker: { productId: 'BRUTTO_PRODUCT_ID_MC4', variantId: 'BRUTTO_VARIANT_ID_MC4' },
-    Solarkabel: { productId: 'BRUTTO_PRODUCT_ID_SOLARKABEL', variantId: 'BRUTTO_VARIANT_ID_SOLARKABEL' },
-    Holzunterleger: { productId: 'BRUTTO_PRODUCT_ID_HOLZ', variantId: 'BRUTTO_VARIANT_ID_HOLZ' },
-    Quetschkabelschuhe: { productId: 'BRUTTO_PRODUCT_ID_QUETSCH', variantId: 'BRUTTO_VARIANT_ID_QUETSCH' },
-    Erdungsband: { productId: 'BRUTTO_PRODUCT_ID_ERDUNGSBAND', variantId: 'BRUTTO_VARIANT_ID_ERDUNGSBAND' },
-    Erdungsklemme: { productId: 'BRUTTO_PRODUCT_ID_ERDUNGSKLEMME', variantId: 'BRUTTO_VARIANT_ID_ERDUNGSKLEMME' }
-  };
-
-  function getCartProductInfo(productKey) {
-    if (isPrivateCustomer() && Object.prototype.hasOwnProperty.call(PRODUCT_MAP_BRUTTO_ADDITIONAL, productKey)) {
-      return PRODUCT_MAP_BRUTTO_ADDITIONAL[productKey];
-    }
-    return PRODUCT_MAP[productKey];
+    // MwSt. nur für Firmenkunden anwenden
+    return isPrivateCustomer() ? amount : Math.round(amount * 119) / 100;
   }
 
   // Liefert den wirksamen VE-Preis (Packpreis) basierend auf benötigter Stückzahl und Staffelung
@@ -274,9 +258,7 @@
     const ve = VE[productKey] || 1;
     const basePackPrice = getPriceFromCache(productKey) || 0;
     const tiers = TIER_PRICING[productKey];
-    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) {
-      return applyVatIfPrivate(basePackPrice);
-    }
+    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return applyVatIfBusiness(basePackPrice);
     const qty = Number(requiredPieces) || 0;
     let best = null;
     for (const tier of tiers) {
@@ -284,10 +266,10 @@
         if (!best || tier.minPieces > best.minPieces) best = tier;
       }
     }
-    if (!best) return applyVatIfPrivate(basePackPrice);
-    if (typeof best.packPrice === 'number') return applyVatIfPrivate(best.packPrice);
-    if (typeof best.pricePerPiece === 'number') return applyVatIfPrivate(best.pricePerPiece * ve);
-    return applyVatIfPrivate(basePackPrice);
+    if (!best) return applyVatIfBusiness(basePackPrice);
+    if (typeof best.packPrice === 'number') return applyVatIfBusiness(best.packPrice);
+    if (typeof best.pricePerPiece === 'number') return applyVatIfBusiness(best.pricePerPiece * ve);
+    return applyVatIfBusiness(basePackPrice);
   }
   
   const PRODUCT_MAP = {
@@ -7898,21 +7880,10 @@
     }
 
     addProductToCart(productKey, quantity, isLastItem = false) {
-      const preferBrutto = isPrivateCustomer() && Object.prototype.hasOwnProperty.call(PRODUCT_MAP_BRUTTO_ADDITIONAL, productKey);
-      let form = null;
-      if (preferBrutto && this.webflowFormMapBrutto) {
-        form = this.webflowFormMapBrutto[productKey] || null;
-      }
-      if (!form && this.webflowFormMap) {
-        form = this.webflowFormMap[productKey] || null;
-      }
-      if (!form) {
-        const info = getCartProductInfo(productKey);
-        if (info) {
-          form = document.querySelector(`[data-commerce-product-id="${info.productId}"]`) ||
-                 document.querySelector(`[data-commerce-sku-id="${info.variantId}"]`);
-        }
-      }
+      const product = PRODUCT_MAP[productKey];
+      if (!product) return;
+      
+      const form = this.webflowFormMap[productKey];
       if (!form) return;
       
       const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
@@ -7969,31 +7940,12 @@
 
     async addSingleItemAndWait(productKey, quantity, isLast) {
       // Safeguards
-      const preferBrutto = isPrivateCustomer() && Object.prototype.hasOwnProperty.call(PRODUCT_MAP_BRUTTO_ADDITIONAL, productKey);
-      let mappedForm = null;
-      if (preferBrutto && this.webflowFormMapBrutto) {
-        mappedForm = this.webflowFormMapBrutto[productKey] || null;
-      }
-      if (!mappedForm && this.webflowFormMap) {
-        mappedForm = this.webflowFormMap[productKey] || null;
-      }
-      if (!mappedForm) {
+      const form = this.webflowFormMap ? this.webflowFormMap[productKey] : null;
+      if (!form) {
         // Versuche, Formen neu zu sammeln, dann erneut versuchen
         await this.ensureWebflowFormsMapped();
-        if (preferBrutto && this.webflowFormMapBrutto) {
-          mappedForm = this.webflowFormMapBrutto[productKey] || null;
-        }
-        if (!mappedForm && this.webflowFormMap) {
-          mappedForm = this.webflowFormMap[productKey] || null;
-        }
-        if (!mappedForm) {
-          const info = getCartProductInfo(productKey);
-          if (info) {
-            mappedForm = document.querySelector(`[data-commerce-product-id="${info.productId}"]`) ||
-                         document.querySelector(`[data-commerce-sku-id="${info.variantId}"]`);
-          }
-        }
       }
+      const mappedForm = this.webflowFormMap ? this.webflowFormMap[productKey] : null;
       if (!mappedForm) {
         this.showToast(`Produktformular nicht gefunden: ${productKey}`, 2000);
         return;
