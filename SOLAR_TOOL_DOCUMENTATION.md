@@ -165,6 +165,7 @@ Hinweise:
 - 2025-08-30: Schienenverbinder-Logik korrigiert (Produktliste): pro Reihe jetzt Verbinder = Anzahl der Schienen − 2. Beispiel: Bei 4 Schienen in einer Reihe werden 2 Verbinder angezeigt (vorher 4). Test: Konfiguration mit einer Reihe, die zwei Schienenstücke pro Rail benötigt; prüfen, dass Verbinderanzahl halbiert ist.
 - 2025-08-25: Webhook-Payload verschlankt (ohne Bilddaten), hinzugefügt: `selection`-Metadaten und kompaktes `productQuantities`.
 - 2025-08-26: Smart Config – Verteilungsmodus `gleichmäßig` deaktiviert; Nutzerhinweis ergänzt und Beispiele angepasst.
+- 2025-09-13: Kundentyp-Popup (Privat/Firma, 48h Speicherung) hinzugefügt. Preislogik: Privatkunden Bruttopreise (×1,19), Firmenkunden Nettopreise. Warenkorb bevorzugt Brutto-SKUs für Zusatzprodukte bei Privatkunden (Platzhalter-IDs).
 
 ---
 
@@ -195,6 +196,24 @@ VE = {
 - Orientierungsabhängige Schienenlängen
 - Zusatzprodukte: Quetschkabelschuhe pauschal 1 VE; Erdungsband nach berechneter Länge (auf 600 cm aufrunden)
  - Schienenverbinder: pro Reihe = Gesamtanzahl der Schienenstücke (beide Schienen) − 2
+ - Kundentyp-Logik: Privatkunden sehen Bruttopreise (19% MwSt), Firmenkunden Nettopreise. Die Kalkulation nutzt `getPackPriceForQuantity()` mit MwSt-Aufschlag via `applyVatIfPrivate()`.
+
+### **Kundentyp-Popup (48h Speicherung)**
+- Dateien: `customer-type-popup.html`, `customer-type-popup.css`, `customer-type-popup.js`
+- Einbindung: Auf jeder Shop-Seite HTML-Snippet einfügen und CSS/JS referenzieren
+  - HTML direkt in die Seite oder via CMS-Snippet
+  - CSS im `<head>`: `<link rel="stylesheet" href="/customer-type-popup.css">`
+  - JS am Ende von `<body>`: `<script src="/customer-type-popup.js" defer></script>`
+- Verhalten:
+  - Overlay erscheint, wenn kein Kundentyp gesetzt ist oder 48h abgelaufen sind
+  - Buttons: „Privatkunde“ setzt `type=private`, „Firmenkunde“ setzt `type=business`
+  - Speichern in `localStorage.solarTool_customerType = { type, expiresAt }`
+  - Nach Auswahl automatische Aktualisierung der Seite (`location.reload()`), damit Preise und Warenkorb-IDs korrekt greifen
+
+### **Warenkorb (Brutto-SKUs für Privatkunden)**
+- Brutto-Produkt-Overrides (Platzhalter) für Zusatzprodukte in `script.js` per `PRODUCT_MAP_BRUTTO_ADDITIONAL`
+- Beim Hinzufügen in den Warenkorb werden für Privatkunden, falls vorhanden, die Brutto-Formulare bevorzugt (Mapping `webflowFormMapBrutto`)
+- Fallback auf Standard-SKUs, falls Brutto-SKU nicht vorhanden ist
 
 ### **Analytics-Nutzung:**
 - **Zweck:** Tool-Optimierung basierend auf Nutzerverhalten
@@ -336,3 +355,4 @@ Hinweis: Der Verteilungsmodus `gleichmäßig` ist deaktiviert. Bitte verwenden S
   - 40× `Schiene_240_cm` → 11,59 € pro Stück (VE=1).
   - 300× `Mittelklemmen` → 0,95 € pro Stück, VE=50 → Packpreis 47,50 €.
   - 36× `Solarmodul` → 55,90 € pro Stück.
+  - Kundentyp: LocalStorage löschen, Seite laden → Popup erscheint. „Privatkunde“ wählen → alle Preise mit 19% MwSt., Zusatzprodukte nutzen Brutto-IDs (falls vorhanden). „Firmenkunde“ → Nettopreise, Standard-IDs. Nach 48h → Popup erscheint wieder.

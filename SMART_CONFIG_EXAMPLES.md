@@ -254,3 +254,7 @@ Eingabe → Erwartung (Auszug)
 - "300 mittel-klemmen" → VE=50; Stückpreis 0,95 € → Packpreis 47,50 €.
 - "unter 300 mittelklemmen" → Basispreis pro VE wieder aktiv.
 - Unbekanntes Kommando: klare Meldung im UI, keine Preisänderung.
+
+## Hinweis Kundentyp & Smart Config
+- Die Smart Config Parserregeln bleiben unverändert.
+- Die ausgewiesenen Preise in Zusammenfassungen und PDF richten sich nach dem Kundentyp (Privat = brutto, Firma = netto). Die Eingabekommandos bleiben gleich.

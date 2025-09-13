@@ -214,3 +214,18 @@ node -c script.min.js
 
 - Verwende `getPackPriceForQuantity(productKey, requiredPieces)` statt direktem `getPriceFromCache` für alle positionsbezogenen Preisberechnungen.
 - Staffeldefinitionen stehen in `TIER_PRICING`. `pricePerPiece` × `VE` ergibt dynamischen VE-Preis; alternativ `packPrice` nutzen.
+
+## Reasoning-Level für diese Änderung
+- Level: medium – Parser/Worker unangetastet; lokale Preis- und Warenkorb-Logik erweitert; neue Popup-Dateien hinzugefügt.
+
+## Git-Flow Ergänzung
+1) `script.js` commit
+2) `script.min.js` commit (gleiche Message + `[minified]`)
+3) `.md`-Änderungen commit (Changelog + Doku)
+4) Popup-Dateien (`customer-type-popup.*`) commit (statisches Asset; kann zusammen mit Doku committet werden, wenn gewünscht)
+
+## Tests (Kundentyp)
+- LocalStorage leeren → Seite lädt → Popup erscheint
+- Auswahl „Privatkunde“ → Preise = Bruttopreise (×1,19), Brutto-SKUs werden bevorzugt
+- Auswahl „Firmenkunde“ → Preise = Netto; Standard-SKUs
+- Nach 48h → Popup erscheint erneut
