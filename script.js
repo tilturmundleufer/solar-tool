@@ -973,7 +973,22 @@
 
         // Produkte rendern (neues Tabellenlayout: Anzahl | Produkt+VE | benötigte Menge | Preis)
         // Zusatzprodukte werden hier explizit ausgeschlossen – sie kommen gesammelt auf eine separate Seite
-        await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), productsPage.querySelector('.pdf-total-price'), {
+        const pdfTotalPriceEl = productsPage.querySelector('.pdf-total-price');
+        if (pdfTotalPriceEl) {
+          // Optionaler MwSt.-Hinweis nur für Firmenkunden
+          if (!isPrivateCustomer()) {
+            const hint = document.createElement('div');
+            hint.textContent = '(inkl. MwSt)';
+            hint.style.fontSize = '9pt';
+            hint.style.fontWeight = '400';
+            hint.style.marginTop = '2mm';
+            hint.style.opacity = '0.9';
+            const totalContainer = productsPage.querySelector('.pdf-total');
+            if (totalContainer) totalContainer.appendChild(hint);
+          }
+        }
+
+        await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), pdfTotalPriceEl, {
           htmlLayout: true,
           excludeAdditionalProducts: true
         });
@@ -1060,7 +1075,20 @@
           `;
 
           // Render Zusatzprodukte-Tabelle
-          await this.renderAdditionalProductsIntoTable(snapshot, additionalPage.querySelector('.pdf-additional-table-body'), additionalPage.querySelector('.pdf-additional-total-price'));
+          const pdfAddTotalEl = additionalPage.querySelector('.pdf-additional-total-price');
+          if (pdfAddTotalEl) {
+            if (!isPrivateCustomer()) {
+              const hint = document.createElement('div');
+              hint.textContent = '(inkl. MwSt)';
+              hint.style.fontSize = '9pt';
+              hint.style.fontWeight = '400';
+              hint.style.marginTop = '2mm';
+              hint.style.opacity = '0.9';
+              const totalContainer = additionalPage.querySelector('.pdf-total');
+              if (totalContainer) totalContainer.appendChild(hint);
+            }
+          }
+          await this.renderAdditionalProductsIntoTable(snapshot, additionalPage.querySelector('.pdf-additional-table-body'), pdfAddTotalEl);
 
           // Footer
           const footer = document.createElement('div');
@@ -1474,7 +1502,8 @@
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.text('GESAMTPREIS:', 20, positionRef.y + 8);
-      pdf.text(`${totalPrice.toFixed(2)} €`, 170, positionRef.y + 8);
+      const totalText = `${totalPrice.toFixed(2)} €` + (isPrivateCustomer() ? '' : ' (inkl. MwSt)');
+      pdf.text(totalText, 170, positionRef.y + 8);
       
       pdf.setTextColor(0, 0, 0);
       positionRef.y += 30;
@@ -5353,6 +5382,12 @@
 				
 				const totalPrice = this.calculateConfigPrice(currentConfig);
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+				// Subtitle ("inkl. MwSt") nur für Firmenkunden anzeigen
+				const section = totalPriceEl.closest('.total-section');
+				const subtitle = section ? section.querySelector('.total-subtitle') : null;
+				if (subtitle) {
+					subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+				}
 			}
 		}
 		
@@ -5408,6 +5443,12 @@
 			totalPrice += additionalProductsPrice;
 			
 			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+			// Subtitle ("inkl. MwSt") nur für Firmenkunden anzeigen
+			const section = totalPriceEl.closest('.total-section');
+			const subtitle = section ? section.querySelector('.total-subtitle') : null;
+			if (subtitle) {
+				subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+			}
 		}
 		
 		calculateAdditionalProductsPrice() {
