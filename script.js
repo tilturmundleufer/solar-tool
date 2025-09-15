@@ -253,86 +253,7 @@
     return isPrivateCustomer() ? amount : Math.round(amount * 119) / 100;
   }
 
-  // Sichtbarkeit von Produkt-Collection-Listen je Kundentyp steuern
-  function updateCustomerTypeVisibility() {
-    try {
-      const isPrivate = isPrivateCustomer();
-      const privateSelectors = [
-        '[id="privat"]',
-        '[data-customer-type="privat"]',
-        '[data-customer-segment="privat"]',
-        '[data-list="privat"]',
-        '.collection-list-privat'
-      ];
-      const businessSelectors = [
-        '[id="gewerbe"]',
-        '[data-customer-type="gewerbe"]',
-        '[data-customer-segment="gewerbe"]',
-        '[data-list="gewerbe"]',
-        '.collection-list-gewerbe'
-      ];
-      const setHidden = (elements, hidden) => {
-        elements.forEach(el => {
-          if (el && el.style) el.style.display = hidden ? 'none' : '';
-        });
-      };
-      const queryAll = (selectors) => selectors.flatMap(sel => Array.from(document.querySelectorAll(sel)));
-      const privEls = queryAll(privateSelectors);
-      const busEls = queryAll(businessSelectors);
-      // Privat sichtbar, Gewerbe versteckt ODER umgekehrt
-      setHidden(privEls, !isPrivate);
-      setHidden(busEls, isPrivate);
-    } catch (_) { /* noop */ }
-  }
-
-  // Exponiere für andere Seiten/Skripte
-  window.updateCustomerTypeVisibility = updateCustomerTypeVisibility;
-
-  function setActiveCustomerTypeButtons() {
-    const btnPriv = document.getElementById('nav-private');
-    const btnBiz  = document.getElementById('nav-business');
-    const isPrivate = isPrivateCustomer();
-    if (btnPriv && btnPriv.classList) {
-      btnPriv.classList.toggle('stp-btn-active', isPrivate);
-    }
-    if (btnBiz && btnBiz.classList) {
-      btnBiz.classList.toggle('stp-btn-active', !isPrivate);
-    }
-  }
-
-  function storeCustomerTypeSelection(type) {
-    try {
-      const expiresAt = Date.now() + 48 * 60 * 60 * 1000;
-      localStorage.setItem('solarTool_customerType', JSON.stringify({ type, expiresAt }));
-    } catch (_) {}
-  }
-
-  function setCustomerType(type) {
-    const normalized = type === 'business' ? 'business' : 'private';
-    storeCustomerTypeSelection(normalized);
-    updateCustomerTypeVisibility();
-    setActiveCustomerTypeButtons();
-    // Preise/Übersichten live aktualisieren (falls SolarGrid aktiv ist)
-    try {
-      if (window.solarGrid) {
-        if (typeof window.solarGrid.updateCurrentTotalPrice === 'function') {
-          window.solarGrid.updateCurrentTotalPrice();
-        }
-        if (typeof window.solarGrid.updateOverviewTotalPrice === 'function') {
-          window.solarGrid.updateOverviewTotalPrice();
-        }
-        // Webflow-Form-Mapping sicherstellen (Brutto/Netto-Formulare bevorzugen)
-        if (typeof window.solarGrid.ensureWebflowFormsMapped === 'function') {
-          window.solarGrid.ensureWebflowFormsMapped();
-        } else if (typeof window.solarGrid.generateHiddenCartForms === 'function') {
-          window.solarGrid.generateHiddenCartForms();
-        }
-      }
-    } catch (_) {}
-  }
-
-  // Exponiere Setter
-  window.setCustomerType = setCustomerType;
+  // Kundentyp-UI (Listen/Buttons) wird zentral in customer-type-popup.js verwaltet
 
   // Brutto-Produkt-Mapping (Platzhalter) für Zusatzprodukte bei Firmenkunden
   const PRODUCT_MAP_BRUTTO = {
@@ -8974,17 +8895,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Zeige die korrekten Produktlisten je Kundentyp (Privat/Gewerbe)
-    updateCustomerTypeVisibility();
-    // Navbar-Umschalter anbinden
-    try {
-      const btnPriv = document.getElementById('nav-private');
-      const btnBiz  = document.getElementById('nav-business');
-      if (btnPriv) btnPriv.addEventListener('click', () => window.setCustomerType('private'));
-      if (btnBiz)  btnBiz.addEventListener('click', () => window.setCustomerType('business'));
-    } catch (_) {}
-    // Aktivzustand initial setzen
-    try { setActiveCustomerTypeButtons(); } catch (_) {}
+    // Kundentyp-UI (Listen/Buttons) wird global im customer-type-popup.js verwaltet
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
     window.solarGrid = grid;
