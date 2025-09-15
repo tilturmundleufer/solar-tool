@@ -253,6 +253,38 @@
     return isPrivateCustomer() ? amount : Math.round(amount * 119) / 100;
   }
 
+  // Sichtbarkeit von Produkt-Collection-Listen je Kundentyp steuern
+  function updateCustomerTypeVisibility() {
+    try {
+      const isPrivate = isPrivateCustomer();
+      const privateSelectors = [
+        '[id="privat"]',
+        '[data-customer-type="privat"]',
+        '[data-customer-segment="privat"]',
+        '[data-list="privat"]',
+        '.collection-list-privat'
+      ];
+      const businessSelectors = [
+        '[id="gewerbe"]',
+        '[data-customer-type="gewerbe"]',
+        '[data-customer-segment="gewerbe"]',
+        '[data-list="gewerbe"]',
+        '.collection-list-gewerbe'
+      ];
+      const setHidden = (elements, hidden) => {
+        elements.forEach(el => {
+          if (el && el.style) el.style.display = hidden ? 'none' : '';
+        });
+      };
+      const queryAll = (selectors) => selectors.flatMap(sel => Array.from(document.querySelectorAll(sel)));
+      const privEls = queryAll(privateSelectors);
+      const busEls = queryAll(businessSelectors);
+      // Privat sichtbar, Gewerbe versteckt ODER umgekehrt
+      setHidden(privEls, !isPrivate);
+      setHidden(busEls, isPrivate);
+    } catch (_) { /* noop */ }
+  }
+
   // Brutto-Produkt-Mapping (Platzhalter) für Zusatzprodukte bei Firmenkunden
   const PRODUCT_MAP_BRUTTO = {
     // Module
@@ -8893,6 +8925,8 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    // Zeige die korrekten Produktlisten je Kundentyp (Privat/Gewerbe)
+    updateCustomerTypeVisibility();
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
     window.solarGrid = grid;
