@@ -6955,6 +6955,21 @@
         }
 
 
+      // Palettenlogik für Produktliste (36er-Bündel je nach Modultyp)
+      try {
+        const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+        const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+        const count = Number(parts[pieceKey] || 0);
+        if (count > 0) {
+          const pallets = Math.floor(count / 36);
+          const remainder = count % 36;
+          if (pallets > 0) {
+            parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+          }
+          parts[pieceKey] = remainder;
+        }
+      } catch (e) {}
+
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
         if (this.listHolder) {
