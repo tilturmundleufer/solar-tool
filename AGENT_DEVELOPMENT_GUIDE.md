@@ -226,6 +226,12 @@ node -c script.min.js
 
 ## Tests (Kundentyp)
 - LocalStorage leeren → Seite lädt → Popup erscheint
-- Auswahl „Privatkunde“ → Preise = Bruttopreise (×1,19), Brutto-SKUs werden bevorzugt
-- Auswahl „Firmenkunde“ → Preise = Netto; Standard-SKUs
+- Auswahl „Privatkunde“ → Preise = Netto; Standard-SKUs
+- Auswahl „Firmenkunde“ → Preise = Bruttopreise (×1,19); Brutto-SKUs werden bevorzugt
 - Nach 48h → Popup erscheint erneut
+
+## Changes Made - [2025-09-15]
+- Added: 36er-Palettenlogik für Ulica-Module (450/500)
+- Mapping: `SolarmodulPalette`, `UlicaSolarBlackJadeFlowPalette` in `PRODUCT_MAP` und `PRODUCT_MAP_BRUTTO`
+- Preis: Immer Shop-VE-Preis für Paletten (keine Staffel), MwSt-Weiche über `applyVatIfBusiness` + Brutto-SKUs
+- UI/PDF/Warenkorb: Anzeige „Palette (36× …)“, Bild = Einzelmodul, Queue/Observer unverändert

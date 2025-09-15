@@ -165,7 +165,8 @@ Hinweise:
 - 2025-08-30: Schienenverbinder-Logik korrigiert (Produktliste): pro Reihe jetzt Verbinder = Anzahl der Schienen − 2. Beispiel: Bei 4 Schienen in einer Reihe werden 2 Verbinder angezeigt (vorher 4). Test: Konfiguration mit einer Reihe, die zwei Schienenstücke pro Rail benötigt; prüfen, dass Verbinderanzahl halbiert ist.
 - 2025-08-25: Webhook-Payload verschlankt (ohne Bilddaten), hinzugefügt: `selection`-Metadaten und kompaktes `productQuantities`.
 - 2025-08-26: Smart Config – Verteilungsmodus `gleichmäßig` deaktiviert; Nutzerhinweis ergänzt und Beispiele angepasst.
-- 2025-09-13: Kundentyp-Popup (Privat/Firma, 48h Speicherung) hinzugefügt. Preislogik: Privatkunden Bruttopreise (×1,19), Firmenkunden Nettopreise. Warenkorb bevorzugt Brutto-SKUs für Zusatzprodukte bei Privatkunden (Platzhalter-IDs).
+- 2025-09-13: Kundentyp-Popup (Privat/Firma, 48h Speicherung). Korrektur: Privatkunden Nettopreise, Firmenkunden Bruttopreise (×1,19). Warenkorb bevorzugt Brutto-SKUs für Zusatzprodukte bei Firmenkunden (Platzhalter-IDs).
+- 2025-09-15: Ulica‑Module in 36er‑Paletten gebündelt. Bei aktivem Ulica‑Modul (500 W) bzw. allgemeinen Modulen (450 W) werden automatisch so viele Paletten wie möglich gebildet, Rest als Einzelmodule. In Produktliste, PDF und Warenkorb erscheinen eigene Paletten‑Produkte (inkl./exkl. MwSt je Kundentyp). Beispiele: 69 → 1 Palette + 33; 73 → 2 Paletten + 1.
 
 ---
 
@@ -183,6 +184,9 @@ VE = {
   Schiene_240_cm: 8,
   Schiene_360_cm: 8,
   Solarmodul: 1,
+  // Neu: Paletten (36 Stück pro Palette)
+  SolarmodulPalette: 36,
+  UlicaSolarBlackJadeFlowPalette: 36,
   MC4_Stecker: /* Anzeige/VE im UI: 50 Stück, Berechnung in Paketen */ 1,
   Solarkabel: /* Anzeige/VE im UI: 100 m */ 1,
   Holzunterleger: 50,
@@ -196,7 +200,8 @@ VE = {
 - Orientierungsabhängige Schienenlängen
 - Zusatzprodukte: Quetschkabelschuhe pauschal 1 VE; Erdungsband nach berechneter Länge (auf 600 cm aufrunden)
  - Schienenverbinder: pro Reihe = Gesamtanzahl der Schienenstücke (beide Schienen) − 2
- - Kundentyp-Logik: Privatkunden sehen Bruttopreise (19% MwSt), Firmenkunden Nettopreise. Die Kalkulation nutzt `getPackPriceForQuantity()` mit MwSt-Aufschlag via `applyVatIfPrivate()`.
+ - Kundentyp-Logik: Privatkunden sehen Nettopreise, Firmenkunden Bruttopreise (19% MwSt). Die Kalkulation nutzt `getPackPriceForQuantity()` mit MwSt-Aufschlag via `applyVatIfBusiness()`.
+ - Palettenpreise: Für Paletten werden die Shop‑VE‑Preise genutzt (keine Stück‑Staffel). Netto/Brutto‑Produkt wird automatisch je Kundentyp gewählt.
 
 ### **Kundentyp-Popup (48h Speicherung)**
 - Dateien: `customer-type-popup.html`, `customer-type-popup.css`, `customer-type-popup.js`
@@ -210,9 +215,9 @@ VE = {
   - Speichern in `localStorage.solarTool_customerType = { type, expiresAt }`
   - Nach Auswahl automatische Aktualisierung der Seite (`location.reload()`), damit Preise und Warenkorb-IDs korrekt greifen
 
-### **Warenkorb (Brutto-SKUs für Privatkunden)**
+### **Warenkorb (Brutto-SKUs für Firmenkunden)**
 - Brutto-Produkt-Overrides (Platzhalter) für Zusatzprodukte in `script.js` per `PRODUCT_MAP_BRUTTO_ADDITIONAL`
-- Beim Hinzufügen in den Warenkorb werden für Privatkunden, falls vorhanden, die Brutto-Formulare bevorzugt (Mapping `webflowFormMapBrutto`)
+- Beim Hinzufügen in den Warenkorb werden für Firmenkunden, falls vorhanden, die Brutto-Formulare bevorzugt (Mapping `webflowFormMapBrutto`)
 - Fallback auf Standard-SKUs, falls Brutto-SKU nicht vorhanden ist
 
 ### **Analytics-Nutzung:**
@@ -355,4 +360,4 @@ Hinweis: Der Verteilungsmodus `gleichmäßig` ist deaktiviert. Bitte verwenden S
   - 40× `Schiene_240_cm` → 11,59 € pro Stück (VE=1).
   - 300× `Mittelklemmen` → 0,95 € pro Stück, VE=50 → Packpreis 47,50 €.
   - 36× `Solarmodul` → 55,90 € pro Stück.
-  - Kundentyp: LocalStorage löschen, Seite laden → Popup erscheint. „Privatkunde“ wählen → alle Preise mit 19% MwSt., Zusatzprodukte nutzen Brutto-IDs (falls vorhanden). „Firmenkunde“ → Nettopreise, Standard-IDs. Nach 48h → Popup erscheint wieder.
+  - Kundentyp: LocalStorage löschen, Seite laden → Popup erscheint. „Privatkunde“ → Nettopreise, Standard-IDs. „Firmenkunde“ → Bruttopreise (×1,19), Zusatzprodukte nutzen Brutto-IDs (falls vorhanden). Nach 48h → Popup erscheint wieder.

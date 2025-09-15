@@ -257,4 +257,5 @@ Eingabe → Erwartung (Auszug)
 
 ## Hinweis Kundentyp & Smart Config
 - Die Smart Config Parserregeln bleiben unverändert.
-- Die ausgewiesenen Preise in Zusammenfassungen und PDF richten sich nach dem Kundentyp (Privat = brutto, Firma = netto). Die Eingabekommandos bleiben gleich.
+- Die ausgewiesenen Preise in Zusammenfassungen und PDF richten sich nach dem Kundentyp (Privat = netto, Firma = brutto). Die Eingabekommandos bleiben gleich.
+ - Bei aktivierten Modulen (Ulica 500 oder allgemeine 450) werden automatisch 36er‑Paletten gebildet. Beispiel: "73 module" → 2× Palette (36×) + 1× Einzelmodul.
