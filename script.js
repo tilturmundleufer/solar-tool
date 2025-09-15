@@ -128,6 +128,9 @@
     Schiene_360_cm: 1,
     Solarmodul: 1,
     UlicaSolarBlackJadeFlow: 1,
+    // Neue 36er-Paletten (VE = 36 Stück pro Palette)
+    SolarmodulPalette: 36,
+    UlicaSolarBlackJadeFlowPalette: 36,
     MC4_Stecker: 50,
     Solarkabel: 1,
     Holzunterleger: 50,
@@ -142,6 +145,9 @@
     // VK pro VE (Fallbackpreise)
     Solarmodul: 59.70,
     UlicaSolarBlackJadeFlow: 67.90,
+    // Fallbackpreise für Paletten werden nicht genutzt (Shoppreise werden gelesen)
+    SolarmodulPalette: 0,
+    UlicaSolarBlackJadeFlowPalette: 0,
     Endklemmen: 49.50,
     Schrauben: 22.00,
     Dachhaken: 69.00,
@@ -207,6 +213,7 @@
       { minPieces: 36, pricePerPiece: 62.90 },
       { minPieces: 360, pricePerPiece: 61.90 }
     ],
+    // Für Paletten keine Staffel – Shoppreis pro Palette wird gelesen
     MC4_Stecker: [
       { minPieces: 1000, pricePerPiece: 0.69 },
       { minPieces: 3000, pricePerPiece: 0.65 }
@@ -258,8 +265,13 @@
   // Brutto-Produkt-Mapping (Platzhalter) für Zusatzprodukte bei Firmenkunden
   const PRODUCT_MAP_BRUTTO = {
     // Module
-    Solarmodul: { productId: '68c7ec7571df9723b8ef5050', variantId: '68c7ec7e71df9723b8ef53cd' }, // Ulica 450 W inkl. MwSt
+    Solarmodul: { productId: '68c7ec7571df9723b8ef5050', variantId: '68c7ec7e71df9723b8ef53cd' }, // Ulica 450 W inkl. MwSt (Einzelprodukt)
     UlicaSolarBlackJadeFlow: { productId: '68c7ef7fbeeaadb13262a062', variantId: '68c7ef7ff397fcf9d6d7571e' }, // Ulica 500 W inkl. MwSt (Einzelprodukt)
+    // Neue Paletten (inkl. MwSt) – IDs aus Screenshot/Shop (Handles: ganze Palette inkl MwSt)
+    // 450 W Palette inkl. MwSt
+    SolarmodulPalette: { productId: '68c7ec7471df9723b8ef5008', variantId: '68c7ec7c71df9723b8ef5160' },
+    // 500 W Palette inkl. MwSt
+    UlicaSolarBlackJadeFlowPalette: { productId: '68c7ec7471df9723b8ef5006', variantId: '68c7ec7d71df9723b8ef5187' },
 
     // Zubehör/Komponenten
     Quetschkabelschuhe: { productId: '68c7ec7471df9723b8ef502d', variantId: '68c7ec7c71df9723b8ef514b' },
@@ -292,6 +304,10 @@
   function getPackPriceForQuantity(productKey, requiredPieces) {
     const ve = VE[productKey] || 1;
     const basePackPrice = getPriceFromCache(productKey) || 0;
+    // Paletten: Preis immer aus Shop nehmen (basePackPrice), keine Stück-Staffel anwenden
+    if (productKey === 'SolarmodulPalette' || productKey === 'UlicaSolarBlackJadeFlowPalette') {
+      return applyVatIfBusiness(basePackPrice);
+    }
     const tiers = TIER_PRICING[productKey];
     if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return applyVatIfBusiness(basePackPrice);
     const qty = Number(requiredPieces) || 0;
@@ -310,6 +326,11 @@
   const PRODUCT_MAP = {
     Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
     UlicaSolarBlackJadeFlow: { productId:'689455ed543f0cbb26ba54e9', variantId:'689455ed7d7ddfd326d5dbf9' },
+    // Neue Paletten (ohne MwSt – für Privatkunden)
+    // 450 W ganze Palette
+    SolarmodulPalette: { productId: '68b999a74abecff30536dee0', variantId: '68b999a873f9b0df7954ed8b' },
+    // 500 W ganze Palette
+    UlicaSolarBlackJadeFlowPalette: { productId: '68b99932fb8af7a115bb2680', variantId: '68b999339e25d980ba33928d' },
     Endklemmen: { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
     Schrauben: { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
     Dachhaken: { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
@@ -331,6 +352,8 @@
   const PRODUCT_NAME_MAP = {
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
     'UlicaSolarBlackJadeFlow': 'Ulica Solar Black Jade-Flow 500 W',
+    'SolarmodulPalette': 'Palette (36× Ulica Solar Black Jade-Flow 450 W)',
+    'UlicaSolarBlackJadeFlowPalette': 'Palette (36× Ulica Solar Black Jade-Flow 500 W)',
     'Schrauben': 'Schraube M10x25',
     'Solarkabel': 'Solarkabel',
     'Holzunterleger': 'Unterlegholz für Dachhaken',
@@ -344,6 +367,8 @@
   const PRODUCT_IMAGES = {
     Solarmodul: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     UlicaSolarBlackJadeFlow: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    SolarmodulPalette: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+    UlicaSolarBlackJadeFlowPalette: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Endklemmen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c316b21cb7d04ba2ed22_DSC04815-min.jpg',
     Schrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg',
     Dachhaken: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c1c8a2835b7879f46811_DSC04760-min.jpg',
@@ -1140,7 +1165,22 @@
     }
 
     async renderProductsIntoTable(config, tbodyEl, totalEl, options = {}) {
-      const parts = await this.calculatePartsFromSnapshot(config);
+      const rawParts = await this.calculatePartsFromSnapshot(config);
+      const parts = { ...rawParts };
+      try {
+        const ulicaSelected = config.ulicaModule === true;
+        const keyPiece = ulicaSelected ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+        const keyPallet = ulicaSelected ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+        const count = Number(parts[keyPiece] || 0);
+        if (count > 0) {
+          const pallets = Math.floor(count / 36);
+          const remainder = count % 36;
+          if (pallets > 0) {
+            parts[keyPallet] = (parts[keyPallet] || 0) + pallets * 36; // Stückbasis, VE=36
+          }
+          parts[keyPiece] = remainder;
+        }
+      } catch (e) {}
       let totalPrice = 0;
       const rows = [];
       const ADDITIONAL_KEYS = new Set(['MC4_Stecker', 'Solarkabel', 'Holzunterleger', 'Quetschkabelschuhe']);
@@ -2136,6 +2176,22 @@
         } else {
           delete parts.Erdungsband;
         }
+
+        // Palettenlogik nachträglich anwenden, damit nachgelagerte Renderer/Preise profitieren
+        try {
+          const ulicaSelected = config.ulicaModule === true;
+          const pieceKey = ulicaSelected ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+          const palletKey = ulicaSelected ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+          const count = Number(parts[pieceKey] || 0);
+          if (count > 0) {
+            const pallets = Math.floor(count / 36);
+            const remainder = count % 36;
+            if (pallets > 0) {
+              parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+            }
+            parts[pieceKey] = remainder;
+          }
+        } catch (e) {}
 
         console.log('Final parts after processing:', parts);
         return parts;
@@ -4690,6 +4746,22 @@
       // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
       // Sie werden nur noch in der Overview berechnet
 
+      // Palettenlogik für Anzeige anwenden: 36er bündeln je nach Modultyp
+      try {
+        const ulicaSelected = currentConfig.ulicaModule === true;
+        const pieceKey = ulicaSelected ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+        const palletKey = ulicaSelected ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+        const count = Number(parts[pieceKey] || 0);
+        if (count > 0) {
+          const pallets = Math.floor(count / 36);
+          const remainder = count % 36;
+          if (pallets > 0) {
+            parts[palletKey] = (parts[palletKey] || 0) + pallets * 36;
+          }
+          parts[pieceKey] = remainder;
+        }
+      } catch (e) {}
+
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       let totalPrice = 0;
       const productQuantities = {};
@@ -5805,7 +5877,10 @@
 				Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
 				Dachhaken: 0, Schrauben: 0, Endkappen: 0,
 				Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
-				UlicaSolarBlackJadeFlow: 0
+				UlicaSolarBlackJadeFlow: 0,
+				// Palettenzählung wird als Stückbasis 36× gespeichert
+				SolarmodulPalette: 0,
+				UlicaSolarBlackJadeFlowPalette: 0
 			};
 
 			// Berechne Teile für jede Zeile
@@ -5839,8 +5914,22 @@
 				delete parts.UlicaSolarBlackJadeFlow;
 			}
 			
-			let totalPrice = 0;
+			// Palettenlogik: 36er bündeln je nach Modultyp
+			try {
+				const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+				const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+				const count = Number(parts[pieceKey] || 0);
+				if (count > 0) {
+					const pallets = Math.floor(count / 36);
+					const remainder = count % 36;
+					if (pallets > 0) {
+						parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+					}
+					parts[pieceKey] = remainder;
+				}
+			} catch (e) {}
 			
+			let totalPrice = 0;
 			Object.entries(parts).forEach(([partName, quantity]) => {
 				if (quantity > 0) {
 					const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
@@ -8303,6 +8392,21 @@
           delete parts.Erdungsband;
         }
         
+        // Palettenlogik anwenden (36er Bündel je Modultyp)
+        try {
+          const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+          const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+          const count = Number(parts[pieceKey] || 0);
+          if (count > 0) {
+            const pallets = Math.floor(count / 36);
+            const remainder = count % 36;
+            if (pallets > 0) {
+              parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+            }
+            parts[pieceKey] = remainder;
+          }
+        } catch (e) {}
+        
         return parts;
       } finally {
         // Ursprüngliche Auswahl wiederherstellen
@@ -8312,7 +8416,9 @@
 
     _buildCartItems(parts) {
       return Object.entries(parts).map(([k,v]) => {
-        const packs = Math.ceil(v / VE[k]), m = PRODUCT_MAP[k];
+        const ve = VE[k] || 1;
+        const packs = Math.ceil(v / ve);
+        const m = (!isPrivateCustomer() && PRODUCT_MAP_BRUTTO[k]) ? PRODUCT_MAP_BRUTTO[k] : PRODUCT_MAP[k];
         return (!m || packs <= 0) ? null : {
           productId: m.productId,
           variantId: m.variantId,
