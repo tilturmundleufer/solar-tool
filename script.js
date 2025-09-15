@@ -255,12 +255,27 @@
 
   // Brutto-Produkt-Mapping (Platzhalter) für Zusatzprodukte bei Firmenkunden
   const PRODUCT_MAP_BRUTTO = {
-    MC4_Stecker: { productId: 'BRUTTO_PRODUCT_ID_MC4', variantId: 'BRUTTO_VARIANT_ID_MC4' },
-    Solarkabel: { productId: 'BRUTTO_PRODUCT_ID_SOLARKABEL', variantId: 'BRUTTO_VARIANT_ID_SOLARKABEL' },
-    Holzunterleger: { productId: 'BRUTTO_PRODUCT_ID_HOLZ', variantId: 'BRUTTO_VARIANT_ID_HOLZ' },
-    Quetschkabelschuhe: { productId: 'BRUTTO_PRODUCT_ID_QUETSCH', variantId: 'BRUTTO_VARIANT_ID_QUETSCH' },
-    Erdungsband: { productId: 'BRUTTO_PRODUCT_ID_ERDUNGSBAND', variantId: 'BRUTTO_VARIANT_ID_ERDUNGSBAND' },
-    Erdungsklemme: { productId: 'BRUTTO_PRODUCT_ID_ERDUNGSKLEMME', variantId: 'BRUTTO_VARIANT_ID_ERDUNGSKLEMME' }
+    // Module
+    Solarmodul: { productId: '68c7ec7571df9723b8ef5050', variantId: '68c7ec7e71df9723b8ef53cd' }, // Ulica 450 W inkl. MwSt
+    // UlicaSolarBlackJadeFlow (500 W) – einzelnes Produkt inkl. MwSt nicht geliefert (Palette vorhanden)
+
+    // Zubehör/Komponenten
+    Quetschkabelschuhe: { productId: '68c7ec7471df9723b8ef502d', variantId: '68c7ec7c71df9723b8ef514b' },
+    Solarkabel: { productId: '68c7ec7471df9723b8ef5031', variantId: '68c7ec7d71df9723b8ef5205' },
+    Erdungsband: { productId: '68c7ec7471df9723b8ef5033', variantId: '68c7ec7c71df9723b8ef5159' },
+    Endkappen: { productId: '68c7ec7471df9723b8ef5041', variantId: '68c7ec7e71df9723b8ef533e' },
+    Mittelklemmen: { productId: '68c7ec7471df9723b8ef5043', variantId: '68c7ec7e71df9723b8ef53e0' },
+    Dachhaken: { productId: '68c7ec7471df9723b8ef5045', variantId: '68c7ec7f71df9723b8ef54f9' },
+    Schiene_360_cm: { productId: '68c7ec7471df9723b8ef5047', variantId: '68c7ec7e71df9723b8ef53d6' },
+    Schienenverbinder: { productId: '68c7ec7471df9723b8ef5049', variantId: '68c7ec7e71df9723b8ef533b' },
+    Schiene_240_cm: { productId: '68c7ec7471df9723b8ef504b', variantId: '68c7ec7e71df9723b8ef5387' },
+    MC4_Stecker: { productId: '68c7ec7671df9723b8ef506e', variantId: '68c7ec7d71df9723b8ef5230' },
+    Tellerkopfschraube: { productId: '68c7ec7671df9723b8ef5072', variantId: '68c7ec7f71df9723b8ef544a' },
+    Schrauben: { productId: '68c7ec7771df9723b8ef5085', variantId: '68c7ec7f71df9723b8ef5406' },
+    Endklemmen: { productId: '68c7ec7771df9723b8ef5087', variantId: '68c7ec7f71df9723b8ef542a' }
+    // Holzunterleger – fehlt (kein inkl. MwSt Produkt in der Liste)
+    // Erdungsklemme – fehlt (kein inkl. MwSt Produkt in der Liste)
+    // UlicaSolarBlackJadeFlow (500 W, Einzelprodukt) – fehlt; nur Palette-ID geliefert
   };
 
   function getCartProductInfo(productKey) {
