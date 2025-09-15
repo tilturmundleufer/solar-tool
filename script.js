@@ -285,6 +285,55 @@
     } catch (_) { /* noop */ }
   }
 
+  // Exponiere für andere Seiten/Skripte
+  window.updateCustomerTypeVisibility = updateCustomerTypeVisibility;
+
+  function setActiveCustomerTypeButtons() {
+    const btnPriv = document.getElementById('nav-private');
+    const btnBiz  = document.getElementById('nav-business');
+    const isPrivate = isPrivateCustomer();
+    if (btnPriv && btnPriv.classList) {
+      btnPriv.classList.toggle('stp-btn-active', isPrivate);
+    }
+    if (btnBiz && btnBiz.classList) {
+      btnBiz.classList.toggle('stp-btn-active', !isPrivate);
+    }
+  }
+
+  function storeCustomerTypeSelection(type) {
+    try {
+      const expiresAt = Date.now() + 48 * 60 * 60 * 1000;
+      localStorage.setItem('solarTool_customerType', JSON.stringify({ type, expiresAt }));
+    } catch (_) {}
+  }
+
+  function setCustomerType(type) {
+    const normalized = type === 'business' ? 'business' : 'private';
+    storeCustomerTypeSelection(normalized);
+    updateCustomerTypeVisibility();
+    setActiveCustomerTypeButtons();
+    // Preise/Übersichten live aktualisieren (falls SolarGrid aktiv ist)
+    try {
+      if (window.solarGrid) {
+        if (typeof window.solarGrid.updateCurrentTotalPrice === 'function') {
+          window.solarGrid.updateCurrentTotalPrice();
+        }
+        if (typeof window.solarGrid.updateOverviewTotalPrice === 'function') {
+          window.solarGrid.updateOverviewTotalPrice();
+        }
+        // Webflow-Form-Mapping sicherstellen (Brutto/Netto-Formulare bevorzugen)
+        if (typeof window.solarGrid.ensureWebflowFormsMapped === 'function') {
+          window.solarGrid.ensureWebflowFormsMapped();
+        } else if (typeof window.solarGrid.generateHiddenCartForms === 'function') {
+          window.solarGrid.generateHiddenCartForms();
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Exponiere Setter
+  window.setCustomerType = setCustomerType;
+
   // Brutto-Produkt-Mapping (Platzhalter) für Zusatzprodukte bei Firmenkunden
   const PRODUCT_MAP_BRUTTO = {
     // Module
@@ -8927,6 +8976,15 @@
   document.addEventListener('DOMContentLoaded', () => {
     // Zeige die korrekten Produktlisten je Kundentyp (Privat/Gewerbe)
     updateCustomerTypeVisibility();
+    // Navbar-Umschalter anbinden
+    try {
+      const btnPriv = document.getElementById('nav-private');
+      const btnBiz  = document.getElementById('nav-business');
+      if (btnPriv) btnPriv.addEventListener('click', () => window.setCustomerType('private'));
+      if (btnBiz)  btnBiz.addEventListener('click', () => window.setCustomerType('business'));
+    } catch (_) {}
+    // Aktivzustand initial setzen
+    try { setActiveCustomerTypeButtons(); } catch (_) {}
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
     window.solarGrid = grid;

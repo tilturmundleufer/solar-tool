@@ -27,17 +27,26 @@
     if(overlay){overlay.style.display='none';overlay.setAttribute('aria-hidden','true');}
   }
   function init(){
-    if(getStoredCustomerType()) return; // bereits gesetzt und nicht abgelaufen
     const overlay = document.getElementById('customer-type-overlay');
     if(!overlay) return;
+    const already = getStoredCustomerType();
     const btnPrivate = document.getElementById('stp-private');
     const btnBusiness = document.getElementById('stp-business');
-    if(btnPrivate) btnPrivate.addEventListener('click', function(){ storeCustomerType('private'); hide(); location.reload(); });
-    if(btnBusiness) btnBusiness.addEventListener('click', function(){ storeCustomerType('business'); hide(); location.reload(); });
-    show();
+    if(btnPrivate) btnPrivate.addEventListener('click', function(){
+      storeCustomerType('private'); hide();
+      if(window.setCustomerType){ window.setCustomerType('private'); }
+      else { try{ location.reload(); }catch(e){} }
+    });
+    if(btnBusiness) btnBusiness.addEventListener('click', function(){
+      storeCustomerType('business'); hide();
+      if(window.setCustomerType){ window.setCustomerType('business'); }
+      else { try{ location.reload(); }catch(e){} }
+    });
+    if(!already){ show(); }
   }
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded', init);
   }else{ init(); }
 })();
+
 
