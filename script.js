@@ -704,17 +704,19 @@
                          document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
       
       if (productForm) {
-        const priceElement = productForm.querySelector('[data-wf-sku-bindings*="f_price_"]');
-        
-        if (priceElement) {
-          let priceText = priceElement.textContent || priceElement.innerHTML;
+        // Mehrere mögliche Selektoren/Attribute versuchen
+        const selectors = [
+          '[data-wf-sku-bindings*="f_price_"]',
+          '[data-commerce-sku-price]','[data-commerce-product-price]',
+          '.w-commerce-commerceproductprice','.w-commerce-commerceaddtocartprice'
+        ];
+        for (const sel of selectors) {
+          const el = productForm.querySelector(sel);
+          if (!el) continue;
+          let priceText = (el.getAttribute('data-commerce-sku-price') || el.getAttribute('data-commerce-product-price') || el.textContent || el.innerHTML || '').toString();
           priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
-          const priceMatch = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
-          
-          if (priceMatch) {
-            const price = parseFloat(priceMatch[1].replace(',', '.'));
-            return price;
-          }
+          const m = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
+          if (m) return parseFloat(m[1].replace(',', '.'));
         }
       }
     } catch (error) {
@@ -6970,6 +6972,7 @@
         }
       } catch (e) {}
 
+
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
         if (this.listHolder) {
@@ -8101,6 +8104,15 @@
       if (qtyInput) {
         qtyInput.value = quantity;
       }
+      // Optional-Selects (Webflow Produkt-Optionen) automatisch setzen, falls required
+      try {
+        form.querySelectorAll('select[required]').forEach(sel => {
+          if (!sel.value) {
+            const first = sel.querySelector('option[value]:not([value=""])');
+            if (first) sel.value = first.value;
+          }
+        });
+      } catch (e) {}
       
       const addToCartButton = form.querySelector('input[data-node-type="commerce-add-to-cart-button"]');
       if (addToCartButton) {
@@ -8111,6 +8123,15 @@
     clickWebflowButtonSafely(form, button, productKey, quantity, isLastItem) {
       const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
       if (qtyInput) qtyInput.value = quantity;
+      // Siehe oben: required selects füllen
+      try {
+        form.querySelectorAll('select[required]').forEach(sel => {
+          if (!sel.value) {
+            const first = sel.querySelector('option[value]:not([value=""])');
+            if (first) sel.value = first.value;
+          }
+        });
+      } catch (e) {}
       
       // Iframe-Workaround entfernt: wir klicken direkt und warten sequenziell über DOM-Änderungen/Timeouts
       button.click();
@@ -8256,6 +8277,8 @@
       const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
       if (cartContainer) {
         cartContainer.style.display = 'none';
+        // Sicherstellen, dass Cart am Ende wieder geöffnet werden kann
+        cartContainer.classList.add('st-cart-hidden');
       }
     }
 
@@ -8263,6 +8286,14 @@
       const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
       if (cartContainer) {
         cartContainer.style.display = '';
+        cartContainer.classList.remove('st-cart-hidden');
+        // Falls Webflow einen Toggle-Button hat, löse ggf. ein Open aus
+        try {
+          const openBtn = document.querySelector('[data-node-type="commerce-cart-open-link"]');
+          if (openBtn && typeof openBtn.click === 'function') {
+            openBtn.click();
+          }
+        } catch (e) {}
       }
     }
 
