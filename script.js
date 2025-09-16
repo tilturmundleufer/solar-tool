@@ -737,24 +737,48 @@
           '[data-commerce-sku-price]','[data-commerce-product-price]',
           '.w-commerce-commerceproductprice','.w-commerce-commerceaddtocartprice'
         ];
+        // Hilfsfunktion: robustes Parsen deutscher/englischer Preisformate
+        const parsePriceStrict = (txt) => {
+          if (!txt) return null;
+          let s = String(txt).replace(/\u00a0|\s+/g, '');
+          // Kandidaten: längste Zahlenkette mit Trennzeichen
+          const candidates = s.match(/[0-9][0-9.,-]*/g) || [];
+          if (candidates.length === 0) return null;
+          // Bevorzugt letztes Element (meist der Betrag, nicht z. B. (36)) mit Länge > 3
+          let cand = candidates.filter(c => c && c.length > 3).pop() || candidates[candidates.length - 1];
+          // Erlaube nur Ziffern und Trennzeichen
+          cand = cand.replace(/[^0-9.,-]/g, '');
+          const lastComma = cand.lastIndexOf(',');
+          const lastDot = cand.lastIndexOf('.');
+          if (lastComma === -1 && lastDot === -1) {
+            const v = parseFloat(cand);
+            return Number.isFinite(v) ? v : null;
+          }
+          // Bestimme Dezimaltrennzeichen: das letzte auftretende Separator-Zeichen
+          const decimalSep = lastComma > lastDot ? ',' : '.';
+          if (decimalSep === ',') {
+            // Entferne Tausenderpunkte und alle Kommas bis auf das letzte
+            let t = cand.replace(/\./g, '');
+            const parts = t.split(',');
+            const frac = parts.pop();
+            t = parts.join('') + '.' + frac;
+            const v = parseFloat(t);
+            return Number.isFinite(v) ? v : null;
+          } else {
+            // Dezimalpunkt – entferne Tausenderkommas
+            const t = cand.replace(/,/g, '');
+            const v = parseFloat(t);
+            return Number.isFinite(v) ? v : null;
+          }
+        };
+
         for (const sel of selectors) {
           const el = productForm.querySelector(sel);
           if (!el) continue;
           let priceText = (el.getAttribute('data-commerce-sku-price') || el.getAttribute('data-commerce-product-price') || el.textContent || el.innerHTML || '').toString();
           priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€').trim();
-          // Extrahiere nur Zahlen/Trennzeichen
-          let numeric = priceText.replace(/[^0-9.,-]/g, '');
-          // Deutsche Schreibweise: 2.394,76 -> 2394,76 -> 2394.76
-          if (numeric.includes(',')) {
-            numeric = numeric.replace(/\./g, '').replace(',', '.');
-          }
-          // Fallback: nimm die letzte passende Zahl (falls z. B. (36) im gleichen Element steht)
-          const matches = numeric.match(/-?\d+(?:\.\d{1,2})?/g);
-          if (matches && matches.length) {
-            const last = matches[matches.length - 1];
-            const val = parseFloat(last);
-            if (!Number.isNaN(val) && val > 0) return val;
-          }
+          const val = parsePriceStrict(priceText);
+          if (Number.isFinite(val) && val > 0) return val;
         }
       }
     } catch (error) {
