@@ -741,9 +741,20 @@
           const el = productForm.querySelector(sel);
           if (!el) continue;
           let priceText = (el.getAttribute('data-commerce-sku-price') || el.getAttribute('data-commerce-product-price') || el.textContent || el.innerHTML || '').toString();
-          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€');
-          const m = priceText.match(/(\d+(?:[.,]\d{1,2})?)/);
-          if (m) return parseFloat(m[1].replace(',', '.'));
+          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€').trim();
+          // Extrahiere nur Zahlen/Trennzeichen
+          let numeric = priceText.replace(/[^0-9.,-]/g, '');
+          // Deutsche Schreibweise: 2.394,76 -> 2394,76 -> 2394.76
+          if (numeric.includes(',')) {
+            numeric = numeric.replace(/\./g, '').replace(',', '.');
+          }
+          // Fallback: nimm die letzte passende Zahl (falls z. B. (36) im gleichen Element steht)
+          const matches = numeric.match(/-?\d+(?:\.\d{1,2})?/g);
+          if (matches && matches.length) {
+            const last = matches[matches.length - 1];
+            const val = parseFloat(last);
+            if (!Number.isNaN(val) && val > 0) return val;
+          }
         }
       }
     } catch (error) {
