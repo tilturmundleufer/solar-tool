@@ -167,7 +167,7 @@ Hinweise:
 - 2025-08-26: Smart Config – Verteilungsmodus `gleichmäßig` deaktiviert; Nutzerhinweis ergänzt und Beispiele angepasst.
 - 2025-09-13: Kundentyp-Popup (Privat/Firma, 48h Speicherung). Korrektur: Privatkunden Nettopreise, Firmenkunden Bruttopreise (×1,19). Warenkorb bevorzugt Brutto-SKUs für Zusatzprodukte bei Firmenkunden (Platzhalter-IDs).
 - 2025-09-15: Ulica‑Module in 36er‑Paletten gebündelt. Bei aktivem Ulica‑Modul (500 W) bzw. allgemeinen Modulen (450 W) werden automatisch so viele Paletten wie möglich gebildet, Rest als Einzelmodule. In Produktliste, PDF und Warenkorb erscheinen eigene Paletten‑Produkte (inkl./exkl. MwSt je Kundentyp). Beispiele: 69 → 1 Palette + 33; 73 → 2 Paletten + 1.
-- 2025-09-16: Automatische Warenkorb-Kompatibilitätsprüfung und Austausch-Logik basierend auf Kundentyp (Privat/Gewerbe). Prüft DOM-basiert, tauscht nicht passende Produkte gegen die gemappten Partnerprodukte aus, fallbackt mit Warnung wenn kein Mapping vorhanden ist.
+- 2025-09-16: Automatische Warenkorb-Kompatibilitätsprüfung und Austausch-Logik basierend auf Kundentyp (Privat/Gewerbe) nach `customer-type-popup.js` verlagert (global aktiv), nutzt `window.solarGrid` für Add-Flow/Form-Mapping, mit Fallback-Warnungen bei fehlendem Mapping.
 
 ---
 
@@ -221,10 +221,10 @@ VE = {
 - Beim Hinzufügen in den Warenkorb werden für Firmenkunden, falls vorhanden, die Brutto-Formulare bevorzugt (Mapping `webflowFormMapBrutto`)
 - Fallback auf Standard-SKUs, falls Brutto-SKU nicht vorhanden ist
 #### Kompatibilitätsprüfung (Privat vs. Gewerbe)
-- Beim Laden des Warenkorbs und bei jeder Änderung (MutationObserver auf `.w-commerce-commercecartlist`) wird geprüft, ob alle Cart-Items zum aktuellen Kundentyp passen.
+- Beim Laden des Warenkorbs und bei jeder Änderung (MutationObserver auf `.w-commerce-commercecartlist`) prüft `customer-type-popup.js`, ob alle Cart-Items zum aktuellen Kundentyp passen.
 - Falls ein Produkt nicht passt, wird es automatisch entfernt und das korrekte Partnerprodukt gemäß `PRODUCT_MAP`/`PRODUCT_MAP_BRUTTO` in gleicher Menge wieder hinzugefügt.
 - Fallback: Existiert kein Mapping, bleibt das Produkt im Warenkorb und es wird eine Warnung in der Konsole ausgegeben.
-- Initiales Triggering beim `DOMContentLoaded` in `script.js` via `initCartCompatibility()`.
+- Initiales Triggering im Popup beim `init()`; nutzt bei Verfügbarkeit `window.solarGrid` für den stabilen Add-Flow.
 
 ### **Analytics-Nutzung:**
 - **Zweck:** Tool-Optimierung basierend auf Nutzerverhalten

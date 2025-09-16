@@ -4657,10 +4657,6 @@
       this.webflowFormsObserver = null;
       this.cartAckObserver = null;
       this.cartAckResolve = null;
-      // Kompatibilitätsprüfung (Kundentyp ↔ Warenkorb)
-      this.cartConsistencyObserver = null;
-      this.cartCompatTimeout = null;
-      this.idToProductKeyMap = null;
       
       // Performance: Resize Observer für responsive Updates
       this.resizeObserver = null;
@@ -8341,8 +8337,6 @@
               this.cartAckResolve = null;
               r();
             }
-            // Nach jeder Cart-Änderung Kompatibilitätscheck planen
-            this.scheduleCartCompatibilityCheck(50);
           });
           this.cartAckObserver.observe(list, { childList: true, subtree: true });
         }
@@ -8352,8 +8346,6 @@
       if (!this.webflowFormsObserver) {
         this.webflowFormsObserver = new MutationObserver(() => {
           this.generateHiddenCartForms();
-          // Wenn neue Forms auftauchen, sicherstellen, dass der Kompatibilitätscheck kurz danach läuft
-          this.scheduleCartCompatibilityCheck(100);
         });
         this.webflowFormsObserver.observe(document.body, { childList: true, subtree: true });
       }
@@ -8389,141 +8381,6 @@
         // kurze Wartezeit, falls Webflow synchron nachrendert
         await new Promise(r => setTimeout(r, 50));
       }
-      // Reverse-ID-Maps bauen (einmalig/lazy)
-      if (!this.idToProductKeyMap) {
-        this.buildReverseIdMaps();
-      }
-    }
-
-    // === Cart-Kompatibilitäts-Logik ===
-    buildReverseIdMaps() {
-      try {
-        const productIdToKey = {};
-        const variantIdToKey = {};
-        Object.keys(PRODUCT_MAP || {}).forEach(k => {
-          const info = PRODUCT_MAP[k];
-          if (info && info.productId) productIdToKey[info.productId] = k;
-          if (info && info.variantId) variantIdToKey[info.variantId] = k;
-        });
-        Object.keys(PRODUCT_MAP_BRUTTO || {}).forEach(k => {
-          const info = PRODUCT_MAP_BRUTTO[k];
-          if (info && info.productId) productIdToKey[info.productId] = k;
-          if (info && info.variantId) variantIdToKey[info.variantId] = k;
-        });
-        this.idToProductKeyMap = { productIdToKey, variantIdToKey };
-      } catch (e) {
-        console.warn('Reverse ID Maps konnten nicht erstellt werden:', e);
-      }
-    }
-
-    getProductKeyFromIds(productId, variantId) {
-      if (!this.idToProductKeyMap) return null;
-      const { productIdToKey, variantIdToKey } = this.idToProductKeyMap;
-      if (variantId && variantIdToKey[variantId]) return variantIdToKey[variantId];
-      if (productId && productIdToKey[productId]) return productIdToKey[productId];
-      return null;
-    }
-
-    getExpectedInfoForKey(productKey) {
-      if (!productKey) return null;
-      const preferBrutto = !isPrivateCustomer() && Object.prototype.hasOwnProperty.call(PRODUCT_MAP_BRUTTO || {}, productKey);
-      if (preferBrutto) return PRODUCT_MAP_BRUTTO[productKey] || null;
-      return PRODUCT_MAP[productKey] || null;
-    }
-
-    getCurrentInfoForIds(productId, variantId) {
-      const key = this.getProductKeyFromIds(productId, variantId);
-      if (!key) return { key: null, info: null };
-      // Finde die tatsächlich im Cart befindliche Info (kann aus Netto oder Brutto stammen)
-      const inBrutto = Object.values(PRODUCT_MAP_BRUTTO || {}).some(i => i && (i.productId === productId || i.variantId === variantId));
-      const info = inBrutto ? (PRODUCT_MAP_BRUTTO && PRODUCT_MAP_BRUTTO[key]) : (PRODUCT_MAP && PRODUCT_MAP[key]);
-      return { key, info: info || null };
-    }
-
-    extractIdsFromCartItem(itemEl) {
-      try {
-        const idEl = itemEl.querySelector('[data-commerce-sku-id], [data-commerce-product-id]') || itemEl;
-        const productId = idEl.getAttribute('data-commerce-product-id') || '';
-        const variantId = idEl.getAttribute('data-commerce-sku-id') || '';
-        return { productId, variantId };
-      } catch (e) {
-        return { productId: '', variantId: '' };
-      }
-    }
-
-    extractQuantityFromCartItem(itemEl) {
-      try {
-        const qtyEl = itemEl.querySelector('input[type="number"], input[data-node-type*="quantity"], .w-commerce-commercecartquantity input');
-        const val = qtyEl ? parseInt(qtyEl.value, 10) : NaN;
-        return Number.isFinite(val) && val > 0 ? val : 1;
-      } catch (e) {
-        return 1;
-      }
-    }
-
-    async removeCartItem(itemEl) {
-      try {
-        const selectors = [
-          '[data-node-type="commerce-cart-remove-link"]',
-          '[data-node-type*="remove"]',
-          '.w-commerce-commercecartremovebutton',
-          '.w-commerce-commercecartremove',
-          'button[aria-label*="Entfernen" i]',
-          'button[aria-label*="Remove" i]'
-        ];
-        let btn = null;
-        for (const sel of selectors) {
-          btn = itemEl.querySelector(sel);
-          if (btn) break;
-        }
-        if (btn) {
-          btn.click();
-          await this.waitForCartAcknowledge(1500);
-        }
-      } catch (e) {
-        console.warn('Konnte Cart-Item nicht entfernen:', e);
-      }
-    }
-
-    async ensureCartCompatibility() {
-      try {
-        if (this.isAddingToCart) return; // nicht während Sequenz-Einfügung eingreifen
-        await this.ensureWebflowFormsMapped();
-        const list = document.querySelector('.w-commerce-commercecartlist') || document.querySelector('.w-commerce-commercecartcontainerwrapper');
-        if (!list) return;
-        const items = Array.from(list.querySelectorAll('.w-commerce-commercecartitem, [data-node-type="commerce-cart-item"]'));
-        for (const itemEl of items) {
-          const { productId, variantId } = this.extractIdsFromCartItem(itemEl);
-          const { key, info: currentInfo } = this.getCurrentInfoForIds(productId, variantId);
-          if (!key) continue; // Unbekanntes Produkt im Warenkorb → ignorieren
-          const expected = this.getExpectedInfoForKey(key);
-          if (!expected) {
-            console.warn(`[CartCompat] Kein Mapping für Produkt-Key gefunden: ${key}. Produkt bleibt im Warenkorb.`);
-            continue;
-          }
-          const isSame = !!currentInfo && (currentInfo.productId === expected.productId || currentInfo.variantId === expected.variantId);
-          if (isSame) continue; // bereits kompatibel
-          // Falsches Produkt für aktuellen Kundentyp → austauschen
-          const qty = this.extractQuantityFromCartItem(itemEl);
-          await this.removeCartItem(itemEl);
-          await this.addSingleItemAndWait(key, qty, false);
-        }
-      } catch (e) {
-        console.warn('Cart-Kompatibilitätsprüfung fehlgeschlagen:', e);
-      }
-    }
-
-    scheduleCartCompatibilityCheck(delayMs = 100) {
-      if (this.cartCompatTimeout) clearTimeout(this.cartCompatTimeout);
-      this.cartCompatTimeout = setTimeout(() => {
-        this.ensureCartCompatibility();
-        this.cartCompatTimeout = null;
-      }, Math.max(0, delayMs));
-    }
-
-    initCartCompatibility() {
-      // Initiale Prüfung etwas verzögert (damit Webflow DOM aufgebaut ist)
-      this.scheduleCartCompatibilityCheck(300);
     }
 
     hideCartContainer() {
@@ -9318,10 +9175,6 @@
     // Kundentyp-UI (Listen/Buttons) wird global im customer-type-popup.js verwaltet
     const grid = new SolarGrid();
     grid.generateHiddenCartForms();
-    // Starte initiale Cart-Kompatibilitätsprüfung
-    if (typeof grid.initCartCompatibility === 'function') {
-      grid.initCartCompatibility();
-    }
     window.solarGrid = grid;
   });
 
