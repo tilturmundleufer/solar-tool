@@ -1033,15 +1033,27 @@
         // Zusatzprodukte werden hier explizit ausgeschlossen – sie kommen gesammelt auf eine separate Seite
         const pdfTotalPriceEl = productsPage.querySelector('.pdf-total-price');
         if (pdfTotalPriceEl) {
-          // Neuer Hinweis: immer Netto anzeigen (exkl. MwSt)
-          const hint = document.createElement('div');
-          hint.textContent = '(exkl. MwSt)';
-          hint.style.fontSize = '9pt';
-          hint.style.fontWeight = '400';
-          hint.style.marginTop = '2mm';
-          hint.style.opacity = '0.9';
-          const totalContainer = productsPage.querySelector('.pdf-total');
-          if (totalContainer) totalContainer.appendChild(hint);
+          // Hinweis nur für Firmenkunden, unter dem Preis anordnen (rechts, Spalte)
+          if (!isPrivateCustomer()) {
+            const totalContainer = productsPage.querySelector('.pdf-total');
+            if (totalContainer && pdfTotalPriceEl.parentElement === totalContainer) {
+              const rightCol = document.createElement('div');
+              rightCol.style.display = 'flex';
+              rightCol.style.flexDirection = 'column';
+              rightCol.style.alignItems = 'flex-end';
+              // Preis-Element in die rechte Spalte verschieben
+              rightCol.appendChild(pdfTotalPriceEl);
+              // Hinweis darunter
+              const hint = document.createElement('div');
+              hint.textContent = '(exkl. MwSt)';
+              hint.style.fontSize = '9pt';
+              hint.style.fontWeight = '400';
+              hint.style.marginTop = '2mm';
+              hint.style.opacity = '0.9';
+              rightCol.appendChild(hint);
+              totalContainer.appendChild(rightCol);
+            }
+          }
         }
 
         await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), pdfTotalPriceEl, {
@@ -1133,14 +1145,24 @@
           // Render Zusatzprodukte-Tabelle
           const pdfAddTotalEl = additionalPage.querySelector('.pdf-additional-total-price');
           if (pdfAddTotalEl) {
-            const hint = document.createElement('div');
-            hint.textContent = '(exkl. MwSt)';
-            hint.style.fontSize = '9pt';
-            hint.style.fontWeight = '400';
-            hint.style.marginTop = '2mm';
-            hint.style.opacity = '0.9';
-            const totalContainer = additionalPage.querySelector('.pdf-total');
-            if (totalContainer) totalContainer.appendChild(hint);
+            if (!isPrivateCustomer()) {
+              const totalContainer = additionalPage.querySelector('.pdf-total');
+              if (totalContainer && pdfAddTotalEl.parentElement === totalContainer) {
+                const rightCol = document.createElement('div');
+                rightCol.style.display = 'flex';
+                rightCol.style.flexDirection = 'column';
+                rightCol.style.alignItems = 'flex-end';
+                rightCol.appendChild(pdfAddTotalEl);
+                const hint = document.createElement('div');
+                hint.textContent = '(exkl. MwSt)';
+                hint.style.fontSize = '9pt';
+                hint.style.fontWeight = '400';
+                hint.style.marginTop = '2mm';
+                hint.style.opacity = '0.9';
+                rightCol.appendChild(hint);
+                totalContainer.appendChild(rightCol);
+              }
+            }
           }
           await this.renderAdditionalProductsIntoTable(snapshot, additionalPage.querySelector('.pdf-additional-table-body'), pdfAddTotalEl);
 
