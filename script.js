@@ -5483,11 +5483,11 @@
 				
 				const totalPrice = this.calculateConfigPrice(currentConfig);
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
-				// Subtitle: immer anzeigen, jetzt "exkl. MwSt"
+				// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
 				const section = totalPriceEl.closest('.total-section');
 				const subtitle = section ? section.querySelector('.total-subtitle') : null;
 				if (subtitle) {
-					subtitle.style.display = '';
+					subtitle.style.display = isPrivateCustomer() ? 'none' : '';
 					subtitle.textContent = 'exkl. MwSt';
 				}
 			}
@@ -5545,11 +5545,11 @@
 			totalPrice += additionalProductsPrice;
 			
 			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
-			// Subtitle: immer anzeigen, jetzt "exkl. MwSt"
+			// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
 			const section = totalPriceEl.closest('.total-section');
 			const subtitle = section ? section.querySelector('.total-subtitle') : null;
 			if (subtitle) {
-				subtitle.style.display = '';
+				subtitle.style.display = isPrivateCustomer() ? 'none' : '';
 				subtitle.textContent = 'exkl. MwSt';
 			}
 		}
