@@ -8046,9 +8046,20 @@
     			if (this.erdungsband && typeof data.erdungsband === 'boolean') {
     				this.erdungsband.checked = data.erdungsband;
     			}
-    						if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
+						if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
 				this.ulicaModule.checked = data.ulicaModule;
 			}
+			
+			// Opti-State laden (Checkboxen + Menge)
+			try {
+				const hCb = document.getElementById('huawei-opti');
+				const bCb = document.getElementById('brc-opti');
+				const qEl = document.getElementById('opti-qty');
+				if (hCb && typeof data.huaweiOpti === 'boolean') hCb.checked = data.huaweiOpti;
+				if (bCb && typeof data.brcOpti === 'boolean') bCb.checked = data.brcOpti;
+				if (qEl && typeof data.optiQty === 'number') qEl.value = String(Math.max(1, data.optiQty));
+				if (qEl) qEl.style.display = ((hCb && hCb.checked) || (bCb && bCb.checked)) ? '' : 'none';
+			} catch (_) {}
 			
 			// Lade Module Dropdown Auswahl
 			if (this.moduleSelect && typeof data.moduleSelectValue === 'string') {
