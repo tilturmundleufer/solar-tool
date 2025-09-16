@@ -5619,8 +5619,8 @@
 			const hCb = document.getElementById('huawei-opti');
 			const bCb = document.getElementById('brc-opti');
 			const qEl = document.getElementById('opti-qty');
-			if (hCb && bCb && sEl && qEl && (hCb.checked || bCb.checked)) {
-				const key = sEl.value === 'BRCOpti' ? 'BRCOpti' : 'HuaweiOpti';
+			if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
+				const key = bCb.checked ? 'BRCOpti' : 'HuaweiOpti';
 				const qty = Math.max(1, parseInt(qEl.value || '1', 10));
 				const pricePer = getPackPriceForQuantity(key, 1);
 				totalPrice += qty * pricePer;
