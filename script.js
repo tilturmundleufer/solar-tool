@@ -5752,6 +5752,8 @@
 						// Update Gesamtpreis und Zusatzprodukte-Liste
 						this.updateOverviewTotalPrice();
 						this.renderAdditionalProducts();
+						// Neu: Änderungen unmittelbar persistieren
+						this.saveToCache?.();
 					});
 				}
 			});
@@ -5764,6 +5766,8 @@
 				qEl.style.display = (hCb.checked || bCb.checked) ? '' : 'none';
 				this.renderAdditionalProducts();
 				this.updateOverviewTotalPrice();
+				// Neu: State sichern
+				this.saveToCache?.();
 			};
 			if (hCb) {
 				hCb.addEventListener('click', () => {
