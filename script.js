@@ -8416,6 +8416,16 @@
         }
       });
       
+      // Opti-Zusatz (einmalig) hinzufügen
+      try {
+        const hCb = document.getElementById('huawei-opti');
+        const bCb = document.getElementById('brc-opti');
+        const qEl = document.getElementById('opti-qty');
+        if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
+          const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+          if (bCb.checked) parts.BRCOpti = (parts.BRCOpti || 0) + qty; else parts.HuaweiOpti = (parts.HuaweiOpti || 0) + qty;
+        }
+      } catch (_) {}
       this.addPartsListToCart(parts);
       this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
         
@@ -8468,6 +8478,16 @@
           total[k] = (total[k] || 0) + v;
         });
       });
+      // Opti-Zusatz aus globaler UI berücksichtigen
+      try {
+        const hCb = document.getElementById('huawei-opti');
+        const bCb = document.getElementById('brc-opti');
+        const qEl = document.getElementById('opti-qty');
+        if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
+          const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+          if (bCb.checked) total.BRCOpti = (total.BRCOpti || 0) + qty; else total.HuaweiOpti = (total.HuaweiOpti || 0) + qty;
+        }
+      } catch (_) {}
       
       const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
       
