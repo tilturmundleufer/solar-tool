@@ -106,19 +106,70 @@
   var idToKey = { productIdToKey: {}, variantIdToKey: {} };
   var mapsReady = false;
 
-  function getEmbeddedFallbackMaps(){
-    // Minimaler Fallback – bitte bei Bedarf erweitern
-    var PRODUCT_MAP_FALLBACK = {
-      Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
-      UlicaSolarBlackJadeFlow: { productId:'689455ed543f0cbb26ba54e9', variantId:'689455ed7d7ddfd326d5dbf9' },
-      SolarmodulPalette: { productId:'68b999a74abecff30536dee0', variantId:'68b999a873f9b0df7954ed8b' }
-    };
-    var PRODUCT_MAP_BRUTTO_FALLBACK = {
-      // Platzhalter-IDs aus script.js-Auszügen – ggf. ergänzen/prüfen
-      Solarmodul: { productId:'68c7ec7571df9723b8ef5050', variantId:'68c7ec7e71df9723b8ef53cd' }
-    };
-    return { PRODUCT_MAP_FALLBACK: PRODUCT_MAP_FALLBACK, PRODUCT_MAP_BRUTTO_FALLBACK: PRODUCT_MAP_BRUTTO_FALLBACK };
+  // Eingebettete Kopien der Produkt-Mappings aus script.js (leicht umbenannt)
+  const POPUP_PRODUCT_MAP_BRUTTO = {
+    // Module
+    Solarmodul: { productId: '68c7ec7571df9723b8ef5050', variantId: '68c7ec7e71df9723b8ef53cd' }, // Ulica 450 W inkl. MwSt (Einzelprodukt)
+    UlicaSolarBlackJadeFlow: { productId: '68c7ef7fbeeaadb13262a062', variantId: '68c7ef7ff397fcf9d6d7571e' }, // Ulica 500 W inkl. MwSt (Einzelprodukt)
+    // Neue Paletten (inkl. MwSt)
+    SolarmodulPalette: { productId: '68c7ec7471df9723b8ef5008', variantId: '68c7ec7c71df9723b8ef5160' },
+    UlicaSolarBlackJadeFlowPalette: { productId: '68c7ec7471df9723b8ef5006', variantId: '68c7ec7d71df9723b8ef5187' },
+
+    // Zubehör/Komponenten
+    Quetschkabelschuhe: { productId: '68c7ec7471df9723b8ef502d', variantId: '68c7ec7c71df9723b8ef514b' },
+    Solarkabel: { productId: '68c7ec7471df9723b8ef5031', variantId: '68c7ec7d71df9723b8ef5205' },
+    Erdungsband: { productId: '68c7ec7471df9723b8ef5033', variantId: '68c7ec7c71df9723b8ef5159' },
+    Endkappen: { productId: '68c7ec7471df9723b8ef5041', variantId: '68c7ec7e71df9723b8ef533e' },
+    Mittelklemmen: { productId: '68c7ec7471df9723b8ef5043', variantId: '68c7ec7e71df9723b8ef53e0' },
+    Dachhaken: { productId: '68c7ec7471df9723b8ef5045', variantId: '68c7ec7f71df9723b8ef54f9' },
+    Schiene_360_cm: { productId: '68c7ec7471df9723b8ef5047', variantId: '68c7ec7e71df9723b8ef53d6' },
+    Schienenverbinder: { productId: '68c7ec7471df9723b8ef5049', variantId: '68c7ec7e71df9723b8ef533b' },
+    Schiene_240_cm: { productId: '68c7ec7471df9723b8ef504b', variantId: '68c7ec7e71df9723b8ef5387' },
+    MC4_Stecker: { productId: '68c7ec7671df9723b8ef506e', variantId: '68c7ec7d71df9723b8ef5230' },
+    Tellerkopfschraube: { productId: '68c7ec7671df9723b8ef5072', variantId: '68c7ec7f71df9723b8ef544a' },
+    Schrauben: { productId: '68c7ec7771df9723b8ef5085', variantId: '68c7ec7f71df9723b8ef5406' },
+    Endklemmen: { productId: '68c7ec7771df9723b8ef5087', variantId: '68c7ec7f71df9723b8ef542a' },
+    Holzunterleger: { productId: '68c7f04a8fd58d9f974d6eb6', variantId: '68c7f04bb950895d194203e00' },
+    // Optimierer (Brutto)
+    HuaweiOpti: { productId: '68c7ec7471df9723b8ef501e', variantId: '68c7ec7e71df9723b8ef5335' },
+    BRCOpti: { productId: '68c7ec7471df9723b8ef501a', variantId: '68c7ec7b71df9723b8ef510b' }
+  };
+
+  const POPUP_PRODUCT_MAP_NETTO = {
+    Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
+    UlicaSolarBlackJadeFlow: { productId:'689455ed543f0cbb26ba54e9', variantId:'689455ed7d7ddfd326d5dbf9' },
+    // Paletten (ohne MwSt)
+    SolarmodulPalette: { productId: '68b999a74abecff30536dee0', variantId: '68b999a873f9b0df7954ed8b' },
+    UlicaSolarBlackJadeFlowPalette: { productId: '68b99932fb8af7a115bb2680', variantId: '68b999339e25d980ba33928d' },
+    Endklemmen: { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
+    Schrauben: { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
+    Dachhaken: { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
+    Mittelklemmen: { productId:'68531088654d1468dca962c', variantId:'6853c1084c04541622ba3e26' },
+    Endkappen: { productId:'6853be0895a5a578324f9682', variantId:'6853be0805e96b5a16c705cd' },
+    Schienenverbinder: { productId:'6853c2018bf6755ddde216a8', variantId:'6853c202c488ee61eb51a3dc' },
+    Schiene_240_cm: { productId:'6853bd882f00db0c9a42d653', variantId:'6853bd88c4173dbe72bab10f' },
+    Schiene_360_cm: { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
+    MC4_Stecker: { productId:'687fcc9f66078f7098826ccc', variantId:'687fcca02c6537b9a9493fa7' },
+    Solarkabel: { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
+    Holzunterleger: { productId:'688780821dbbf26153a85117', variantId:'688780ad795c82663cd6e69b' },
+    // Optionale/Neue Produkte
+    Erdungsklemme: { productId:'6887e8aaa6ca43c15254d224', variantId:'6887e8abb439562cbc88db5d' },
+    Quetschkabelschuhe: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
+    Erdungsband: { productId:'688760e01c9c7973ee287386', variantId:'688760e0835845affc493354' },
+    Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' },
+    // Optimierer (Netto)
+    HuaweiOpti: { productId: '68af2934de0a7fe5d316efbc', variantId: '68af2934c230bc1eaa972585' },
+    BRCOpti: { productId: '68b1e02629cec71ebfc12f0e', variantId: '68b1e02ca05a6b4aca721dc8' }
+  };
+
+  function ensureMapsDefaultedToLocal(){
+    try{
+      window.PRODUCT_MAP = window.PRODUCT_MAP || POPUP_PRODUCT_MAP_NETTO;
+      window.PRODUCT_MAP_BRUTTO = window.PRODUCT_MAP_BRUTTO || POPUP_PRODUCT_MAP_BRUTTO;
+    }catch(_){ }
   }
+
+  // (eingebetteter Fallback entfällt, da POPUP_* Maps direkt genutzt werden)
 
   function tryAssignMaps(obj){
     try{
@@ -148,47 +199,26 @@
     return new Promise(function(resolve){
       try{
         if (mapsReady) return resolve(true);
-        // 1) Globale Maps vorhanden?
-        if (typeof window.PRODUCT_MAP === 'object' && window.PRODUCT_MAP && typeof window.PRODUCT_MAP_BRUTTO === 'object' && window.PRODUCT_MAP_BRUTTO){
-          mapsReady = true; return resolve(true);
-        }
-        // 2) Optional: solarGrid könnte sie indirekt bereitstellen
-        tryAssignMaps(window);
-        if (typeof window.PRODUCT_MAP === 'object' && window.PRODUCT_MAP && typeof window.PRODUCT_MAP_BRUTTO === 'object' && window.PRODUCT_MAP_BRUTTO){
-          mapsReady = true; return resolve(true);
-        }
-        // 3) Fetch von konfigurierbarer URL → gleiche Origin → Vercel-Fallback
-        var urlPrimary = (window.SOLAR_TOOL_PRODUCT_MAPS_URL || '/product-maps.json');
-        fetchJson(urlPrimary).then(function(data){
-          if (data) tryAssignMaps(data);
-          if (!(window.PRODUCT_MAP && window.PRODUCT_MAP_BRUTTO)){
-            fetchJson('https://solar-tool-xi.vercel.app/product-maps.json').then(function(data2){
-              if (data2) tryAssignMaps(data2);
-              if (!(window.PRODUCT_MAP && window.PRODUCT_MAP_BRUTTO)){
-                // 4) Eingebetteter Fallback
-                var fb = getEmbeddedFallbackMaps();
-                window.PRODUCT_MAP = window.PRODUCT_MAP || fb.PRODUCT_MAP_FALLBACK;
-                window.PRODUCT_MAP_BRUTTO = window.PRODUCT_MAP_BRUTTO || fb.PRODUCT_MAP_BRUTTO_FALLBACK;
-              }
-              mapsReady = true; resolve(true);
-            });
-          } else {
-            mapsReady = true; resolve(true);
-          }
-        });
-      }catch(e){
-        // Absolute Fallback: eingebettet
-        var fb2 = getEmbeddedFallbackMaps();
-        window.PRODUCT_MAP = window.PRODUCT_MAP || fb2.PRODUCT_MAP_FALLBACK;
-        window.PRODUCT_MAP_BRUTTO = window.PRODUCT_MAP_BRUTTO || fb2.PRODUCT_MAP_BRUTTO_FALLBACK;
+        ensureMapsDefaultedToLocal();
         mapsReady = true; resolve(true);
-      }
+      }catch(_){ mapsReady = true; resolve(true); }
     });
   }
 
   function buildReverseMaps(){
     try{
-      // 1) Aus globalen Maps (falls vorhanden)
+      // 1) Aus lokalen POPUP-Maps
+      Object.keys(POPUP_PRODUCT_MAP_NETTO || {}).forEach(function(k){
+        var info = POPUP_PRODUCT_MAP_NETTO[k];
+        if(info&&info.productId) idToKey.productIdToKey[info.productId] = k;
+        if(info&&info.variantId) idToKey.variantIdToKey[info.variantId] = k;
+      });
+      Object.keys(POPUP_PRODUCT_MAP_BRUTTO || {}).forEach(function(k){
+        var info = POPUP_PRODUCT_MAP_BRUTTO[k];
+        if(info&&info.productId) idToKey.productIdToKey[info.productId] = k;
+        if(info&&info.variantId) idToKey.variantIdToKey[info.variantId] = k;
+      });
+      // 2) Zusätzlich: globale Maps (falls vorhanden)
       if (typeof PRODUCT_MAP === 'object' && PRODUCT_MAP){
         Object.keys(PRODUCT_MAP).forEach(function(k){
           var info = PRODUCT_MAP[k];
@@ -348,12 +378,10 @@
         var shouldBeBrutto = isBusiness();
         var isBruttoNow = false;
         try{
-          if (typeof PRODUCT_MAP_BRUTTO === 'object' && PRODUCT_MAP_BRUTTO){
-            isBruttoNow = Object.keys(PRODUCT_MAP_BRUTTO).some(function(k){
-              var info = PRODUCT_MAP_BRUTTO[k];
-              return info && (info.productId === ids.productId || info.variantId === ids.variantId);
-            });
-          }
+          isBruttoNow = Object.keys(POPUP_PRODUCT_MAP_BRUTTO || {}).some(function(k){
+            var info = POPUP_PRODUCT_MAP_BRUTTO[k];
+            return info && (info.productId === ids.productId || info.variantId === ids.variantId);
+          });
         }catch(_){ }
 
         if(shouldBeBrutto === isBruttoNow){
