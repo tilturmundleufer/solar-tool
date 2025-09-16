@@ -324,6 +324,24 @@
             <input type="checkbox" id="erdungsband">
             <span>Erdungsband</span>
           </label>
+          <!-- Optimierer Dropdown in der Checkbox-Leiste -->
+          <div class="module-dropdown">
+            <div class="module-dropdown-header">
+              <span class="module-dropdown-title">Optimierer hinzufügen</span>
+              <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Dropdown" class="module-dropdown-arrow" style="width: 8px; height: 12px;">
+            </div>
+            <div class="module-dropdown-content">
+              <label class="checkbox-item">
+                <input type="checkbox" id="huawei-opti">
+                <span class="checkbox-label">Huawei Optimierer 600W</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="brc-opti">
+                <span class="checkbox-label">BRC M600M Optimierer</span>
+              </label>
+              <input type="number" id="opti-qty" min="1" value="1" style="width:80px; margin-left:8px; display:none;" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -412,19 +430,6 @@
           <!-- Zusatzprodukte -->
           <div class="additional-products-section">
             <h4>Zusatzprodukte</h4>
-            <div class="additional-products-optis">
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="huawei-opti" /> Huawei Optimierer 600W
-              </label>
-              <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="brc-opti" /> BRC M600M Optimierer
-              </label>
-              <select id="opti-select" style="margin-top:6px;">
-                <option value="HuaweiOpti">Huawei Optimierer 600W</option>
-                <option value="BRCOpti">BRC M600M Optimierer</option>
-              </select>
-              <input type="number" id="opti-qty" min="1" value="1" style="width:80px; margin-left:8px; display:none;" />
-            </div>
             <div id="additional-products-list" class="additional-products-list"></div>
           </div>
         </div>

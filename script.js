@@ -5618,7 +5618,6 @@
 			// Optimierer (Huawei/BRC)
 			const hCb = document.getElementById('huawei-opti');
 			const bCb = document.getElementById('brc-opti');
-			const sEl = document.getElementById('opti-select');
 			const qEl = document.getElementById('opti-qty');
 			if (hCb && bCb && sEl && qEl && (hCb.checked || bCb.checked)) {
 				const key = sEl.value === 'BRCOpti' ? 'BRCOpti' : 'HuaweiOpti';
@@ -5726,10 +5725,9 @@
 			// Optimierer (Huawei/BRC) – exklusiv, Menge aus Input
 			const hCb = document.getElementById('huawei-opti');
 			const bCb = document.getElementById('brc-opti');
-			const sEl = document.getElementById('opti-select');
 			const qEl = document.getElementById('opti-qty');
 			if (hCb && bCb && sEl && qEl && (hCb.checked || bCb.checked)) {
-				const key = sEl.value === 'BRCOpti' ? 'BRCOpti' : 'HuaweiOpti';
+				const key = bCb.checked ? 'BRCOpti' : 'HuaweiOpti';
 				const qty = Math.max(1, parseInt(qEl.value || '1', 10));
 				const pricePer = getPackPriceForQuantity(key, 1);
 				const total = qty * pricePer;
@@ -5751,7 +5749,7 @@
 		
 		initAdditionalProductsListeners() {
 			// Event-Listener für Zusatzprodukte-Checkboxen
-			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'huawei-opti', 'brc-opti', 'opti-select', 'opti-qty'];
+			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'huawei-opti', 'brc-opti', 'opti-qty'];
 			
 			additionalProductCheckboxes.forEach(checkboxId => {
 				const checkbox = document.getElementById(checkboxId);
@@ -5766,19 +5764,15 @@
 			// Exklusivität der Optis + Mengeingabe Handling
 			const hCb = document.getElementById('huawei-opti');
 			const bCb = document.getElementById('brc-opti');
-			const sEl = document.getElementById('opti-select');
 			const qEl = document.getElementById('opti-qty');
 			const syncOptiUi = () => {
-				if (!hCb || !bCb || !sEl || !qEl) return;
+				if (!hCb || !bCb || !qEl) return;
 				// Exklusiv
 				if (hCb.checked && bCb.checked) bCb.checked = false;
-				// Select folgt Checkbox
-				if (hCb.checked) sEl.value = 'HuaweiOpti';
-				else if (bCb.checked) sEl.value = 'BRCOpti';
 				// Menge Feld nur sichtbar wenn einer aktiv
 				qEl.style.display = (hCb.checked || bCb.checked) ? '' : 'none';
 			};
-			[hCb, bCb, sEl].filter(Boolean).forEach(el => el.addEventListener('change', syncOptiUi));
+			[hCb, bCb].filter(Boolean).forEach(el => el.addEventListener('change', syncOptiUi));
 			syncOptiUi();
 		}
 		
