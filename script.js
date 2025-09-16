@@ -145,9 +145,9 @@
     // VK pro VE (Fallbackpreise)
     Solarmodul: 59.70,
     UlicaSolarBlackJadeFlow: 67.90,
-    // Fallbackpreise für Paletten werden nicht genutzt (Shoppreise werden gelesen)
-    SolarmodulPalette: 0,
-    UlicaSolarBlackJadeFlowPalette: 0,
+    // Paletten-Fallbackpreise (Netto) – falls Collection Price nicht gefunden wird
+    SolarmodulPalette: 2394.76, // 450 W Palette
+    UlicaSolarBlackJadeFlowPalette: 2694.64, // 500 W Palette
     Endklemmen: 49.50,
     Schrauben: 22.00,
     Dachhaken: 69.00,
