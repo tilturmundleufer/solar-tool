@@ -787,7 +787,6 @@
 
   // Globale Price Cache Instanz (nach PRODUCT_MAP Definition)
   const priceCache = new PriceCache();
-
   // Debug-Funktionen für Price Cache (nur für Entwicklung)
   window.debugPriceCache = {
     forceUpdate: () => priceCache.forceUpdate(),
@@ -1503,7 +1502,6 @@
 
       return totalPrice;
     }
-
     // NEUE ISOLIERTE Konfiguration zu PDF hinzufügen (aus Snapshot)
     async addConfigurationToPDFFromSnapshot(pdf, config, isFirstPage) {
       const pageWidth = 210; // A4 Breite in mm
@@ -2246,7 +2244,6 @@
         return {};
       }
     }
-
     // Füge Produkttabelle zum PDF hinzu
     async addProductTable(pdf, config, yPosition, checkPageBreak) {
       // NEUES DESIGN: Produkttabelle mit Header – Stil der Sidebar
@@ -3376,7 +3373,6 @@
 
       return { cols: Math.max(best[0], best[1]), rows: Math.min(best[0], best[1]) };
     }
-
     applyConfiguration(config) {
       
       // Speichere bestehende Auswahl
@@ -4177,7 +4173,6 @@
       this.solarGrid.buildList();
       this.solarGrid.updateSummaryOnChange();
     }
-    
     expandGridForRowConfig(neededCols, neededRows) {
       const oldSelection = this.solarGrid.selection || [];
       
@@ -5400,7 +5395,6 @@
 				});
 			}
 		}
-		
 		showOverview() {
 			// Aktuelle Konfiguration speichern um Progress nicht zu verlieren
 			if (this.currentConfig !== null) {
@@ -6121,9 +6115,6 @@
 				}
 			}, 600);
 		}
-
-
-
 		initQuickConfigInterface() {
 			// Verbesserte Initialisierung mit mehreren Versuchen
 			const initSmartConfig = () => {
@@ -6918,7 +6909,6 @@
 			this.gridEl.style.height = finalHeight + 'px';
 		}
 		}
-
     buildGrid() {
   		if (!Array.isArray(this.selection)) return;
   		
@@ -7685,7 +7675,6 @@
   		this.renderConfigList();
   		this.updateSaveButtons();
 		}
-
     _makeConfigObject(customName = null) {
       // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
       let configName;
@@ -7981,6 +7970,10 @@
 			quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
 			erdungsband: this.erdungsband ? this.erdungsband.checked : false,
 			ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
+			// Opti-State (global)
+			huaweiOpti: (document.getElementById('huawei-opti')?.checked) || false,
+			brcOpti: (document.getElementById('brc-opti')?.checked) || false,
+			optiQty: parseInt(document.getElementById('opti-qty')?.value || '1', 10),
 			// Module Dropdown Auswahl
 			moduleSelectValue: this.moduleSelect ? this.moduleSelect.value : '',
     			// Grid-Struktur
@@ -8874,9 +8867,6 @@
       const isVertical = this.orV ? this.orV.checked : false;
       const originalCellW = isVertical ? inputH : inputW;
       const originalCellH = isVertical ? inputW : inputH;
-      
-      
-      
 		// Maximale verfügbare Größe (wie im Hauptgrid)
 		const maxWidth = this.wrapper ? this.wrapper.clientWidth - 160 : 800;
 		const maxHeight = this.wrapper ? this.wrapper.clientHeight - 160 : 600;
