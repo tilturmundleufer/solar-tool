@@ -5761,19 +5761,36 @@
 					});
 				}
 			});
-			// Exklusivität der Optis + Mengeingabe Handling
+			// Exklusivität der Optis + Mengeingabe Handling (robust, sofortiges UI-Update)
 			const hCb = document.getElementById('huawei-opti');
 			const bCb = document.getElementById('brc-opti');
 			const qEl = document.getElementById('opti-qty');
-			const syncOptiUi = () => {
+			const syncDisplayAndUpdate = () => {
 				if (!hCb || !bCb || !qEl) return;
-				// Exklusiv
-				if (hCb.checked && bCb.checked) bCb.checked = false;
-				// Menge Feld nur sichtbar wenn einer aktiv
 				qEl.style.display = (hCb.checked || bCb.checked) ? '' : 'none';
+				this.renderAdditionalProducts();
+				this.updateOverviewTotalPrice();
 			};
-			[hCb, bCb].filter(Boolean).forEach(el => el.addEventListener('change', syncOptiUi));
-			syncOptiUi();
+			if (hCb) {
+				hCb.addEventListener('click', () => {
+					if (hCb.checked && bCb) bCb.checked = false;
+					syncDisplayAndUpdate();
+				});
+				hCb.addEventListener('change', syncDisplayAndUpdate);
+			}
+			if (bCb) {
+				bCb.addEventListener('click', () => {
+					if (bCb.checked && hCb) hCb.checked = false;
+					syncDisplayAndUpdate();
+				});
+				bCb.addEventListener('change', syncDisplayAndUpdate);
+			}
+			if (qEl) {
+				qEl.addEventListener('input', () => {
+					syncDisplayAndUpdate();
+				});
+			}
+			syncDisplayAndUpdate();
 		}
 		
 		editConfigName() {

@@ -1390,6 +1390,36 @@ body {
   box-shadow: 0 4px 12px rgba(14, 30, 52, 0.15);
 }
 
+/* Opti Menge Input im Dropdown – an Rechner-Design angelehnt */
+#opti-qty {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0e1e34;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 10px;
+  width: 90px;
+  margin: 6px 12px;
+}
+
+#opti-qty:focus {
+  outline: none;
+  border-color: #ffb101;
+  box-shadow: 0 0 0 3px rgba(255, 177, 1, 0.15);
+}
+
+#opti-qty::-webkit-outer-spin-button,
+#opti-qty::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#opti-qty[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .module-dropdown:hover .module-dropdown-content {
   opacity: 1;
   visibility: visible;
