@@ -104,6 +104,87 @@
   var cartCompatTimer = null;
   var idMapsBuilt = false;
   var idToKey = { productIdToKey: {}, variantIdToKey: {} };
+  var mapsReady = false;
+
+  function getEmbeddedFallbackMaps(){
+    // Minimaler Fallback – bitte bei Bedarf erweitern
+    var PRODUCT_MAP_FALLBACK = {
+      Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
+      UlicaSolarBlackJadeFlow: { productId:'689455ed543f0cbb26ba54e9', variantId:'689455ed7d7ddfd326d5dbf9' },
+      SolarmodulPalette: { productId:'68b999a74abecff30536dee0', variantId:'68b999a873f9b0df7954ed8b' }
+    };
+    var PRODUCT_MAP_BRUTTO_FALLBACK = {
+      // Platzhalter-IDs aus script.js-Auszügen – ggf. ergänzen/prüfen
+      Solarmodul: { productId:'68c7ec7571df9723b8ef5050', variantId:'68c7ec7e71df9723b8ef53cd' }
+    };
+    return { PRODUCT_MAP_FALLBACK: PRODUCT_MAP_FALLBACK, PRODUCT_MAP_BRUTTO_FALLBACK: PRODUCT_MAP_BRUTTO_FALLBACK };
+  }
+
+  function tryAssignMaps(obj){
+    try{
+      if (obj && typeof obj === 'object'){
+        if (obj.PRODUCT_MAP && typeof obj.PRODUCT_MAP === 'object' && Object.keys(obj.PRODUCT_MAP).length){
+          window.PRODUCT_MAP = window.PRODUCT_MAP || obj.PRODUCT_MAP;
+        }
+        if (obj.PRODUCT_MAP_BRUTTO && typeof obj.PRODUCT_MAP_BRUTTO === 'object' && Object.keys(obj.PRODUCT_MAP_BRUTTO).length){
+          window.PRODUCT_MAP_BRUTTO = window.PRODUCT_MAP_BRUTTO || obj.PRODUCT_MAP_BRUTTO;
+        }
+      }
+    }catch(_){ }
+  }
+
+  function fetchJson(url){
+    return new Promise(function(resolve){
+      try{
+        fetch(url, { credentials:'omit', cache:'no-store' }).then(function(r){
+          if(!r.ok) return resolve(null);
+          r.json().then(function(j){ resolve(j); }).catch(function(){ resolve(null); });
+        }).catch(function(){ resolve(null); });
+      }catch(_){ resolve(null); }
+    });
+  }
+
+  function ensureProductMapsAvailable(){
+    return new Promise(function(resolve){
+      try{
+        if (mapsReady) return resolve(true);
+        // 1) Globale Maps vorhanden?
+        if (typeof window.PRODUCT_MAP === 'object' && window.PRODUCT_MAP && typeof window.PRODUCT_MAP_BRUTTO === 'object' && window.PRODUCT_MAP_BRUTTO){
+          mapsReady = true; return resolve(true);
+        }
+        // 2) Optional: solarGrid könnte sie indirekt bereitstellen
+        tryAssignMaps(window);
+        if (typeof window.PRODUCT_MAP === 'object' && window.PRODUCT_MAP && typeof window.PRODUCT_MAP_BRUTTO === 'object' && window.PRODUCT_MAP_BRUTTO){
+          mapsReady = true; return resolve(true);
+        }
+        // 3) Fetch von konfigurierbarer URL → gleiche Origin → Vercel-Fallback
+        var urlPrimary = (window.SOLAR_TOOL_PRODUCT_MAPS_URL || '/product-maps.json');
+        fetchJson(urlPrimary).then(function(data){
+          if (data) tryAssignMaps(data);
+          if (!(window.PRODUCT_MAP && window.PRODUCT_MAP_BRUTTO)){
+            fetchJson('https://solar-tool-xi.vercel.app/product-maps.json').then(function(data2){
+              if (data2) tryAssignMaps(data2);
+              if (!(window.PRODUCT_MAP && window.PRODUCT_MAP_BRUTTO)){
+                // 4) Eingebetteter Fallback
+                var fb = getEmbeddedFallbackMaps();
+                window.PRODUCT_MAP = window.PRODUCT_MAP || fb.PRODUCT_MAP_FALLBACK;
+                window.PRODUCT_MAP_BRUTTO = window.PRODUCT_MAP_BRUTTO || fb.PRODUCT_MAP_BRUTTO_FALLBACK;
+              }
+              mapsReady = true; resolve(true);
+            });
+          } else {
+            mapsReady = true; resolve(true);
+          }
+        });
+      }catch(e){
+        // Absolute Fallback: eingebettet
+        var fb2 = getEmbeddedFallbackMaps();
+        window.PRODUCT_MAP = window.PRODUCT_MAP || fb2.PRODUCT_MAP_FALLBACK;
+        window.PRODUCT_MAP_BRUTTO = window.PRODUCT_MAP_BRUTTO || fb2.PRODUCT_MAP_BRUTTO_FALLBACK;
+        mapsReady = true; resolve(true);
+      }
+    });
+  }
 
   function buildReverseMaps(){
     try{
@@ -306,12 +387,15 @@
   window.CartCompatibility = {
     init: function(){
       try{
-        // Falls solarGrid existiert: sichergehen, dass Forms gemappt sind
-        if(window.solarGrid && (window.solarGrid.generateHiddenCartForms || window.solarGrid.ensureWebflowFormsMapped)){
-          try{ (window.solarGrid.ensureWebflowFormsMapped || window.solarGrid.generateHiddenCartForms).call(window.solarGrid); }catch(_){ }
-        }
-        setupObservers();
-        scheduleCartCompatibilityCheck(300); // initial verzögert
+        ensureProductMapsAvailable().then(function(){
+          // Falls solarGrid existiert: sichergehen, dass Forms gemappt sind
+          if(window.solarGrid && (window.solarGrid.generateHiddenCartForms || window.solarGrid.ensureWebflowFormsMapped)){
+            try{ (window.solarGrid.ensureWebflowFormsMapped || window.solarGrid.generateHiddenCartForms).call(window.solarGrid); }catch(_){ }
+          }
+          if(!idMapsBuilt) buildReverseMaps();
+          setupObservers();
+          scheduleCartCompatibilityCheck(300); // initial verzögert
+        });
       }catch(_){ }
     }
   };
