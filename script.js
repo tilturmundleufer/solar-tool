@@ -256,8 +256,8 @@
 
   function applyVatIfBusiness(amount) {
     if (!Number.isFinite(amount)) return amount;
-    // MwSt. nur für Firmenkunden anwenden
-    return isPrivateCustomer() ? amount : Math.round(amount * 119) / 100;
+    // Neue Anforderung: Immer Netto anzeigen/berechnen; kein 1,19-Aufschlag mehr
+    return amount;
   }
 
   // Kundentyp-UI (Listen/Buttons) wird zentral in customer-type-popup.js verwaltet
@@ -663,7 +663,11 @@
       
       this.isUpdating = true;
       
-      const promises = Object.keys(PRODUCT_MAP).map(async (productKey) => {
+      const allKeys = Array.from(new Set([
+        ...Object.keys(PRODUCT_MAP || {}),
+        ...Object.keys(PRODUCT_MAP_BRUTTO || {})
+      ]));
+      const promises = allKeys.map(async (productKey) => {
         const price = await this.getPriceFromHTMLAsync(productKey);
         this.cache.set(productKey, price);
         return { productKey, price };
@@ -686,7 +690,18 @@
       return new Promise((resolve) => {
         // Verwende setTimeout um DOM-Zugriffe nicht zu blockieren
         setTimeout(() => {
-          const price = this.extractPriceFromHTML(productKey);
+          let price = this.extractPriceFromHTML(productKey);
+          // Falls 0 oder nicht gefunden: versuche Brutto-/Netto-Schwestern-Key
+          if (!price || price === 0) {
+            try {
+              // Map zwischen Netto/Brutto-Produktquellen bilden
+              const isBrutto = !!(PRODUCT_MAP_BRUTTO && PRODUCT_MAP_BRUTTO[productKey]);
+              const altMap = isBrutto ? PRODUCT_MAP : PRODUCT_MAP_BRUTTO;
+              if (altMap && altMap[productKey]) {
+                price = this.extractPriceFromHTML(productKey);
+              }
+            } catch (e) {}
+          }
           resolve(price);
         }, 0);
       });
@@ -1018,17 +1033,15 @@
         // Zusatzprodukte werden hier explizit ausgeschlossen – sie kommen gesammelt auf eine separate Seite
         const pdfTotalPriceEl = productsPage.querySelector('.pdf-total-price');
         if (pdfTotalPriceEl) {
-          // Optionaler MwSt.-Hinweis nur für Firmenkunden
-          if (!isPrivateCustomer()) {
-            const hint = document.createElement('div');
-            hint.textContent = '(inkl. MwSt)';
-            hint.style.fontSize = '9pt';
-            hint.style.fontWeight = '400';
-            hint.style.marginTop = '2mm';
-            hint.style.opacity = '0.9';
-            const totalContainer = productsPage.querySelector('.pdf-total');
-            if (totalContainer) totalContainer.appendChild(hint);
-          }
+          // Neuer Hinweis: immer Netto anzeigen (exkl. MwSt)
+          const hint = document.createElement('div');
+          hint.textContent = '(exkl. MwSt)';
+          hint.style.fontSize = '9pt';
+          hint.style.fontWeight = '400';
+          hint.style.marginTop = '2mm';
+          hint.style.opacity = '0.9';
+          const totalContainer = productsPage.querySelector('.pdf-total');
+          if (totalContainer) totalContainer.appendChild(hint);
         }
 
         await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), pdfTotalPriceEl, {
@@ -1120,16 +1133,14 @@
           // Render Zusatzprodukte-Tabelle
           const pdfAddTotalEl = additionalPage.querySelector('.pdf-additional-total-price');
           if (pdfAddTotalEl) {
-            if (!isPrivateCustomer()) {
-              const hint = document.createElement('div');
-              hint.textContent = '(inkl. MwSt)';
-              hint.style.fontSize = '9pt';
-              hint.style.fontWeight = '400';
-              hint.style.marginTop = '2mm';
-              hint.style.opacity = '0.9';
-              const totalContainer = additionalPage.querySelector('.pdf-total');
-              if (totalContainer) totalContainer.appendChild(hint);
-            }
+            const hint = document.createElement('div');
+            hint.textContent = '(exkl. MwSt)';
+            hint.style.fontSize = '9pt';
+            hint.style.fontWeight = '400';
+            hint.style.marginTop = '2mm';
+            hint.style.opacity = '0.9';
+            const totalContainer = additionalPage.querySelector('.pdf-total');
+            if (totalContainer) totalContainer.appendChild(hint);
           }
           await this.renderAdditionalProductsIntoTable(snapshot, additionalPage.querySelector('.pdf-additional-table-body'), pdfAddTotalEl);
 
@@ -1560,7 +1571,7 @@
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.text('GESAMTPREIS:', 20, positionRef.y + 8);
-      const totalText = `${totalPrice.toFixed(2)} €` + (isPrivateCustomer() ? '' : ' (inkl. MwSt)');
+      const totalText = `${totalPrice.toFixed(2)} € (exkl. MwSt)`;
       pdf.text(totalText, 170, positionRef.y + 8);
       
       pdf.setTextColor(0, 0, 0);
@@ -5472,11 +5483,12 @@
 				
 				const totalPrice = this.calculateConfigPrice(currentConfig);
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
-				// Subtitle ("inkl. MwSt") nur für Firmenkunden anzeigen
+				// Subtitle: immer anzeigen, jetzt "exkl. MwSt"
 				const section = totalPriceEl.closest('.total-section');
 				const subtitle = section ? section.querySelector('.total-subtitle') : null;
 				if (subtitle) {
-					subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+					subtitle.style.display = '';
+					subtitle.textContent = 'exkl. MwSt';
 				}
 			}
 		}
@@ -5533,11 +5545,12 @@
 			totalPrice += additionalProductsPrice;
 			
 			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
-			// Subtitle ("inkl. MwSt") nur für Firmenkunden anzeigen
+			// Subtitle: immer anzeigen, jetzt "exkl. MwSt"
 			const section = totalPriceEl.closest('.total-section');
 			const subtitle = section ? section.querySelector('.total-subtitle') : null;
 			if (subtitle) {
-				subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+				subtitle.style.display = '';
+				subtitle.textContent = 'exkl. MwSt';
 			}
 		}
 		
@@ -6971,7 +6984,6 @@
           parts[pieceKey] = remainder;
         }
       } catch (e) {}
-
 
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
