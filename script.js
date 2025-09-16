@@ -138,7 +138,10 @@
     Erdungsklemme: 1,
     Quetschkabelschuhe: 1,
     Erdungsband: 1,
-    Tellerkopfschraube: 100
+    Tellerkopfschraube: 100,
+    // Neue Zusatzprodukte (Optimierer)
+    HuaweiOpti: 1,
+    BRCOpti: 1
   };
   
   const PRICE_MAP = {
@@ -163,7 +166,10 @@
     Erdungsklemme: 25.00,
     Quetschkabelschuhe: 18.50,
     Erdungsband: 8.70,
-    Tellerkopfschraube: 26.00
+    Tellerkopfschraube: 26.00,
+    // Optimierer (Netto VK pro VE)
+    HuaweiOpti: 34.50,
+    BRCOpti: 33.50
   };
 
   // Staffelpreis-Konfiguration: thresholds immer in Stück (benötigte Menge),
@@ -287,8 +293,10 @@
     Tellerkopfschraube: { productId: '68c7ec7671df9723b8ef5072', variantId: '68c7ec7f71df9723b8ef544a' },
     Schrauben: { productId: '68c7ec7771df9723b8ef5085', variantId: '68c7ec7f71df9723b8ef5406' },
     Endklemmen: { productId: '68c7ec7771df9723b8ef5087', variantId: '68c7ec7f71df9723b8ef542a' },
-    Holzunterleger: { productId: '68c7f04a8fd58d9f974d6eb6', variantId: '68c7f04bb950895d194203e00' }
-    // Erdungsklemme – fehlt (kein inkl. MwSt Produkt in der Liste)
+    Holzunterleger: { productId: '68c7f04a8fd58d9f974d6eb6', variantId: '68c7f04bb950895d194203e00' },
+    // Optimierer (Brutto)
+    HuaweiOpti: { productId: '68c7ec7471df9723b8ef501e', variantId: '68c7ec7e71df9723b8ef5335' },
+    BRCOpti: { productId: '68c7ec7471df9723b8ef501a', variantId: '68c7ec7b71df9723b8ef510b' }
   };
 
   function getCartProductInfo(productKey) {
@@ -346,7 +354,10 @@
     Erdungsklemme: { productId:'6887e8aaa6ca43c15254d224', variantId:'6887e8abb439562cbc88db5d' },
     Quetschkabelschuhe: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
     Erdungsband: { productId:'688760e01c9c7973ee287386', variantId:'688760e0835845affc493354' },
-    Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' }
+    Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' },
+    // Optimierer (Netto)
+    HuaweiOpti: { productId: '68af2934de0a7fe5d316efbc', variantId: '68af2934c230bc1eaa972585' },
+    BRCOpti: { productId: '68b1e02629cec71ebfc12f0e', variantId: '68b1e02ca05a6b4aca721dc8' }
   };
   
   const PRODUCT_NAME_MAP = {
@@ -361,7 +372,9 @@
     'Erdungsklemme': 'Erdungsklemme - ?? Stücl',
     'Quetschkabelschuhe': 'Quetschkabelschuhe',
     'Erdungsband': 'Erdungsband',
-    'Tellerkopfschraube': 'Tellerkopfschraube 8x100'
+    'Tellerkopfschraube': 'Tellerkopfschraube 8x100',
+    'HuaweiOpti': 'Huawei Smart PV Optimierer 600W',
+    'BRCOpti': 'BRC M600M Optimierer'
   };
   
   const PRODUCT_IMAGES = {
@@ -388,7 +401,6 @@
   };
   
   // Zentrale Konfiguration ist jetzt direkt eingebettet
-
   // ===== BACKGROUND CALCULATION MANAGER =====
   class CalculationManager {
     constructor() {
@@ -1295,7 +1307,6 @@
         return {};
       }
     }
-
     // Rendert Zusatzprodukte in eine Tabelle (HTML-Modus) und zeigt Gesamtpreis
     async renderAdditionalProductsIntoTable(snapshot, tbodyEl, totalEl) {
       const parts = this.computeAdditionalProductsForSnapshot(snapshot);
@@ -2125,7 +2136,6 @@
         return yPosition;
       }
     }
-
     // Isolierte Produktberechnung aus Snapshot
     async calculatePartsFromSnapshot(config) {
       try {
@@ -2611,7 +2621,6 @@
 
       return checkboxes;
     }
-
     parseInput(input) {
       // NEU (Testmodus, Schritt 1): Unterstütze ausschließlich Grid-Größe wie "5x5"
       try {
@@ -3946,7 +3955,6 @@
       // Grid neu aufbauen
       this.solarGrid.updateSize();
     }
-    
     // NEUE METHODE: Dynamische Abstand-Anpassung für bestehende Grids
     adjustGridSpacing(spacingConfig) {
       const { spacing, targetCols, targetRows } = spacingConfig;
@@ -4439,7 +4447,6 @@
         }
       }
     }
-
     clearHighlight() {
       // Entferne alle Highlight- und Preview-Klassen
       const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight, .drag-preview-select, .drag-preview-deselect');
@@ -4854,7 +4861,6 @@
       
       return { html, css };
     }
-
     getConfigData(config = null) {
       const targetConfig = config || {
         cols: this.cols,
@@ -5324,7 +5330,6 @@
 			
 			// Hinweis: Keine erzwungene Standard-Orientation hier setzen, um Cache/URL-Werte nicht zu überschreiben
 		}
-		
 		initSidebarNavigation() {
 			// Navigation zwischen Detail-Ansicht und Übersicht
 			const backToOverviewBtn = document.getElementById('back-to-overview');
@@ -5610,6 +5615,18 @@
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
+			// Optimierer (Huawei/BRC)
+			const hCb = document.getElementById('huawei-opti');
+			const bCb = document.getElementById('brc-opti');
+			const sEl = document.getElementById('opti-select');
+			const qEl = document.getElementById('opti-qty');
+			if (hCb && bCb && sEl && qEl && (hCb.checked || bCb.checked)) {
+				const key = sEl.value === 'BRCOpti' ? 'BRCOpti' : 'HuaweiOpti';
+				const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+				const pricePer = getPackPriceForQuantity(key, 1);
+				totalPrice += qty * pricePer;
+			}
+			
 			return totalPrice;
 		}
 		
@@ -5705,11 +5722,36 @@
 				`;
 				additionalProductsListEl.appendChild(item);
 			}
+			
+			// Optimierer (Huawei/BRC) – exklusiv, Menge aus Input
+			const hCb = document.getElementById('huawei-opti');
+			const bCb = document.getElementById('brc-opti');
+			const sEl = document.getElementById('opti-select');
+			const qEl = document.getElementById('opti-qty');
+			if (hCb && bCb && sEl && qEl && (hCb.checked || bCb.checked)) {
+				const key = sEl.value === 'BRCOpti' ? 'BRCOpti' : 'HuaweiOpti';
+				const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+				const pricePer = getPackPriceForQuantity(key, 1);
+				const total = qty * pricePer;
+				const item = document.createElement('div');
+				item.className = 'additional-product-item produkt-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">${qty}×</span>
+						<div class="item-info">
+							<span class="item-name">${PRODUCT_NAME_MAP[key] || key}</span>
+							<span class="item-ve">1 Stück</span>
+						</div>
+					</div>
+					<span class="item-price">${total.toFixed(2).replace('.', ',')} €</span>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
 		}
 		
 		initAdditionalProductsListeners() {
 			// Event-Listener für Zusatzprodukte-Checkboxen
-			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe'];
+			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'huawei-opti', 'brc-opti', 'opti-select', 'opti-qty'];
 			
 			additionalProductCheckboxes.forEach(checkboxId => {
 				const checkbox = document.getElementById(checkboxId);
@@ -5721,6 +5763,23 @@
 					});
 				}
 			});
+			// Exklusivität der Optis + Mengeingabe Handling
+			const hCb = document.getElementById('huawei-opti');
+			const bCb = document.getElementById('brc-opti');
+			const sEl = document.getElementById('opti-select');
+			const qEl = document.getElementById('opti-qty');
+			const syncOptiUi = () => {
+				if (!hCb || !bCb || !sEl || !qEl) return;
+				// Exklusiv
+				if (hCb.checked && bCb.checked) bCb.checked = false;
+				// Select folgt Checkbox
+				if (hCb.checked) sEl.value = 'HuaweiOpti';
+				else if (bCb.checked) sEl.value = 'BRCOpti';
+				// Menge Feld nur sichtbar wenn einer aktiv
+				qEl.style.display = (hCb.checked || bCb.checked) ? '' : 'none';
+			};
+			[hCb, bCb, sEl].filter(Boolean).forEach(el => el.addEventListener('change', syncOptiUi));
+			syncOptiUi();
 		}
 		
 		editConfigName() {
@@ -5789,7 +5848,6 @@
 				}
 			});
 		}
-		
 		editConfigNameInList(configIndex) {
 			const config = this.configs[configIndex];
 			if (!config) return;
@@ -6248,7 +6306,6 @@
 				console.log('No grid-affecting config found, skipping preview');
 			}
 		}
-		
 		// Smart Config Help Dropdown Initialisierung
 		initializeSmartConfigHelp() {
 			// Trigger wird auch in setupSmartConfig aufgerufen
@@ -6783,7 +6840,7 @@
   		this.rows -= 1;
   		this.selection.shift();
   		this.updateGridAfterStructureChange();
-				}
+		}
 
     updateGridAfterStructureChange() {
   		this.updateSize();
@@ -7168,7 +7225,6 @@
 
   		return p;
 		}
-
     processGroup(len, p) {
       // Verwende die korrekte Schienenlogik (wie im Worker)
       const isVertical = this.orV?.checked;
@@ -8020,7 +8076,6 @@
 				// Aktualisiere die erste Konfiguration mit der globalen Orientation
 				this.updateFirstConfigOrientation(data.orientation);
 			}
-    			
     			// Lade die erste Konfiguration
     			if (this.configs.length > 0) {
     				this.loadFirstConfigFromCache();
@@ -8506,7 +8561,6 @@
         };
       }).filter(Boolean);
     }
-
     // ===== PDF HELPER METHODS =====
     
     // Hole aktuelle Konfigurationsdaten für PDF
@@ -8988,7 +9042,6 @@
         this.resizeObserver.observe(this.wrapper);
       }
     }
-    
     // FEATURE 8: Pinch-to-Zoom Setup
     setupPinchToZoom() {
       if (!this.wrapper) return;

@@ -412,6 +412,19 @@
           <!-- Zusatzprodukte -->
           <div class="additional-products-section">
             <h4>Zusatzprodukte</h4>
+            <div class="additional-products-optis">
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="huawei-opti" /> Huawei Optimierer 600W
+              </label>
+              <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="brc-opti" /> BRC M600M Optimierer
+              </label>
+              <select id="opti-select" style="margin-top:6px;">
+                <option value="HuaweiOpti">Huawei Optimierer 600W</option>
+                <option value="BRCOpti">BRC M600M Optimierer</option>
+              </select>
+              <input type="number" id="opti-qty" min="1" value="1" style="width:80px; margin-left:8px; display:none;" />
+            </div>
             <div id="additional-products-list" class="additional-products-list"></div>
           </div>
         </div>
