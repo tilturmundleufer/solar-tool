@@ -7974,6 +7974,15 @@
     	// Checkboxen auf Default zurücksetzen (ALLE abwählen)
     	if (this.incM) this.incM.checked = false;
     	if (this.mc4) this.mc4.checked = false;
+		// Optimierer zurücksetzen
+		try {
+			const hCb = document.getElementById('huawei-opti');
+			const bCb = document.getElementById('brc-opti');
+			const qEl = document.getElementById('opti-qty');
+			if (hCb) hCb.checked = false;
+			if (bCb) bCb.checked = false;
+			if (qEl) qEl.value = '1';
+		} catch (_) {}
     	if (this.solarkabel) this.solarkabel.checked = false;
     	if (this.holz) this.holz.checked = false;
     	if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
