@@ -8440,26 +8440,37 @@
         cartContainer.classList.remove('st-cart-hidden');
         // Cart zuverlässig öffnen: versuche mehrfach, da Webflow DOM evtl. leicht verzögert ist
         try {
+          const isVisible = (el) => {
+            if (!el) return false;
+            const cs = window.getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+            if (el.disabled) return false;
+            // Auch übergeordnete Hiding-Container berücksichtigen
+            let p = el;
+            while (p) {
+              const ps = window.getComputedStyle(p);
+              if (ps.display === 'none' || ps.visibility === 'hidden') return false;
+              p = p.parentElement;
+            }
+            return el.offsetParent !== null || el.getClientRects().length > 0;
+          };
           const tryOpen = (attempt = 0) => {
-            const selectors = [
+            const selectorUnion = [
               '[data-node-type="commerce-cart-open-link"]',
               '.w-commerce-commercecartopenlink',
               '[data-node-type*="cart-open"], [data-node-type*="commerce-cart-open"]',
               'a[href="#cart"]'
-            ];
-            let openBtn = null;
-            for (const s of selectors) {
-              const el = document.querySelector(s);
-              if (el) { openBtn = el; break; }
-            }
+            ].join(',');
+            const candidates = Array.from(document.querySelectorAll(selectorUnion));
+            const openBtn = candidates.find(isVisible) || candidates[0] || null;
             if (openBtn && typeof openBtn.click === 'function') {
               openBtn.click();
               return;
             }
-            if (attempt < 6) setTimeout(() => tryOpen(attempt + 1), 150);
+            if (attempt < 8) setTimeout(() => tryOpen(attempt + 1), 160);
           };
           // kleiner Delay, damit Webflow den letzten Add-Event verarbeiten kann
-          setTimeout(() => tryOpen(0), 60);
+          setTimeout(() => tryOpen(0), 80);
         } catch (e) {}
       }
     }
