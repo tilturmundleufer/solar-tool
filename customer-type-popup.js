@@ -43,6 +43,8 @@
         (window.solarGrid.ensureWebflowFormsMapped || window.solarGrid.generateHiddenCartForms)?.call(window.solarGrid);
       }
     }catch(e){}
+    // Direkt nach Wechsel: Warenkorb-Kompatibilität anstoßen (ohne Cart zu öffnen)
+    try{ if (window.CartCompatibility && typeof window.CartCompatibility.schedule==='function'){ window.CartCompatibility.schedule(150); } }catch(_){ }
   }
   function getStoredCustomerType(){
     try{
@@ -553,6 +555,8 @@
     },
     // öffentliche Planungsmethode, damit externe Module (z. B. script.js) triggern können
     schedule: function(delayMs){
+      // Beim manuellen Trigger: Cart nicht öffnen → nur still austauschen
+      try{ if (window.solarGrid && typeof window.solarGrid.hideCartContainer==='function') window.solarGrid.hideCartContainer(); }catch(_){ }
       scheduleCartCompatibilityCheck(delayMs);
     }
   };
