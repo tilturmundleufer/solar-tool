@@ -8187,8 +8187,12 @@
       });
       
       this.hideWebflowForms();
-      // Nach dem (Neu-)Mapping einen Kompatibilitätscheck einplanen
-      this.scheduleCartCompatibilityCheck(150);
+      // Nach dem (Neu-)Mapping einen Kompatibilitätscheck über Popup-Modul einplanen (falls vorhanden)
+      try {
+        if (window.CartCompatibility && typeof window.CartCompatibility.schedule === 'function') {
+          window.CartCompatibility.schedule(150);
+        }
+      } catch (e) {}
     }
 
     hideWebflowForms() {

@@ -425,6 +425,10 @@
           scheduleCartCompatibilityCheck(300); // initial verzögert
         });
       }catch(_){ }
+    },
+    // öffentliche Planungsmethode, damit externe Module (z. B. script.js) triggern können
+    schedule: function(delayMs){
+      scheduleCartCompatibilityCheck(delayMs);
     }
   };
 })();
