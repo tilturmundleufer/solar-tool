@@ -23,6 +23,12 @@
       const b = document.getElementById('nav-business');
       if(p&&p.classList) p.classList.toggle('stp-btn-active', isPrivate());
       if(b&&b.classList) b.classList.toggle('stp-btn-active', !isPrivate());
+      // Sliding Indicator Container-Klassen setzen
+      const container = document.querySelector('.customer-type-switch');
+      if(container && container.classList){
+        container.classList.toggle('is-private', isPrivate());
+        container.classList.toggle('is-business', !isPrivate());
+      }
     }catch(e){}
   }
   function setCustomerType(type){

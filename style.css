@@ -2229,3 +2229,72 @@ body {
   .intro-modal { transition: none !important; animation: none !important; }
 }
 /* ... existing code ... */
+
+/* ===== Customer Type Switch (Rechner-Stil) ===== */
+.customer-type-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  background: #ffffff;
+  border: 1px solid rgba(14, 30, 52, 0.12);
+  border-radius: 12px;
+  padding: 2px;
+  box-shadow: 0 4px 14px rgba(14, 30, 52, 0.12);
+  position: relative;
+}
+
+.customer-type-switch::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  background: #f5a623;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(245, 166, 35, 0.35);
+  transform: translateX(0%);
+  transition: transform 0.18s ease;
+  pointer-events: none;
+}
+
+.customer-type-switch.is-business::before { transform: translateX(100%); }
+.customer-type-switch.is-private::before { transform: translateX(0%); }
+
+.customer-type-switch .stp-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #0e1e34;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
+  min-width: 132px;
+  position: relative;
+  z-index: 1;
+}
+
+.customer-type-switch .stp-btn:hover {
+  background: rgba(245, 166, 35, 0.12);
+}
+
+.customer-type-switch .stp-btn:active {
+  transform: scale(0.98);
+}
+
+/* Aktiver Zustand wird per JS-Klasse gesetzt */
+.customer-type-switch .stp-btn-active { color: #ffffff; }
+
+.customer-type-switch .stp-btn:focus-visible {
+  outline: 2px solid #f5a623;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .customer-type-switch { border-radius: 10px; padding: 2px; }
+  .customer-type-switch .stp-btn { min-width: 118px; padding: 9px 12px; font-size: 13px; }
+}
