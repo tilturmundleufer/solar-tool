@@ -8273,7 +8273,8 @@
         });
       } catch (e) {}
       
-      const addToCartButton = form.querySelector('input[data-node-type="commerce-add-to-cart-button"]');
+      // Klassen/Node-Typen sind unzuverlässig → breite Selektoren nutzen
+      const addToCartButton = form.querySelector('input[data-node-type="commerce-add-to-cart-button"], input[type="submit"][value*="cart" i], [data-wf-cart-action="add-item"], [data-wf-cart-action*="add" i]');
       if (addToCartButton) {
         this.clickWebflowButtonSafely(form, addToCartButton, productKey, quantity, isLastItem);
       }

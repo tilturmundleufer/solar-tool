@@ -332,18 +332,29 @@
   }
 
   function findRemoveButton(itemEl){
+    // Klassen dürfen keine Rolle spielen → breite Attribut-/Textsuche
     var sels = [
+      '[data-wf-cart-action="remove-item"]',
+      '[data-wf-cart-action*="remove" i]',
       '[data-node-type="commerce-cart-remove-link"]',
-      '[data-node-type*="remove"]',
+      '[data-node-type*="remove" i]',
+      'a[role="button"][aria-label*="remove" i]',
+      'button[aria-label*="remove" i]',
       '.w-commerce-commercecartremovebutton',
-      '.w-commerce-commercecartremove',
-      'button[aria-label*="Entfernen" i]',
-      'button[aria-label*="Remove" i]'
+      '.w-commerce-commercecartremove'
     ];
     for(var i=0;i<sels.length;i++){
-      var btn = itemEl.querySelector(sels[i]);
-      if(btn) return btn;
+      var cand = itemEl.querySelector(sels[i]);
+      if(cand) return cand;
     }
+    // Fallback: Element mit Text "Entfernen"/"Remove"
+    try{
+      var textCandidates = Array.from(itemEl.querySelectorAll('a,button,div,span')).filter(function(n){
+        var t = (n.textContent||'').trim().toLowerCase();
+        return t === 'entfernen' || t === 'remove' || t.indexOf('entfernen')>=0 || t.indexOf('remove')>=0;
+      });
+      if(textCandidates.length) return textCandidates[0];
+    }catch(_){ }
     return null;
   }
 
