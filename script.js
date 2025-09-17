@@ -179,10 +179,8 @@
       { minPieces: 40, pricePerPiece: 11.59 },
       { minPieces: 80, pricePerPiece: 11.25 }
     ],
-    Schiene_360_cm: [
-      { minPieces: 40, pricePerPiece: 16.99 },
-      { minPieces: 80, pricePerPiece: 16.49 }
-    ],
+    // Schiene 360 cm: Keine Staffelpreise mehr – Shoppreis 17,49 verwenden
+    Schiene_360_cm: [],
     Mittelklemmen: [
       { minPieces: 300, pricePerPiece: 0.95 },
       { minPieces: 1200, pricePerPiece: 0.79 }
@@ -580,7 +578,8 @@
       
       if (options.mc4Connectors) {
         const panelCount = data.selection.flat().filter(v => v).length;
-        parts.MC4_Stecker = Math.ceil(panelCount / 30);
+        const veMc4 = VE.MC4_Stecker || 50;
+        parts.MC4_Stecker = Math.ceil(panelCount / veMc4) * veMc4; // Stückbasis, später zu VE-Packs gewandelt
       }
       
       if (options.solarkabel) {
@@ -2425,7 +2424,8 @@
       // Füge optionale Komponenten nur hinzu wenn ausgewählt
       if (config.mc4) {
         const moduleCount = config.selection.flat().filter(v => v).length;
-        parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+        const veMc4 = VE.MC4_Stecker || 50;
+        parts.MC4_Stecker = Math.ceil(moduleCount / veMc4) * veMc4; // Stückbasis
         console.log('Added MC4_Stecker:', parts.MC4_Stecker, 'for', moduleCount, 'modules');
       }
       
@@ -8580,7 +8580,8 @@
         // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
         const moduleCount = (this.selection || []).flat().filter(Boolean).length;
         if (mc4 && moduleCount > 0) {
-          parts.MC4_Stecker = Math.ceil(moduleCount / 30);
+          const veMc4 = VE.MC4_Stecker || 50;
+          parts.MC4_Stecker = Math.ceil(moduleCount / veMc4) * veMc4;
         } else {
           delete parts.MC4_Stecker;
         }
