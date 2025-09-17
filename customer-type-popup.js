@@ -335,9 +335,25 @@
 
   function extractQuantityFromCartItem(itemEl){
     try{
-      var qtyEl = itemEl.querySelector('input[type="number"], input[data-node-type*="quantity"], .w-commerce-commercecartquantity input');
+      // 1) Primär: Zahl aus einem Quantity-Input lesen
+      var qtyEl = itemEl.querySelector('input[type="number"], input[data-node-type*="quantity"], .w-commerce-commercecartquantity input, input[name*="quantity" i]');
       var val = qtyEl ? parseInt(qtyEl.value, 10) : NaN;
-      return (isFinite(val) && val>0) ? val : 1;
+      if (isFinite(val) && val > 0) return val;
+      // 2) Fallback: Zahl aus einem sichtbaren Quantity-Container parsen
+      var candidates = [
+        '.w-commerce-commercecartquantity',
+        '[data-node-type*="quantity" i]',
+        '[data-wf-bindings*="quantity" i]'
+      ];
+      for (var i=0;i<candidates.length;i++){
+        var el = itemEl.querySelector(candidates[i]);
+        if(!el) continue;
+        var txt = (el.textContent||'').trim();
+        var m = txt.match(/\d+/);
+        if(m){ val = parseInt(m[0],10); if(isFinite(val) && val>0) return val; }
+      }
+      // 3) Sicherer Fallback
+      return 1;
     }catch(e){ return 1; }
   }
 
@@ -508,6 +524,7 @@
       // Während Austausch Cart visuell verstecken, damit Webflow kein Auto-Open zeigt
       try{ if (window.solarGrid && typeof window.solarGrid.hideCartContainer === 'function') window.solarGrid.hideCartContainer(); }catch(_){ }
 
+      // Produkte sequenziell verarbeiten: altes entfernen → neues mit gleicher Menge hinzufügen
       for(var i=0;i<items.length;i++){
         var itemEl = items[i];
         var ids = extractIdsFromCartItem(itemEl);
@@ -533,6 +550,8 @@
         var qty = extractQuantityFromCartItem(itemEl);
         await removeCartItem(itemEl);
         await addByKey(key, qty);
+        // Kurze Pause, damit Webflow den Eintrag stabil anlegt
+        await new Promise(function(res){ setTimeout(res, 120); });
       }
       // Cart sichtbar lassen, aber niemals öffnen
       try{ var w = document.querySelector('.w-commerce-commercecartcontainerwrapper'); if(w){ var csf = window.getComputedStyle(w); if(csf.display === 'none'){ /* nichts */ } else { w.style.display=''; } } if(document.body && document.body.classList){ document.body.classList.remove('w-commerce-commercecartopen','wf-commerce-cart-open'); } }catch(_){ }
