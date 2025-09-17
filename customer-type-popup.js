@@ -335,25 +335,9 @@
 
   function extractQuantityFromCartItem(itemEl){
     try{
-      // 1) Primär: Zahl aus einem Quantity-Input lesen
       var qtyEl = itemEl.querySelector('input[type="number"], input[data-node-type*="quantity"], .w-commerce-commercecartquantity input, input[name*="quantity" i]');
       var val = qtyEl ? parseInt(qtyEl.value, 10) : NaN;
-      if (isFinite(val) && val > 0) return val;
-      // 2) Fallback: Zahl aus einem sichtbaren Quantity-Container parsen
-      var candidates = [
-        '.w-commerce-commercecartquantity',
-        '[data-node-type*="quantity" i]',
-        '[data-wf-bindings*="quantity" i]'
-      ];
-      for (var i=0;i<candidates.length;i++){
-        var el = itemEl.querySelector(candidates[i]);
-        if(!el) continue;
-        var txt = (el.textContent||'').trim();
-        var m = txt.match(/\d+/);
-        if(m){ val = parseInt(m[0],10); if(isFinite(val) && val>0) return val; }
-      }
-      // 3) Sicherer Fallback
-      return 1;
+      return (isFinite(val) && val > 0) ? val : 1; // nur Inputs vertrauen, sonst 1
     }catch(e){ return 1; }
   }
 
@@ -517,6 +501,8 @@
       if(!list) return;
       var items = Array.from(list.querySelectorAll('.w-commerce-commercecartitem, [data-node-type="commerce-cart-item"]'));
       if(!items.length) return;
+      // Snapshote die Item-Nodes und ihre Mengen jetzt, damit Mutationen später die Indizes nicht verschieben
+      var queue = items.map(function(el){ return { el: el, qty: extractQuantityFromCartItem(el) }; });
 
       // Stelle ID-Mapping bereit
       if(!idMapsBuilt) buildReverseMaps();
@@ -525,8 +511,8 @@
       try{ if (window.solarGrid && typeof window.solarGrid.hideCartContainer === 'function') window.solarGrid.hideCartContainer(); }catch(_){ }
 
       // Produkte sequenziell verarbeiten: altes entfernen → neues mit gleicher Menge hinzufügen
-      for(var i=0;i<items.length;i++){
-        var itemEl = items[i];
+      for(var i=0;i<queue.length;i++){
+        var itemEl = queue[i].el;
         var ids = extractIdsFromCartItem(itemEl);
         var key = getProductKeyFromIds(ids.productId, ids.variantId);
         if(!key){
@@ -546,8 +532,8 @@
           continue; // kompatibel
         }
 
-        // Austausch: Menge ermitteln, entfernen, korrektes Pendant hinzufügen
-        var qty = extractQuantityFromCartItem(itemEl);
+        // Austausch: Menge aus Snapshot verwenden, dann entfernen und Pendant hinzufügen
+        var qty = Math.max(1, parseInt(queue[i].qty||'1',10));
         await removeCartItem(itemEl);
         await addByKey(key, qty);
         // Kurze Pause, damit Webflow den Eintrag stabil anlegt
