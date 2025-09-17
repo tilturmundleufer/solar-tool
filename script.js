@@ -237,6 +237,10 @@
     ]
   };
 
+  // Globale Schalter: Welche Produkte dürfen überhaupt Staffelpreise verwenden?
+  // Um Shop-Preise 1:1 zu spiegeln, bleibt diese Liste standardmäßig leer.
+  const USE_TIER_FOR = new Set([]);
+
   // ===== Kundentyp & MwSt (48h Speicherung) =====
   function getStoredCustomerType() {
     try {
@@ -312,6 +316,10 @@
     const basePackPrice = getPriceFromCache(productKey) || 0;
     // Paletten: Preis immer aus Shop nehmen (basePackPrice), keine Stück-Staffel anwenden
     if (productKey === 'SolarmodulPalette' || productKey === 'UlicaSolarBlackJadeFlowPalette') {
+      return applyVatIfBusiness(basePackPrice);
+    }
+    // Staffelpreise nur anwenden, wenn explizit erlaubt
+    if (!USE_TIER_FOR.has(productKey)) {
       return applyVatIfBusiness(basePackPrice);
     }
     const tiers = TIER_PRICING[productKey];
