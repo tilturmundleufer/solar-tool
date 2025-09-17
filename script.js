@@ -8438,12 +8438,28 @@
       if (cartContainer) {
         cartContainer.style.display = '';
         cartContainer.classList.remove('st-cart-hidden');
-        // Falls Webflow einen Toggle-Button hat, löse ggf. ein Open aus
+        // Cart zuverlässig öffnen: versuche mehrfach, da Webflow DOM evtl. leicht verzögert ist
         try {
-          const openBtn = document.querySelector('[data-node-type="commerce-cart-open-link"]');
-          if (openBtn && typeof openBtn.click === 'function') {
-            openBtn.click();
-          }
+          const tryOpen = (attempt = 0) => {
+            const selectors = [
+              '[data-node-type="commerce-cart-open-link"]',
+              '.w-commerce-commercecartopenlink',
+              '[data-node-type*="cart-open"], [data-node-type*="commerce-cart-open"]',
+              'a[href="#cart"]'
+            ];
+            let openBtn = null;
+            for (const s of selectors) {
+              const el = document.querySelector(s);
+              if (el) { openBtn = el; break; }
+            }
+            if (openBtn && typeof openBtn.click === 'function') {
+              openBtn.click();
+              return;
+            }
+            if (attempt < 6) setTimeout(() => tryOpen(attempt + 1), 150);
+          };
+          // kleiner Delay, damit Webflow den letzten Add-Event verarbeiten kann
+          setTimeout(() => tryOpen(0), 60);
         } catch (e) {}
       }
     }
