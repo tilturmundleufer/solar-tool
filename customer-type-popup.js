@@ -111,6 +111,9 @@
   var idMapsBuilt = false;
   var idToKey = { productIdToKey: {}, variantIdToKey: {} };
   var mapsReady = false;
+  var compatRunning = false;
+  var lastCompatRun = 0;
+  var MIN_COMPAT_INTERVAL_MS = 2000; // Entschärfung gegen Flickern
 
   // Lokale Helpers, da dieses IIFE keinen Zugriff auf die obigen UI-Helfer hat
   function getStoredCustomerTypeLocal(){
@@ -347,7 +350,7 @@
   function scheduleCartCompatibilityCheck(delayMs){
     try{
       if(cartCompatTimer) clearTimeout(cartCompatTimer);
-      cartCompatTimer = setTimeout(ensureCartCompatibility, Math.max(0, delayMs||100));
+      cartCompatTimer = setTimeout(ensureCartCompatibility, Math.max(0, delayMs||250));
     }catch(_){ }
   }
 
@@ -382,6 +385,28 @@
 
   async function ensureCartCompatibility(){
     try{
+      // Reentrancy/Throttling: vermeidet Dauerschleifen und Flackern
+      if (compatRunning) return;
+      var now = Date.now();
+      if (now - lastCompatRun < MIN_COMPAT_INTERVAL_MS) return;
+      if (document.hidden) return; // Seite nicht aktiv → warten
+      // Nicht während der Add-Queue des Konfigurators eingreifen
+      try{ if (window.solarGrid && window.solarGrid.isAddingToCart) return; }catch(_){ }
+      // Wenn der Cart sichtbar/offen ist, Eingriff aufschieben (vermeidet Open-Toggles)
+      try{
+        var wrapper = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+        if (wrapper){
+          var cs = window.getComputedStyle(wrapper);
+          var openCls = document.body && document.body.classList && (document.body.classList.contains('w-commerce-commercecartopen') || document.body.classList.contains('wf-commerce-cart-open'));
+          var dialog = wrapper.querySelector('[role="dialog"], .w-commerce-commercecartcontainer');
+          var dialogVisible = dialog ? (function(){ var dcs = window.getComputedStyle(dialog); return dcs.display !== 'none' && dcs.visibility !== 'hidden'; })() : false;
+          if ((cs.display !== 'none' && cs.visibility !== 'hidden') && (openCls || dialogVisible)){
+            return; // Cart aktuell offen → nicht manipulieren
+          }
+        }
+      }catch(_){ }
+
+      compatRunning = true;
       var list = getCartList();
       if(!list) return;
       var items = Array.from(list.querySelectorAll('.w-commerce-commercecartitem, [data-node-type="commerce-cart-item"]'));
@@ -389,6 +414,9 @@
 
       // Stelle ID-Mapping bereit
       if(!idMapsBuilt) buildReverseMaps();
+
+      // Während Austausch Cart visuell verstecken, damit Webflow kein Auto-Open zeigt
+      try{ if (window.solarGrid && typeof window.solarGrid.hideCartContainer === 'function') window.solarGrid.hideCartContainer(); }catch(_){ }
 
       for(var i=0;i<items.length;i++){
         var itemEl = items[i];
@@ -416,8 +444,13 @@
         await removeCartItem(itemEl);
         await addByKey(key, qty);
       }
+      // Nach kurzem Delay Cart wieder anzeigen, aber nicht aktiv öffnen
+      setTimeout(function(){ try{ var w = document.querySelector('.w-commerce-commercecartcontainerwrapper'); if(w) w.style.display=''; }catch(_){ } }, 200);
     }catch(e){
       console.warn('Cart-Kompatibilitätsprüfung fehlgeschlagen:', e);
+    }finally{
+      compatRunning = false;
+      lastCompatRun = Date.now();
     }
   }
 
@@ -426,11 +459,11 @@
       // Cart-Änderungen beobachten
       var list = getCartList();
       if(list){
-        var mo = new MutationObserver(function(){ scheduleCartCompatibilityCheck(50); });
+        var mo = new MutationObserver(function(){ scheduleCartCompatibilityCheck(500); });
         try{ mo.observe(list, {childList:true, subtree:true}); }catch(_){ }
       }
       // Globale DOM-Änderungen (Forms etc.)
-      var bodyMo = new MutationObserver(function(){ scheduleCartCompatibilityCheck(100); });
+      var bodyMo = new MutationObserver(function(){ scheduleCartCompatibilityCheck(800); });
       try{ bodyMo.observe(document.body, {childList:true, subtree:true}); }catch(_){ }
     }catch(_){ }
   }
