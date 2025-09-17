@@ -116,6 +116,7 @@
   var compatRunning = false;
   var lastCompatRun = 0;
   var MIN_COMPAT_INTERVAL_MS = 2000; // Entschärfung gegen Flickern
+  var compatRequestCounter = 0; // zählt manuelle/observer-Requests
 
   // Lokale Helpers, da dieses IIFE keinen Zugriff auf die obigen UI-Helfer hat
   function getStoredCustomerTypeLocal(){
@@ -388,7 +389,19 @@
   function scheduleCartCompatibilityCheck(delayMs){
     try{
       if(cartCompatTimer) clearTimeout(cartCompatTimer);
-      cartCompatTimer = setTimeout(ensureCartCompatibility, Math.max(0, delayMs||250));
+      var myReqId = ++compatRequestCounter;
+      var startIn = Math.max(0, delayMs||250);
+      var attempt = function(){
+        // Wenn ein neueres Request existiert, diesen Versuch überspringen und warten
+        if (myReqId < compatRequestCounter) { return; }
+        // Wenn gerade ein Lauf aktiv ist, später erneut versuchen
+        if (compatRunning) { cartCompatTimer = setTimeout(attempt, 200); return; }
+        var now = Date.now();
+        var remaining = Math.max(0, MIN_COMPAT_INTERVAL_MS - (now - lastCompatRun));
+        if (remaining > 0) { cartCompatTimer = setTimeout(attempt, remaining); return; }
+        ensureCartCompatibility();
+      };
+      cartCompatTimer = setTimeout(attempt, startIn);
     }catch(_){ }
   }
 
