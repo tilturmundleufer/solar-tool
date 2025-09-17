@@ -419,6 +419,10 @@
     }catch(_){ }
     // Fallback: Eigenständiger Add-Flow (ohne script.js)
     try{
+      // Silent Mode: Cart geschlossen halten
+      var wrapper = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+      var initiallyVisible = false;
+      try{ if(wrapper){ var cs0 = window.getComputedStyle(wrapper); initiallyVisible = (cs0.display !== 'none' && cs0.visibility !== 'hidden'); wrapper.style.display='none'; } }catch(_){ }
       var preferBrutto = isBusiness();
       var info = (preferBrutto ? (POPUP_PRODUCT_MAP_BRUTTO[productKey] || (typeof PRODUCT_MAP_BRUTTO==='object'&&PRODUCT_MAP_BRUTTO[productKey]))
                                : (POPUP_PRODUCT_MAP_NETTO[productKey]  || (typeof PRODUCT_MAP==='object'&&PRODUCT_MAP[productKey])) ) || null;
@@ -449,6 +453,8 @@
       var ack = waitForCartAcknowledge(1500);
       addBtn.click();
       await ack;
+      // Sichtbarkeit wiederherstellen, aber ohne Open-Klasse
+      try{ if(wrapper){ wrapper.style.display = initiallyVisible ? '' : 'none'; } if(document.body && document.body.classList){ document.body.classList.remove('w-commerce-commercecartopen','wf-commerce-cart-open'); } }catch(_){ }
     }catch(e){
       console.warn('[CartCompat] Eigenständiger Add-Flow fehlgeschlagen:', e);
     }
@@ -515,8 +521,8 @@
         await removeCartItem(itemEl);
         await addByKey(key, qty);
       }
-      // Nach kurzem Delay Cart wieder anzeigen, aber nicht aktiv öffnen
-      setTimeout(function(){ try{ var w = document.querySelector('.w-commerce-commercecartcontainerwrapper'); if(w) w.style.display=''; }catch(_){ } }, 200);
+      // Cart sichtbar lassen, aber niemals öffnen
+      try{ var w = document.querySelector('.w-commerce-commercecartcontainerwrapper'); if(w){ var csf = window.getComputedStyle(w); if(csf.display === 'none'){ /* nichts */ } else { w.style.display=''; } } if(document.body && document.body.classList){ document.body.classList.remove('w-commerce-commercecartopen','wf-commerce-cart-open'); } }catch(_){ }
     }catch(e){
       console.warn('Cart-Kompatibilitätsprüfung fehlgeschlagen:', e);
     }finally{
