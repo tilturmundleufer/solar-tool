@@ -345,6 +345,21 @@
     return document.querySelector('.w-commerce-commercecartlist') || document.querySelector('.w-commerce-commercecartcontainerwrapper');
   }
 
+  function findCartItemByIds(productId, variantId){
+    try{
+      var list = getCartList();
+      if(!list) return null;
+      var all = Array.from(list.querySelectorAll('.w-commerce-commercecartitem, [data-node-type="commerce-cart-item"]'));
+      for(var i=0;i<all.length;i++){
+        var el = all[i];
+        var pid = el.getAttribute('data-commerce-product-id') || (el.querySelector('[data-commerce-product-id]') && el.querySelector('[data-commerce-product-id]').getAttribute('data-commerce-product-id')) || '';
+        var vid = el.getAttribute('data-commerce-sku-id') || (el.querySelector('[data-commerce-sku-id]') && el.querySelector('[data-commerce-sku-id]').getAttribute('data-commerce-sku-id')) || '';
+        if ((productId && pid === productId) || (variantId && vid === variantId)) return el;
+      }
+      return null;
+    }catch(_){ return null; }
+  }
+
   function waitForCartAcknowledge(timeoutMs){
     return new Promise(function(resolve){
       var settled = false;
@@ -501,8 +516,13 @@
       if(!list) return;
       var items = Array.from(list.querySelectorAll('.w-commerce-commercecartitem, [data-node-type="commerce-cart-item"]'));
       if(!items.length) return;
-      // Snapshote die Item-Nodes und ihre Mengen jetzt, damit Mutationen später die Indizes nicht verschieben
-      var queue = items.map(function(el){ return { el: el, qty: extractQuantityFromCartItem(el) }; });
+      // Snapshot: IDs, Key und Menge sichern (keine DOM-Referenzen, um Stale-Nodes zu vermeiden)
+      var queue = items.map(function(el){
+        var ids = extractIdsFromCartItem(el);
+        var key = getProductKeyFromIds(ids.productId, ids.variantId);
+        var qty = extractQuantityFromCartItem(el);
+        return { productId: ids.productId, variantId: ids.variantId, key: key, qty: qty };
+      });
 
       // Stelle ID-Mapping bereit
       if(!idMapsBuilt) buildReverseMaps();
@@ -512,9 +532,9 @@
 
       // Produkte sequenziell verarbeiten: altes entfernen → neues mit gleicher Menge hinzufügen
       for(var i=0;i<queue.length;i++){
-        var itemEl = queue[i].el;
-        var ids = extractIdsFromCartItem(itemEl);
-        var key = getProductKeyFromIds(ids.productId, ids.variantId);
+        var snap = queue[i];
+        var key = snap.key;
+        var itemEl = findCartItemByIds(snap.productId, snap.variantId);
         if(!key){
           console.warn('[CartCompat] Unbekanntes Produkt im Warenkorb; wird ignoriert.');
           continue;
@@ -533,8 +553,8 @@
         }
 
         // Austausch: Menge aus Snapshot verwenden, dann entfernen und Pendant hinzufügen
-        var qty = Math.max(1, parseInt(queue[i].qty||'1',10));
-        await removeCartItem(itemEl);
+        var qty = Math.max(1, parseInt(snap.qty||'1',10));
+        if(itemEl) await removeCartItem(itemEl);
         await addByKey(key, qty);
         // Kurze Pause, damit Webflow den Eintrag stabil anlegt
         await new Promise(function(res){ setTimeout(res, 120); });
