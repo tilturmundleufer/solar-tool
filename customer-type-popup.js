@@ -112,6 +112,23 @@
   var idToKey = { productIdToKey: {}, variantIdToKey: {} };
   var mapsReady = false;
 
+  // Lokale Helpers, da dieses IIFE keinen Zugriff auf die obigen UI-Helfer hat
+  function getStoredCustomerTypeLocal(){
+    try{
+      const raw = localStorage.getItem('solarTool_customerType');
+      if(!raw) return null;
+      const data = JSON.parse(raw);
+      if(!data || !data.type) return null;
+      if(typeof data.expiresAt === 'number' && Date.now() > data.expiresAt){
+        localStorage.removeItem('solarTool_customerType');
+        return null;
+      }
+      return data.type === 'private' ? 'private' : 'business';
+    }catch(_){ return null; }
+  }
+  function isBusiness(){ return getStoredCustomerTypeLocal() === 'business'; }
+  function isPrivate(){ return getStoredCustomerTypeLocal() === 'private'; }
+
   // Eingebettete Kopien der Produkt-Mappings aus script.js (leicht umbenannt)
   const POPUP_PRODUCT_MAP_BRUTTO = {
     // Module
