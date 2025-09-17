@@ -579,7 +579,8 @@
       if (options.mc4Connectors) {
         const panelCount = data.selection.flat().filter(v => v).length;
         const veMc4 = VE.MC4_Stecker || 50;
-        parts.MC4_Stecker = Math.ceil(panelCount / veMc4) * veMc4; // Stückbasis, später zu VE-Packs gewandelt
+        const packs = Math.ceil(panelCount / 30);
+        parts.MC4_Stecker = packs * veMc4; // Stückbasis für korrekte Packanzahl im Warenkorb
       }
       
       if (options.solarkabel) {
@@ -2425,8 +2426,9 @@
       if (config.mc4) {
         const moduleCount = config.selection.flat().filter(v => v).length;
         const veMc4 = VE.MC4_Stecker || 50;
-        parts.MC4_Stecker = Math.ceil(moduleCount / veMc4) * veMc4; // Stückbasis
-        console.log('Added MC4_Stecker:', parts.MC4_Stecker, 'for', moduleCount, 'modules');
+        const packs = Math.ceil(moduleCount / 30);
+        parts.MC4_Stecker = packs * veMc4; // Stückbasis
+        console.log('Added MC4_Stecker packs:', packs, '=> pieces', parts.MC4_Stecker, 'for', moduleCount, 'modules');
       }
       
       if (config.cable) {
@@ -8581,7 +8583,8 @@
         const moduleCount = (this.selection || []).flat().filter(Boolean).length;
         if (mc4 && moduleCount > 0) {
           const veMc4 = VE.MC4_Stecker || 50;
-          parts.MC4_Stecker = Math.ceil(moduleCount / veMc4) * veMc4;
+          const packs = Math.ceil(moduleCount / 30);
+          parts.MC4_Stecker = packs * veMc4;
         } else {
           delete parts.MC4_Stecker;
         }
