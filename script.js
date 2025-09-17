@@ -8448,6 +8448,24 @@
         cartContainer.classList.remove('st-cart-hidden');
         // Cart zuverlässig öffnen: versuche mehrfach, da Webflow DOM evtl. leicht verzögert ist
         try {
+          const isCartActuallyOpen = () => {
+            try{
+              // Heuristiken: Wrapper sichtbar und hat offene Klasse/Attribute
+              const wrapper = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+              if (!wrapper) return false;
+              const cs = window.getComputedStyle(wrapper);
+              if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+              // Manche Webflow-Themes setzen Klasse auf <body> beim offenen Cart
+              if (document.body && document.body.classList && (document.body.classList.contains('w-commerce-commercecartopen') || document.body.classList.contains('wf-commerce-cart-open'))) return true;
+              // Prüfe auf Dialogrolle
+              const dialog = wrapper.querySelector('[role="dialog"], .w-commerce-commercecartcontainer');
+              if (dialog){
+                const dcs = window.getComputedStyle(dialog);
+                if (dcs.display !== 'none' && dcs.visibility !== 'hidden') return true;
+              }
+              return false;
+            }catch(_){ return false; }
+          };
           const isVisible = (el) => {
             if (!el) return false;
             const cs = window.getComputedStyle(el);
@@ -8463,6 +8481,7 @@
             return el.offsetParent !== null || el.getClientRects().length > 0;
           };
           const tryOpen = (attempt = 0) => {
+            if (isCartActuallyOpen()) return; // schon offen → nicht togglen
             const selectorUnion = [
               '[data-node-type="commerce-cart-open-link"]',
               '.w-commerce-commercecartopenlink',
@@ -8473,6 +8492,8 @@
             const openBtn = candidates.find(isVisible) || candidates[0] || null;
             if (openBtn && typeof openBtn.click === 'function') {
               openBtn.click();
+              // Nach dem Klick kurz prüfen; wenn offen, keine weiteren Retries
+              setTimeout(() => { /* noop: early check */ }, 0);
               return;
             }
             if (attempt < 8) setTimeout(() => tryOpen(attempt + 1), 160);
