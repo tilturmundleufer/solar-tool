@@ -284,6 +284,31 @@
           });
         }catch(_){ }
       }
+      // 3) DOM-Formulare direkt durchsuchen (ohne script.js)
+      try{
+        var allForms = Array.from(document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]'));
+        allForms.forEach(function(form){
+          var pid = form.getAttribute('data-commerce-product-id');
+          var vid = form.getAttribute('data-commerce-sku-id');
+          if(pid && !idToKey.productIdToKey[pid]){
+            // Versuche Key aus bekannten Maps zu ermitteln
+            var k = null;
+            Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(key){ var v = POPUP_PRODUCT_MAP_NETTO[key]; if(v&&v.productId===pid){ k=key; return true;} return false; });
+            if(!k) Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(key){ var v = POPUP_PRODUCT_MAP_BRUTTO[key]; if(v&&v.productId===pid){ k=key; return true;} return false; });
+            if(!k && typeof PRODUCT_MAP==='object') Object.keys(PRODUCT_MAP).some(function(key){ var v = PRODUCT_MAP[key]; if(v&&v.productId===pid){ k=key; return true;} return false; });
+            if(!k && typeof PRODUCT_MAP_BRUTTO==='object') Object.keys(PRODUCT_MAP_BRUTTO).some(function(key){ var v = PRODUCT_MAP_BRUTTO[key]; if(v&&v.productId===pid){ k=key; return true;} return false; });
+            if(k) idToKey.productIdToKey[pid] = k;
+          }
+          if(vid && !idToKey.variantIdToKey[vid]){
+            var k2 = null;
+            Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(key){ var v = POPUP_PRODUCT_MAP_NETTO[key]; if(v&&v.variantId===vid){ k2=key; return true;} return false; });
+            if(!k2) Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(key){ var v = POPUP_PRODUCT_MAP_BRUTTO[key]; if(v&&v.variantId===vid){ k2=key; return true;} return false; });
+            if(!k2 && typeof PRODUCT_MAP==='object') Object.keys(PRODUCT_MAP).some(function(key){ var v = PRODUCT_MAP[key]; if(v&&v.variantId===vid){ k2=key; return true;} return false; });
+            if(!k2 && typeof PRODUCT_MAP_BRUTTO==='object') Object.keys(PRODUCT_MAP_BRUTTO).some(function(key){ var v = PRODUCT_MAP_BRUTTO[key]; if(v&&v.variantId===vid){ k2=key; return true;} return false; });
+            if(k2) idToKey.variantIdToKey[vid] = k2;
+          }
+        });
+      }catch(_){ }
       idMapsBuilt = true;
     }catch(e){ /* keep maps partial */ }
   }
@@ -390,8 +415,41 @@
         }
       }
     }catch(_){ }
-    // Fallback: Ohne solarGrid kein sicherer Add-Fluss → Hinweis
-    console.warn('[CartCompat] Konnte kein Add-Flow ohne solarGrid ausführen. Item wird nicht ersetzt.');
+    // Fallback: Eigenständiger Add-Flow (ohne script.js)
+    try{
+      var preferBrutto = isBusiness();
+      var info = (preferBrutto ? (POPUP_PRODUCT_MAP_BRUTTO[productKey] || (typeof PRODUCT_MAP_BRUTTO==='object'&&PRODUCT_MAP_BRUTTO[productKey]))
+                               : (POPUP_PRODUCT_MAP_NETTO[productKey]  || (typeof PRODUCT_MAP==='object'&&PRODUCT_MAP[productKey])) ) || null;
+      var form = null;
+      if(info){
+        form = document.querySelector('form[data-node-type="commerce-add-to-cart-form"][data-commerce-product-id="'+info.productId+'"]') ||
+               document.querySelector('form[data-node-type="commerce-add-to-cart-form"][data-commerce-sku-id="'+info.variantId+'"]');
+      }
+      if(!form){
+        // Versuche generisch anhand Reverse-Map → finde irgendein passendes Formular
+        var allForms = Array.from(document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]'));
+        for(var i=0;i<allForms.length;i++){
+          var f = allForms[i];
+          var pid = f.getAttribute('data-commerce-product-id');
+          var vid = f.getAttribute('data-commerce-sku-id');
+          var key = getProductKeyFromIds(pid, vid);
+          if(key === productKey){ form = f; break; }
+        }
+      }
+      if(!form) { console.warn('[CartCompat] Add-Form für', productKey, 'nicht gefunden.'); return; }
+      // Menge setzen
+      try{ var qEl = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]'); if(qEl){ qEl.value = qty; } }catch(_){ }
+      // required selects bestücken
+      try{ Array.from(form.querySelectorAll('select[required]')).forEach(function(sel){ if(!sel.value){ var opt = sel.querySelector('option[value]:not([value=""])'); if(opt) sel.value = opt.value; } }); }catch(_){ }
+      // Add-Button robust finden
+      var addBtn = form.querySelector('input[data-node-type="commerce-add-to-cart-button"], [data-wf-cart-action="add-item"], [data-wf-cart-action*="add" i], input[type="submit"], button[type="submit"]');
+      if(!addBtn){ console.warn('[CartCompat] Add-Button nicht gefunden für', productKey); return; }
+      var ack = waitForCartAcknowledge(1500);
+      addBtn.click();
+      await ack;
+    }catch(e){
+      console.warn('[CartCompat] Eigenständiger Add-Flow fehlgeschlagen:', e);
+    }
   }
 
   async function ensureCartCompatibility(){
