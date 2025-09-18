@@ -107,20 +107,26 @@
     if(productId && _idTypeCache[productId]) return _idTypeCache[productId];
     var type = null;
     try{
-      // Prüfe gegen bekannte Maps
-      var keyByVar = variantId && idToKey.variantIdToKey[variantId];
-      var keyByProd = productId && idToKey.productIdToKey[productId];
-      var key = keyByVar || keyByProd || null;
-      if(key && (POPUP_PRODUCT_MAP_BRUTTO[key] || (typeof PRODUCT_MAP_BRUTTO==='object' && PRODUCT_MAP_BRUTTO && PRODUCT_MAP_BRUTTO[key]))){ type = 'brutto'; }
-      if(!type && key && (POPUP_PRODUCT_MAP_NETTO[key]  || (typeof PRODUCT_MAP==='object' && PRODUCT_MAP && PRODUCT_MAP[key]))){ type = 'netto'; }
-      // Wenn kein key gefunden: heuristisch anhand IDs (nur wenn in einer der Maps enthalten)
-      if(!type && variantId){
-        Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; if(v&&v.variantId===variantId){ type='brutto'; return true;} return false;});
-        if(!type) Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; if(v&&v.variantId===variantId){ type='netto'; return true;} return false;});
+      // 1) Exakte ID-Matches bevorzugen (Variant vor Product)
+      if(variantId){
+        if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.variantId===variantId; })) type='brutto';
+        if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.variantId===variantId; })) type='netto';
       }
       if(!type && productId){
-        Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; if(v&&v.productId===productId){ type='brutto'; return true;} return false;});
-        if(!type) Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; if(v&&v.productId===productId){ type='netto'; return true;} return false;});
+        if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.productId===productId; })) type='brutto';
+        if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.productId===productId; })) type='netto';
+      }
+      // 2) Wenn immer noch unbekannt, versuche Key-Auflösung und vergleiche ID gegen Map-Eintrag
+      if(!type){
+        var keyByVar = variantId && idToKey.variantIdToKey[variantId];
+        var keyByProd = productId && idToKey.productIdToKey[productId];
+        var key = keyByVar || keyByProd || null;
+        if(key){
+          var b = (POPUP_PRODUCT_MAP_BRUTTO && POPUP_PRODUCT_MAP_BRUTTO[key]) || (typeof PRODUCT_MAP_BRUTTO==='object' && PRODUCT_MAP_BRUTTO && PRODUCT_MAP_BRUTTO[key]);
+          var n = (POPUP_PRODUCT_MAP_NETTO && POPUP_PRODUCT_MAP_NETTO[key]) || (typeof PRODUCT_MAP==='object' && PRODUCT_MAP && PRODUCT_MAP[key]);
+          if(b && (b.variantId===variantId || b.productId===productId)) type='brutto';
+          else if(n && (n.variantId===variantId || n.productId===productId)) type='netto';
+        }
       }
     }catch(_){ }
     if(variantId && type) _idTypeCache[variantId] = type;
@@ -205,11 +211,12 @@
 
       // Sonderfall: leerer Begriff → alle Items zeigen, No-Result ausblenden
       if(term === ''){
-        for(var s=0;s<items.length;s++){ items[s].style.display = ''; }
+        for(var s=0;s<items.length;s++){ items[s].style.display = itemMatchesCurrentCustomerType(items[s]) ? '' : 'none'; }
         var nr0 = root.querySelector('[data-div="noResult-'+key+'"]');
         if(nr0) nr0.style.display='none';
         var pf0 = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
         if(pf0){ try{ var u0=new URL(window.location.href); u0.searchParams.delete('search-'+key); window.history.pushState({},'',u0);}catch(_){}}
+        try{ refineCmsListByIds(root, key, ''); }catch(_){ }
         return;
       }
 
