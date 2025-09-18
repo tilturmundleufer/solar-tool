@@ -31,10 +31,126 @@
       }
     }catch(e){}
   }
+
+  // === Segmentierte CMS-Suche (scoped auf Privat/Gewerbe-Bereiche) ===
+  var cmsSearchInitialized = false;
+  function getSegmentRootForElement(el){
+    try{
+      const privSel = ['#privat','[data-customer-type="privat"]','[data-customer-segment="privat"]','[data-list="privat"]','.collection-list-privat'];
+      const gewSel  = ['#gewerbe','[data-customer-type="gewerbe"]','[data-customer-segment="gewerbe"]','[data-list="gewerbe"]','.collection-list-gewerbe'];
+      const sels = privSel.concat(gewSel);
+      var node = el;
+      while(node && node !== document){
+        for(var i=0;i<sels.length;i++){
+          try{ if(node.matches && node.matches(sels[i])) return node; }catch(_){ }
+        }
+        node = node.parentElement;
+      }
+      return null;
+    }catch(_){ return null; }
+  }
+
+  function initSegmentedCmsSearch(){
+    try{
+      if(cmsSearchInitialized) return;
+      var $ = window.jQuery;
+      if(!$) return; // Nur aktivieren, wenn jQuery vorhanden ist
+      cmsSearchInitialized = true;
+
+      $('[data-input^="search-"]').each(function(){
+        var $input = $(this);
+        var groupAttr = $input.attr('data-input') || '';
+        var m = groupAttr.match(/^search-(.+)$/);
+        if(!m) return;
+        var key = m[1];
+
+        var root = getSegmentRootForElement(this);
+        var $root = root ? $(root) : $(document);
+
+        // Initialzustand nur im Segment setzen
+        $root.find('[data-search="cms-item-'+key+'"]').hide();
+        $root.find('[data-div="noResult-'+key+'"]').hide();
+
+        var paramFlag = !!$input.data('url');
+        $input.on('input', function(){
+          var term = ($input.val()||'').toString().toLowerCase();
+          var $texts = $root.find('[data-text="search-'+key+'"]').toArray();
+          for(var i=0;i<$texts.length;i++){
+            var $t = $($texts[i]);
+            var txt = ($t.text()||'').toString().toLowerCase();
+            var match = term !== '' && txt.indexOf(term) !== -1;
+            var $item = $t.closest('[data-search="cms-item-'+key+'"]');
+            if(!$item.length) continue;
+            if(match) $item.show(); else $item.hide();
+          }
+
+          // No-Result nur anzeigen, wenn Segment sichtbar ist
+          if($root.is(':visible')){
+            var $all = $root.find('[data-search="cms-item-'+key+'"]').toArray();
+            var hiddenCount = 0;
+            for(var j=0;j<$all.length;j++){
+              var $it = $($all[j]);
+              if($it.css('display') === 'none') hiddenCount++;
+            }
+            if($all.length>0 && hiddenCount === $all.length && term !== ''){
+              $root.find('[data-div="noResult-'+key+'"]').show();
+            }else{
+              $root.find('[data-div="noResult-'+key+'"]').hide();
+            }
+          }
+
+          // URL-Parameter pflegen (optional)
+          if(paramFlag){
+            try{
+              var url = new URL(window.location.href);
+              if(term){ url.searchParams.set('search-'+key, $input.val()); }
+              else { url.searchParams.delete('search-'+key); }
+              window.history.pushState({}, '', url);
+            }catch(_){ }
+          }
+        });
+
+        // Vorbelegung via URL-Param (nur wenn gesetzt)
+        try{
+          var urlParams = new URLSearchParams(window.location.search);
+          var preset = urlParams.get('search-'+key);
+          if(paramFlag && preset){
+            $input.val(preset);
+            $input.trigger('input');
+          }
+        }catch(_){ }
+      });
+    }catch(_){ }
+  }
+
+  function refilterSegmentedCmsSearchForCurrentCustomerType(){
+    try{
+      var $ = window.jQuery;
+      if(!$) return;
+      $('[data-input^="search-"]:visible').each(function(){
+        var $in = $(this);
+        var val = ($in.val()||'');
+        if(val !== ''){ $in.trigger('input'); }
+        else{
+          // Sicherstellen, dass No-Result im Segment ausgeblendet ist
+          var groupAttr = $in.attr('data-input') || '';
+          var m = groupAttr.match(/^search-(.+)$/);
+          if(!m) return;
+          var key = m[1];
+          var root = getSegmentRootForElement(this);
+          var $root = root ? $(root) : $(document);
+          $root.find('[data-search="cms-item-'+key+'"]').hide();
+          $root.find('[data-div="noResult-'+key+'"]').hide();
+        }
+      });
+    }catch(_){ }
+  }
   function setCustomerType(type){
     storeCustomerType(type==='business'?'business':'private');
     updateCustomerTypeVisibility();
     setActiveButtons();
+    // Segmentierte CMS-Suche neu anwenden
+    try{ refilterSegmentedCmsSearchForCurrentCustomerType(); }catch(_){ }
     // Preise/Forms aktualisieren falls Solar-Tool aktiv
     try{
       if(window.solarGrid){
@@ -94,6 +210,8 @@
     // Initial UI Zustand
     updateCustomerTypeVisibility();
     setActiveButtons();
+    // CMS-Suche (segmentiert) initialisieren
+    try{ initSegmentedCmsSearch(); }catch(_){ }
 
     // === Warenkorb-Kompatibilitätslogik (global, auf jeder Seite aktiv) ===
     try{

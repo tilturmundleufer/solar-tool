@@ -168,6 +168,7 @@ Hinweise:
 - 2025-09-13: Kundentyp-Popup (Privat/Firma, 48h Speicherung). Korrektur: Privatkunden Nettopreise, Firmenkunden Bruttopreise (×1,19). Warenkorb bevorzugt Brutto-SKUs für Zusatzprodukte bei Firmenkunden (Platzhalter-IDs).
 - 2025-09-15: Ulica‑Module in 36er‑Paletten gebündelt. Bei aktivem Ulica‑Modul (500 W) bzw. allgemeinen Modulen (450 W) werden automatisch so viele Paletten wie möglich gebildet, Rest als Einzelmodule. In Produktliste, PDF und Warenkorb erscheinen eigene Paletten‑Produkte (inkl./exkl. MwSt je Kundentyp). Beispiele: 69 → 1 Palette + 33; 73 → 2 Paletten + 1.
 - 2025-09-16: Automatische Warenkorb-Kompatibilitätsprüfung und Austausch-Logik basierend auf Kundentyp (Privat/Gewerbe) nach `customer-type-popup.js` verlagert (global aktiv), nutzt `window.solarGrid` für Add-Flow/Form-Mapping, mit Fallback-Warnungen bei fehlendem Mapping.
+- 2025-09-18: CMS-Suche segmentiert in `customer-type-popup.js`. Suchfelder filtern jeweils nur das aktive Kundentyp-Segment; URL‑Parameter werden weiterhin unterstützt.
 
 ---
 
@@ -215,6 +216,7 @@ VE = {
   - Buttons: „Privatkunde“ setzt `type=private`, „Firmenkunde“ setzt `type=business`
   - Speichern in `localStorage.solarTool_customerType = { type, expiresAt }`
   - Nach Auswahl automatische Aktualisierung der Seite (`location.reload()`), damit Preise und Warenkorb-IDs korrekt greifen
+  - CMS-Suche ist segmentiert: `data-input="search-X"` filtert nur innerhalb des zugehörigen Segments (Privat/Gewerbe). `data-div="noResult-X"` erscheint nur im aktiven Segment. URL‑Sync über `data-url` bleibt erhalten.
 
 ### **Warenkorb (Brutto-SKUs für Firmenkunden)**
 - Brutto-Produkt-Overrides (Platzhalter) für Zusatzprodukte in `script.js` per `PRODUCT_MAP_BRUTTO_ADDITIONAL`
@@ -225,6 +227,7 @@ VE = {
 - Falls ein Produkt nicht passt, wird es automatisch entfernt und das korrekte Partnerprodukt gemäß `PRODUCT_MAP`/`PRODUCT_MAP_BRUTTO` in gleicher Menge wieder hinzugefügt.
 - Fallback: Existiert kein Mapping, bleibt das Produkt im Warenkorb und es wird eine Warnung in der Konsole ausgegeben.
 - Initiales Triggering im Popup beim `init()`; nutzt bei Verfügbarkeit `window.solarGrid` für den stabilen Add-Flow.
+- Hinweis: Segmentierte CMS-Suche wird beim Wechsel des Kundentyps automatisch neu angewendet (Re-Filter), sodass jeweils nur die Produkte des ausgewählten Segments sichtbar sind.
 
 ### **Analytics-Nutzung:**
 - **Zweck:** Tool-Optimierung basierend auf Nutzerverhalten
