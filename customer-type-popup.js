@@ -81,11 +81,17 @@
       var resolved = (item.getAttribute('data-price-resolved')||'').toLowerCase();
       if(resolved === 'brutto') return preferBrutto === true;
       if(resolved === 'netto')  return preferBrutto === false;
-      // 2) Schnelle Heuristik bevor wir IDs nachladen
+      // 2) Versuche sofortige ID-basierte Auflösung (synchron)
+      var sync = extractIdsFromCmsItemSync(item);
+      if(sync.productId || sync.variantId){
+        var t = resolvePriceTypeFromIds(sync.productId, sync.variantId);
+        if(t){ item.setAttribute('data-price-resolved', t); return preferBrutto ? t==='brutto' : t==='netto'; }
+      }
+      // 3) Heuristik (Fallback)
       var cls = classifyItemGrossNet(item);
       if(cls){ item.setAttribute('data-price-resolved', cls); return preferBrutto ? cls==='brutto' : cls==='netto'; }
-      // 3) Unbekannt → vorerst zeigen, asynchron per IDs nachschärfen
-      return true;
+      // 4) Unbekannt → bei Firmenkunden strikt ausblenden, bei Privatkunden toleranter anzeigen
+      return preferBrutto ? false : true;
     }catch(_){ return true; }
   }
 
@@ -242,6 +248,8 @@
           window.history.pushState({}, '', url);
         }catch(_){ }
       }
+      // Asynchron IDs verfeinern (zeigt nur passende Items für aktuellen Kundentyp)
+      try{ refineCmsListByIds(root, key, term); }catch(_){ }
     }catch(_){ }
   }
 
