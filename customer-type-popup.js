@@ -71,19 +71,32 @@
       }
 
       // Für jedes Item Suchtext bestimmen: bevorzugt data-text innerhalb des Items, sonst gesamter Item-Text
+      var anyVisible = 0;
       for(var i=0;i<items.length;i++){
         var it = items[i];
         var textNode = it.querySelector('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
         var raw = textNode ? (textNode.textContent||'') : (it.textContent||'');
         var txt = raw.toString().toLowerCase();
         var match = txt.indexOf(term) !== -1;
-        it.style.display = match ? '' : 'none';
+        if(match){
+          it.style.display = '';
+          // Falls CSS standardmäßig versteckt, explizit sichtbar machen
+          try{ if(getComputedStyle(it).display === 'none'){ it.style.display = 'block'; } }catch(_){ }
+          anyVisible++;
+        }else{
+          it.style.display = 'none';
+        }
       }
 
       var total = items.length, hidden = 0;
       for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
       var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
       if(noRes){ noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; }
+      // Ergebnisse-Wrapper sichtbar halten
+      try{
+        var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (items[0] && items[0].parentElement);
+        if(wrapper){ wrapper.style.display = ''; if(getComputedStyle(wrapper).display === 'none'){ wrapper.style.display = 'block'; } }
+      }catch(_){ }
       var paramFlag = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
       if(paramFlag){
         try{
