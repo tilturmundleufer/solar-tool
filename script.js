@@ -7203,6 +7203,15 @@
 		if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
 		if (this.erdungsband) this.erdungsband.checked = false;
 		if (this.ulicaModule) this.ulicaModule.checked = false;
+		// Optimierer (Huawei/BRC) und Menge zurücksetzen
+		try {
+			const hCb = document.getElementById('huawei-opti');
+			const bCb = document.getElementById('brc-opti');
+			const qEl = document.getElementById('opti-qty');
+			if (hCb) { hCb.checked = false; hCb.dispatchEvent(new Event('change')); }
+			if (bCb) { bCb.checked = false; bCb.dispatchEvent(new Event('change')); }
+			if (qEl) qEl.value = '1';
+		} catch (_) {}
 		
 		// Module Dropdown auf Default zurücksetzen
 		if (this.moduleSelect) {
