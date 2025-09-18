@@ -58,26 +58,48 @@
       var key = m[1];
       var root = getSegmentRootForElement(input) || document;
       var term = (input.value||'').toString().toLowerCase();
-      var texts = root.querySelectorAll('[data-text="search-'+key+'"]');
-      for(var i=0;i<texts.length;i++){
-        var t = texts[i];
-        var txt = (t.textContent||'').toString().toLowerCase();
-        var match = term !== '' && txt.indexOf(term) !== -1;
-        var item = t.closest('[data-search="cms-item-'+key+'"]');
-        if(!item) continue;
-        item.style.display = match ? '' : 'none';
-      }
       var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
+      var texts = root.querySelectorAll('[data-text="search-'+key+'"]');
+
+      // Sonderfall: leerer Begriff → alle Items zeigen, No-Result ausblenden
+      if(term === ''){
+        for(var s=0;s<items.length;s++){ items[s].style.display = ''; }
+        var nr0 = root.querySelector('[data-div="noResult-'+key+'"]');
+        if(nr0) nr0.style.display='none';
+        // URL ggf. leeren
+        var pf0 = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
+        if(pf0){ try{ var u0=new URL(window.location.href); u0.searchParams.delete('search-'+key); window.history.pushState({},'',u0);}catch(_){}}
+        return;
+      }
+
+      // Primär über data-text filtern; Fallback: Item-Text
+      if(texts.length>0){
+        for(var i=0;i<texts.length;i++){
+          var t = texts[i];
+          var txt = (t.textContent||'').toString().toLowerCase();
+          var match = txt.indexOf(term) !== -1;
+          var item = t.closest('[data-search="cms-item-'+key+'"]');
+          if(!item) continue;
+          item.style.display = match ? '' : 'none';
+        }
+      }else{
+        for(var k=0;k<items.length;k++){
+          var it = items[k];
+          var txt2 = (it.textContent||'').toString().toLowerCase();
+          var match2 = txt2.indexOf(term) !== -1;
+          it.style.display = match2 ? '' : 'none';
+        }
+      }
+
       var total = items.length, hidden = 0;
       for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
       var noRes = root.querySelector('[data-div="noResult-'+key+'"]');
-      if(noRes){ noRes.style.display = (total>0 && hidden===total && term!=='') ? '' : 'none'; }
+      if(noRes){ noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; }
       var paramFlag = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
       if(paramFlag){
         try{
           var url = new URL(window.location.href);
-          if(term){ url.searchParams.set('search-'+key, input.value); }
-          else { url.searchParams.delete('search-'+key); }
+          url.searchParams.set('search-'+key, input.value);
           window.history.pushState({}, '', url);
         }catch(_){ }
       }
@@ -94,6 +116,11 @@
         try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
         handleSearchInput(t);
       }, false);
+      document.addEventListener('keyup', function(e){
+        var t = e.target;
+        try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+        handleSearchInput(t);
+      }, false);
       // Initialzustand + URL-Vorbelegung je Input
       var inputs = document.querySelectorAll('[data-input^="search-"]');
       for(var i=0;i<inputs.length;i++){
@@ -101,8 +128,6 @@
         var attr = inp.getAttribute('data-input')||'';
         var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
         var root = getSegmentRootForElement(inp) || document;
-        var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
-        for(var k=0;k<items.length;k++){ items[k].style.display='none'; }
         var noRes = root.querySelector('[data-div="noResult-'+key+'"]'); if(noRes) noRes.style.display='none';
         try{
           var paramFlag = ((inp.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
