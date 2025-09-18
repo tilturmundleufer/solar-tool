@@ -83,8 +83,8 @@
       if(resolved === 'netto')  return preferBrutto === false;
       // 2) Versuche sofortige ID-basierte Auflösung (synchron)
       var sync = extractIdsFromCmsItemSync(item);
-      if(sync.productId || sync.variantId){
-        var t = resolvePriceTypeFromIds(sync.productId, sync.variantId);
+      if(sync.variantId){
+        var t = resolvePriceTypeFromVariantId(sync.variantId);
         if(t){ item.setAttribute('data-price-resolved', t); return preferBrutto ? t==='brutto' : t==='netto'; }
       }
       // 3) Heuristik (Fallback)
@@ -99,38 +99,24 @@
   var _urlToIdsCache = Object.create(null);
   var _idTypeCache = Object.create(null); // variantId/productId -> 'brutto'|'netto'
 
-  function resolvePriceTypeFromIds(productId, variantId){
+  function resolvePriceTypeFromVariantId(variantId){
     try{
+      if(!variantId) return null;
       if(!idMapsBuilt) buildReverseMaps();
     }catch(_){ }
-    if(variantId && _idTypeCache[variantId]) return _idTypeCache[variantId];
-    if(productId && _idTypeCache[productId]) return _idTypeCache[productId];
+    if(_idTypeCache[variantId]) return _idTypeCache[variantId];
     var type = null;
     try{
-      // 1) Exakte ID-Matches bevorzugen (Variant vor Product)
-      if(variantId){
-        if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.variantId===variantId; })) type='brutto';
-        if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.variantId===variantId; })) type='netto';
+      if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.variantId===variantId; })) type='brutto';
+      if(!type && typeof PRODUCT_MAP_BRUTTO==='object' && PRODUCT_MAP_BRUTTO){
+        Object.keys(PRODUCT_MAP_BRUTTO).some(function(k){ var v=PRODUCT_MAP_BRUTTO[k]; if(v&&v.variantId===variantId){ type='brutto'; return true;} return false; });
       }
-      if(!type && productId){
-        if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.productId===productId; })) type='brutto';
-        if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.productId===productId; })) type='netto';
-      }
-      // 2) Wenn immer noch unbekannt, versuche Key-Auflösung und vergleiche ID gegen Map-Eintrag
-      if(!type){
-        var keyByVar = variantId && idToKey.variantIdToKey[variantId];
-        var keyByProd = productId && idToKey.productIdToKey[productId];
-        var key = keyByVar || keyByProd || null;
-        if(key){
-          var b = (POPUP_PRODUCT_MAP_BRUTTO && POPUP_PRODUCT_MAP_BRUTTO[key]) || (typeof PRODUCT_MAP_BRUTTO==='object' && PRODUCT_MAP_BRUTTO && PRODUCT_MAP_BRUTTO[key]);
-          var n = (POPUP_PRODUCT_MAP_NETTO && POPUP_PRODUCT_MAP_NETTO[key]) || (typeof PRODUCT_MAP==='object' && PRODUCT_MAP && PRODUCT_MAP[key]);
-          if(b && (b.variantId===variantId || b.productId===productId)) type='brutto';
-          else if(n && (n.variantId===variantId || n.productId===productId)) type='netto';
-        }
+      if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.variantId===variantId; })) type='netto';
+      if(!type && typeof PRODUCT_MAP==='object' && PRODUCT_MAP){
+        Object.keys(PRODUCT_MAP).some(function(k){ var v=PRODUCT_MAP[k]; if(v&&v.variantId===variantId){ type='netto'; return true;} return false; });
       }
     }catch(_){ }
-    if(variantId && type) _idTypeCache[variantId] = type;
-    if(productId && type) _idTypeCache[productId] = type;
+    if(type) _idTypeCache[variantId] = type;
     return type;
   }
 
@@ -139,6 +125,14 @@
       var el = item.querySelector('[data-commerce-sku-id], [data-commerce-product-id]') || item;
       var pid = el.getAttribute('data-commerce-product-id') || '';
       var vid = el.getAttribute('data-commerce-sku-id') || '';
+      // Falls nicht direkt am Item: versuche im Link Daten-Attribute
+      if(!vid){
+        var a = item.querySelector('a[data-commerce-sku-id], a[data-commerce-product-id]');
+        if(a){
+          pid = pid || a.getAttribute('data-commerce-product-id') || '';
+          vid = a.getAttribute('data-commerce-sku-id') || '';
+        }
+      }
       return { productId: pid, variantId: vid };
     }catch(_){ return { productId:'', variantId:'' }; }
   }
@@ -146,7 +140,7 @@
   async function extractIdsFromCmsItemAsync(item){
     try{
       var ids = extractIdsFromCmsItemSync(item);
-      if(ids.productId || ids.variantId) return ids;
+      if(ids.variantId) return ids; // Nur Variant-IDs relevant für Filter
       var a = item.querySelector('a[href]');
       if(!a) return ids;
       var href = a.getAttribute('href');
@@ -161,7 +155,6 @@
       if(doc){
         var form = doc.querySelector('form[data-node-type="commerce-add-to-cart-form"]');
         if(form){
-          ids.productId = form.getAttribute('data-commerce-product-id') || '';
           ids.variantId = form.getAttribute('data-commerce-sku-id') || '';
         }
       }
@@ -182,7 +175,7 @@
         var finalType = already;
         if(!finalType){
           var ids = await extractIdsFromCmsItemAsync(it);
-          finalType = resolvePriceTypeFromIds(ids.productId, ids.variantId) || null;
+          finalType = resolvePriceTypeFromVariantId(ids.variantId) || null;
           if(finalType){ it.setAttribute('data-price-resolved', finalType); changed = true; }
         }
         // Wenn aktuell sichtbar, aber Kundentyp nicht passt → verstecken; umgekehrt sichtbar machen, wenn Suchterm passt
