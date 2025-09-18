@@ -183,21 +183,33 @@
       var preferBrutto = isBusiness();
       var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
       var changed = false;
+      var DBG = false; try{ DBG = localStorage && localStorage.getItem('CMS_SEARCH_DEBUG')==='1'; }catch(_){ }
       for(var i=0;i<items.length;i++){
         var it = items[i];
         // Neu: bereits klassifizierte Items behalten, aber Anzeige strikt am aktuellen Kundentyp ausrichten
         var already = it.getAttribute('data-price-resolved');
         var finalType = already;
+        // 1) Versuche zuerst lokale IDs (ohne Fetch)
         if(!finalType){
-          var ids = await extractIdsFromCmsItemAsync(it);
-          finalType = resolvePriceTypeFromIds(ids.productId, ids.variantId) || null;
-          if(finalType){ it.setAttribute('data-price-resolved', finalType); changed = true; }
+          var localIds = extractIdsFromCmsItemSync(it);
+          var localType = resolvePriceTypeFromIds(localIds.productId, localIds.variantId) || null;
+          if(localType){ finalType = localType; it.setAttribute('data-price-resolved', finalType); changed = true; }
+          // 2) Private: Wenn keine lokalen IDs vorhanden → NICHT per Fetch klassifizieren (vermeidet falsche Brutto-Matches)
+          if(!finalType && isPrivate()){
+            if(DBG){ console.warn('[CMS-SEARCH] skip fetch for private; no local ids', localIds); }
+          }else if(!finalType){
+            // 3) Business oder lokale IDs vorhanden → Fetch erlaubt
+            var ids = await extractIdsFromCmsItemAsync(it);
+            finalType = resolvePriceTypeFromIds(ids.productId, ids.variantId) || null;
+            if(finalType){ it.setAttribute('data-price-resolved', finalType); changed = true; }
+          }
         }
         // Wenn aktuell sichtbar, aber Kundentyp nicht passt → verstecken; umgekehrt sichtbar machen, wenn Suchterm passt
         var raw = (it.textContent||'').toString().toLowerCase();
         var matchesTerm = term ? (raw.indexOf(term) !== -1) : true;
         var shouldShow = matchesTerm && (!finalType || (preferBrutto ? finalType==='brutto' : finalType==='netto'));
         it.style.display = shouldShow ? '' : 'none';
+        if(DBG){ try{ var dbgIds = extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] refine item', {finalType, preferBrutto, shouldShow, vid:dbgIds.variantId, pid:dbgIds.productId}); }catch(_){ } }
       }
       if(changed){
         // No-Result neu berechnen
@@ -278,14 +290,17 @@
       if(cmsSearchInitialized) return;
       cmsSearchInitialized = true;
       // Delegiertes Event-Handling (jQuery-unabhängig)
+      var DBG = false; try{ DBG = localStorage && localStorage.getItem('CMS_SEARCH_DEBUG')==='1'; }catch(_){ }
       document.addEventListener('input', function(e){
         var t = e.target;
         try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+        try{ if(DBG) console.warn('[CMS-SEARCH] input event fired'); }catch(_){ }
         handleSearchInput(t);
       }, false);
       document.addEventListener('keyup', function(e){
         var t = e.target;
         try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+        try{ if(DBG) console.warn('[CMS-SEARCH] keyup event fired'); }catch(_){ }
         handleSearchInput(t);
       }, false);
       // Initialzustand + URL-Vorbelegung je Input
@@ -305,7 +320,7 @@
           }
         }catch(_){ }
         // IDs asynchron auflösen, damit Brutto/Netto-Klassifizierung greift
-        try{ refineCmsListByIds(root, key, (inp.value||'').toString().toLowerCase()); }catch(_){ }
+        try{ if(DBG) console.warn('[CMS-SEARCH] init refine for', {key}); refineCmsListByIds(root, key, (inp.value||'').toString().toLowerCase()); }catch(_){ }
       }
     }catch(_){ }
   }
