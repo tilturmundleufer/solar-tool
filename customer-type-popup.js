@@ -177,16 +177,18 @@
       var changed = false;
       for(var i=0;i<items.length;i++){
         var it = items[i];
-        // Überspringe bereits eindeutig klassifizierte Items
+        // Neu: bereits klassifizierte Items behalten, aber Anzeige strikt am aktuellen Kundentyp ausrichten
         var already = it.getAttribute('data-price-resolved');
-        if(already === 'brutto' || already === 'netto') continue;
-        var ids = await extractIdsFromCmsItemAsync(it);
-        var type = resolvePriceTypeFromIds(ids.productId, ids.variantId);
-        if(type){ it.setAttribute('data-price-resolved', type); changed = true; }
+        var finalType = already;
+        if(!finalType){
+          var ids = await extractIdsFromCmsItemAsync(it);
+          finalType = resolvePriceTypeFromIds(ids.productId, ids.variantId) || null;
+          if(finalType){ it.setAttribute('data-price-resolved', finalType); changed = true; }
+        }
         // Wenn aktuell sichtbar, aber Kundentyp nicht passt → verstecken; umgekehrt sichtbar machen, wenn Suchterm passt
         var raw = (it.textContent||'').toString().toLowerCase();
         var matchesTerm = term ? (raw.indexOf(term) !== -1) : true;
-        var shouldShow = matchesTerm && (!type || (preferBrutto ? type==='brutto' : type==='netto'));
+        var shouldShow = matchesTerm && (!finalType || (preferBrutto ? finalType==='brutto' : finalType==='netto'));
         it.style.display = shouldShow ? '' : 'none';
       }
       if(changed){
@@ -306,6 +308,13 @@
         var attr = inp.getAttribute('data-input')||'';
         var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
         var root = getSegmentRootForElement(inp) || document;
+        // Vor dem Refilter evtl. alte Klassifizierungen entfernen (Wechsel Firma ↔ Privat)
+        try{
+          var allItems = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
+          for(var r=0;r<allItems.length;r++){
+            allItems[r].removeAttribute('data-price-resolved');
+          }
+        }catch(_){ }
         if(val !== ''){ handleSearchInput(inp); }
         else{
           // Leeres Feld: Zeige alle Items, die zum Kundentyp passen
