@@ -99,24 +99,38 @@
   var _urlToIdsCache = Object.create(null);
   var _idTypeCache = Object.create(null); // variantId/productId -> 'brutto'|'netto'
 
-  function resolvePriceTypeFromVariantId(variantId){
+  function resolvePriceTypeFromIds(productId, variantId){
     try{
-      if(!variantId) return null;
       if(!idMapsBuilt) buildReverseMaps();
     }catch(_){ }
-    if(_idTypeCache[variantId]) return _idTypeCache[variantId];
+    if(variantId && _idTypeCache[variantId]) return _idTypeCache[variantId];
+    if(productId && _idTypeCache[productId]) return _idTypeCache[productId];
     var type = null;
     try{
-      if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.variantId===variantId; })) type='brutto';
-      if(!type && typeof PRODUCT_MAP_BRUTTO==='object' && PRODUCT_MAP_BRUTTO){
-        Object.keys(PRODUCT_MAP_BRUTTO).some(function(k){ var v=PRODUCT_MAP_BRUTTO[k]; if(v&&v.variantId===variantId){ type='brutto'; return true;} return false; });
+      // 1) Exakte ID-Matches bevorzugen (Variant vor Product)
+      if(variantId){
+        if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.variantId===variantId; })) type='brutto';
+        if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.variantId===variantId; })) type='netto';
       }
-      if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.variantId===variantId; })) type='netto';
-      if(!type && typeof PRODUCT_MAP==='object' && PRODUCT_MAP){
-        Object.keys(PRODUCT_MAP).some(function(k){ var v=PRODUCT_MAP[k]; if(v&&v.variantId===variantId){ type='netto'; return true;} return false; });
+      if(!type && productId){
+        if(Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; return v&&v.productId===productId; })) type='brutto';
+        if(!type && Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; return v&&v.productId===productId; })) type='netto';
+      }
+      // 2) Wenn immer noch unbekannt, versuche Key-Auflösung und vergleiche ID gegen Map-Eintrag
+      if(!type){
+        var keyByVar = variantId && idToKey.variantIdToKey[variantId];
+        var keyByProd = productId && idToKey.productIdToKey[productId];
+        var key = keyByVar || keyByProd || null;
+        if(key){
+          var b = (POPUP_PRODUCT_MAP_BRUTTO && POPUP_PRODUCT_MAP_BRUTTO[key]) || (typeof PRODUCT_MAP_BRUTTO==='object' && PRODUCT_MAP_BRUTTO && PRODUCT_MAP_BRUTTO[key]);
+          var n = (POPUP_PRODUCT_MAP_NETTO && POPUP_PRODUCT_MAP_NETTO[key]) || (typeof PRODUCT_MAP==='object' && PRODUCT_MAP && PRODUCT_MAP[key]);
+          if(b && (b.variantId===variantId || b.productId===productId)) type='brutto';
+          else if(n && (n.variantId===variantId || n.productId===productId)) type='netto';
+        }
       }
     }catch(_){ }
-    if(type) _idTypeCache[variantId] = type;
+    if(variantId && type) _idTypeCache[variantId] = type;
+    if(productId && type) _idTypeCache[productId] = type;
     return type;
   }
 
@@ -140,7 +154,7 @@
   async function extractIdsFromCmsItemAsync(item){
     try{
       var ids = extractIdsFromCmsItemSync(item);
-      if(ids.variantId) return ids; // Nur Variant-IDs relevant für Filter
+      if(ids.productId || ids.variantId) return ids;
       var a = item.querySelector('a[href]');
       if(!a) return ids;
       var href = a.getAttribute('href');
@@ -155,6 +169,7 @@
       if(doc){
         var form = doc.querySelector('form[data-node-type="commerce-add-to-cart-form"]');
         if(form){
+          ids.productId = form.getAttribute('data-commerce-product-id') || '';
           ids.variantId = form.getAttribute('data-commerce-sku-id') || '';
         }
       }
@@ -175,7 +190,7 @@
         var finalType = already;
         if(!finalType){
           var ids = await extractIdsFromCmsItemAsync(it);
-          finalType = resolvePriceTypeFromVariantId(ids.variantId) || null;
+          finalType = resolvePriceTypeFromIds(ids.productId, ids.variantId) || null;
           if(finalType){ it.setAttribute('data-price-resolved', finalType); changed = true; }
         }
         // Wenn aktuell sichtbar, aber Kundentyp nicht passt → verstecken; umgekehrt sichtbar machen, wenn Suchterm passt
@@ -196,6 +211,7 @@
 
   function handleSearchInput(input){
     try{
+      var DBG = false; try{ DBG = localStorage && localStorage.getItem('CMS_SEARCH_DEBUG')==='1'; }catch(_){ }
       var attr = (input.getAttribute('data-input')||'').toString();
       var m = attr.match(/^search-(.+)$/);
       if(!m) return;
@@ -203,6 +219,7 @@
       var root = getSegmentRootForElement(input) || document;
       var term = (input.value||'').toString().toLowerCase();
       var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
+      if(DBG){ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: items.length}); }
 
       // Sonderfall: leerer Begriff → alle Items zeigen, No-Result ausblenden
       if(term === ''){
@@ -231,6 +248,7 @@
         }else{
           it.style.display = 'none';
         }
+        if(DBG){ try{ var ids=extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] item', {vid:ids.variantId,pid:ids.productId,match}); }catch(_){ } }
       }
 
       var total = items.length, hidden = 0;
@@ -251,7 +269,7 @@
         }catch(_){ }
       }
       // Asynchron IDs verfeinern (zeigt nur passende Items für aktuellen Kundentyp)
-      try{ refineCmsListByIds(root, key, term); }catch(_){ }
+      try{ if(DBG) console.warn('[CMS-SEARCH] refine async'); refineCmsListByIds(root, key, term); }catch(_){ }
     }catch(_){ }
   }
 
