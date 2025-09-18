@@ -4673,13 +4673,7 @@
       this.resetBtn      = document.getElementById('reset-btn');
       this.continueLaterBtn = document.getElementById('continue-later-btn');
       this.moduleSelect = document.getElementById('module-select');
-      // Fallback: Reset-Button an resetAllConfigurations binden, falls nicht anderweitig angebunden
-      try{
-        if (this.resetBtn && !this.resetBtn._stResetBound) {
-          this.resetBtn.addEventListener('click', () => { this.resetAllConfigurations(); });
-          this.resetBtn._stResetBound = true;
-        }
-      }catch(_){ }
+      // Entfernt: Reset-Button soll NUR aktuelle Konfiguration zurücksetzen (resetGridToDefault)
       
       // Modul-Daten
       this.moduleData = {
