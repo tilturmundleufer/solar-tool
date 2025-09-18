@@ -58,7 +58,7 @@
       var key = m[1];
       var root = getSegmentRootForElement(input) || document;
       var term = (input.value||'').toString().toLowerCase();
-      var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
+      var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
 
       // Sonderfall: leerer Begriff → alle Items zeigen, No-Result ausblenden
       if(term === ''){
@@ -73,7 +73,7 @@
       // Für jedes Item Suchtext bestimmen: bevorzugt data-text innerhalb des Items, sonst gesamter Item-Text
       for(var i=0;i<items.length;i++){
         var it = items[i];
-        var textNode = it.querySelector('[data-text="search-'+key+'"]');
+        var textNode = it.querySelector('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
         var raw = textNode ? (textNode.textContent||'') : (it.textContent||'');
         var txt = raw.toString().toLowerCase();
         var match = txt.indexOf(term) !== -1;
@@ -82,7 +82,7 @@
 
       var total = items.length, hidden = 0;
       for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
-      var noRes = root.querySelector('[data-div="noResult-'+key+'"]');
+      var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
       if(noRes){ noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; }
       var paramFlag = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
       if(paramFlag){
