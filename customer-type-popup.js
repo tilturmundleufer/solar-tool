@@ -50,6 +50,40 @@
     }catch(_){ return null; }
   }
 
+  // Heuristische Klassifikation der Such-Items in Brutto/Netto
+  function classifyItemGrossNet(item){
+    try{
+      // Explizite Flags bevorzugen
+      var t = (item.getAttribute('data-price-type')||'').toLowerCase();
+      if(t === 'brutto') return 'brutto';
+      if(t === 'netto')  return 'netto';
+      var ct = (item.getAttribute('data-customer-type')||'').toLowerCase();
+      if(ct === 'gewerbe') return 'brutto';
+      if(ct === 'privat')  return 'netto';
+      var bruttoAttr = (item.getAttribute('data-brutto')||'').toLowerCase();
+      if(bruttoAttr === 'true' || bruttoAttr === '1') return 'brutto';
+
+      // Anchor/Text-Heuristiken
+      var a = item.querySelector('a[href]');
+      var hay = ((a && (a.textContent + ' ' + a.getAttribute('href'))) || item.textContent || '').toLowerCase();
+      if(/inkl\.?\s*mwst|brutto/.test(hay)) return 'brutto';
+      if(/exkl\.?\s*mwst|ohne\s*mwst|netto/.test(hay)) return 'netto';
+      if(/-inkl-mwst/.test(hay)) return 'brutto';
+      if(/-exkl-mwst/.test(hay)) return 'netto';
+    }catch(_){ }
+    return null; // unbekannt
+  }
+
+  function itemMatchesCurrentCustomerType(item){
+    try{
+      var preferBrutto = isBusiness();
+      var cls = classifyItemGrossNet(item);
+      if(cls === 'brutto') return preferBrutto === true;
+      if(cls === 'netto')  return preferBrutto === false;
+      return true; // unbekannt → nicht hart ausfiltern
+    }catch(_){ return true; }
+  }
+
   function handleSearchInput(input){
     try{
       var attr = (input.getAttribute('data-input')||'').toString();
@@ -77,7 +111,7 @@
         var textNode = it.querySelector('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
         var raw = textNode ? (textNode.textContent||'') : (it.textContent||'');
         var txt = raw.toString().toLowerCase();
-        var match = txt.indexOf(term) !== -1;
+        var match = txt.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it);
         if(match){
           it.style.display = '';
           // Falls CSS standardmäßig versteckt, explizit sichtbar machen
