@@ -309,6 +309,11 @@
             it.style.display = ok ? '' : 'none';
           }
           var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'); if(noRes) noRes.style.display='none';
+          // Ergebnis-Wrapper sichtbar machen
+          try{
+            var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (items[0] && items[0].parentElement);
+            if(wrapper){ wrapper.style.display = ''; if(getComputedStyle(wrapper).display === 'none'){ wrapper.style.display = 'block'; } }
+          }catch(_){ }
           // IDs verfeinern, um unbekannte Elemente korrekt zuzuordnen
           try{ refineCmsListByIds(root, key, ''); }catch(_){ }
         }
