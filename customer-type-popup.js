@@ -231,7 +231,7 @@
       var root = getSegmentRootForElement(input) || document;
       var term = (input.value||'').toString().toLowerCase();
       var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
-      if(DBG){ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: items.length}); }
+      try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: items.length}); }catch(_){ }
 
       // Sonderfall: leerer Begriff → alle Items zeigen, No-Result ausblenden
       if(term === ''){
@@ -260,7 +260,7 @@
         }else{
           it.style.display = 'none';
         }
-        if(DBG){ try{ var ids=extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] item', {vid:ids.variantId,pid:ids.productId,match}); }catch(_){ } }
+        try{ var ids=extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] item', {vid:ids.variantId,pid:ids.productId,match}); }catch(_){ }
       }
 
       var total = items.length, hidden = 0;
@@ -281,7 +281,7 @@
         }catch(_){ }
       }
       // Asynchron IDs verfeinern (zeigt nur passende Items für aktuellen Kundentyp)
-      try{ if(DBG) console.warn('[CMS-SEARCH] refine async'); refineCmsListByIds(root, key, term); }catch(_){ }
+      try{ console.warn('[CMS-SEARCH] refine async'); refineCmsListByIds(root, key, term); }catch(_){ }
     }catch(_){ }
   }
 
@@ -290,19 +290,20 @@
       if(cmsSearchInitialized) return;
       cmsSearchInitialized = true;
       // Delegiertes Event-Handling (jQuery-unabhängig)
+      try{ console.warn('[CMS-SEARCH] init binding events'); }catch(_){ }
       var DBG = false; try{ DBG = localStorage && localStorage.getItem('CMS_SEARCH_DEBUG')==='1'; }catch(_){ }
       document.addEventListener('input', function(e){
         var t = e.target;
         try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
-        try{ if(DBG) console.warn('[CMS-SEARCH] input event fired'); }catch(_){ }
+        try{ console.warn('[CMS-SEARCH] input event fired'); }catch(_){ }
         handleSearchInput(t);
-      }, false);
+      }, true);
       document.addEventListener('keyup', function(e){
         var t = e.target;
         try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
-        try{ if(DBG) console.warn('[CMS-SEARCH] keyup event fired'); }catch(_){ }
+        try{ console.warn('[CMS-SEARCH] keyup event fired'); }catch(_){ }
         handleSearchInput(t);
-      }, false);
+      }, true);
       // Initialzustand + URL-Vorbelegung je Input
       var inputs = document.querySelectorAll('[data-input^="search-"]');
       for(var i=0;i<inputs.length;i++){
@@ -319,8 +320,10 @@
             if(preset){ inp.value = preset; handleSearchInput(inp); }
           }
         }catch(_){ }
+        // Initial einmal triggern, auch ohne URL-Param, damit Logs erscheinen
+        try{ handleSearchInput(inp); }catch(_){ }
         // IDs asynchron auflösen, damit Brutto/Netto-Klassifizierung greift
-        try{ if(DBG) console.warn('[CMS-SEARCH] init refine for', {key}); refineCmsListByIds(root, key, (inp.value||'').toString().toLowerCase()); }catch(_){ }
+        try{ console.warn('[CMS-SEARCH] init refine for', {key}); refineCmsListByIds(root, key, (inp.value||'').toString().toLowerCase()); }catch(_){ }
       }
     }catch(_){ }
   }
