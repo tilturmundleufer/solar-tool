@@ -296,14 +296,21 @@
       for(var i=0;i<inputs.length;i++){
         var inp = inputs[i];
         var val = (inp.value||'');
+        var attr = inp.getAttribute('data-input')||'';
+        var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
+        var root = getSegmentRootForElement(inp) || document;
         if(val !== ''){ handleSearchInput(inp); }
         else{
-          var attr = inp.getAttribute('data-input')||'';
-          var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
-          var root = getSegmentRootForElement(inp) || document;
-          var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
-          for(var k=0;k<items.length;k++){ items[k].style.display='none'; }
-          var noRes = root.querySelector('[data-div="noResult-'+key+'"]'); if(noRes) noRes.style.display='none';
+          // Leeres Feld: Zeige alle Items, die zum Kundentyp passen
+          var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
+          for(var k=0;k<items.length;k++){
+            var it = items[k];
+            var ok = itemMatchesCurrentCustomerType(it);
+            it.style.display = ok ? '' : 'none';
+          }
+          var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'); if(noRes) noRes.style.display='none';
+          // IDs verfeinern, um unbekannte Elemente korrekt zuzuordnen
+          try{ refineCmsListByIds(root, key, ''); }catch(_){ }
         }
       }
     }catch(_){ }
