@@ -50,99 +50,88 @@
     }catch(_){ return null; }
   }
 
+  function handleSearchInput(input){
+    try{
+      var attr = (input.getAttribute('data-input')||'').toString();
+      var m = attr.match(/^search-(.+)$/);
+      if(!m) return;
+      var key = m[1];
+      var root = getSegmentRootForElement(input) || document;
+      var term = (input.value||'').toString().toLowerCase();
+      var texts = root.querySelectorAll('[data-text="search-'+key+'"]');
+      for(var i=0;i<texts.length;i++){
+        var t = texts[i];
+        var txt = (t.textContent||'').toString().toLowerCase();
+        var match = term !== '' && txt.indexOf(term) !== -1;
+        var item = t.closest('[data-search="cms-item-'+key+'"]');
+        if(!item) continue;
+        item.style.display = match ? '' : 'none';
+      }
+      var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
+      var total = items.length, hidden = 0;
+      for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
+      var noRes = root.querySelector('[data-div="noResult-'+key+'"]');
+      if(noRes){ noRes.style.display = (total>0 && hidden===total && term!=='') ? '' : 'none'; }
+      var paramFlag = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
+      if(paramFlag){
+        try{
+          var url = new URL(window.location.href);
+          if(term){ url.searchParams.set('search-'+key, input.value); }
+          else { url.searchParams.delete('search-'+key); }
+          window.history.pushState({}, '', url);
+        }catch(_){ }
+      }
+    }catch(_){ }
+  }
+
   function initSegmentedCmsSearch(){
     try{
       if(cmsSearchInitialized) return;
-      var $ = window.jQuery;
-      if(!$) return; // Nur aktivieren, wenn jQuery vorhanden ist
       cmsSearchInitialized = true;
-
-      $('[data-input^="search-"]').each(function(){
-        var $input = $(this);
-        var groupAttr = $input.attr('data-input') || '';
-        var m = groupAttr.match(/^search-(.+)$/);
-        if(!m) return;
-        var key = m[1];
-
-        var root = getSegmentRootForElement(this);
-        var $root = root ? $(root) : $(document);
-
-        // Initialzustand nur im Segment setzen
-        $root.find('[data-search="cms-item-'+key+'"]').hide();
-        $root.find('[data-div="noResult-'+key+'"]').hide();
-
-        var paramFlag = !!$input.data('url');
-        $input.on('input', function(){
-          var term = ($input.val()||'').toString().toLowerCase();
-          var $texts = $root.find('[data-text="search-'+key+'"]').toArray();
-          for(var i=0;i<$texts.length;i++){
-            var $t = $($texts[i]);
-            var txt = ($t.text()||'').toString().toLowerCase();
-            var match = term !== '' && txt.indexOf(term) !== -1;
-            var $item = $t.closest('[data-search="cms-item-'+key+'"]');
-            if(!$item.length) continue;
-            if(match) $item.show(); else $item.hide();
-          }
-
-          // No-Result nur anzeigen, wenn Segment sichtbar ist
-          if($root.is(':visible')){
-            var $all = $root.find('[data-search="cms-item-'+key+'"]').toArray();
-            var hiddenCount = 0;
-            for(var j=0;j<$all.length;j++){
-              var $it = $($all[j]);
-              if($it.css('display') === 'none') hiddenCount++;
-            }
-            if($all.length>0 && hiddenCount === $all.length && term !== ''){
-              $root.find('[data-div="noResult-'+key+'"]').show();
-            }else{
-              $root.find('[data-div="noResult-'+key+'"]').hide();
-            }
-          }
-
-          // URL-Parameter pflegen (optional)
-          if(paramFlag){
-            try{
-              var url = new URL(window.location.href);
-              if(term){ url.searchParams.set('search-'+key, $input.val()); }
-              else { url.searchParams.delete('search-'+key); }
-              window.history.pushState({}, '', url);
-            }catch(_){ }
-          }
-        });
-
-        // Vorbelegung via URL-Param (nur wenn gesetzt)
+      // Delegiertes Event-Handling (jQuery-unabhängig)
+      document.addEventListener('input', function(e){
+        var t = e.target;
+        try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+        handleSearchInput(t);
+      }, false);
+      // Initialzustand + URL-Vorbelegung je Input
+      var inputs = document.querySelectorAll('[data-input^="search-"]');
+      for(var i=0;i<inputs.length;i++){
+        var inp = inputs[i];
+        var attr = inp.getAttribute('data-input')||'';
+        var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
+        var root = getSegmentRootForElement(inp) || document;
+        var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
+        for(var k=0;k<items.length;k++){ items[k].style.display='none'; }
+        var noRes = root.querySelector('[data-div="noResult-'+key+'"]'); if(noRes) noRes.style.display='none';
         try{
-          var urlParams = new URLSearchParams(window.location.search);
-          var preset = urlParams.get('search-'+key);
-          if(paramFlag && preset){
-            $input.val(preset);
-            $input.trigger('input');
+          var paramFlag = ((inp.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
+          if(paramFlag){
+            var sp = new URLSearchParams(window.location.search);
+            var preset = sp.get('search-'+key);
+            if(preset){ inp.value = preset; handleSearchInput(inp); }
           }
         }catch(_){ }
-      });
+      }
     }catch(_){ }
   }
 
   function refilterSegmentedCmsSearchForCurrentCustomerType(){
     try{
-      var $ = window.jQuery;
-      if(!$) return;
-      $('[data-input^="search-"]:visible').each(function(){
-        var $in = $(this);
-        var val = ($in.val()||'');
-        if(val !== ''){ $in.trigger('input'); }
+      var inputs = document.querySelectorAll('[data-input^="search-"]');
+      for(var i=0;i<inputs.length;i++){
+        var inp = inputs[i];
+        var val = (inp.value||'');
+        if(val !== ''){ handleSearchInput(inp); }
         else{
-          // Sicherstellen, dass No-Result im Segment ausgeblendet ist
-          var groupAttr = $in.attr('data-input') || '';
-          var m = groupAttr.match(/^search-(.+)$/);
-          if(!m) return;
-          var key = m[1];
-          var root = getSegmentRootForElement(this);
-          var $root = root ? $(root) : $(document);
-          $root.find('[data-search="cms-item-'+key+'"]').hide();
-          $root.find('[data-div="noResult-'+key+'"]').hide();
+          var attr = inp.getAttribute('data-input')||'';
+          var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
+          var root = getSegmentRootForElement(inp) || document;
+          var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
+          for(var k=0;k<items.length;k++){ items[k].style.display='none'; }
+          var noRes = root.querySelector('[data-div="noResult-'+key+'"]'); if(noRes) noRes.style.display='none';
         }
-      });
+      }
     }catch(_){ }
   }
   function setCustomerType(type){
