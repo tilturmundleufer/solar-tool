@@ -59,36 +59,25 @@
       var root = getSegmentRootForElement(input) || document;
       var term = (input.value||'').toString().toLowerCase();
       var items = root.querySelectorAll('[data-search="cms-item-'+key+'"]');
-      var texts = root.querySelectorAll('[data-text="search-'+key+'"]');
 
       // Sonderfall: leerer Begriff → alle Items zeigen, No-Result ausblenden
       if(term === ''){
         for(var s=0;s<items.length;s++){ items[s].style.display = ''; }
         var nr0 = root.querySelector('[data-div="noResult-'+key+'"]');
         if(nr0) nr0.style.display='none';
-        // URL ggf. leeren
         var pf0 = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
         if(pf0){ try{ var u0=new URL(window.location.href); u0.searchParams.delete('search-'+key); window.history.pushState({},'',u0);}catch(_){}}
         return;
       }
 
-      // Primär über data-text filtern; Fallback: Item-Text
-      if(texts.length>0){
-        for(var i=0;i<texts.length;i++){
-          var t = texts[i];
-          var txt = (t.textContent||'').toString().toLowerCase();
-          var match = txt.indexOf(term) !== -1;
-          var item = t.closest('[data-search="cms-item-'+key+'"]');
-          if(!item) continue;
-          item.style.display = match ? '' : 'none';
-        }
-      }else{
-        for(var k=0;k<items.length;k++){
-          var it = items[k];
-          var txt2 = (it.textContent||'').toString().toLowerCase();
-          var match2 = txt2.indexOf(term) !== -1;
-          it.style.display = match2 ? '' : 'none';
-        }
+      // Für jedes Item Suchtext bestimmen: bevorzugt data-text innerhalb des Items, sonst gesamter Item-Text
+      for(var i=0;i<items.length;i++){
+        var it = items[i];
+        var textNode = it.querySelector('[data-text="search-'+key+'"]');
+        var raw = textNode ? (textNode.textContent||'') : (it.textContent||'');
+        var txt = raw.toString().toLowerCase();
+        var match = txt.indexOf(term) !== -1;
+        it.style.display = match ? '' : 'none';
       }
 
       var total = items.length, hidden = 0;
