@@ -1,3 +1,8 @@
+  function normalizeSearchText(str){
+    try{
+      return (str||'').toString().toLowerCase().replace(/\s+/g,' ').trim();
+    }catch(_){ return ''; }
+  }
 (function(){
   function isPrivate(){
     return getStoredCustomerType() === 'private';
@@ -248,10 +253,19 @@
       var anyVisible = 0;
       for(var i=0;i<items.length;i++){
         var it = items[i];
-        var textNode = it.querySelector('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
-        var raw = textNode ? (textNode.textContent||'') : (it.textContent||'');
-        var txt = raw.toString().toLowerCase();
-        var match = txt.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it);
+        // Sammle alle definierten Suchtexte im Item
+        var nodes = it.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
+        var rawAgg = '';
+        if(nodes && nodes.length){
+          for(var n=0;n<nodes.length;n++){ rawAgg += ' ' + (nodes[n].textContent||''); }
+        }
+        if(!rawAgg){
+          var a = it.querySelector('a');
+          if(a) rawAgg = (a.textContent||'');
+          else rawAgg = (it.textContent||'');
+        }
+        var txt = normalizeSearchText(rawAgg);
+        var match = txt.indexOf(normalizeSearchText(term)) !== -1 && itemMatchesCurrentCustomerType(it);
         if(match){
           it.style.display = '';
           // Falls CSS standardmäßig versteckt, explizit sichtbar machen
@@ -260,7 +274,7 @@
         }else{
           it.style.display = 'none';
         }
-        try{ var ids=extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] item', {vid:ids.variantId,pid:ids.productId,match}); }catch(_){ }
+        try{ var ids=extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] item', {vid:ids.variantId,pid:ids.productId,match, textLen: txt.length}); }catch(_){ }
       }
 
       var total = items.length, hidden = 0;
@@ -281,7 +295,11 @@
         }catch(_){ }
       }
       // Asynchron IDs verfeinern (zeigt nur passende Items für aktuellen Kundentyp)
-      try{ console.warn('[CMS-SEARCH] refine async'); refineCmsListByIds(root, key, term); }catch(_){ }
+      try{ console.warn('[CMS-SEARCH] refine async');
+        // Debounce Refinement, um Log-Spam und Flackern zu reduzieren
+        clearTimeout(handleSearchInput._rto);
+        handleSearchInput._rto = setTimeout(function(){ refineCmsListByIds(root, key, term); }, 120);
+      }catch(_){ }
     }catch(_){ }
   }
 
