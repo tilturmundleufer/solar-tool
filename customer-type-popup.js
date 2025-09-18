@@ -77,11 +77,114 @@
   function itemMatchesCurrentCustomerType(item){
     try{
       var preferBrutto = isBusiness();
+      // 1) Bereits ermittelte Klassifizierung nutzen
+      var resolved = (item.getAttribute('data-price-resolved')||'').toLowerCase();
+      if(resolved === 'brutto') return preferBrutto === true;
+      if(resolved === 'netto')  return preferBrutto === false;
+      // 2) Schnelle Heuristik bevor wir IDs nachladen
       var cls = classifyItemGrossNet(item);
-      if(cls === 'brutto') return preferBrutto === true;
-      if(cls === 'netto')  return preferBrutto === false;
-      return true; // unbekannt → nicht hart ausfiltern
+      if(cls){ item.setAttribute('data-price-resolved', cls); return preferBrutto ? cls==='brutto' : cls==='netto'; }
+      // 3) Unbekannt → vorerst zeigen, asynchron per IDs nachschärfen
+      return true;
     }catch(_){ return true; }
+  }
+
+  // Caches für ID-Auflösung
+  var _urlToIdsCache = Object.create(null);
+  var _idTypeCache = Object.create(null); // variantId/productId -> 'brutto'|'netto'
+
+  function resolvePriceTypeFromIds(productId, variantId){
+    try{
+      if(!idMapsBuilt) buildReverseMaps();
+    }catch(_){ }
+    if(variantId && _idTypeCache[variantId]) return _idTypeCache[variantId];
+    if(productId && _idTypeCache[productId]) return _idTypeCache[productId];
+    var type = null;
+    try{
+      // Prüfe gegen bekannte Maps
+      var keyByVar = variantId && idToKey.variantIdToKey[variantId];
+      var keyByProd = productId && idToKey.productIdToKey[productId];
+      var key = keyByVar || keyByProd || null;
+      if(key && (POPUP_PRODUCT_MAP_BRUTTO[key] || (typeof PRODUCT_MAP_BRUTTO==='object' && PRODUCT_MAP_BRUTTO && PRODUCT_MAP_BRUTTO[key]))){ type = 'brutto'; }
+      if(!type && key && (POPUP_PRODUCT_MAP_NETTO[key]  || (typeof PRODUCT_MAP==='object' && PRODUCT_MAP && PRODUCT_MAP[key]))){ type = 'netto'; }
+      // Wenn kein key gefunden: heuristisch anhand IDs (nur wenn in einer der Maps enthalten)
+      if(!type && variantId){
+        Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; if(v&&v.variantId===variantId){ type='brutto'; return true;} return false;});
+        if(!type) Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; if(v&&v.variantId===variantId){ type='netto'; return true;} return false;});
+      }
+      if(!type && productId){
+        Object.keys(POPUP_PRODUCT_MAP_BRUTTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_BRUTTO[k]; if(v&&v.productId===productId){ type='brutto'; return true;} return false;});
+        if(!type) Object.keys(POPUP_PRODUCT_MAP_NETTO||{}).some(function(k){ var v=POPUP_PRODUCT_MAP_NETTO[k]; if(v&&v.productId===productId){ type='netto'; return true;} return false;});
+      }
+    }catch(_){ }
+    if(variantId && type) _idTypeCache[variantId] = type;
+    if(productId && type) _idTypeCache[productId] = type;
+    return type;
+  }
+
+  function extractIdsFromCmsItemSync(item){
+    try{
+      var el = item.querySelector('[data-commerce-sku-id], [data-commerce-product-id]') || item;
+      var pid = el.getAttribute('data-commerce-product-id') || '';
+      var vid = el.getAttribute('data-commerce-sku-id') || '';
+      return { productId: pid, variantId: vid };
+    }catch(_){ return { productId:'', variantId:'' }; }
+  }
+
+  async function extractIdsFromCmsItemAsync(item){
+    try{
+      var ids = extractIdsFromCmsItemSync(item);
+      if(ids.productId || ids.variantId) return ids;
+      var a = item.querySelector('a[href]');
+      if(!a) return ids;
+      var href = a.getAttribute('href');
+      if(!href) return ids;
+      if(_urlToIdsCache[href]) return _urlToIdsCache[href];
+      // Seite anfragen und IDs aus erstem Add-to-Cart-Formular lesen
+      var res = await fetch(href, { credentials:'omit', cache:'force-cache' }).catch(function(){ return null; });
+      if(!res || !res.ok){ _urlToIdsCache[href] = ids; return ids; }
+      var html = await res.text().catch(function(){ return ''; });
+      var doc = null;
+      try{ doc = new DOMParser().parseFromString(html, 'text/html'); }catch(_){ doc = null; }
+      if(doc){
+        var form = doc.querySelector('form[data-node-type="commerce-add-to-cart-form"]');
+        if(form){
+          ids.productId = form.getAttribute('data-commerce-product-id') || '';
+          ids.variantId = form.getAttribute('data-commerce-sku-id') || '';
+        }
+      }
+      _urlToIdsCache[href] = ids;
+      return ids;
+    }catch(_){ return { productId:'', variantId:'' }; }
+  }
+
+  async function refineCmsListByIds(root, key, term){
+    try{
+      var preferBrutto = isBusiness();
+      var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
+      var changed = false;
+      for(var i=0;i<items.length;i++){
+        var it = items[i];
+        // Überspringe bereits eindeutig klassifizierte Items
+        var already = it.getAttribute('data-price-resolved');
+        if(already === 'brutto' || already === 'netto') continue;
+        var ids = await extractIdsFromCmsItemAsync(it);
+        var type = resolvePriceTypeFromIds(ids.productId, ids.variantId);
+        if(type){ it.setAttribute('data-price-resolved', type); changed = true; }
+        // Wenn aktuell sichtbar, aber Kundentyp nicht passt → verstecken; umgekehrt sichtbar machen, wenn Suchterm passt
+        var raw = (it.textContent||'').toString().toLowerCase();
+        var matchesTerm = term ? (raw.indexOf(term) !== -1) : true;
+        var shouldShow = matchesTerm && (!type || (preferBrutto ? type==='brutto' : type==='netto'));
+        it.style.display = shouldShow ? '' : 'none';
+      }
+      if(changed){
+        // No-Result neu berechnen
+        var total = items.length, hidden = 0;
+        for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
+        var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
+        if(noRes){ noRes.style.display = (total>0 && hidden===total && term!=='') ? '' : 'none'; }
+      }
+    }catch(_){ }
   }
 
   function handleSearchInput(input){
@@ -164,7 +267,7 @@
         var attr = inp.getAttribute('data-input')||'';
         var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
         var root = getSegmentRootForElement(inp) || document;
-        var noRes = root.querySelector('[data-div="noResult-'+key+'"]'); if(noRes) noRes.style.display='none';
+        var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'); if(noRes) noRes.style.display='none';
         try{
           var paramFlag = ((inp.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
           if(paramFlag){
@@ -173,6 +276,8 @@
             if(preset){ inp.value = preset; handleSearchInput(inp); }
           }
         }catch(_){ }
+        // IDs asynchron auflösen, damit Brutto/Netto-Klassifizierung greift
+        try{ refineCmsListByIds(root, key, (inp.value||'').toString().toLowerCase()); }catch(_){ }
       }
     }catch(_){ }
   }
