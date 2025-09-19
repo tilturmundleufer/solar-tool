@@ -811,6 +811,81 @@
     }catch(_){ }
     return null;
   }
+  function getProductDisplayInfoFromKey(key){
+    try{
+      var name = (typeof PRODUCT_NAME_MAP==='object' && PRODUCT_NAME_MAP[key]) || key;
+      var img = (typeof PRODUCT_IMAGES==='object' && PRODUCT_IMAGES[key]) || '';
+      return { name:name, img:img };
+    }catch(_){ return { name:key, img:'' }; }
+  }
+  function getProductDisplayInfoFromItemEl(itemEl){
+    try{
+      var name = '';
+      var nameSel = ['.w-commerce-commercecartproductname','[data-node-type*="product" i]','.text-block-18','.text-block-5','h1,h2,h3,h4,div,span'];
+      for (var i=0;i<nameSel.length;i++){
+        var el = itemEl.querySelector(nameSel[i]);
+        if (el && (el.textContent||'').trim()){ name = (el.textContent||'').trim(); break; }
+      }
+      var img = '';
+      var imgel = itemEl.querySelector('img');
+      if (imgel) img = imgel.getAttribute('src') || imgel.getAttribute('data-src') || '';
+      return { name:name, img:img };
+    }catch(_){ return { name:'', img:'' }; }
+  }
+  function ensureRemovedModal(){
+    var id = 'st-removed-items-modal';
+    var el = document.getElementById(id);
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = id;
+    el.setAttribute('role','dialog');
+    el.setAttribute('aria-modal','true');
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:24px;';
+    el.innerHTML = '<div style="max-width:720px;width:100%;background:#fff;border-radius:12px;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,.3);">\
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">\
+        <h3 style="margin:0;font-size:20px;">Warenkorb aktualisiert</h3>\
+        <button id="st-removed-close" aria-label="Schließen" style="border:none;background:transparent;font-size:20px;cursor:pointer;">×</button>\
+      </div>\
+      <p style="margin:8px 0 12px;line-height:1.4;">Einige Artikel passen nicht zum ausgewählten Kundentyp und wurden entfernt. Bitte füge die passenden Artikel erneut hinzu.</p>\
+      <div id="st-removed-list" style="display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow:auto;"></div>\
+      <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px;">\
+        <button id="st-removed-ok" style="padding:10px 14px;border-radius:8px;border:1px solid #ddd;background:#111;color:#fff;cursor:pointer;">Verstanden</button>\
+      </div>\
+    </div>';
+    document.body.appendChild(el);
+    var close = function(){ el.style.display='none'; };
+    try{ el.querySelector('#st-removed-close').addEventListener('click', close); }catch(_){ }
+    try{ el.querySelector('#st-removed-ok').addEventListener('click', close); }catch(_){ }
+    return el;
+  }
+  function showRemovedItemsModal(items){
+    try{
+      if(!items || !items.length) return;
+      var modal = ensureRemovedModal();
+      var list = modal.querySelector('#st-removed-list');
+      list.innerHTML='';
+      items.forEach(function(it){
+        var row = document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:10px;border:1px solid #eee;border-radius:8px;padding:8px;';
+        var img = document.createElement('img');
+        img.src = it.img || '';
+        img.alt = it.name || '';
+        img.style.cssText='width:56px;height:56px;object-fit:cover;border-radius:6px;background:#f5f5f5;';
+        var info = document.createElement('div');
+        info.style.cssText='display:flex;flex-direction:column;gap:2px;';
+        var name = document.createElement('div');
+        name.textContent = it.name || it.key || 'Produkt';
+        name.style.cssText='font-weight:600;';
+        var qty = document.createElement('div');
+        qty.textContent = 'Menge: '+ (it.qty||1);
+        qty.style.cssText='font-size:12px;color:#666;';
+        info.appendChild(name); info.appendChild(qty);
+        row.appendChild(img); row.appendChild(info);
+        list.appendChild(row);
+      });
+      modal.style.display='flex';
+    }catch(_){ }
+  }
 
   function scheduleCartCompatibilityCheck(delayMs){
     try{
@@ -927,12 +1002,14 @@
       if(!list) return;
       var items = Array.from(list.querySelectorAll('.w-commerce-commercecartitem, [data-node-type="commerce-cart-item"]'));
       if(!items.length) return;
-      // Snapshot: IDs, Key und Menge sichern (keine DOM-Referenzen, um Stale-Nodes zu vermeiden)
+      // Snapshot: IDs, Key, Menge und Anzeige-Infos
       var queue = items.map(function(el){
         var ids = extractIdsFromCartItem(el);
         var key = getProductKeyFromIds(ids.productId, ids.variantId);
         var qty = extractQuantityFromCartItem(el);
-        return { productId: ids.productId, variantId: ids.variantId, key: key, qty: qty };
+        var disp = getProductDisplayInfoFromItemEl(el);
+        if(!disp.name){ var tmp = getProductDisplayInfoFromKey(key||''); disp.name = disp.name || tmp.name; disp.img = disp.img || tmp.img; }
+        return { productId: ids.productId, variantId: ids.variantId, key: key, qty: qty, name: disp.name, img: disp.img };
       });
 
       // Stelle ID-Mapping bereit
@@ -941,35 +1018,28 @@
       // Während Austausch Cart visuell verstecken, damit Webflow kein Auto-Open zeigt
       try{ if (window.solarGrid && typeof window.solarGrid.hideCartContainer === 'function') window.solarGrid.hideCartContainer(); }catch(_){ }
 
-      // Produkte sequenziell verarbeiten: altes entfernen → neues mit gleicher Menge hinzufügen
+      // Produkte sequenziell verarbeiten: Nur entfernen und im Popup auflisten
+      var removed = [];
       for(var i=0;i<queue.length;i++){
         var snap = queue[i];
-        var key = snap.key;
-        var itemEl = findCartItemByIds(snap.productId, snap.variantId);
-        if(!key){
-          console.warn('[CartCompat] Unbekanntes Produkt im Warenkorb; wird ignoriert.');
-          continue;
-        }
+        if(!snap.key) continue;
         var shouldBeBrutto = isBusiness();
         var isBruttoNow = false;
         try{
           isBruttoNow = Object.keys(POPUP_PRODUCT_MAP_BRUTTO || {}).some(function(k){
             var info = POPUP_PRODUCT_MAP_BRUTTO[k];
-            return info && (info.productId === ids.productId || info.variantId === ids.variantId);
+            return info && (info.productId === snap.productId || info.variantId === snap.variantId);
           });
         }catch(_){ }
-
-        if(shouldBeBrutto === isBruttoNow){
-          continue; // kompatibel
+        if(shouldBeBrutto === isBruttoNow) continue; // kompatibel
+        var itemEl = findCartItemByIds(snap.productId, snap.variantId);
+        if(itemEl){
+          await removeCartItem(itemEl);
+          removed.push({ key:snap.key, name:snap.name||snap.key, qty:snap.qty, img:snap.img });
+          await new Promise(function(res){ setTimeout(res, 100); });
         }
-
-        // Austausch: Menge aus Snapshot verwenden, dann entfernen und Pendant hinzufügen
-        var qty = Math.max(1, parseInt(snap.qty||'1',10));
-        if(itemEl) await removeCartItem(itemEl);
-        await addByKey(key, qty);
-        // Kurze Pause, damit Webflow den Eintrag stabil anlegt
-        await new Promise(function(res){ setTimeout(res, 120); });
       }
+      if(removed.length){ showRemovedItemsModal(removed); }
       // Cart sichtbar lassen, aber niemals öffnen
       try{ var w = document.querySelector('.w-commerce-commercecartcontainerwrapper'); if(w){ var csf = window.getComputedStyle(w); if(csf.display === 'none'){ /* nichts */ } else { w.style.display=''; } } if(document.body && document.body.classList){ document.body.classList.remove('w-commerce-commercecartopen','wf-commerce-cart-open'); } }catch(_){ }
     }catch(e){
