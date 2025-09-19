@@ -55,6 +55,19 @@
     }catch(_){ return null; }
   }
 
+  function getVisibleSegmentRoot(){
+    try{
+      const privSel = ['#privat','[data-customer-type="privat"]','[data-customer-segment="privat"]','[data-list="privat"]','.collection-list-privat'];
+      const gewSel  = ['#gewerbe','[data-customer-type="gewerbe"]','[data-customer-segment="gewerbe"]','[data-list="gewerbe"]','.collection-list-gewerbe'];
+      const sels = isPrivate() ? privSel : gewSel;
+      for(var i=0;i<sels.length;i++){
+        var node = document.querySelector(sels[i]);
+        if(node){ try{ var cs = window.getComputedStyle(node); if(cs.display !== 'none' && cs.visibility !== 'hidden') return node; }catch(_){ return node; } }
+      }
+      return null;
+    }catch(_){ return null; }
+  }
+
   // Heuristische Klassifikation der Such-Items in Brutto/Netto
   function classifyItemGrossNet(item){
     try{
@@ -214,6 +227,9 @@
         var matchesTerm = term ? (raw.indexOf(term) !== -1) : true;
         var shouldShow = matchesTerm && (!finalType || (preferBrutto ? finalType==='brutto' : finalType==='netto'));
         it.style.display = shouldShow ? '' : 'none';
+        if(shouldShow){
+          try{ if(getComputedStyle(it).display === 'none'){ it.style.display = 'block'; } }catch(_){ }
+        }
         if(DBG){ try{ var dbgIds = extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] refine item', {finalType, preferBrutto, shouldShow, vid:dbgIds.variantId, pid:dbgIds.productId}); }catch(_){ } }
       }
       if(changed){
@@ -222,6 +238,11 @@
         for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
         var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
         if(noRes){ noRes.style.display = (total>0 && hidden===total && term!=='') ? '' : 'none'; }
+        // Wrapper sichtbar halten
+        try{
+          var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (items[0] && items[0].parentElement);
+          if(wrapper){ wrapper.style.display = ''; if(getComputedStyle(wrapper).display === 'none'){ wrapper.style.display = 'block'; } }
+        }catch(_){ }
       }
     }catch(_){ }
   }
@@ -233,8 +254,8 @@
       var m = attr.match(/^search-(.+)$/);
       if(!m) return;
       var key = m[1];
-      var root = getSegmentRootForElement(input) || document;
-      var term = (input.value||'').toString().toLowerCase();
+      var root = getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
+      var term = normalizeSearchText((input.value||''));
       var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
       try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: items.length}); }catch(_){ }
 
@@ -265,7 +286,7 @@
           else rawAgg = (it.textContent||'');
         }
         var txt = normalizeSearchText(rawAgg);
-        var match = txt.indexOf(normalizeSearchText(term)) !== -1 && itemMatchesCurrentCustomerType(it);
+        var match = txt.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it);
         if(match){
           it.style.display = '';
           // Falls CSS standardmäßig versteckt, explizit sichtbar machen
@@ -298,7 +319,10 @@
       try{ console.warn('[CMS-SEARCH] refine async');
         // Debounce Refinement, um Log-Spam und Flackern zu reduzieren
         clearTimeout(handleSearchInput._rto);
-        handleSearchInput._rto = setTimeout(function(){ refineCmsListByIds(root, key, term); }, 120);
+        handleSearchInput._rto = setTimeout(function(){
+          // Falls inzwischen ein anderer Kundentyp aktiv ist, verwende aktuellen
+          try{ var currentRoot = getVisibleSegmentRoot() || root; refineCmsListByIds(currentRoot, key, term); }catch(_){ refineCmsListByIds(root, key, term); }
+        }, 250);
       }catch(_){ }
     }catch(_){ }
   }
