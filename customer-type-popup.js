@@ -269,20 +269,21 @@
       var m = attr.match(/^search-(.+)$/);
       if(!m) return;
       var key = m[1];
-      var root = getListRootForInput(input) || getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
+      var segmentRoot = getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
+      var root = getListRootForInput(input) || segmentRoot;
       var term = normalizeSearchText((input.value||''));
-      var itemsAll = root.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"], .search-cms-item, .w-dyn-item');
-      var nodesForKey = root.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]');
+      var itemsAll = segmentRoot.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"], .search-cms-item, .w-dyn-item');
+      var nodesForKey = segmentRoot.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]');
       try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: itemsAll.length, nodesForKey: nodesForKey.length}); }catch(_){ }
 
-      // Sonderfall: leerer Begriff → alle Items zeigen (nur aktueller Kundentyp), No-Result ausblenden
+      // Sonderfall: leerer Begriff → nichts anzeigen
       if(term === ''){
-        for(var s=0;s<itemsAll.length;s++){ itemsAll[s].style.display = itemMatchesCurrentCustomerType(itemsAll[s]) ? '' : 'none'; }
+        for(var s=0;s<itemsAll.length;s++){ itemsAll[s].style.display = 'none'; }
         var nr0 = root.querySelector('[data-div="noResult-'+key+'"]');
         if(nr0) nr0.style.display='none';
         var pf0 = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
         if(pf0){ try{ var u0=new URL(window.location.href); u0.searchParams.delete('search-'+key); window.history.pushState({},'',u0);}catch(_){}}
-        try{ refineCmsListByIds(root, key, ''); }catch(_){ }
+        try{ var wrap0 = root.querySelector('.search-cms-wrapper, [role="list"]'); if(wrap0) wrap0.style.display='none'; }catch(_){ }
         return;
       }
 
@@ -301,7 +302,7 @@
           it.style.display = match ? '' : 'none';
           if(match){ try{ if(getComputedStyle(it).display === 'none'){ it.style.display = 'block'; } }catch(_){ } anyVisible++; }
         }
-        // Alle übrigen Items, die nicht betrachtet wurden, verstecken
+        // Alle übrigen Items verstecken
         for(var j=0;j<itemsAll.length;j++){
           var it2 = itemsAll[j]; if(considered.has(it2)) continue; it2.style.display = 'none';
         }
