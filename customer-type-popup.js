@@ -272,8 +272,9 @@
       var segmentRoot = getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
       var root = getListRootForInput(input) || segmentRoot;
       var term = normalizeSearchText((input.value||''));
-      var itemsAll = segmentRoot.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"], .search-cms-item, .w-dyn-item');
-      var nodesForKey = segmentRoot.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]');
+      // Query breit (document-weit) und filtere danach auf das aktive Segment
+      var itemsAll = Array.prototype.slice.call(document.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"], .search-cms-item, .w-dyn-item')).filter(function(n){ return segmentRoot.contains(n); });
+      var nodesForKey = Array.prototype.slice.call(document.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]')).filter(function(n){ return segmentRoot.contains(n); });
       try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: itemsAll.length, nodesForKey: nodesForKey.length}); }catch(_){ }
 
       // Sonderfall: leerer Begriff → nichts anzeigen
