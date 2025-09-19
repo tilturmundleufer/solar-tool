@@ -68,6 +68,21 @@
     }catch(_){ return null; }
   }
 
+  // Bevorzugt den List-Container in der Nähe des Inputs
+  function getListRootForInput(input){
+    try{
+      var p = input;
+      for(var i=0;i<6 && p; i++){
+        var r = p.querySelector && p.querySelector('.search-cms-wrapper');
+        if(r) return r;
+        p = p.parentElement;
+      }
+      var any = document.querySelector('.search-cms-wrapper');
+      if(any) return any;
+    }catch(_){ }
+    return null;
+  }
+
   // Heuristische Klassifikation der Such-Items in Brutto/Netto
   function classifyItemGrossNet(item){
     try{
@@ -254,10 +269,10 @@
       var m = attr.match(/^search-(.+)$/);
       if(!m) return;
       var key = m[1];
-      var root = getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
+      var root = getListRootForInput(input) || getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
       var term = normalizeSearchText((input.value||''));
-      var itemsAll = root.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"]');
-      var nodesForKey = root.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
+      var itemsAll = root.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"], .search-cms-item, .w-dyn-item');
+      var nodesForKey = root.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]');
       try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: itemsAll.length, nodesForKey: nodesForKey.length}); }catch(_){ }
 
       // Sonderfall: leerer Begriff → alle Items zeigen (nur aktueller Kundentyp), No-Result ausblenden
