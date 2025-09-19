@@ -116,8 +116,8 @@
       if(resolved === 'netto')  return preferBrutto === false;
       // 2) Versuche sofortige ID-basierte Auflösung (synchron)
       var sync = extractIdsFromCmsItemSync(item);
-      if(sync.variantId){
-        var t = resolvePriceTypeFromVariantId(sync.variantId);
+      if(sync.productId || sync.variantId){
+        var t = resolvePriceTypeFromIds(sync.productId, sync.variantId);
         if(t){ item.setAttribute('data-price-resolved', t); return preferBrutto ? t==='brutto' : t==='netto'; }
       }
       // 3) Heuristik (Fallback)
@@ -270,11 +270,13 @@
       if(!m) return;
       var key = m[1];
       var segmentRoot = getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
-      var root = getListRootForInput(input) || segmentRoot;
+      // Liste an der tatsächlichen Ergebnis-Box ausrichten, nicht am Kundensegment
+      var root = getListRootForInput(input) || segmentRoot || document;
       var term = normalizeSearchText((input.value||''));
-      // Query breit (document-weit) und filtere danach auf das aktive Segment
-      var itemsAll = Array.prototype.slice.call(document.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"], .search-cms-item, .w-dyn-item')).filter(function(n){ return segmentRoot.contains(n); });
-      var nodesForKey = Array.prototype.slice.call(document.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]')).filter(function(n){ return segmentRoot.contains(n); });
+      // Innerhalb des Listen-Containers für den aktuellen Key suchen
+      var scope = root || document;
+      var itemsAll = Array.prototype.slice.call(scope.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"], .search-cms-item, .w-dyn-item'));
+      var nodesForKey = Array.prototype.slice.call(scope.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]'));
       try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: itemsAll.length, nodesForKey: nodesForKey.length}); }catch(_){ }
 
       // Sonderfall: leerer Begriff → nichts anzeigen
@@ -320,11 +322,11 @@
 
       var total = itemsAll.length, hidden = 0;
       for(var j2=0;j2<itemsAll.length;j2++){ if(getComputedStyle(itemsAll[j2]).display === 'none') hidden++; }
-      var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
+      var noRes = (root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]') || segmentRoot.querySelector?.('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'));
       if(noRes){ noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; }
       // Ergebnisse-Wrapper Sichtbarkeit gemäß Zustand steuern
       try{
-        var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (itemsAll[0] && itemsAll[0].parentElement);
+        var wrapper = (root.classList && root.classList.contains('search-cms-wrapper')) ? root : (root.querySelector('.search-cms-wrapper, [role="list"]') || (itemsAll[0] && itemsAll[0].parentElement));
         if(wrapper){
           if(anyVisible>0 && term){ wrapper.style.display = 'block'; }
           else { wrapper.style.display = 'none'; }
