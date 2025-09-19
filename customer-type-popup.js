@@ -369,7 +369,7 @@
         try{
           var attr = (t.getAttribute('data-input')||'').toString();
           var m = attr.match(/^search-(.+)$/); if(!m) return; var key = m[1];
-          var root = getSegmentRootForElement(t) || getVisibleSegmentRoot() || document;
+          var root = getListRootForInput(t) || getSegmentRootForElement(t) || getVisibleSegmentRoot() || document;
           var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]');
           if(wrapper) wrapper.style.display = 'none';
         }catch(_){ }
@@ -405,7 +405,7 @@
         var val = (inp.value||'');
         var attr = inp.getAttribute('data-input')||'';
         var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
-        var root = getSegmentRootForElement(inp) || document;
+        var root = getListRootForInput(inp) || getSegmentRootForElement(inp) || getVisibleSegmentRoot() || document;
         // Vor dem Refilter evtl. alte Klassifizierungen entfernen (Wechsel Firma ↔ Privat)
         try{
           var allItems = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
@@ -415,21 +415,13 @@
         }catch(_){ }
         if(val !== ''){ handleSearchInput(inp); }
         else{
-          // Leeres Feld: Zeige alle Items, die zum Kundentyp passen
-          var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
-          for(var k=0;k<items.length;k++){
-            var it = items[k];
-            var ok = itemMatchesCurrentCustomerType(it);
-            it.style.display = ok ? '' : 'none';
-          }
-          var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'); if(noRes) noRes.style.display='none';
-          // Ergebnis-Wrapper sichtbar machen
+          // Leeres Feld: nichts anzeigen (Anforderung)
           try{
-            var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (items[0] && items[0].parentElement);
-            if(wrapper){ wrapper.style.display = ''; if(getComputedStyle(wrapper).display === 'none'){ wrapper.style.display = 'block'; } }
+            var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
+            for(var k=0;k<items.length;k++){ items[k].style.display='none'; }
+            var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'); if(noRes) noRes.style.display='none';
+            var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]'); if(wrapper) wrapper.style.display='none';
           }catch(_){ }
-          // IDs verfeinern, um unbekannte Elemente korrekt zuzuordnen
-          try{ refineCmsListByIds(root, key, ''); }catch(_){ }
         }
       }
     }catch(_){ }
