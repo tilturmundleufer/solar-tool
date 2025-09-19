@@ -256,12 +256,13 @@
       var key = m[1];
       var root = getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
       var term = normalizeSearchText((input.value||''));
-      var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
-      try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: items.length}); }catch(_){ }
+      var itemsAll = root.querySelectorAll('[data-search^="cms-item-"], [data-search^="cms_item_"]');
+      var nodesForKey = root.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
+      try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: itemsAll.length, nodesForKey: nodesForKey.length}); }catch(_){ }
 
-      // Sonderfall: leerer Begriff → alle Items zeigen, No-Result ausblenden
+      // Sonderfall: leerer Begriff → alle Items zeigen (nur aktueller Kundentyp), No-Result ausblenden
       if(term === ''){
-        for(var s=0;s<items.length;s++){ items[s].style.display = itemMatchesCurrentCustomerType(items[s]) ? '' : 'none'; }
+        for(var s=0;s<itemsAll.length;s++){ itemsAll[s].style.display = itemMatchesCurrentCustomerType(itemsAll[s]) ? '' : 'none'; }
         var nr0 = root.querySelector('[data-div="noResult-'+key+'"]');
         if(nr0) nr0.style.display='none';
         var pf0 = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
@@ -270,41 +271,43 @@
         return;
       }
 
-      // Für jedes Item Suchtext bestimmen: bevorzugt data-text innerhalb des Items, sonst gesamter Item-Text
+      // Suche primär über die Knoten für den Key; mappe zu Items per closest
+      var considered = new WeakSet();
       var anyVisible = 0;
-      for(var i=0;i<items.length;i++){
-        var it = items[i];
-        // Sammle alle definierten Suchtexte im Item
-        var nodes = it.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"]');
-        var rawAgg = '';
-        if(nodes && nodes.length){
-          for(var n=0;n<nodes.length;n++){ rawAgg += ' ' + (nodes[n].textContent||''); }
+      if(nodesForKey.length){
+        for(var i=0;i<nodesForKey.length;i++){
+          var tn = nodesForKey[i];
+          var it = tn.closest('[data-search^="cms-item-"], [data-search^="cms_item_"]');
+          if(!it) continue;
+          considered.add(it);
+          var txt = normalizeSearchText(tn.textContent||'');
+          if(!txt){ txt = normalizeSearchText(it.textContent||''); }
+          var match = txt.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it);
+          it.style.display = match ? '' : 'none';
+          if(match){ try{ if(getComputedStyle(it).display === 'none'){ it.style.display = 'block'; } }catch(_){ } anyVisible++; }
         }
-        if(!rawAgg){
-          var a = it.querySelector('a');
-          if(a) rawAgg = (a.textContent||'');
-          else rawAgg = (it.textContent||'');
+        // Alle übrigen Items, die nicht betrachtet wurden, verstecken
+        for(var j=0;j<itemsAll.length;j++){
+          var it2 = itemsAll[j]; if(considered.has(it2)) continue; it2.style.display = 'none';
         }
-        var txt = normalizeSearchText(rawAgg);
-        var match = txt.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it);
-        if(match){
-          it.style.display = '';
-          // Falls CSS standardmäßig versteckt, explizit sichtbar machen
-          try{ if(getComputedStyle(it).display === 'none'){ it.style.display = 'block'; } }catch(_){ }
-          anyVisible++;
-        }else{
-          it.style.display = 'none';
+      }else{
+        // Fallback: keine passenden data-text-Knoten gefunden → gesamte Item-Texte durchsuchen
+        for(var k=0;k<itemsAll.length;k++){
+          var it3 = itemsAll[k];
+          var txt3 = normalizeSearchText(it3.textContent||'');
+          var match3 = txt3.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it3);
+          it3.style.display = match3 ? '' : 'none';
+          if(match3){ try{ if(getComputedStyle(it3).display === 'none'){ it3.style.display = 'block'; } }catch(_){ } anyVisible++; }
         }
-        try{ var ids=extractIdsFromCmsItemSync(it); console.log('[CMS-SEARCH] item', {vid:ids.variantId,pid:ids.productId,match, textLen: txt.length}); }catch(_){ }
       }
 
-      var total = items.length, hidden = 0;
-      for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
+      var total = itemsAll.length, hidden = 0;
+      for(var j2=0;j2<itemsAll.length;j2++){ if(getComputedStyle(itemsAll[j2]).display === 'none') hidden++; }
       var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
       if(noRes){ noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; }
       // Ergebnisse-Wrapper Sichtbarkeit gemäß Zustand steuern
       try{
-        var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (items[0] && items[0].parentElement);
+        var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (itemsAll[0] && itemsAll[0].parentElement);
         if(wrapper){
           if(anyVisible>0 && term){ wrapper.style.display = 'block'; }
           else { wrapper.style.display = 'none'; }
