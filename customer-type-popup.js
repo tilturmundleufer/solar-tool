@@ -302,10 +302,13 @@
       for(var j=0;j<items.length;j++){ if(getComputedStyle(items[j]).display === 'none') hidden++; }
       var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
       if(noRes){ noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; }
-      // Ergebnisse-Wrapper sichtbar halten
+      // Ergebnisse-Wrapper Sichtbarkeit gemäß Zustand steuern
       try{
         var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]') || (items[0] && items[0].parentElement);
-        if(wrapper){ wrapper.style.display = ''; if(getComputedStyle(wrapper).display === 'none'){ wrapper.style.display = 'block'; } }
+        if(wrapper){
+          if(anyVisible>0 && term){ wrapper.style.display = 'block'; }
+          else { wrapper.style.display = 'none'; }
+        }
       }catch(_){ }
       var paramFlag = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
       if(paramFlag){
@@ -315,15 +318,7 @@
           window.history.pushState({}, '', url);
         }catch(_){ }
       }
-      // Asynchron IDs verfeinern (zeigt nur passende Items für aktuellen Kundentyp)
-      try{ console.warn('[CMS-SEARCH] refine async');
-        // Debounce Refinement, um Log-Spam und Flackern zu reduzieren
-        clearTimeout(handleSearchInput._rto);
-        handleSearchInput._rto = setTimeout(function(){
-          // Falls inzwischen ein anderer Kundentyp aktiv ist, verwende aktuellen
-          try{ var currentRoot = getVisibleSegmentRoot() || root; refineCmsListByIds(currentRoot, key, term); }catch(_){ refineCmsListByIds(root, key, term); }
-        }, 250);
-      }catch(_){ }
+      // Kein asynchrones Refinement mehr – Anzeige bleibt stabil bis zur nächsten Eingabe oder Blur
     }catch(_){ }
   }
 
@@ -346,6 +341,21 @@
         try{ console.warn('[CMS-SEARCH] keyup event fired'); }catch(_){ }
         handleSearchInput(t);
       }, true);
+      // Fokus/Blur: Ergebnisse zeigen/verbergen
+      document.addEventListener('focusin', function(e){
+        var t = e.target; try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+        try{ handleSearchInput(t); }catch(_){ }
+      }, true);
+      document.addEventListener('focusout', function(e){
+        var t = e.target; try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+        try{
+          var attr = (t.getAttribute('data-input')||'').toString();
+          var m = attr.match(/^search-(.+)$/); if(!m) return; var key = m[1];
+          var root = getSegmentRootForElement(t) || getVisibleSegmentRoot() || document;
+          var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]');
+          if(wrapper) wrapper.style.display = 'none';
+        }catch(_){ }
+      }, true);
       // Initialzustand + URL-Vorbelegung je Input
       var inputs = document.querySelectorAll('[data-input^="search-"]');
       for(var i=0;i<inputs.length;i++){
@@ -364,8 +374,7 @@
         }catch(_){ }
         // Initial einmal triggern, auch ohne URL-Param, damit Logs erscheinen
         try{ handleSearchInput(inp); }catch(_){ }
-        // IDs asynchron auflösen, damit Brutto/Netto-Klassifizierung greift
-        try{ console.warn('[CMS-SEARCH] init refine for', {key}); refineCmsListByIds(root, key, (inp.value||'').toString().toLowerCase()); }catch(_){ }
+        // Kein initiales Refinement erforderlich
       }
     }catch(_){ }
   }
