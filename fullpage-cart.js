@@ -375,107 +375,23 @@
       if(paypalSlot){
         paypalSlot.innerHTML='';
 
-        // 1) Statt Umhängen: Original-Container per fixed über unseren Slot positionieren
-        try{
-          var host = document.querySelector('[data-wf-paypal-button]');
-          if(host){
-            var placeOver = function(){
-              try{
-                var targetRect = paypalSlot.getBoundingClientRect();
-                var el = host.querySelector('div[id^="zoid_paypal_buttons"]') || host;
-                el.setAttribute('data-fp-teleport','1');
-                el.style.position = 'fixed';
-                el.style.left = (Math.round(targetRect.left))+'px';
-                el.style.top = (Math.round(targetRect.top))+'px';
-                el.style.width = (Math.round(targetRect.width))+'px';
-                el.style.zIndex = '2147483000';
-                el.style.pointerEvents = 'auto';
-                el.style.opacity = '1';
-                // Zeige alle Funding Buttons (PayPal/SEPA/Card)
-                try{
-                  var iframe = el.querySelector('iframe.component-frame');
-                  if(iframe && iframe.contentWindow){
-                    try{ iframe.contentWindow.postMessage({event:'render', funding:['paypal','sepa','card']}, '*'); }catch(_){ }
-                  }
-                }catch(_){ }
-              }catch(_){ }
-            };
-            placeOver();
-            try{ window.addEventListener('resize', placeOver); window.addEventListener('scroll', placeOver, true); }catch(_){ }
-          }
-        }catch(_){ }
-
-        function makeBtn(label, cls, iconSrc){
-          var b=document.createElement('button'); b.className='btn '+cls;
-          var i=document.createElement('img'); i.className='pay-icon'; i.alt=''; i.src=iconSrc; b.appendChild(i);
-          var s=document.createElement('span'); s.textContent=label; b.appendChild(s); return b;
-        }
-        var ppIcon='https://www.paypalobjects.com/webstatic/icon/pp258.png';
-        var sepaIcon='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjMyIiB2aWV3Qm94PSIwIDAgMTAwIDMyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWluWU1pbiBtZWV0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGZpbGw9IiMwMDVEQTAiIGQ9Ik0gMzkuODcxIDE4Ljc3MiBDIDM3Ljc4IDE4Ljc3MiAzNS44NDMgMTguMjc4IDM0LjI3MiAxNy40MjUgTCAzNC44MSAxMy45MzUgQyAzNi40MDkgMTQuNzY5IDM4LjA1MSAxNS4yNjMgMzkuODI2IDE1LjI2MyBDIDQxLjgwOSAxNS4yNjMgNDIuNjYxIDE0LjU0NCA0Mi42NjEgMTMuMjg0IEMgNDIuNjYxIDEwLjQ1IDM0LjM0IDExLjY0MSAzNC4zNCA1LjU5IEMgMzQuMzQgMi41MyAzNi4zMTkgMC4wNTUgNDAuODg1IDAuMDU1IEMgNDIuNjM5IDAuMDU1IDQ0LjU0OSAwLjQxNiA0NS45NDYgMC45OTkgTCA0NS40NzQgNC4zOTUgQyA0My45ODkgMy45MjYgNDIuNDgxIDMuNjMzIDQxLjEwOCAzLjYzMyBDIDM4Ljg2IDMuNjMzIDM4LjI3NSA0LjM5NSAzOC4yNzUgNS4zNjQgQyAzOC4yNzUgOC4xNzUgNDYuNTk4IDYuODk1IDQ2LjU5OCAxMy4wMTMgQyA0Ni41NzYgMTYuNTY5IDQ0LjEwMSAxOC43NzIgMzkuODcxIDE4Ljc3MiBaIj48L3BhdGg+PC9zdmc+';
-        var cardIcon='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjRweCIgaGVpZ2h0PSIxOHB4IiB2aWV3Qm94PSIwIDAgMjQgMTgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTguMjc1IDEyLjUxMkMyLjcuLiIvPjwvc3ZnPg==';
-        // Hinweis: verkürzte Icons; in Produktion die vollständigen base64 aus dem Webflow verwenden
-
-        var btnPP=makeBtn('Pay with PayPal','paypal-blue',ppIcon);
-        btnPP.addEventListener('click', async function(){
+        // Native PayPal Buttons in unseren Slot verschieben (kein Overlay, keine Proxy-Buttons)
+        (function mountNativePayPal(started){
           try{
-            btnPP.disabled = true;
-            var b = findPayPalDomButton('paypal') || document.querySelector('div[id^="zoid_paypal_buttons"] [data-funding-source="paypal"], div.paypal-button.paypal-button-number-0[role="link"][data-funding-source="paypal"]');
-            if(!b){ b = await waitForFundingButton('paypal', 10000); }
-            if(!b){ flashNotice('PayPal ist noch nicht bereit. Bitte erneut versuchen.'); return; }
-            if(b.tagName && b.tagName.toLowerCase()==='iframe'){
-              try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
-              // Kann aus Sicherheitsgründen häufig NICHT direkt angeklickt werden → Nutzerhinweis
-              flashNotice('Bitte den PayPal-Button im eingebetteten Bereich klicken.');
-              return;
+            var host = document.querySelector('[data-wf-paypal-button]');
+            var zoid = host && host.querySelector('div[id^="zoid_paypal_buttons"]');
+            if(zoid && !paypalSlot.contains(zoid)){
+              paypalSlot.appendChild(zoid);
+              try{ zoid.style.position='static'; zoid.style.opacity='1'; zoid.style.pointerEvents='auto'; zoid.style.width='100%'; }catch(_){ }
+              // Wenn wir die nativen Buttons haben, die alternativen Slots ausblenden
+              var s1=document.getElementById('fp-paypal-sepa'); if(s1) s1.style.display='none';
+              var s2=document.getElementById('fp-paypal-card'); if(s2) s2.style.display='none';
+              return; // fertig
             }
-            withTemporarilyShown(b, function(){
-              try{ b.focus && b.focus(); }catch(_){ }
-              triggerSyntheticClick(b);
-            });
-          }catch(_){ } finally { try{ btnPP.disabled=false; }catch(__){} }
-        });
-        paypalSlot.appendChild(btnPP);
-
-        var sepaSlot=document.getElementById('fp-paypal-sepa');
-        if(sepaSlot){
-          sepaSlot.innerHTML='';
-          var btnSEPA=makeBtn('Pay with SEPA','sepa',sepaIcon);
-          btnSEPA.addEventListener('click', async function(){
-            try{
-              btnSEPA.disabled = true;
-              var b = findPayPalDomButton('sepa') || document.querySelector('div[id^="zoid_paypal_buttons"] [data-funding-source="sepa"], div.paypal-button[role="link"][data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]');
-              if(!b){ b = await waitForFundingButton('sepa', 10000); }
-              if(!b){ flashNotice('SEPA ist noch nicht bereit. Bitte erneut versuchen.'); return; }
-              if(b.tagName && b.tagName.toLowerCase()==='iframe'){
-                try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
-                flashNotice('Bitte SEPA im PayPal-Bereich direkt auswählen.');
-                return;
-              }
-              withTemporarilyShown(b, function(){ try{ b.focus && b.focus(); }catch(_){ } triggerSyntheticClick(b); });
-            }catch(_){ } finally { try{ btnSEPA.disabled=false; }catch(__){} }
-          });
-          sepaSlot.appendChild(btnSEPA);
-        }
-        var cardSlot=document.getElementById('fp-paypal-card');
-        if(cardSlot){
-          cardSlot.innerHTML='';
-          var btnCARD=makeBtn('Debit or Credit Card','card',cardIcon);
-          btnCARD.addEventListener('click', async function(){
-            try{
-              btnCARD.disabled = true;
-              var b = findPayPalDomButton('card') || document.querySelector('div[id^="zoid_paypal_buttons"] [data-funding-source="card"], div.paypal-button[role="link"][data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
-              if(!b){ b = await waitForFundingButton('card', 10000); }
-              if(!b){ flashNotice('Kartenzahlung ist noch nicht bereit. Bitte erneut versuchen.'); return; }
-              if(b.tagName && b.tagName.toLowerCase()==='iframe'){
-                try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
-                flashNotice('Bitte Karte direkt im PayPal-Bereich wählen.');
-                return;
-              }
-              withTemporarilyShown(b, function(){ try{ b.focus && b.focus(); }catch(_){ } triggerSyntheticClick(b); });
-            }catch(_){ } finally { try{ btnCARD.disabled=false; }catch(__){} }
-          });
-          cardSlot.appendChild(btnCARD);
-        }
+          }catch(_){ }
+          if(Date.now() - started > 10000) return; // nach 10s aufgeben
+          setTimeout(function(){ mountNativePayPal(started); }, 250);
+        })(Date.now());
       }
     }catch(_){ }
   }
