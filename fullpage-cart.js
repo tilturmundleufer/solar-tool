@@ -135,7 +135,13 @@
     var root = document.getElementById('fp-cart-items');
     if(root){
       root.innerHTML = '';
-      if(!items.length){ root.innerHTML = '<div class="fp-empty">Ihr Warenkorb ist leer.</div>'; }
+      if(!items.length){
+        root.innerHTML = '<div class="fp-empty">Ihr Warenkorb ist leer.</div>';
+        // Buttons ausblenden wenn leer
+        try{ document.getElementById('fp-checkout-slot').innerHTML=''; }catch(_){ }
+        try{ document.getElementById('fp-quick-slot').innerHTML=''; }catch(_){ }
+        try{ document.getElementById('fp-paypal-slot').innerHTML=''; }catch(_){ }
+      }
       items.forEach(function(it){
         var row = document.createElement('div'); row.className='fp-cart-item';
         var img = document.createElement('img'); img.src=it.img||''; img.alt=it.name||'';
@@ -232,7 +238,14 @@
       var quickSlot = document.getElementById('fp-quick-slot');
       if(quickSlot){
         quickSlot.innerHTML='';
-        var qb=document.createElement('button'); qb.className='btn outline'; qb.textContent='Pay with browser.';
+        var qb=document.createElement('button'); qb.className='btn pay-dark';
+        var icon=document.createElement('span'); icon.className='pay-icon';
+        // Browser Detection → Icon/Text
+        var ua=(navigator.userAgent||'').toLowerCase(); var label='Pay with browser.';
+        if(/safari/.test(ua) && !/chrome|android/.test(ua)){ label='Pay with Apple Pay'; icon.innerHTML=''; icon.style.fontFamily='-apple-system'; icon.style.fontSize='18px'; }
+        else if(/android|chrome|crios/.test(ua)){ label='Pay with Google Pay'; icon.innerHTML=''; icon.style.background='url(https://www.gstatic.com/instantbuy/svg/dark_gpay.svg) no-repeat center/contain'; }
+        else { icon.style.background='url(https://www.gstatic.com/instantbuy/svg/dark_gpay.svg) no-repeat center/contain'; }
+        qb.appendChild(icon); var span=document.createElement('span'); span.textContent=label; qb.appendChild(span);
         qb.addEventListener('click', function(){
           try{ var quick = document.querySelector('[data-node-type="commerce-cart-quick-checkout-button"], .w-commerce-commercecartquickcheckoutbutton'); if(quick){ quick.click(); } }catch(_){ }
         });
@@ -243,7 +256,10 @@
       var paypalSlot = document.getElementById('fp-paypal-slot');
       if(paypalSlot){
         paypalSlot.innerHTML='';
-        var pb=document.createElement('button'); pb.className='btn primary'; pb.textContent='Pay with PayPal';
+        var pb=document.createElement('button'); pb.className='btn paypal-blue';
+        var pi=document.createElement('span'); pi.className='pay-icon'; pi.style.background='url(https://www.paypalobjects.com/webstatic/icon/pp258.png) no-repeat center/contain';
+        var pl=document.createElement('span'); pl.textContent='Pay with PayPal';
+        pb.appendChild(pi); pb.appendChild(pl);
         pb.addEventListener('click', function(){
           try{
             // Bevorzugt Smart Buttons via iframe triggern

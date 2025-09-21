@@ -22,6 +22,11 @@
 .btn.outline { background: #fff; color: #000; border: 2px solid #CECECE; }
 .btn.primary:hover { background: #e6a000; }
 .btn.outline:hover { border-color: #000; }
+.btn.pay-dark { background:#000; color:#fff; border:none; display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn.pay-dark:hover { background:#111; }
+.btn.paypal-blue { background:#0070ba; color:#fff; border:none; display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn.paypal-blue:hover { background:#005ea6; }
+.btn .pay-icon { width:18px; height:18px; display:inline-block; }
 .fp-empty { padding: 18px; border: 1px dashed #CECECE; border-radius: 12px; text-align: center; color: #8F8F8F; }
 @media (max-width: 920px){ .fp-cart-main { grid-template-columns: 1fr; } }
 
