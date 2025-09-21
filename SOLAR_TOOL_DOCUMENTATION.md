@@ -169,6 +169,7 @@ Hinweise:
 - 2025-09-15: Ulica‑Module in 36er‑Paletten gebündelt. Bei aktivem Ulica‑Modul (500 W) bzw. allgemeinen Modulen (450 W) werden automatisch so viele Paletten wie möglich gebildet, Rest als Einzelmodule. In Produktliste, PDF und Warenkorb erscheinen eigene Paletten‑Produkte (inkl./exkl. MwSt je Kundentyp). Beispiele: 69 → 1 Palette + 33; 73 → 2 Paletten + 1.
 - 2025-09-16: Automatische Warenkorb-Kompatibilitätsprüfung und Austausch-Logik basierend auf Kundentyp (Privat/Gewerbe) nach `customer-type-popup.js` verlagert (global aktiv), nutzt `window.solarGrid` für Add-Flow/Form-Mapping, mit Fallback-Warnungen bei fehlendem Mapping.
 - 2025-09-18: CMS-Suche segmentiert in `customer-type-popup.js`. Suchfelder filtern jeweils nur das aktive Kundentyp-Segment; URL‑Parameter werden weiterhin unterstützt.
+ - 2025-09-21: Fullpage‑Warenkorb hinzugefügt (`fullpage-cart.html/.css/.js`). Der Fullpage‑Warenkorb spiegelt den Webflow‑Native‑Cart eins‑zu‑eins, nutzt dessen versteckte Formulare für alle Änderungen (Menge ±, Entfernen, Leeren, Checkout) und zeigt Preise stets netto an. Kundentyp‑Hinweis: Privatkunden sehen den 0% MwSt‑Hinweis gem. §12 Abs. 3 UStG, Firmenkunden den MwSt‑Hinweis im Bestellprozess. `CartCompatibility` bleibt aktiv und räumt ggf. unpassende Artikel.
 
 ---
 
@@ -228,6 +229,16 @@ VE = {
 - Fallback: Existiert kein Mapping, bleibt das Produkt im Warenkorb und es wird eine Warnung in der Konsole ausgegeben.
 - Initiales Triggering im Popup beim `init()`; nutzt bei Verfügbarkeit `window.solarGrid` für den stabilen Add-Flow.
 - Hinweis: Segmentierte CMS-Suche wird beim Wechsel des Kundentyps automatisch neu angewendet (Re-Filter), sodass jeweils nur die Produkte des ausgewählten Segments sichtbar sind.
+
+#### Fullpage‑Warenkorb (neue Seite/Embed)
+- Dateien: `fullpage-cart.html`, `fullpage-cart.css`, `fullpage-cart.js` (optional: `fullpage-cart.min.js`)
+- Einbindung: In Webflow als Code‑Embed. Der Webflow‑Cart bleibt auf der Seite vorhanden, ist jedoch komplett verborgen und dient als „Motor“ für den Fullpage‑Warenkorb.
+- Verhalten:
+  - Lesen: Items werden aus `.w-commerce-commercecartlist` gespiegelt (Name, Bild, Menge).
+  - Ändern: UI‑Aktionen lösen Klicks auf versteckte Add‑to‑Cart‑Formulare aus (Mengenänderung, Entfernen, Leeren, Checkout‑Clickthrough). DOM‑Änderungen werden via `MutationObserver` erkannt.
+  - Preise: Anzeige immer netto; Hinweistext je Kundentyp (Privat/Firma) gemäß Popup‑Auswahl.
+  - Kundentyp: `CartCompatibility.schedule()` wird beim Start aufgerufen; inkompatible Artikel werden entfernt und optional ausgewiesen.
+  - Kein „Aus Konfigurator übernehmen“ auf dieser Seite (nicht vorgesehen).
 
 ### **Analytics-Nutzung:**
 - **Zweck:** Tool-Optimierung basierend auf Nutzerverhalten
