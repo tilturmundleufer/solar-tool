@@ -1,9 +1,9 @@
-.fp-cart-app { max-width: 1100px; margin: 0 auto; padding: 20px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #000; }
+.fp-cart-app { max-width: 1200px; margin: 0 auto; padding: 20px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #000; box-sizing: border-box; }
 .fp-cart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .fp-cart-header h1 { margin: 0; color: #0e1e34; font-size: 24px; }
 .fp-cart-notice { color: #0e1e34; font-size: 12px; opacity: 0.9; }
-.fp-cart-main { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
-.fp-cart-item { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; background: #fff; border: 1px solid #e6eaf0; border-radius: 12px; padding: 12px; }
+.fp-cart-main { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+.fp-cart-item { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; background: #fff; border: 1px solid #e6eaf0; border-radius: 12px; padding: 12px; box-sizing: border-box; }
 .fp-cart-item img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; background: #f5f5f5; }
 .fp-cart-item .title { font-weight: 700; color: #000; margin-bottom: 4px; }
 .fp-cart-item .meta { color: #8F8F8F; font-size: 12px; }
@@ -17,7 +17,7 @@
 .fp-summary-note { font-size: 12px; color: #0e1e34; background: #fffbef; border: 1px solid #ffe7a1; border-radius: 8px; padding: 8px; line-height: 1.4; }
 .fp-summary-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
 .fp-vat-line { margin-top: 8px; font-size: 12px; color: #000; }
-.btn { width: 100%; padding: 12px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+.btn { width: 100%; padding: 12px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; line-height: 1; }
 .btn.primary { background: #FFB101; color: #000; border: none; }
 .btn.outline { background: #fff; color: #000; border: 2px solid #CECECE; }
 .btn.primary:hover { background: #e6a000; }
@@ -32,7 +32,41 @@
 .btn.card { background:#2f2f2f; color:#fff; border:none; display:flex; align-items:center; justify-content:center; gap:8px; }
 .btn.card:hover { background:#1f1f1f; }
 .fp-empty { padding: 18px; border: 1px dashed #CECECE; border-radius: 12px; text-align: center; color: #8F8F8F; }
+@media (max-width: 1200px){ .fp-cart-main { grid-template-columns: 320px 1fr; gap: 16px; } }
 @media (max-width: 920px){ .fp-cart-main { grid-template-columns: 1fr; } }
+
+@media (max-width: 920px){
+  .fp-cart-app { padding: 16px; }
+  .fp-cart-summary { position: relative; top: 0; }
+  .fp-cart-item { grid-template-columns: 64px 1fr auto; }
+  .fp-cart-item img { width: 64px; height: 64px; }
+  .qty .btn { width: 36px; min-height: 36px; }
+  .qty input { width: 56px; font-size: 15px; }
+}
+
+@media (max-width: 768px){
+  .fp-cart-app { padding: 14px; }
+  .fp-cart-item { padding: 10px; gap: 10px; }
+  .fp-cart-item .title { font-size: 15px; }
+  .proxy-label { font-size: 11px; }
+}
+
+@media (max-width: 560px){
+  .fp-cart-item { grid-template-columns: 56px 1fr; }
+  .fp-cart-item img { width: 56px; height: 56px; }
+  .fp-cart-item .meta { display: none; }
+  .fp-cart-item .price, .item-price { min-width: auto; text-align: left; }
+  .fp-cart-item .qty { order: 3; grid-column: 2 / -1; margin-top: 8px; }
+  .fp-cart-item .actions { order: 4; }
+  .btn { padding: 14px 16px; }
+}
+
+@media (max-width: 420px){
+  .fp-cart-app { padding: 12px; }
+  .fp-cart-header h1 { font-size: 20px; }
+  .fp-summary-row { gap: 8px; }
+  .qty input { width: 48px; font-size: 14px; }
+}
 
 /* rechte Spalte */
 .fp-right { display: flex; flex-direction: column; gap: 16px; }
@@ -44,7 +78,7 @@
 
 /* Menge-Steuerung hübscher */
 .qty { display: inline-flex; align-items: center; gap: 6px; background: #f8f9fa; border: 1px solid #e6eaf0; border-radius: 8px; padding: 4px; }
-.qty .btn { width: 32px; padding: 6px 0; border-radius: 6px; }
-.qty input { width: 56px; border: none; background: transparent; font-weight: 700; text-align: center; }
+.qty .btn { width: 40px; min-height: 40px; padding: 0; border-radius: 8px; }
+.qty input { width: 64px; border: none; background: transparent; font-weight: 700; text-align: center; font-size: 16px; }
 
 
