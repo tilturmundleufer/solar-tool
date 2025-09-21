@@ -2,8 +2,7 @@
 .fp-cart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .fp-cart-header h1 { margin: 0; color: #0e1e34; font-size: 24px; }
 .fp-cart-notice { color: #0e1e34; font-size: 12px; opacity: 0.9; }
-.fp-cart-main { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
-.fp-cart-items { display: flex; flex-direction: column; gap: 12px; }
+.fp-cart-main { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
 .fp-cart-item { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; background: #fff; border: 1px solid #e6eaf0; border-radius: 12px; padding: 12px; }
 .fp-cart-item img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; background: #f5f5f5; }
 .fp-cart-item .title { font-weight: 700; color: #000; margin-bottom: 4px; }
@@ -23,5 +22,11 @@
 .btn.outline:hover { border-color: #000; }
 .fp-empty { padding: 18px; border: 1px dashed #CECECE; border-radius: 12px; text-align: center; color: #8F8F8F; }
 @media (max-width: 920px){ .fp-cart-main { grid-template-columns: 1fr; } }
+
+/* Proxy Slots */
+.fp-proxies { display: flex; flex-direction: column; gap: 16px; }
+.fp-proxy-section { background: #fff; border: 1px solid #e6eaf0; border-radius: 12px; padding: 12px; }
+.proxy-label { font-size: 12px; color: #8F8F8F; margin-bottom: 8px; }
+.proxy-slot { min-height: 48px; border: 1px dashed #CECECE; border-radius: 10px; padding: 8px; display: flex; align-items: center; justify-content: center; }
 
 

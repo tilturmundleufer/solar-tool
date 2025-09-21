@@ -120,35 +120,10 @@
   }
 
   function render(){
-    var root = document.getElementById('fp-cart-items'); if(!root) return;
+    // Nur Summary aktualisieren + Proxy-Slots auffüllen
     var items = getCartItems();
-    root.innerHTML = '';
-    if(!items.length){ root.innerHTML = '<div class="fp-empty">Ihr Warenkorb ist leer.</div>'; updateSummary(0); return; }
-    items.forEach(function(it){
-      var row = document.createElement('div'); row.className = 'fp-cart-item';
-      var img = document.createElement('img'); img.src = it.img || ''; img.alt = it.name || '';
-      var info = document.createElement('div');
-      var title = document.createElement('div'); title.className = 'title'; title.textContent = it.name || 'Produkt';
-      var meta = document.createElement('div'); meta.className = 'meta'; meta.textContent = it.key ? ('Key: '+it.key) : (it.variantId || it.productId || '');
-      info.appendChild(title); info.appendChild(meta);
-      var right = document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
-      var qty = document.createElement('div'); qty.className = 'qty';
-      var minus = document.createElement('button'); minus.className='btn outline'; minus.style.width='36px'; minus.textContent = '−';
-      var input = document.createElement('input'); input.type='number'; input.min='0'; input.value=String(it.quantity);
-      var plus = document.createElement('button'); plus.className='btn outline'; plus.style.width='36px'; plus.textContent = '+';
-      var remove = document.createElement('button'); remove.className='btn outline'; remove.textContent='Entfernen';
-      qty.appendChild(minus); qty.appendChild(input); qty.appendChild(plus);
-      right.appendChild(qty); right.appendChild(remove);
-      var price = document.createElement('div'); price.className='price'; price.textContent = '—';
-      row.appendChild(img); row.appendChild(info); row.appendChild(right);
-      // events
-      minus.addEventListener('click', async function(){ var current=parseInt(input.value,10)||0; if(current>0){ input.value=String(current-1); await setItemQuantityByDelta(it, -1); }});
-      plus.addEventListener('click', async function(){ input.value=String((parseInt(input.value,10)||0)+1); await setItemQuantityByDelta(it, +1); });
-      input.addEventListener('change', async function(){ var v=parseInt(input.value,10); if(!isFinite(v)||v<0){ input.value=String(it.quantity); return; } var delta=v - it.quantity; if(delta!==0){ await setItemQuantityByDelta(it, delta); }});
-      remove.addEventListener('click', async function(){ var btn=findRemoveButton(it.el); if(btn){ btn.click(); await waitAck(1500); }});
-      root.appendChild(row);
-    });
-    var st = computeSubtotalNet(items); updateSummary(st.subtotal);
+    if(!items.length){ updateSummary(0); fillProxySlots(); return; }
+    var st = computeSubtotalNet(items); updateSummary(st.subtotal); fillProxySlots();
   }
 
   function updateSummary(subtotal){
@@ -176,17 +151,51 @@
       for(var i=0;i<items.length;i++){ var btn=findRemoveButton(items[i].el); if(btn){ btn.click(); await waitAck(1500); } }
     }); }
     var checkout = document.getElementById('fp-checkout');
-    if(checkout){ checkout.addEventListener('click', function(){
-      // Attempt to click native cart checkout if present
-      var sels = ['[data-node-type*="checkout" i]', '.w-commerce-commercecartcheckoutbutton', 'a[href*="checkout" i]'];
-      for(var i=0;i<sels.length;i++){ var b=document.querySelector(sels[i]); if(b){ b.click(); return; } }
-    }); }
+    if(checkout){ checkout.addEventListener('click', function(){ clickNativeCheckout(); }); }
     // Mutations → rerender
     var list = getCartList();
     if(list){ try{ var mo = new MutationObserver(function(){ render(); }); mo.observe(list,{childList:true,subtree:true}); }catch(_){ } }
     // Customer type changes from popup
     try{ if(window.CartCompatibility && typeof window.CartCompatibility.schedule==='function'){ window.CartCompatibility.schedule(200); } }catch(_){ }
     render();
+  }
+
+  function fillProxySlots(){
+    try{
+      var checkoutBtn = document.querySelector('.w-commerce-commercecartcheckoutbutton, [data-node-type="cart-checkout-button"], [data-node-type*="checkout" i]');
+      var checkoutSlot = document.getElementById('fp-checkout-slot');
+      if(checkoutBtn && checkoutSlot && checkoutBtn !== checkoutSlot && !checkoutSlot.contains(checkoutBtn)){
+        // Klonen statt verschieben (um Webflow Event-Bindings zu behalten, vermeiden wir Parent-Containment)
+        var clone = checkoutBtn.cloneNode(true);
+        clone.addEventListener('click', function(e){ e.preventDefault(); clickNativeCheckout(); });
+        checkoutSlot.innerHTML = ''; checkoutSlot.appendChild(clone);
+      }
+    }catch(_){ }
+    try{
+      var quick = document.querySelector('[data-node-type="commerce-cart-quick-checkout-button"], .w-commerce-commercecartquickcheckoutbutton');
+      var quickSlot = document.getElementById('fp-quick-slot');
+      if(quick && quickSlot && quick !== quickSlot && !quickSlot.contains(quick)){
+        var q = quick.cloneNode(true);
+        q.addEventListener('click', function(e){ e.preventDefault(); try{ quick.click(); }catch(_){ } });
+        quickSlot.innerHTML=''; quickSlot.appendChild(q);
+      }
+    }catch(_){ }
+    try{
+      var paypalContainer = document.querySelector('[data-wf-paypal-button], [data-node-type="commerce-cart-quick-checkout-actions"] + div[id^="zoid-paypal-buttons"], [data-node-type="commerce-cart-quick-checkout-actions"] .paypal-buttons');
+      var paypalSlot = document.getElementById('fp-paypal-slot');
+      if(paypalContainer && paypalSlot){
+        // Statt verschieben: Einen transparenteren Proxy-Button einfügen, der das Original klickt.
+        paypalSlot.innerHTML='';
+        var payBtn = document.createElement('button'); payBtn.className='btn primary'; payBtn.textContent='Pay with PayPal';
+        payBtn.addEventListener('click', function(e){ e.preventDefault(); try{ var iframe=document.querySelector('.paypal-buttons iframe.component-frame'); if(iframe){ iframe.contentWindow.postMessage({event:'click'}, '*'); } else { paypalContainer.querySelector('iframe,button,a')?.click(); } }catch(_){ } });
+        paypalSlot.appendChild(payBtn);
+      }
+    }catch(_){ }
+  }
+
+  function clickNativeCheckout(){
+    var sels = ['[data-node-type*="checkout" i]', '.w-commerce-commercecartcheckoutbutton', 'a[href*="checkout" i]'];
+    for(var i=0;i<sels.length;i++){ var b=document.querySelector(sels[i]); if(b){ try{ b.click(); return; }catch(_){ } } }
   }
 
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', init); } else { init(); }
