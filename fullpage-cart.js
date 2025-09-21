@@ -374,6 +374,26 @@
       var paypalSlot = document.getElementById('fp-paypal-slot');
       if(paypalSlot){
         paypalSlot.innerHTML='';
+
+        // 1) Bevor wir Proxy-Buttons bauen: versuche, die nativen PayPal-Buttons umzuhängen
+        try{
+          var nativePP = document.querySelector('[data-wf-paypal-button]');
+          if(nativePP && !nativePP.getAttribute('data-fp-mounted')){
+            nativePP.setAttribute('data-fp-mounted','1');
+            nativePP.style.display = 'block';
+            nativePP.style.opacity = '1';
+            nativePP.style.visibility = 'visible';
+            nativePP.style.position = 'static';
+            nativePP.style.width = '100%';
+            paypalSlot.appendChild(nativePP);
+            // Wenn native Buttons gemountet sind, blenden wir unsere alternativen Slots aus
+            var s1=document.getElementById('fp-paypal-sepa'); if(s1) s1.style.display='none';
+            var s2=document.getElementById('fp-paypal-card'); if(s2) s2.style.display='none';
+            // Und überspringen den Proxy-Aufbau, da die echten Buttons nun hier stehen
+            return;
+          }
+        }catch(_){ }
+
         function makeBtn(label, cls, iconSrc){
           var b=document.createElement('button'); b.className='btn '+cls;
           var i=document.createElement('img'); i.className='pay-icon'; i.alt=''; i.src=iconSrc; b.appendChild(i);
@@ -393,12 +413,9 @@
             if(!b){ flashNotice('PayPal ist noch nicht bereit. Bitte erneut versuchen.'); return; }
             if(b.tagName && b.tagName.toLowerCase()==='iframe'){
               try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
-              // Fallback: versuche das Smart-Buttons Shadow DOM zu treffen
-              try{
-                var doc = b.contentDocument || b.contentWindow && b.contentWindow.document;
-                var innerBtn = doc && doc.querySelector('[data-funding-source="paypal"], button, div[role="button"], div[role="link"]');
-                if(innerBtn){ triggerSyntheticClick(innerBtn); return; }
-              }catch(_){ }
+              // Kann aus Sicherheitsgründen häufig NICHT direkt angeklickt werden → Nutzerhinweis
+              flashNotice('Bitte den PayPal-Button im eingebetteten Bereich klicken.');
+              return;
             }
             withTemporarilyShown(b, function(){
               try{ b.focus && b.focus(); }catch(_){ }
@@ -420,11 +437,8 @@
               if(!b){ flashNotice('SEPA ist noch nicht bereit. Bitte erneut versuchen.'); return; }
               if(b.tagName && b.tagName.toLowerCase()==='iframe'){
                 try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
-                try{
-                  var doc = b.contentDocument || b.contentWindow && b.contentWindow.document;
-                  var innerBtn = doc && doc.querySelector('[data-funding-source="sepa"], button, div[role="button"], div[role="link"]');
-                  if(innerBtn){ triggerSyntheticClick(innerBtn); return; }
-                }catch(_){ }
+                flashNotice('Bitte SEPA im PayPal-Bereich direkt auswählen.');
+                return;
               }
               withTemporarilyShown(b, function(){ try{ b.focus && b.focus(); }catch(_){ } triggerSyntheticClick(b); });
             }catch(_){ } finally { try{ btnSEPA.disabled=false; }catch(__){} }
@@ -443,11 +457,8 @@
               if(!b){ flashNotice('Kartenzahlung ist noch nicht bereit. Bitte erneut versuchen.'); return; }
               if(b.tagName && b.tagName.toLowerCase()==='iframe'){
                 try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
-                try{
-                  var doc = b.contentDocument || b.contentWindow && b.contentWindow.document;
-                  var innerBtn = doc && doc.querySelector('[data-funding-source="card"], button, div[role="button"], div[role="link"]');
-                  if(innerBtn){ triggerSyntheticClick(innerBtn); return; }
-                }catch(_){ }
+                flashNotice('Bitte Karte direkt im PayPal-Bereich wählen.');
+                return;
               }
               withTemporarilyShown(b, function(){ try{ b.focus && b.focus(); }catch(_){ } triggerSyntheticClick(b); });
             }catch(_){ } finally { try{ btnCARD.disabled=false; }catch(__){} }
