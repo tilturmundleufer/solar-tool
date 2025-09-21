@@ -28,8 +28,14 @@
     if(!list) return [];
     var nodes = Array.from(list.querySelectorAll('.w-commerce-commercecartitem, [data-node-type="commerce-cart-item"]'));
     return nodes.map(function(el){
-      var pid = el.getAttribute('data-commerce-product-id') || (el.querySelector('[data-commerce-product-id]') && el.querySelector('[data-commerce-product-id]').getAttribute('data-commerce-product-id')) || '';
-      var vid = el.getAttribute('data-commerce-sku-id') || (el.querySelector('[data-commerce-sku-id]') && el.querySelector('[data-commerce-sku-id]').getAttribute('data-commerce-sku-id')) || '';
+      var pid = el.getAttribute('data-commerce-product-id') || '';
+      var vid = el.getAttribute('data-commerce-sku-id') || '';
+      if(!pid){ var pidEl = el.querySelector('[data-commerce-product-id]'); if(pidEl){ pid = pidEl.getAttribute('data-commerce-product-id') || ''; } }
+      if(!vid){
+        var vidEl = el.querySelector('[data-commerce-sku-id]');
+        if(vidEl){ vid = vidEl.getAttribute('data-commerce-sku-id') || ''; }
+        if(!vid){ var rem = el.querySelector('[data-wf-cart-action="remove-item"]'); if(rem){ vid = rem.getAttribute('data-commerce-sku-id') || ''; } }
+      }
       var qtyEl = el.querySelector('input[type="number"], input[data-node-type*="quantity"], .w-commerce-commercecartquantity input, input[name*="quantity" i]');
       var qty = 1; try{ var v = parseInt(qtyEl && qtyEl.value, 10); qty = (isFinite(v)&&v>0)?v:1; }catch(_){ }
       var name = ''; var nameSel = ['.w-commerce-commercecartproductname','[data-node-type*="product" i]','.text-block-18','.text-block-5','h1,h2,h3,h4,div,span'];
@@ -158,11 +164,7 @@
         right.appendChild(qty); right.appendChild(priceTotal); right.appendChild(remove);
         row.appendChild(img); row.appendChild(info); row.appendChild(right);
         minus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=Math.max(0,c-1); input.value=String(next); await setItemQuantityByDelta(it, next-c); });
-        plus.addEventListener('click', async function(){
-          // Wenn ein Add-Form existiert, füge exakt 1 hinzu (delta=+1)
-          var c=parseInt(input.value,10)||0; var next=c+1; input.value=String(next);
-          await setItemQuantityByDelta(it, +1);
-        });
+        plus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=c+1; input.value=String(next); await setItemQuantityByDelta(it, next-c); });
         input.addEventListener('change', async function(){ var v=parseInt(input.value,10); if(!isFinite(v)||v<0){ input.value=String(it.quantity); return; } var d=v-it.quantity; if(d!==0){ await setItemQuantityByDelta(it,d); }});
         remove.addEventListener('click', async function(){ var btn=findRemoveButton(it.el); if(btn){ btn.click(); await waitAck(1500); }});
         root.appendChild(row);
@@ -218,35 +220,41 @@
 
   function fillProxySlots(){
     try{
-      var checkoutBtn = document.querySelector('.w-commerce-commercecartcheckoutbutton, [data-node-type="cart-checkout-button"], [data-node-type*="checkout" i]');
       var checkoutSlot = document.getElementById('fp-checkout-slot');
-      if(checkoutBtn && checkoutSlot && checkoutBtn !== checkoutSlot && !checkoutSlot.contains(checkoutBtn)){
-        // Klonen statt verschieben (um Webflow Event-Bindings zu behalten, vermeiden wir Parent-Containment)
-        var clone = checkoutBtn.cloneNode(true);
-        clone.addEventListener('click', function(e){ e.preventDefault(); clickNativeCheckout(); });
-        checkoutSlot.innerHTML = ''; checkoutSlot.appendChild(clone);
+      if(checkoutSlot){
+        checkoutSlot.innerHTML='';
+        var btn=document.createElement('button'); btn.className='btn primary'; btn.textContent='Weiter zur Kasse';
+        btn.addEventListener('click', function(){ clickNativeCheckout(); });
+        checkoutSlot.appendChild(btn);
       }
     }catch(_){ }
     try{
-      var quick = document.querySelector('[data-node-type="commerce-cart-quick-checkout-button"], .w-commerce-commercecartquickcheckoutbutton');
       var quickSlot = document.getElementById('fp-quick-slot');
-      if(quick && quickSlot && quick !== quickSlot && !quickSlot.contains(quick)){
-        var q = quick.cloneNode(true);
-        q.addEventListener('click', function(e){ e.preventDefault(); try{ quick.click(); }catch(_){ } });
-        quickSlot.innerHTML=''; quickSlot.appendChild(q);
+      if(quickSlot){
+        quickSlot.innerHTML='';
+        var qb=document.createElement('button'); qb.className='btn outline'; qb.textContent='Pay with browser.';
+        qb.addEventListener('click', function(){
+          try{ var quick = document.querySelector('[data-node-type="commerce-cart-quick-checkout-button"], .w-commerce-commercecartquickcheckoutbutton'); if(quick){ quick.click(); } }catch(_){ }
+        });
+        quickSlot.appendChild(qb);
       }
     }catch(_){ }
     try{
-      var paypalContainer = document.querySelector('[data-wf-paypal-button]');
       var paypalSlot = document.getElementById('fp-paypal-slot');
-      if(paypalContainer && paypalSlot){
-        // Klone den kompletten PayPal-Container, damit alle Buttons/Styles erhalten bleiben
-        var cloneWrap = paypalContainer.cloneNode(true);
-        paypalSlot.innerHTML=''; paypalSlot.appendChild(cloneWrap);
-      }else{
-        // generische Fallbacks
-        var generic = document.querySelector('.paypal-buttons');
-        if(generic && paypalSlot){ paypalSlot.innerHTML=''; paypalSlot.appendChild(generic.cloneNode(true)); }
+      if(paypalSlot){
+        paypalSlot.innerHTML='';
+        var pb=document.createElement('button'); pb.className='btn primary'; pb.textContent='Pay with PayPal';
+        pb.addEventListener('click', function(){
+          try{
+            // Bevorzugt Smart Buttons via iframe triggern
+            var iframe=document.querySelector('[data-wf-paypal-button] iframe.component-frame, .paypal-buttons iframe.component-frame');
+            if(iframe && iframe.contentWindow){ iframe.contentWindow.postMessage({event:'click'}, '*'); return; }
+            // Fallback: einen sichtbaren PayPal-Button klicken
+            var nativeBtn = document.querySelector('[data-wf-paypal-button] button, .paypal-buttons button, [data-node-type="commerce-cart-quick-checkout-actions"] button');
+            if(nativeBtn){ nativeBtn.click(); }
+          }catch(_){ }
+        });
+        paypalSlot.appendChild(pb);
       }
     }catch(_){ }
   }
