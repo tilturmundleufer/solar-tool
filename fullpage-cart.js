@@ -279,14 +279,12 @@
         });
         paypalSlot.appendChild(btnPP);
 
-        var altWrap=document.getElementById('fp-paypal-alt');
-        if(altWrap){ altWrap.style.display='block'; }
         var sepaSlot=document.getElementById('fp-paypal-sepa');
         if(sepaSlot){
           sepaSlot.innerHTML='';
           var btnSEPA=makeBtn('Pay with SEPA','sepa',sepaIcon);
           btnSEPA.addEventListener('click', function(){
-            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="sepa"], .paypal-buttons [data-funding-source="sepa"], [aria-label="sepa" i]'); if(b){ b.click(); } }catch(_){ }
+            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="sepa"], .paypal-buttons [data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]'); if(b){ b.click(); } }catch(_){ }
           });
           sepaSlot.appendChild(btnSEPA);
         }
@@ -295,7 +293,7 @@
           cardSlot.innerHTML='';
           var btnCARD=makeBtn('Debit or Credit Card','card',cardIcon);
           btnCARD.addEventListener('click', function(){
-            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="card"], .paypal-buttons [data-funding-source="card"], [aria-label*="Credit Card" i]'); if(b){ b.click(); } }catch(_){ }
+            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="card"], .paypal-buttons [data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]'); if(b){ b.click(); } }catch(_){ }
           });
           cardSlot.appendChild(btnCARD);
         }
