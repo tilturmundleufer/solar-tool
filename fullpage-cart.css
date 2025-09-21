@@ -15,6 +15,7 @@
 .fp-summary-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .fp-summary-note { font-size: 12px; color: #0e1e34; background: #fffbef; border: 1px solid #ffe7a1; border-radius: 8px; padding: 8px; line-height: 1.4; }
 .fp-summary-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.fp-vat-line { margin-top: 8px; font-size: 12px; color: #000; }
 .btn { width: 100%; padding: 12px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; }
 .btn.primary { background: #FFB101; color: #000; border: none; }
 .btn.outline { background: #fff; color: #000; border: 2px solid #CECECE; }
@@ -27,8 +28,14 @@
 .fp-right { display: flex; flex-direction: column; gap: 16px; }
 .fp-cart-items { display: flex; flex-direction: column; gap: 10px; }
 .fp-payments-box { background: #fff; border: 1px solid #e6eaf0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-.fp-proxy-section { background: #fff; border: 1px dashed #e6eaf0; border-radius: 12px; padding: 12px; }
+.fp-payments-box--left { grid-column: 1 / 2; }
+.fp-proxy-section { background: #fff; border: 1px solid #e6eaf0; border-radius: 12px; padding: 12px; }
 .proxy-label { font-size: 12px; color: #8F8F8F; margin-bottom: 8px; }
-.proxy-slot { min-height: 48px; border: 1px dashed #CECECE; border-radius: 10px; padding: 8px; display: flex; align-items: center; justify-content: center; }
+.proxy-slot { min-height: 48px; border: none; border-radius: 10px; padding: 0; display: flex; align-items: center; justify-content: center; }
+
+/* Menge-Steuerung hübscher */
+.qty { display: inline-flex; align-items: center; gap: 6px; background: #f8f9fa; border: 1px solid #e6eaf0; border-radius: 8px; padding: 4px; }
+.qty .btn { width: 32px; padding: 6px 0; border-radius: 6px; }
+.qty input { width: 56px; border: none; background: transparent; font-weight: 700; text-align: center; }
 
 

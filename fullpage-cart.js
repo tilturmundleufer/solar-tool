@@ -104,17 +104,21 @@
     return null;
   }
 
+  function parsePriceEU(str){
+    var s=(str||'').toString().trim();
+    s=s.replace(/\u00a0/g,' ').replace(/[^0-9,\.]/g,'');
+    if(/,\d{2}$/.test(s)){ s=s.replace(/\./g,'').replace(',', '.'); }
+    var n=parseFloat(s); return isFinite(n)?n:0;
+  }
   function computeSubtotalNet(items){
-    // We only display net subtotal. Try to read per-item totals; if not feasible, show placeholder.
+    var totalNode = document.querySelector('.w-commerce-commercecartordervalue, [data-node-type*="ordervalue" i]');
+    var total = 0;
+    if(totalNode){ total = parsePriceEU(totalNode.textContent||''); }
+    if(total>0) return { subtotal: total, reliable: true };
     var sum = 0; var found = false;
     items.forEach(function(it){
-      var priceNode = it.el.querySelector('.w-commerce-commercecartitemprice, [data-node-type*="price" i]');
-      if(priceNode){
-        var raw = (priceNode.textContent||'').toLowerCase();
-        // Strip currency and thousands, try parse in EU style
-        var num = parseFloat(raw.replace(/[^0-9,\.]/g,'').replace('.', '').replace(',', '.'));
-        if(isFinite(num)){ sum += num; found = true; }
-      }
+      var priceNode = it.el.querySelector('.w-commerce-commercecartitemprice, [data-node-type*="price" i], .text-block-5');
+      if(priceNode){ var val=parsePriceEU(priceNode.textContent||''); if(val>0){ sum+=val; found=true; } }
     });
     return { subtotal: sum, reliable: found };
   }
@@ -131,7 +135,13 @@
         var img = document.createElement('img'); img.src=it.img||''; img.alt=it.name||'';
         var info=document.createElement('div');
         var title=document.createElement('div'); title.className='title'; title.textContent=it.name||'Produkt';
-        var meta=document.createElement('div'); meta.className='meta'; meta.textContent=it.key || it.variantId || it.productId || '';
+        var meta=document.createElement('div'); meta.className='meta';
+        try{
+          var keyGuess = it.key || getKeyFromIds(it.productId, it.variantId) || '';
+          var veMap = (window.VE) || (window.VE_VALUES);
+          if(veMap && keyGuess && veMap[keyGuess]){ meta.textContent = 'VE: ' + veMap[keyGuess]; }
+          else { meta.textContent = ''; }
+        }catch(_){ meta.textContent=''; }
         info.appendChild(title); info.appendChild(meta);
         var right=document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
         var qty=document.createElement('div'); qty.className='qty';
@@ -142,8 +152,8 @@
         qty.appendChild(minus); qty.appendChild(input); qty.appendChild(plus);
         right.appendChild(qty); right.appendChild(remove);
         row.appendChild(img); row.appendChild(info); row.appendChild(right);
-        minus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; if(c>0){ input.value=String(c-1); await setItemQuantityByDelta(it,-1); }});
-        plus.addEventListener('click', async function(){ input.value=String((parseInt(input.value,10)||0)+1); await setItemQuantityByDelta(it, +1); });
+        minus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=Math.max(0,c-1); input.value=String(next); await setItemQuantityByDelta(it, next-c); });
+        plus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=c+1; input.value=String(next); await setItemQuantityByDelta(it, next-c); });
         input.addEventListener('change', async function(){ var v=parseInt(input.value,10); if(!isFinite(v)||v<0){ input.value=String(it.quantity); return; } var d=v-it.quantity; if(d!==0){ await setItemQuantityByDelta(it,d); }});
         remove.addEventListener('click', async function(){ var btn=findRemoveButton(it.el); if(btn){ btn.click(); await waitAck(1500); }});
         root.appendChild(row);
@@ -154,14 +164,18 @@
 
   function updateSummary(subtotal){
     var net = subtotal||0;
-    // Falls Firmenkunde und Preise im Cart brutto sind, Netto approximieren (÷1.19)
-    try{ if(isBusiness()){ net = net/1.19; } }catch(_){ }
-    try{ document.getElementById('fp-subtotal').textContent = fmtEuro(net); }catch(_){ }
-    var note = document.getElementById('fp-summary-note'); if(!note) return;
+    var note = document.getElementById('fp-summary-note');
+    var vatLine = document.getElementById('fp-vat-line');
     if(isPrivate()){
-      note.textContent = 'Bei den angebeben Preisen handelt es sich um Nettobeträge. Privatkunden profitieren von 0% MwSt Gemäß §12 Abs. 3 UstG';
+      try{ document.getElementById('fp-subtotal').textContent = fmtEuro(net); }catch(_){ }
+      if(note) note.textContent = 'Bei den angebeben Preisen handelt es sich um Nettobeträge. Privatkunden profitieren von 0% MwSt Gemäß §12 Abs. 3 UstG';
+      if(vatLine) vatLine.textContent = '';
     }else{
-      note.textContent = 'Firmenkunden wird die MwSt im Bestellprozess berechnet.';
+      var vat = net * 0.19;
+      var gross = net + vat;
+      try{ document.getElementById('fp-subtotal').textContent = fmtEuro(net); }catch(_){ }
+      if(note) note.textContent = 'Firmenkunden wird die MwSt im Bestellprozess berechnet.';
+      if(vatLine) vatLine.textContent = 'zzgl. 19% MwSt: ' + fmtEuro(vat) + ' • Brutto: ' + fmtEuro(gross);
     }
   }
 
