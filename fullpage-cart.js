@@ -169,8 +169,11 @@
         qty.appendChild(minus); qty.appendChild(input); qty.appendChild(plus);
         right.appendChild(qty); right.appendChild(priceTotal); right.appendChild(remove);
         row.appendChild(img); row.appendChild(info); row.appendChild(right);
-        minus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=Math.max(0,c-1); input.value=String(next); await setItemQuantityByDelta(it, next-c); });
-        plus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=c+1; input.value=String(next); await setItemQuantityByDelta(it, next-c); });
+        function setNativeQuantity(target){
+          try{ var qEl = it.el.querySelector('input[type="number"], input[data-node-type*="quantity"], .w-commerce-commercecartquantity input, input[name*="quantity" i]'); if(qEl){ qEl.value = target; qEl.dispatchEvent(new Event('change', { bubbles:true })); } }catch(_){ }
+        }
+        minus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=Math.max(0,c-1); input.value=String(next); setNativeQuantity(next); await waitAck(1500); });
+        plus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=c+1; input.value=String(next); setNativeQuantity(next); await waitAck(1500); });
         input.addEventListener('change', async function(){ var v=parseInt(input.value,10); if(!isFinite(v)||v<0){ input.value=String(it.quantity); return; } var d=v-it.quantity; if(d!==0){ await setItemQuantityByDelta(it,d); }});
         remove.addEventListener('click', async function(){ var btn=findRemoveButton(it.el); if(btn){ btn.click(); await waitAck(1500); }});
         root.appendChild(row);
