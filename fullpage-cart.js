@@ -203,7 +203,7 @@
           else { meta.textContent = ''; }
         }catch(_){ meta.textContent=''; }
         info.appendChild(title); info.appendChild(meta);
-        var right=document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='12px';
+        var right=document.createElement('div'); right.className='fp-right-cell'; right.style.display='flex'; right.style.alignItems='center'; right.style.gap='12px';
         var qty=document.createElement('div'); qty.className='qty';
         var minus=document.createElement('button'); minus.className='btn outline'; minus.style.width='36px'; minus.textContent='−';
         var input=document.createElement('input'); input.type='number'; input.min='0'; input.value=String(it.quantity);
@@ -213,7 +213,7 @@
         var single = parsePriceEU(priceNode ? priceNode.textContent : '0');
         var total = single * (it.quantity||1);
         var priceTotal = document.createElement('div'); priceTotal.className='item-price'; priceTotal.textContent = fmtEuro(total);
-        var remove=document.createElement('button'); remove.className='btn outline'; remove.textContent='Entfernen';
+        var remove=document.createElement('button'); remove.className='btn outline remove-btn'; remove.textContent='Entfernen';
         qty.appendChild(minus); qty.appendChild(input); qty.appendChild(plus);
         right.appendChild(qty); right.appendChild(priceTotal); right.appendChild(remove);
         row.appendChild(img); row.appendChild(info); row.appendChild(right);
