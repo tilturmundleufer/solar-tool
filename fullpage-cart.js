@@ -391,9 +391,13 @@
                 el.style.zIndex = '2147483000';
                 el.style.pointerEvents = 'auto';
                 el.style.opacity = '1';
-                // Zeige SEPA/Card nicht doppelt, wenn native Buttons sichtbar sind
-                var s1=document.getElementById('fp-paypal-sepa'); if(s1) s1.style.display='none';
-                var s2=document.getElementById('fp-paypal-card'); if(s2) s2.style.display='none';
+                // Zeige alle Funding Buttons (PayPal/SEPA/Card)
+                try{
+                  var iframe = el.querySelector('iframe.component-frame');
+                  if(iframe && iframe.contentWindow){
+                    try{ iframe.contentWindow.postMessage({event:'render', funding:['paypal','sepa','card']}, '*'); }catch(_){ }
+                  }
+                }catch(_){ }
               }catch(_){ }
             };
             placeOver();
