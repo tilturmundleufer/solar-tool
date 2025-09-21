@@ -119,7 +119,44 @@
     return null;
   }
 
+  // Temporär versteckte PayPal-/Cart-Container sichtbar (unsichtbar) machen,
+  // damit Buttons/iframes zuverlässig gerendert und klickbar sind
+  function preparePayPalVisibility(){
+    var modified = [];
+    try{
+      var containers = Array.from(document.querySelectorAll('[data-wf-paypal-button], .paypal-buttons, .w-commerce-commercecartcontainer, .w-commerce-commercecartcontainerwrapper, .w-commerce-commercecartwrapper'));
+      containers.forEach(function(n){
+        try{
+          var cs = window.getComputedStyle(n);
+          if(!cs) return;
+          if(cs.display==='none' || cs.visibility==='hidden'){
+            modified.push({ node:n, old:n.getAttribute('style') });
+            n.style.display='block';
+            n.style.visibility='hidden';
+            n.style.opacity='0';
+            n.style.position='fixed';
+            n.style.left='-9999px';
+            n.style.top='-9999px';
+            n.style.width='10px';
+            n.style.height='10px';
+          }
+        }catch(_){ }
+      });
+      try{ window.dispatchEvent(new Event('resize')); }catch(_){ }
+      try{ document.body && document.body.offsetHeight; }catch(_){ }
+    }catch(_){ }
+    return function cleanup(){
+      try{
+        modified.forEach(function(m){
+          if(m.old == null){ m.node.removeAttribute('style'); }
+          else { m.node.setAttribute('style', m.old); }
+        });
+      }catch(_){ }
+    };
+  }
+
   function waitForFundingButton(funding, timeoutMs){
+    var cleanup = preparePayPalVisibility();
     return new Promise(function(resolve){
       var started = Date.now();
       (function poll(){
@@ -129,10 +166,10 @@
           var iframe=document.querySelector('[data-wf-paypal-button] iframe.component-frame, .paypal-buttons iframe.component-frame');
           if(iframe) return resolve(iframe);
         }catch(_){ }
-        if(Date.now() - started >= (timeoutMs||8000)) return resolve(null);
+        if(Date.now() - started >= (timeoutMs||10000)) return resolve(null);
         setTimeout(poll, 200);
       })();
-    });
+    }).then(function(node){ try{ cleanup && cleanup(); }catch(_){ } return node; });
   }
   function clickAddForm(form, quantity){
     try{ var q=form.querySelector('input[name="commerce-add-to-cart-quantity-input"]'); if(q){ q.value = quantity; } }catch(_){ }
