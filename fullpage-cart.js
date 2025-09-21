@@ -120,9 +120,35 @@
   }
 
   function render(){
-    // Nur Summary aktualisieren + Proxy-Slots auffüllen
+    // Summary + Items rendern + Proxy-Slots auffüllen
     var items = getCartItems();
-    if(!items.length){ updateSummary(0); fillProxySlots(); return; }
+    var root = document.getElementById('fp-cart-items');
+    if(root){
+      root.innerHTML = '';
+      if(!items.length){ root.innerHTML = '<div class="fp-empty">Ihr Warenkorb ist leer.</div>'; }
+      items.forEach(function(it){
+        var row = document.createElement('div'); row.className='fp-cart-item';
+        var img = document.createElement('img'); img.src=it.img||''; img.alt=it.name||'';
+        var info=document.createElement('div');
+        var title=document.createElement('div'); title.className='title'; title.textContent=it.name||'Produkt';
+        var meta=document.createElement('div'); meta.className='meta'; meta.textContent=it.key || it.variantId || it.productId || '';
+        info.appendChild(title); info.appendChild(meta);
+        var right=document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
+        var qty=document.createElement('div'); qty.className='qty';
+        var minus=document.createElement('button'); minus.className='btn outline'; minus.style.width='36px'; minus.textContent='−';
+        var input=document.createElement('input'); input.type='number'; input.min='0'; input.value=String(it.quantity);
+        var plus=document.createElement('button'); plus.className='btn outline'; plus.style.width='36px'; plus.textContent='+';
+        var remove=document.createElement('button'); remove.className='btn outline'; remove.textContent='Entfernen';
+        qty.appendChild(minus); qty.appendChild(input); qty.appendChild(plus);
+        right.appendChild(qty); right.appendChild(remove);
+        row.appendChild(img); row.appendChild(info); row.appendChild(right);
+        minus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; if(c>0){ input.value=String(c-1); await setItemQuantityByDelta(it,-1); }});
+        plus.addEventListener('click', async function(){ input.value=String((parseInt(input.value,10)||0)+1); await setItemQuantityByDelta(it, +1); });
+        input.addEventListener('change', async function(){ var v=parseInt(input.value,10); if(!isFinite(v)||v<0){ input.value=String(it.quantity); return; } var d=v-it.quantity; if(d!==0){ await setItemQuantityByDelta(it,d); }});
+        remove.addEventListener('click', async function(){ var btn=findRemoveButton(it.el); if(btn){ btn.click(); await waitAck(1500); }});
+        root.appendChild(row);
+      });
+    }
     var st = computeSubtotalNet(items); updateSummary(st.subtotal); fillProxySlots();
   }
 
@@ -147,8 +173,15 @@
     // Buttons
     var clearAll = document.getElementById('fp-clear-all');
     if(clearAll){ clearAll.addEventListener('click', async function(){
-      var items = getCartItems();
-      for(var i=0;i<items.length;i++){ var btn=findRemoveButton(items[i].el); if(btn){ btn.click(); await waitAck(1500); } }
+      // Entfernen robust: solange Items existieren, entfernen und auf Ack warten
+      var guard=0;
+      while(true){
+        var items = getCartItems();
+        if(!items.length || guard++>50) break;
+        var btn = findRemoveButton(items[0].el);
+        if(btn){ btn.click(); await waitAck(1500); }
+        else { break; }
+      }
     }); }
     var checkout = document.getElementById('fp-checkout');
     if(checkout){ checkout.addEventListener('click', function(){ clickNativeCheckout(); }); }
