@@ -3,6 +3,16 @@
   function fmtEuro(n){ try{ return (n||0).toFixed(2).replace('.', ',') + ' €'; }catch(_){ return '0,00 €'; } }
   function isBusiness(){ try{ return (localStorage.getItem('solarTool_customerType') && JSON.parse(localStorage.getItem('solarTool_customerType')).type) === 'business'; }catch(_){ return false; } }
   function isPrivate(){ try{ return !isBusiness(); }catch(_){ return true; } }
+  function flashNotice(message){
+    try{
+      var n = document.getElementById('fp-cart-notice');
+      if(!n) return;
+      var old = n.getAttribute('data-old') || n.textContent || '';
+      if(!n.getAttribute('data-old')) n.setAttribute('data-old', old);
+      n.textContent = message;
+      setTimeout(function(){ try{ n.textContent = n.getAttribute('data-old') || old; }catch(_){ } }, 3000);
+    }catch(_){ }
+  }
 
   // Resolve price type via maps from popup if available
   var idToKey = { productIdToKey:{}, variantIdToKey:{} };
@@ -107,6 +117,22 @@
     ];
     for(var i=0;i<q.length;i++){ var el = document.querySelector(q[i]); if(el) return el; }
     return null;
+  }
+
+  function waitForFundingButton(funding, timeoutMs){
+    return new Promise(function(resolve){
+      var started = Date.now();
+      (function poll(){
+        try{
+          var el = findPayPalDomButton(funding) || document.querySelector('div.paypal-button[role="link"][data-funding-source="'+funding+'"]');
+          if(el) return resolve(el);
+          var iframe=document.querySelector('[data-wf-paypal-button] iframe.component-frame, .paypal-buttons iframe.component-frame');
+          if(iframe) return resolve(iframe);
+        }catch(_){ }
+        if(Date.now() - started >= (timeoutMs||8000)) return resolve(null);
+        setTimeout(poll, 200);
+      })();
+    });
   }
   function clickAddForm(form, quantity){
     try{ var q=form.querySelector('input[name="commerce-add-to-cart-quantity-input"]'); if(q){ q.value = quantity; } }catch(_){ }
@@ -321,15 +347,15 @@
         // Hinweis: verkürzte Icons; in Produktion die vollständigen base64 aus dem Webflow verwenden
 
         var btnPP=makeBtn('Pay with PayPal','paypal-blue',ppIcon);
-        btnPP.addEventListener('click', function(){
+        btnPP.addEventListener('click', async function(){
           try{
+            btnPP.disabled = true;
             var b = findPayPalDomButton('paypal') || document.querySelector('div.paypal-button.paypal-button-number-0[role="link"][data-funding-source="paypal"]');
-            if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); return; }
-            var iframe=document.querySelector('[data-wf-paypal-button] iframe.component-frame, .paypal-buttons iframe.component-frame');
-            if(iframe && iframe.contentWindow){ iframe.contentWindow.postMessage({event:'click'}, '*'); return; }
-            var bf=document.querySelector('[aria-label*="Pay with PayPal" i]');
-            if(bf){ withTemporarilyShown(bf, function(){ triggerSyntheticClick(bf); }); }
-          }catch(_){ }
+            if(!b){ b = await waitForFundingButton('paypal', 10000); }
+            if(!b){ flashNotice('PayPal ist noch nicht bereit. Bitte erneut versuchen.'); return; }
+            if(b.tagName && b.tagName.toLowerCase()==='iframe'){ try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ } }
+            withTemporarilyShown(b, function(){ triggerSyntheticClick(b); });
+          }catch(_){ } finally { try{ btnPP.disabled=false; }catch(__){} }
         });
         paypalSlot.appendChild(btnPP);
 
@@ -337,11 +363,15 @@
         if(sepaSlot){
           sepaSlot.innerHTML='';
           var btnSEPA=makeBtn('Pay with SEPA','sepa',sepaIcon);
-          btnSEPA.addEventListener('click', function(){
+          btnSEPA.addEventListener('click', async function(){
             try{
+              btnSEPA.disabled = true;
               var b = findPayPalDomButton('sepa') || document.querySelector('div.paypal-button[role="link"][data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]');
-              if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); }
-            }catch(_){ }
+              if(!b){ b = await waitForFundingButton('sepa', 10000); }
+              if(!b){ flashNotice('SEPA ist noch nicht bereit. Bitte erneut versuchen.'); return; }
+              if(b.tagName && b.tagName.toLowerCase()==='iframe'){ try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ } }
+              withTemporarilyShown(b, function(){ triggerSyntheticClick(b); });
+            }catch(_){ } finally { try{ btnSEPA.disabled=false; }catch(__){} }
           });
           sepaSlot.appendChild(btnSEPA);
         }
@@ -349,11 +379,15 @@
         if(cardSlot){
           cardSlot.innerHTML='';
           var btnCARD=makeBtn('Debit or Credit Card','card',cardIcon);
-          btnCARD.addEventListener('click', function(){
+          btnCARD.addEventListener('click', async function(){
             try{
+              btnCARD.disabled = true;
               var b = findPayPalDomButton('card') || document.querySelector('div.paypal-button[role="link"][data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
-              if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); }
-            }catch(_){ }
+              if(!b){ b = await waitForFundingButton('card', 10000); }
+              if(!b){ flashNotice('Kartenzahlung ist noch nicht bereit. Bitte erneut versuchen.'); return; }
+              if(b.tagName && b.tagName.toLowerCase()==='iframe'){ try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ } }
+              withTemporarilyShown(b, function(){ triggerSyntheticClick(b); });
+            }catch(_){ } finally { try{ btnCARD.disabled=false; }catch(__){} }
           });
           cardSlot.appendChild(btnCARD);
         }
