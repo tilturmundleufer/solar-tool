@@ -56,6 +56,55 @@
     var mo=new MutationObserver(function(){ if(!settled){ settled=true; clearTimeout(to); try{ mo.disconnect(); }catch(_){ } res(); } });
     try{ mo.observe(list,{childList:true,subtree:true}); }catch(_){ }
   }); }
+
+  // Ensure hidden native nodes can be clicked: temporarily reveal ancestors
+  function withTemporarilyShown(targetNode, action){
+    try{
+      var modified = [];
+      var n = targetNode;
+      while(n && n !== document.documentElement){
+        var cs=null; try{ cs = window.getComputedStyle(n); }catch(_){ }
+        if(cs && (cs.display === 'none' || cs.visibility === 'hidden')){
+          modified.push({ node:n, old:n.getAttribute('style') });
+          n.style.display = 'block';
+          n.style.visibility = 'hidden';
+          n.style.position = 'fixed';
+          n.style.left = '-9999px';
+          n.style.top = '-9999px';
+          n.style.width = '1px';
+          n.style.height = '1px';
+        }
+        n = n.parentElement;
+      }
+      try { action && action(); } finally {
+        setTimeout(function(){
+          modified.forEach(function(m){
+            if(m.old == null){ m.node.removeAttribute('style'); }
+            else { m.node.setAttribute('style', m.old); }
+          });
+        }, 50);
+      }
+    }catch(_){ try{ action && action(); }catch(__){} }
+  }
+
+  function triggerSyntheticClick(el){
+    try{ el.dispatchEvent(new MouseEvent('pointerdown', { bubbles:true, cancelable:true })); }catch(_){ }
+    try{ el.dispatchEvent(new MouseEvent('mousedown', { bubbles:true, cancelable:true })); }catch(_){ }
+    try{ el.dispatchEvent(new MouseEvent('mouseup', { bubbles:true, cancelable:true })); }catch(_){ }
+    try{ el.dispatchEvent(new MouseEvent('pointerup', { bubbles:true, cancelable:true })); }catch(_){ }
+    try{ el.dispatchEvent(new MouseEvent('click', { bubbles:true, cancelable:true })); }catch(_){ try{ el.click(); }catch(__){} }
+  }
+
+  function findPayPalDomButton(funding){
+    var q = [
+      'div.paypal-button[data-funding-source="'+funding+'"]',
+      'div[role="link"][data-funding-source="'+funding+'"]',
+      '[data-wf-paypal-button] [data-funding-source="'+funding+'"]',
+      '.paypal-buttons [data-funding-source="'+funding+'"]'
+    ];
+    for(var i=0;i<q.length;i++){ var el = document.querySelector(q[i]); if(el) return el; }
+    return null;
+  }
   function clickAddForm(form, quantity){
     try{ var q=form.querySelector('input[name="commerce-add-to-cart-quantity-input"]'); if(q){ q.value = quantity; } }catch(_){ }
     try{ form.querySelectorAll('select[required]').forEach(function(sel){ if(!sel.value){ var first=sel.querySelector('option[value]:not([value=""])'); if(first) sel.value = first.value; } }); }catch(_){ }
@@ -271,10 +320,12 @@
         var btnPP=makeBtn('Pay with PayPal','paypal-blue',ppIcon);
         btnPP.addEventListener('click', function(){
           try{
+            var b = findPayPalDomButton('paypal');
+            if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); return; }
             var iframe=document.querySelector('[data-wf-paypal-button] iframe.component-frame, .paypal-buttons iframe.component-frame');
             if(iframe && iframe.contentWindow){ iframe.contentWindow.postMessage({event:'click'}, '*'); return; }
-            var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="paypal"], .paypal-buttons [data-funding-source="paypal"], [aria-label*="Pay with PayPal" i]');
-            if(b){ b.click(); }
+            var bf=document.querySelector('[aria-label*="Pay with PayPal" i]');
+            if(bf){ withTemporarilyShown(bf, function(){ triggerSyntheticClick(bf); }); }
           }catch(_){ }
         });
         paypalSlot.appendChild(btnPP);
@@ -284,7 +335,10 @@
           sepaSlot.innerHTML='';
           var btnSEPA=makeBtn('Pay with SEPA','sepa',sepaIcon);
           btnSEPA.addEventListener('click', function(){
-            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="sepa"], .paypal-buttons [data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]'); if(b){ b.click(); } }catch(_){ }
+            try{
+              var b = findPayPalDomButton('sepa') || document.querySelector('[aria-label*="SEPA" i], [aria-label="sepa" i]');
+              if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); }
+            }catch(_){ }
           });
           sepaSlot.appendChild(btnSEPA);
         }
@@ -293,7 +347,10 @@
           cardSlot.innerHTML='';
           var btnCARD=makeBtn('Debit or Credit Card','card',cardIcon);
           btnCARD.addEventListener('click', function(){
-            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="card"], .paypal-buttons [data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]'); if(b){ b.click(); } }catch(_){ }
+            try{
+              var b = findPayPalDomButton('card') || document.querySelector('[aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
+              if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); }
+            }catch(_){ }
           });
           cardSlot.appendChild(btnCARD);
         }
