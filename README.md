@@ -76,6 +76,7 @@ git push origin main
 - **Analytics** - Nutzungsauswertung für Optimierungen
 - **Zusatzprodukte** - Quetschkabelschuhe, Erdungsband (inkl. Längenlogik/VE)
 - **Desktop-Intro** - Kurzes Schnellstart-Popup erscheint nur beim ersten Desktop-Start ohne Cache/URL; schließbar per × und Klick außerhalb; auf Mobile nicht sichtbar
+- **Fullpage‑Warenkorb** – Spiegelung des Webflow‑Carts auf eigener Seite (`fullpage-cart.html/.css/.js`); das native Webflow‑Cart bleibt unsichtbar und dient als technischer Motor.
 
 ---
 
