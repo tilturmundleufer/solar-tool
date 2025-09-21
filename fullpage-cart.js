@@ -137,10 +137,9 @@
       root.innerHTML = '';
       if(!items.length){
         root.innerHTML = '<div class="fp-empty">Ihr Warenkorb ist leer.</div>';
-        // Buttons ausblenden wenn leer
-        try{ document.getElementById('fp-checkout-slot').innerHTML=''; }catch(_){ }
-        try{ document.getElementById('fp-quick-slot').innerHTML=''; }catch(_){ }
-        try{ document.getElementById('fp-paypal-slot').innerHTML=''; }catch(_){ }
+        try{ var pbox=document.getElementById('fp-payments-box'); if(pbox){ pbox.style.display='none'; } }catch(_){ }
+      } else {
+        try{ var pbox2=document.getElementById('fp-payments-box'); if(pbox2){ pbox2.style.display='block'; } }catch(_){ }
       }
       items.forEach(function(it){
         var row = document.createElement('div'); row.className='fp-cart-item';
