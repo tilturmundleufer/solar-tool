@@ -132,13 +132,14 @@
           if(cs.display==='none' || cs.visibility==='hidden'){
             modified.push({ node:n, old:n.getAttribute('style') });
             n.style.display='block';
-            n.style.visibility='hidden';
-            n.style.opacity='0';
+            n.style.visibility='visible';
+            n.style.opacity='0.01';
+            n.style.pointerEvents='auto';
             n.style.position='fixed';
-            n.style.left='-9999px';
-            n.style.top='-9999px';
-            n.style.width='10px';
-            n.style.height='10px';
+            n.style.left='0';
+            n.style.top='0';
+            n.style.width='1px';
+            n.style.height='1px';
           }
         }catch(_){ }
       });
@@ -390,8 +391,19 @@
             var b = findPayPalDomButton('paypal') || document.querySelector('div.paypal-button.paypal-button-number-0[role="link"][data-funding-source="paypal"]');
             if(!b){ b = await waitForFundingButton('paypal', 10000); }
             if(!b){ flashNotice('PayPal ist noch nicht bereit. Bitte erneut versuchen.'); return; }
-            if(b.tagName && b.tagName.toLowerCase()==='iframe'){ try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ } }
-            withTemporarilyShown(b, function(){ triggerSyntheticClick(b); });
+            if(b.tagName && b.tagName.toLowerCase()==='iframe'){
+              try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
+              // Fallback: versuche das Smart-Buttons Shadow DOM zu treffen
+              try{
+                var doc = b.contentDocument || b.contentWindow && b.contentWindow.document;
+                var innerBtn = doc && doc.querySelector('[data-funding-source="paypal"], button, div[role="button"], div[role="link"]');
+                if(innerBtn){ triggerSyntheticClick(innerBtn); return; }
+              }catch(_){ }
+            }
+            withTemporarilyShown(b, function(){
+              try{ b.focus && b.focus(); }catch(_){ }
+              triggerSyntheticClick(b);
+            });
           }catch(_){ } finally { try{ btnPP.disabled=false; }catch(__){} }
         });
         paypalSlot.appendChild(btnPP);
@@ -406,8 +418,15 @@
               var b = findPayPalDomButton('sepa') || document.querySelector('div.paypal-button[role="link"][data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]');
               if(!b){ b = await waitForFundingButton('sepa', 10000); }
               if(!b){ flashNotice('SEPA ist noch nicht bereit. Bitte erneut versuchen.'); return; }
-              if(b.tagName && b.tagName.toLowerCase()==='iframe'){ try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ } }
-              withTemporarilyShown(b, function(){ triggerSyntheticClick(b); });
+              if(b.tagName && b.tagName.toLowerCase()==='iframe'){
+                try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
+                try{
+                  var doc = b.contentDocument || b.contentWindow && b.contentWindow.document;
+                  var innerBtn = doc && doc.querySelector('[data-funding-source="sepa"], button, div[role="button"], div[role="link"]');
+                  if(innerBtn){ triggerSyntheticClick(innerBtn); return; }
+                }catch(_){ }
+              }
+              withTemporarilyShown(b, function(){ try{ b.focus && b.focus(); }catch(_){ } triggerSyntheticClick(b); });
             }catch(_){ } finally { try{ btnSEPA.disabled=false; }catch(__){} }
           });
           sepaSlot.appendChild(btnSEPA);
@@ -422,8 +441,15 @@
               var b = findPayPalDomButton('card') || document.querySelector('div.paypal-button[role="link"][data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
               if(!b){ b = await waitForFundingButton('card', 10000); }
               if(!b){ flashNotice('Kartenzahlung ist noch nicht bereit. Bitte erneut versuchen.'); return; }
-              if(b.tagName && b.tagName.toLowerCase()==='iframe'){ try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ } }
-              withTemporarilyShown(b, function(){ triggerSyntheticClick(b); });
+              if(b.tagName && b.tagName.toLowerCase()==='iframe'){
+                try{ b.contentWindow && b.contentWindow.postMessage({event:'click'}, '*'); return; }catch(_){ }
+                try{
+                  var doc = b.contentDocument || b.contentWindow && b.contentWindow.document;
+                  var innerBtn = doc && doc.querySelector('[data-funding-source="card"], button, div[role="button"], div[role="link"]');
+                  if(innerBtn){ triggerSyntheticClick(innerBtn); return; }
+                }catch(_){ }
+              }
+              withTemporarilyShown(b, function(){ try{ b.focus && b.focus(); }catch(_){ } triggerSyntheticClick(b); });
             }catch(_){ } finally { try{ btnCARD.disabled=false; }catch(__){} }
           });
           cardSlot.appendChild(btnCARD);
