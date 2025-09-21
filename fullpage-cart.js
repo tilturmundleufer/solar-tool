@@ -377,21 +377,26 @@
 
         // 1) Bevor wir Proxy-Buttons bauen: versuche, die nativen PayPal-Buttons umzuhängen
         try{
-          var nativePP = document.querySelector('[data-wf-paypal-button]');
-          if(nativePP && !nativePP.getAttribute('data-fp-mounted')){
-            nativePP.setAttribute('data-fp-mounted','1');
-            nativePP.style.display = 'block';
-            nativePP.style.opacity = '1';
-            nativePP.style.visibility = 'visible';
-            nativePP.style.position = 'static';
-            nativePP.style.width = '100%';
-            paypalSlot.appendChild(nativePP);
-            // Wenn native Buttons gemountet sind, blenden wir unsere alternativen Slots aus
-            var s1=document.getElementById('fp-paypal-sepa'); if(s1) s1.style.display='none';
-            var s2=document.getElementById('fp-paypal-card'); if(s2) s2.style.display='none';
-            // Und überspringen den Proxy-Aufbau, da die echten Buttons nun hier stehen
-            return;
-          }
+          var transplant = function(){
+            var host = document.querySelector('[data-wf-paypal-button]');
+            var inner = host && host.querySelector('div[id^="zoid_paypal_buttons"]');
+            if(inner && !inner.getAttribute('data-fp-moved')){
+              inner.setAttribute('data-fp-moved','1');
+              paypalSlot.appendChild(inner);
+              try{ inner.style.width='100%'; inner.style.maxWidth='none'; }catch(_){ }
+              var s1=document.getElementById('fp-paypal-sepa'); if(s1) s1.style.display='none';
+              var s2=document.getElementById('fp-paypal-card'); if(s2) s2.style.display='none';
+              return true;
+            }
+            return false;
+          };
+          if(transplant()){ return; }
+          // retry bis 10s, falls iframe noch nicht gerendert wurde
+          (function retryPayPalMove(start){
+            if(Date.now()-start>10000) return;
+            if(transplant()) return;
+            setTimeout(function(){ retryPayPalMove(start); }, 300);
+          })(Date.now());
         }catch(_){ }
 
         function makeBtn(label, cls, iconSrc){
@@ -408,7 +413,7 @@
         btnPP.addEventListener('click', async function(){
           try{
             btnPP.disabled = true;
-            var b = findPayPalDomButton('paypal') || document.querySelector('div.paypal-button.paypal-button-number-0[role="link"][data-funding-source="paypal"]');
+            var b = findPayPalDomButton('paypal') || document.querySelector('div[id^="zoid_paypal_buttons"] [data-funding-source="paypal"], div.paypal-button.paypal-button-number-0[role="link"][data-funding-source="paypal"]');
             if(!b){ b = await waitForFundingButton('paypal', 10000); }
             if(!b){ flashNotice('PayPal ist noch nicht bereit. Bitte erneut versuchen.'); return; }
             if(b.tagName && b.tagName.toLowerCase()==='iframe'){
@@ -432,7 +437,7 @@
           btnSEPA.addEventListener('click', async function(){
             try{
               btnSEPA.disabled = true;
-              var b = findPayPalDomButton('sepa') || document.querySelector('div.paypal-button[role="link"][data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]');
+              var b = findPayPalDomButton('sepa') || document.querySelector('div[id^="zoid_paypal_buttons"] [data-funding-source="sepa"], div.paypal-button[role="link"][data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]');
               if(!b){ b = await waitForFundingButton('sepa', 10000); }
               if(!b){ flashNotice('SEPA ist noch nicht bereit. Bitte erneut versuchen.'); return; }
               if(b.tagName && b.tagName.toLowerCase()==='iframe'){
@@ -452,7 +457,7 @@
           btnCARD.addEventListener('click', async function(){
             try{
               btnCARD.disabled = true;
-              var b = findPayPalDomButton('card') || document.querySelector('div.paypal-button[role="link"][data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
+              var b = findPayPalDomButton('card') || document.querySelector('div[id^="zoid_paypal_buttons"] [data-funding-source="card"], div.paypal-button[role="link"][data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
               if(!b){ b = await waitForFundingButton('card', 10000); }
               if(!b){ flashNotice('Kartenzahlung ist noch nicht bereit. Bitte erneut versuchen.'); return; }
               if(b.tagName && b.tagName.toLowerCase()==='iframe'){
