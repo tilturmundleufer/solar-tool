@@ -68,6 +68,7 @@
           modified.push({ node:n, old:n.getAttribute('style') });
           n.style.display = 'block';
           n.style.visibility = 'hidden';
+          n.style.opacity = '0';
           n.style.position = 'fixed';
           n.style.left = '-9999px';
           n.style.top = '-9999px';
@@ -93,6 +94,8 @@
     try{ el.dispatchEvent(new MouseEvent('mouseup', { bubbles:true, cancelable:true })); }catch(_){ }
     try{ el.dispatchEvent(new MouseEvent('pointerup', { bubbles:true, cancelable:true })); }catch(_){ }
     try{ el.dispatchEvent(new MouseEvent('click', { bubbles:true, cancelable:true })); }catch(_){ try{ el.click(); }catch(__){} }
+    try{ el.dispatchEvent(new KeyboardEvent('keydown', { key:'Enter', code:'Enter', bubbles:true, cancelable:true })); }catch(_){ }
+    try{ el.dispatchEvent(new KeyboardEvent('keyup', { key:'Enter', code:'Enter', bubbles:true, cancelable:true })); }catch(_){ }
   }
 
   function findPayPalDomButton(funding){
@@ -320,7 +323,7 @@
         var btnPP=makeBtn('Pay with PayPal','paypal-blue',ppIcon);
         btnPP.addEventListener('click', function(){
           try{
-            var b = findPayPalDomButton('paypal');
+            var b = findPayPalDomButton('paypal') || document.querySelector('div.paypal-button.paypal-button-number-0[role="link"][data-funding-source="paypal"]');
             if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); return; }
             var iframe=document.querySelector('[data-wf-paypal-button] iframe.component-frame, .paypal-buttons iframe.component-frame');
             if(iframe && iframe.contentWindow){ iframe.contentWindow.postMessage({event:'click'}, '*'); return; }
@@ -336,7 +339,7 @@
           var btnSEPA=makeBtn('Pay with SEPA','sepa',sepaIcon);
           btnSEPA.addEventListener('click', function(){
             try{
-              var b = findPayPalDomButton('sepa') || document.querySelector('[aria-label*="SEPA" i], [aria-label="sepa" i]');
+              var b = findPayPalDomButton('sepa') || document.querySelector('div.paypal-button[role="link"][data-funding-source="sepa"], [aria-label*="SEPA" i], [aria-label="sepa" i]');
               if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); }
             }catch(_){ }
           });
@@ -348,7 +351,7 @@
           var btnCARD=makeBtn('Debit or Credit Card','card',cardIcon);
           btnCARD.addEventListener('click', function(){
             try{
-              var b = findPayPalDomButton('card') || document.querySelector('[aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
+              var b = findPayPalDomButton('card') || document.querySelector('div.paypal-button[role="link"][data-funding-source="card"], [aria-label*="Credit Card" i], [aria-label*="Kreditkarte" i]');
               if(b){ withTemporarilyShown(b, function(){ triggerSyntheticClick(b); }); }
             }catch(_){ }
           });
