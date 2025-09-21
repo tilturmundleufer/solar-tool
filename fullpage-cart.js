@@ -375,28 +375,30 @@
       if(paypalSlot){
         paypalSlot.innerHTML='';
 
-        // 1) Bevor wir Proxy-Buttons bauen: versuche, die nativen PayPal-Buttons umzuhängen
+        // 1) Statt Umhängen: Original-Container per fixed über unseren Slot positionieren
         try{
-          var transplant = function(){
-            var host = document.querySelector('[data-wf-paypal-button]');
-            var inner = host && host.querySelector('div[id^="zoid_paypal_buttons"]');
-            if(inner && !inner.getAttribute('data-fp-moved')){
-              inner.setAttribute('data-fp-moved','1');
-              paypalSlot.appendChild(inner);
-              try{ inner.style.width='100%'; inner.style.maxWidth='none'; }catch(_){ }
-              var s1=document.getElementById('fp-paypal-sepa'); if(s1) s1.style.display='none';
-              var s2=document.getElementById('fp-paypal-card'); if(s2) s2.style.display='none';
-              return true;
-            }
-            return false;
-          };
-          if(transplant()){ return; }
-          // retry bis 10s, falls iframe noch nicht gerendert wurde
-          (function retryPayPalMove(start){
-            if(Date.now()-start>10000) return;
-            if(transplant()) return;
-            setTimeout(function(){ retryPayPalMove(start); }, 300);
-          })(Date.now());
+          var host = document.querySelector('[data-wf-paypal-button]');
+          if(host){
+            var placeOver = function(){
+              try{
+                var targetRect = paypalSlot.getBoundingClientRect();
+                var el = host.querySelector('div[id^="zoid_paypal_buttons"]') || host;
+                el.setAttribute('data-fp-teleport','1');
+                el.style.position = 'fixed';
+                el.style.left = (Math.round(targetRect.left))+'px';
+                el.style.top = (Math.round(targetRect.top))+'px';
+                el.style.width = (Math.round(targetRect.width))+'px';
+                el.style.zIndex = '2147483000';
+                el.style.pointerEvents = 'auto';
+                el.style.opacity = '1';
+                // Zeige SEPA/Card nicht doppelt, wenn native Buttons sichtbar sind
+                var s1=document.getElementById('fp-paypal-sepa'); if(s1) s1.style.display='none';
+                var s2=document.getElementById('fp-paypal-card'); if(s2) s2.style.display='none';
+              }catch(_){ }
+            };
+            placeOver();
+            try{ window.addEventListener('resize', placeOver); window.addEventListener('scroll', placeOver, true); }catch(_){ }
+          }
         }catch(_){ }
 
         function makeBtn(label, cls, iconSrc){
