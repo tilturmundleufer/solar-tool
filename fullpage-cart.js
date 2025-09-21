@@ -258,21 +258,47 @@
       var paypalSlot = document.getElementById('fp-paypal-slot');
       if(paypalSlot){
         paypalSlot.innerHTML='';
-        var pb=document.createElement('button'); pb.className='btn paypal-blue';
-        var pi=document.createElement('span'); pi.className='pay-icon'; pi.style.background='url(https://www.paypalobjects.com/webstatic/icon/pp258.png) no-repeat center/contain';
-        var pl=document.createElement('span'); pl.textContent='Pay with PayPal';
-        pb.appendChild(pi); pb.appendChild(pl);
-        pb.addEventListener('click', function(){
+        function makeBtn(label, cls, iconSrc){
+          var b=document.createElement('button'); b.className='btn '+cls;
+          var i=document.createElement('img'); i.className='pay-icon'; i.alt=''; i.src=iconSrc; b.appendChild(i);
+          var s=document.createElement('span'); s.textContent=label; b.appendChild(s); return b;
+        }
+        var ppIcon='https://www.paypalobjects.com/webstatic/icon/pp258.png';
+        var sepaIcon='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjMyIiB2aWV3Qm94PSIwIDAgMTAwIDMyIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWluWU1pbiBtZWV0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGZpbGw9IiMwMDVEQTAiIGQ9Ik0gMzkuODcxIDE4Ljc3MiBDIDM3Ljc4IDE4Ljc3MiAzNS44NDMgMTguMjc4IDM0LjI3MiAxNy40MjUgTCAzNC44MSAxMy45MzUgQyAzNi40MDkgMTQuNzY5IDM4LjA1MSAxNS4yNjMgMzkuODI2IDE1LjI2MyBDIDQxLjgwOSAxNS4yNjMgNDIuNjYxIDE0LjU0NCA0Mi42NjEgMTMuMjg0IEMgNDIuNjYxIDEwLjQ1IDM0LjM0IDExLjY0MSAzNC4zNCA1LjU5IEMgMzQuMzQgMi41MyAzNi4zMTkgMC4wNTUgNDAuODg1IDAuMDU1IEMgNDIuNjM5IDAuMDU1IDQ0LjU0OSAwLjQxNiA0NS45NDYgMC45OTkgTCA0NS40NzQgNC4zOTUgQyA0My45ODkgMy45MjYgNDIuNDgxIDMuNjMzIDQxLjEwOCAzLjYzMyBDIDM4Ljg2IDMuNjMzIDM4LjI3NSA0LjM5NSAzOC4yNzUgNS4zNjQgQyAzOC4yNzUgOC4xNzUgNDYuNTk4IDYuODk1IDQ2LjU5OCAxMy4wMTMgQyA0Ni41NzYgMTYuNTY5IDQ0LjEwMSAxOC43NzIgMzkuODcxIDE4Ljc3MiBaIj48L3BhdGg+PC9zdmc+';
+        var cardIcon='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjRweCIgaGVpZ2h0PSIxOHB4IiB2aWV3Qm94PSIwIDAgMjQgMTgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTguMjc1IDEyLjUxMkMyLjcuLiIvPjwvc3ZnPg==';
+        // Hinweis: verkürzte Icons; in Produktion die vollständigen base64 aus dem Webflow verwenden
+
+        var btnPP=makeBtn('Pay with PayPal','paypal-blue',ppIcon);
+        btnPP.addEventListener('click', function(){
           try{
-            // Bevorzugt Smart Buttons via iframe triggern
             var iframe=document.querySelector('[data-wf-paypal-button] iframe.component-frame, .paypal-buttons iframe.component-frame');
             if(iframe && iframe.contentWindow){ iframe.contentWindow.postMessage({event:'click'}, '*'); return; }
-            // Fallback: einen sichtbaren PayPal-Button klicken
-            var nativeBtn = document.querySelector('[data-wf-paypal-button] button, .paypal-buttons button, [data-node-type="commerce-cart-quick-checkout-actions"] button');
-            if(nativeBtn){ nativeBtn.click(); }
+            var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="paypal"], .paypal-buttons [data-funding-source="paypal"], [aria-label*="Pay with PayPal" i]');
+            if(b){ b.click(); }
           }catch(_){ }
         });
-        paypalSlot.appendChild(pb);
+        paypalSlot.appendChild(btnPP);
+
+        var altWrap=document.getElementById('fp-paypal-alt');
+        if(altWrap){ altWrap.style.display='block'; }
+        var sepaSlot=document.getElementById('fp-paypal-sepa');
+        if(sepaSlot){
+          sepaSlot.innerHTML='';
+          var btnSEPA=makeBtn('Pay with SEPA','sepa',sepaIcon);
+          btnSEPA.addEventListener('click', function(){
+            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="sepa"], .paypal-buttons [data-funding-source="sepa"], [aria-label="sepa" i]'); if(b){ b.click(); } }catch(_){ }
+          });
+          sepaSlot.appendChild(btnSEPA);
+        }
+        var cardSlot=document.getElementById('fp-paypal-card');
+        if(cardSlot){
+          cardSlot.innerHTML='';
+          var btnCARD=makeBtn('Debit or Credit Card','card',cardIcon);
+          btnCARD.addEventListener('click', function(){
+            try{ var b=document.querySelector('[data-wf-paypal-button] [data-funding-source="card"], .paypal-buttons [data-funding-source="card"], [aria-label*="Credit Card" i]'); if(b){ b.click(); } }catch(_){ }
+          });
+          cardSlot.appendChild(btnCARD);
+        }
       }
     }catch(_){ }
   }
