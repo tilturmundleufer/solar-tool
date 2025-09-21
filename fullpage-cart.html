@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fullpage Warenkorb</title>
+  <link rel="stylesheet" href="fullpage-cart.css" />
+</head>
+<body>
+  <div id="fp-cart-app" class="fp-cart-app">
+    <header class="fp-cart-header">
+      <h1>Warenkorb</h1>
+      <div class="fp-cart-notice" id="fp-cart-notice"></div>
+    </header>
+
+    <main class="fp-cart-main">
+      <section id="fp-cart-items" class="fp-cart-items" aria-live="polite"></section>
+
+      <aside class="fp-cart-summary">
+        <div class="fp-summary-row">
+          <span>Zwischensumme (netto)</span>
+          <strong id="fp-subtotal">0,00 €</strong>
+        </div>
+        <div class="fp-summary-note" id="fp-summary-note"></div>
+        <div class="fp-summary-actions">
+          <button id="fp-clear-all" class="btn outline">Alle Artikel entfernen</button>
+          <button id="fp-checkout" class="btn primary">Zur Kasse</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="customer-type-popup.js" defer></script>
+  <script src="fullpage-cart.js" defer></script>
+</body>
+</html>
+
+
