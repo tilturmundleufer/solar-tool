@@ -143,17 +143,26 @@
           else { meta.textContent = ''; }
         }catch(_){ meta.textContent=''; }
         info.appendChild(title); info.appendChild(meta);
-        var right=document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
+        var right=document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='12px';
         var qty=document.createElement('div'); qty.className='qty';
         var minus=document.createElement('button'); minus.className='btn outline'; minus.style.width='36px'; minus.textContent='−';
         var input=document.createElement('input'); input.type='number'; input.min='0'; input.value=String(it.quantity);
         var plus=document.createElement('button'); plus.className='btn outline'; plus.style.width='36px'; plus.textContent='+';
+        // Preis pro Item × Menge anzeigen
+        var priceNode = it.el.querySelector('.w-commerce-commercecartitemprice, [data-node-type*="price" i], .text-block-5');
+        var single = parsePriceEU(priceNode ? priceNode.textContent : '0');
+        var total = single * (it.quantity||1);
+        var priceTotal = document.createElement('div'); priceTotal.className='item-price'; priceTotal.textContent = fmtEuro(total);
         var remove=document.createElement('button'); remove.className='btn outline'; remove.textContent='Entfernen';
         qty.appendChild(minus); qty.appendChild(input); qty.appendChild(plus);
-        right.appendChild(qty); right.appendChild(remove);
+        right.appendChild(qty); right.appendChild(priceTotal); right.appendChild(remove);
         row.appendChild(img); row.appendChild(info); row.appendChild(right);
         minus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=Math.max(0,c-1); input.value=String(next); await setItemQuantityByDelta(it, next-c); });
-        plus.addEventListener('click', async function(){ var c=parseInt(input.value,10)||0; var next=c+1; input.value=String(next); await setItemQuantityByDelta(it, next-c); });
+        plus.addEventListener('click', async function(){
+          // Wenn ein Add-Form existiert, füge exakt 1 hinzu (delta=+1)
+          var c=parseInt(input.value,10)||0; var next=c+1; input.value=String(next);
+          await setItemQuantityByDelta(it, +1);
+        });
         input.addEventListener('change', async function(){ var v=parseInt(input.value,10); if(!isFinite(v)||v<0){ input.value=String(it.quantity); return; } var d=v-it.quantity; if(d!==0){ await setItemQuantityByDelta(it,d); }});
         remove.addEventListener('click', async function(){ var btn=findRemoveButton(it.el); if(btn){ btn.click(); await waitAck(1500); }});
         root.appendChild(row);
@@ -228,14 +237,16 @@
       }
     }catch(_){ }
     try{
-      var paypalContainer = document.querySelector('[data-wf-paypal-button], [data-node-type="commerce-cart-quick-checkout-actions"] + div[id^="zoid-paypal-buttons"], [data-node-type="commerce-cart-quick-checkout-actions"] .paypal-buttons');
+      var paypalContainer = document.querySelector('[data-wf-paypal-button]');
       var paypalSlot = document.getElementById('fp-paypal-slot');
       if(paypalContainer && paypalSlot){
-        // Statt verschieben: Einen transparenteren Proxy-Button einfügen, der das Original klickt.
-        paypalSlot.innerHTML='';
-        var payBtn = document.createElement('button'); payBtn.className='btn primary'; payBtn.textContent='Pay with PayPal';
-        payBtn.addEventListener('click', function(e){ e.preventDefault(); try{ var iframe=document.querySelector('.paypal-buttons iframe.component-frame'); if(iframe){ iframe.contentWindow.postMessage({event:'click'}, '*'); } else { paypalContainer.querySelector('iframe,button,a')?.click(); } }catch(_){ } });
-        paypalSlot.appendChild(payBtn);
+        // Klone den kompletten PayPal-Container, damit alle Buttons/Styles erhalten bleiben
+        var cloneWrap = paypalContainer.cloneNode(true);
+        paypalSlot.innerHTML=''; paypalSlot.appendChild(cloneWrap);
+      }else{
+        // generische Fallbacks
+        var generic = document.querySelector('.paypal-buttons');
+        if(generic && paypalSlot){ paypalSlot.innerHTML=''; paypalSlot.appendChild(generic.cloneNode(true)); }
       }
     }catch(_){ }
   }
