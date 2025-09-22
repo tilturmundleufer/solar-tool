@@ -1121,6 +1121,91 @@
           tbody.innerHTML = '<tr><td style="padding:3mm 4mm;" colspan="4">Keine Produkte ausgewählt</td></tr>';
         }
 
+        // Paginierung: Wenn Tabelle zu lang ist, auf mehrere .pdf-page Elemente aufteilen
+        try {
+          const rootEl = document.getElementById('pdf-root');
+          if (rootEl && !productsPage.parentNode) {
+            rootEl.appendChild(productsPage);
+          }
+          const paginateProductsPage = (pageEl) => {
+            const createdPages = [];
+            const pageHeight = (pageEl && pageEl.getBoundingClientRect && pageEl.getBoundingClientRect().height) || 1123;
+            const footerReservePx = 120; // Platz für Footer + Abstand
+            const tableBody = pageEl.querySelector('.pdf-table-body');
+            const tableHead = pageEl.querySelector('thead');
+            const totalBlock = pageEl.querySelector('.pdf-total');
+            if (!tableBody || !tableHead) return [pageEl];
+
+            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+            if (allRows.length === 0) return [pageEl];
+
+            // Hilfsfunktion: leeres Seiten-Skelett klonen
+            const makeSkeleton = () => {
+              const clone = pageEl.cloneNode(true);
+              const bd = clone.querySelector('.pdf-table-body');
+              if (bd) bd.innerHTML = '';
+              // Total-Block auf Zwischen-Seiten ausblenden, erst auf letzter Seite sichtbar
+              const tb = clone.querySelector('.pdf-total');
+              if (tb) tb.style.display = 'none';
+              return clone;
+            };
+
+            // Erste Seite als Start verwenden (leeren und befüllen)
+            const first = makeSkeleton();
+            // Ersetze Original im DOM durch das neue Skelett, um Messungen korrekt zu machen
+            if (pageEl.parentNode) {
+              pageEl.parentNode.replaceChild(first, pageEl);
+            }
+            const pagesArr = [first];
+
+            let idx = 0;
+            while (idx < allRows.length) {
+              const currentPage = pagesArr[pagesArr.length - 1];
+              const curBody = currentPage.querySelector('.pdf-table-body');
+              const currentRect = currentPage.getBoundingClientRect();
+              const bodyTop = curBody.getBoundingClientRect().top - currentRect.top;
+              const maxBottom = pageHeight - footerReservePx;
+
+              // Füge Zeilen, bis die Unterkante überschreitet
+              while (idx < allRows.length) {
+                const row = allRows[idx].cloneNode(true);
+                curBody.appendChild(row);
+                const rowBottom = row.getBoundingClientRect().bottom - currentRect.top;
+                if (rowBottom > maxBottom) {
+                  // Überschreitung → entferne und beginne neue Seite
+                  curBody.removeChild(row);
+                  break;
+                }
+                idx++;
+              }
+              if (idx < allRows.length) {
+                const nextPage = makeSkeleton();
+                if (first.parentNode) first.parentNode.appendChild(nextPage);
+                pagesArr.push(nextPage);
+              }
+            }
+
+            // Total nur auf letzter Seite anzeigen
+            pagesArr.forEach((p, i) => {
+              const tb = p.querySelector('.pdf-total');
+              if (tb) tb.style.display = (i === pagesArr.length - 1) ? '' : 'none';
+            });
+
+            return pagesArr;
+          };
+
+          const productPages = paginateProductsPage(productsPage);
+          // Footer später für jede Seite hinzufügen (siehe unten)
+          // Falls mehrere Seiten entstanden, werden sie weiter unten verarbeitet
+          // productsPage wurde intern ersetzt; referenzieren wir die neue erste Seite
+          if (productPages && productPages.length) {
+            // Merke erste Seite für Footer-Handling
+            productsPage = productPages[0];
+          }
+        } catch (e) {
+          console.warn('PDF-Paginierung fehlgeschlagen (fallback auf Einzel-Seite):', e);
+        }
+
         // Footer für beide Seiten mit Logo
         const makeFooter = () => {
           const footer = document.createElement('div');
@@ -1150,10 +1235,23 @@
         };
 
         page.appendChild(makeFooter());
-        productsPage.appendChild(makeFooter());
-
-        root.appendChild(page);
-        root.appendChild(productsPage);
+        // Alle Produktseiten (durch Paginierung können mehrere existieren)
+        const productPagesAll = Array.from(root.querySelectorAll('.pdf-page')).filter(el => el !== page);
+        // Fallback: wenn keine zusätzlichen Seiten gefunden wurden, ist productsPage die einzige
+        if (productPagesAll.length === 0) {
+          productsPage.appendChild(makeFooter());
+          root.appendChild(page);
+          root.appendChild(productsPage);
+        } else {
+          // Stelle sicher, dass footers auf allen Produktseiten vorhanden sind
+          productPagesAll.forEach(p => {
+            // Verhindere doppelten Footer
+            const hasFooter = Array.from(p.children).some(ch => (ch.style && ch.style.position === 'absolute' && ch.style.bottom === '0px'));
+            if (!hasFooter) p.appendChild(makeFooter());
+          });
+          root.appendChild(page);
+          // Produktseiten sind bereits im DOM; optional könnten wir sie umsortieren
+        }
       }
 
       // Nach allen Konfigurationen: optionale Zusatzprodukte-Seite (einmal pro PDF)
