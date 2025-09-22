@@ -8297,21 +8297,10 @@
 			}
     			
 			// Lade die gewünschte Konfiguration aus dem Cache, ohne Orientation zu überschreiben
-			const safeIndex = (Number.isInteger(data.currentConfig) && data.currentConfig >= 0 && data.currentConfig < this.configs.length)
-				? data.currentConfig
-				: 0;
-			if (this.configs.length > 0) {
-				this.loadConfigFromCache(safeIndex);
-				// UI-Orientierung an die geladene Konfiguration angleichen
-				try {
-					const cfgOrient = this.configs[safeIndex]?.orientation;
-					if (this.orH && this.orV && typeof cfgOrient === 'string') {
-						this.orH.checked = cfgOrient === 'horizontal';
-						this.orV.checked = cfgOrient === 'vertical';
-						this.syncOrientationButtons?.();
-					}
-				} catch (_) {}
-			}
+			// Lade IMMER die erste Konfiguration visuell und richte die UI exakt nach deren Orientation aus
+    			if (this.configs.length > 0) {
+    				this.loadFirstConfigFromCache();
+    			}
     			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
