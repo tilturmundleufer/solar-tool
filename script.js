@@ -1110,11 +1110,13 @@
                   labelEl.style.gridColumn = '1 / 2';
                   labelEl.style.gridRow = '1';
                   labelEl.style.alignSelf = 'start';
+                  labelEl.style.marginTop = '-15px';
                 }
                 rightCol.style.gridColumn = '2 / 3';
                 rightCol.style.gridRow = '1';
                 rightCol.style.justifySelf = 'end';
                 rightCol.style.alignSelf = 'start';
+                rightCol.style.marginTop = '-15px';
                 totalContainer.appendChild(rightCol);
                 // Stelle sicher: unten genug Padding – exakt so hoch wie der Hinweis
                 setTimeout(() => {
