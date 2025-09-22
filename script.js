@@ -7672,7 +7672,12 @@
 			// Input-Werte setzen (OHNE Orientation)
 			this.wIn.value = cfg.cellWidth;
 			this.hIn.value = cfg.cellHeight;
-			// Orientation wird NICHT gesetzt - bleibt aus dem Cache
+			// Wichtig: UI-Orientation strikt aus der Konfiguration setzen (damit buildGrid korrekt rendert)
+			if (this.orV && this.orH && typeof cfg.orientation === 'string') {
+				this.orV.checked = cfg.orientation === 'vertical';
+				this.orH.checked = !this.orV.checked;
+				this.syncOrientationButtons?.();
+			}
 			
 			this.incM.checked = cfg.incM;
 			this.mc4.checked = cfg.mc4;
@@ -7711,7 +7716,12 @@
 			// Input-Werte setzen
 			this.wIn.value = cfg.cellWidth;
 			this.hIn.value = cfg.cellHeight;
-			// Orientation wird NICHT gesetzt - bleibt aus dem Cache
+			// Wichtig: UI-Orientation strikt aus der Konfiguration setzen (damit buildGrid korrekt rendert)
+			if (this.orV && this.orH && typeof cfg.orientation === 'string') {
+				this.orV.checked = cfg.orientation === 'vertical';
+				this.orH.checked = !this.orV.checked;
+				this.syncOrientationButtons?.();
+			}
 			
 			this.incM.checked = cfg.incM;
 			this.mc4.checked = cfg.mc4;
