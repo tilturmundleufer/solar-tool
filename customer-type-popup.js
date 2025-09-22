@@ -1,3 +1,4 @@
+(function(){
   function normalizeSearchText(str){
     try{
       return (str||'').toString().toLowerCase().replace(/\s+/g,' ').trim();
