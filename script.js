@@ -1077,7 +1077,7 @@
             </thead>
             <tbody class="pdf-table-body"></tbody>
           </table>
-          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm;">
+          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm; position:relative;">
             <div style="font-weight:700; line-height:1; margin:0;">GESAMTPREIS</div>
             <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1; margin:0;"></div>
           </div>
@@ -1091,34 +1091,22 @@
           if (!isPrivateCustomer()) {
             const totalContainer = productsPage.querySelector('.pdf-total');
             if (totalContainer && pdfTotalPriceEl.parentElement === totalContainer) {
-              const rightCol = document.createElement('div');
-              rightCol.style.display = 'flex';
-              rightCol.style.flexDirection = 'column';
-              rightCol.style.alignItems = 'flex-end';
-              // Preis-Element in die rechte Spalte verschieben
-              rightCol.appendChild(pdfTotalPriceEl);
-              // Hinweis darunter
-              const hint = document.createElement('div');
-              hint.textContent = '(exkl. MwSt)';
-              hint.style.fontSize = '9pt';
-              hint.style.fontWeight = '400';
-              hint.style.marginTop = '2mm';
-              hint.style.opacity = '0.9';
-              rightCol.appendChild(hint);
-              totalContainer.appendChild(rightCol);
-                // Nach dem Einfügen: vertikal exakt mit linkem Label ausrichten
-                setTimeout(() => {
-                  try {
-                    const labelEl = totalContainer.firstElementChild;
-                    if (!labelEl) return;
-                    const lt = labelEl.getBoundingClientRect().top;
-                    const rt = rightCol.getBoundingClientRect().top;
-                    const delta = rt - lt;
-                    if (Math.abs(delta) > 0.5) {
-                      rightCol.style.marginTop = `${-delta}px`;
-                    }
-                  } catch (_) {}
-                }, 0);
+                const rightCol = document.createElement('div');
+                rightCol.style.position = 'absolute';
+                rightCol.style.top = '4mm';
+                rightCol.style.right = '6mm';
+                rightCol.style.display = 'flex';
+                rightCol.style.flexDirection = 'column';
+                rightCol.style.alignItems = 'flex-end';
+                rightCol.appendChild(pdfTotalPriceEl);
+                const hint = document.createElement('div');
+                hint.textContent = '(exkl. MwSt)';
+                hint.style.fontSize = '9pt';
+                hint.style.fontWeight = '400';
+                hint.style.marginTop = '2mm';
+                hint.style.opacity = '0.9';
+                rightCol.appendChild(hint);
+                totalContainer.appendChild(rightCol);
             }
           }
         }
