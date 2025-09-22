@@ -1079,7 +1079,7 @@
           </table>
           <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm; display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="font-weight:700;">GESAMTPREIS</div>
-            <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1;"></div>
+            <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1; transform: translateY(-1mm);"></div>
           </div>
         `;
 
