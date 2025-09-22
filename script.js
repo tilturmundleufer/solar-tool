@@ -1104,9 +1104,17 @@
                 hint.style.opacity = '0.9';
                 hint.style.whiteSpace = 'nowrap';
                 rightCol.appendChild(hint);
-                // Rechts-Spalte in die zweite Grid-Spalte setzen
+                // Positionen in Grid explizit auf erste Zeile setzen
+                const labelEl = totalContainer.firstElementChild;
+                if (labelEl && labelEl.style) {
+                  labelEl.style.gridColumn = '1 / 2';
+                  labelEl.style.gridRow = '1';
+                  labelEl.style.alignSelf = 'start';
+                }
                 rightCol.style.gridColumn = '2 / 3';
+                rightCol.style.gridRow = '1';
                 rightCol.style.justifySelf = 'end';
+                rightCol.style.alignSelf = 'start';
                 totalContainer.appendChild(rightCol);
                 // Stelle sicher: unten genug Padding – exakt so hoch wie der Hinweis
                 setTimeout(() => {
