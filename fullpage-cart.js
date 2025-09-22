@@ -318,7 +318,7 @@
     buildReverseMaps();
     // Initial notice in header
     var notice = document.getElementById('fp-cart-notice');
-    if(notice){ notice.textContent = 'Preise netto angezeigt; Kundentyp-Steuerung aktiv.'; }
+    if(notice){ notice.textContent = ''; }
     // Buttons
     var clearAll = document.getElementById('fp-clear-all');
     if(clearAll){ clearAll.addEventListener('click', async function(){
