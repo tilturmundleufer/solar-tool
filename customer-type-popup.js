@@ -6,12 +6,20 @@
 (function(){
   function renameTaxLabels(root){
     try{
-      var nodes = (root||document).querySelectorAll('.w-commerce-commercecheckoutordersummaryextraitemslistitem > div:first-child');
-      for(var i=0;i<nodes.length;i++){
-        var n = nodes[i];
-        var txt = (n.textContent||'').trim();
-        if(/^country\s+tax(es)?$/i.test(txt) || /tax(es)?/i.test(txt)){
-          n.textContent = 'Mehrwertsteuer';
+      var scope = root || document;
+      // Suche breit nach Labels innerhalb der Extra-Items-List
+      var items = scope.querySelectorAll('.w-commerce-commercecheckoutordersummaryextraitemslistitem');
+      for(var i=0;i<items.length;i++){
+        var item = items[i];
+        // Kandidaten: erste Divs oder data-wf-bindings-Knoten
+        var cands = item.querySelectorAll('div, [data-wf-bindings]');
+        for(var j=0;j<cands.length;j++){
+          var n = cands[j];
+          var txt = ((n.textContent||'').trim());
+          if(/^country\s*tax(es)?:?$/i.test(txt) || /\bcountry\s*tax(es)?\b/i.test(txt)){
+            n.textContent = 'Mehrwertsteuer';
+            break;
+          }
         }
       }
     }catch(_){ }
@@ -22,7 +30,7 @@
       renameTaxLabels(document);
       // Spezifisches Ziel wie im Vorschlag: Liste der Extra-Items im Checkout
       var target = document.querySelector('.w-commerce-commercecheckoutordersummaryextraitemslist');
-      var config = { attributes:false, childList:true, characterData:false, subtree:true };
+      var config = { attributes:true, childList:true, characterData:true, subtree:true };
       var handler = function(mutations){
         try{
           mutations.forEach(function(mutation){
@@ -32,10 +40,10 @@
                   if(!(node instanceof Element)) return;
                   // Prüfe, ob der Node oder seine Kinder den Text enthalten
                   var hasCountry = false;
-                  if(/country\s+tax(es)?/i.test((node.textContent||''))){ hasCountry = true; }
+                  if(/country\s*tax(es)?/i.test((node.textContent||''))){ hasCountry = true; }
                   if(hasCountry){
                     // Statt entfernen → Text ersetzen
-                    var label = node.querySelector(':scope > div:first-child');
+                    var label = node.querySelector(':scope > div, :scope > [data-wf-bindings]');
                     if(label){ label.textContent = 'Mehrwertsteuer'; }
                   }
                   // Sicherheitshalber komplette Liste erneut umbenennen
@@ -43,6 +51,8 @@
                 }catch(_){ }
               });
             }
+            // Auch bei Textänderungen/Attributänderungen versuchen
+            try{ renameTaxLabels(document); }catch(_){ }
           });
         }catch(_){ }
       };
@@ -57,6 +67,12 @@
         });
         try{ waitMo.observe(document.body, { childList:true, subtree:true }); }catch(_){ }
       }
+      // Zusätzlicher Poll-Fallback (10s)
+      var tries = 0; var maxTries = 50; // 50 * 200ms = 10s
+      var iv = setInterval(function(){
+        try{ renameTaxLabels(document); }catch(_){ }
+        if(++tries >= maxTries){ clearInterval(iv); }
+      }, 200);
     }catch(_){ }
   }
   function isPrivate(){
