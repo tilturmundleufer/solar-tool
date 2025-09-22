@@ -1146,6 +1146,19 @@
             const createdPages = [];
             const pageHeight = (pageEl && pageEl.getBoundingClientRect && pageEl.getBoundingClientRect().height) || 1123;
             const footerReservePx = 120; // Platz für Footer + Abstand
+            // Reserviere zusätzlich Platz für die Gesamtpreis-Box, damit sie nie in den Footer läuft
+            const totalBlockTemplate = pageEl.querySelector('.pdf-total');
+            let totalReservePx = 0;
+            try {
+              if (totalBlockTemplate) {
+                // Sichtbar messen (falls auf display:none)
+                const prev = totalBlockTemplate.style.display;
+                if (prev === 'none') totalBlockTemplate.style.display = '';
+                const tbRect = totalBlockTemplate.getBoundingClientRect();
+                totalReservePx = Math.ceil(tbRect.height) + 8; // kleiner Sicherheitsrand
+                totalBlockTemplate.style.display = prev;
+              }
+            } catch (_) { totalReservePx = 80; }
             const tableBody = pageEl.querySelector('.pdf-table-body');
             const tableHead = pageEl.querySelector('thead');
             const totalBlock = pageEl.querySelector('.pdf-total');
@@ -1180,13 +1193,14 @@
               const currentRect = currentPage.getBoundingClientRect();
               const bodyTop = curBody.getBoundingClientRect().top - currentRect.top;
               const maxBottom = pageHeight - footerReservePx;
+              const contentLimitBottom = maxBottom - totalReservePx;
 
               // Füge Zeilen, bis die Unterkante überschreitet
               while (idx < allRows.length) {
                 const row = allRows[idx].cloneNode(true);
                 curBody.appendChild(row);
                 const rowBottom = row.getBoundingClientRect().bottom - currentRect.top;
-                if (rowBottom > maxBottom) {
+                if (rowBottom > contentLimitBottom) {
                   // Überschreitung → entferne und beginne neue Seite
                   curBody.removeChild(row);
                   break;
