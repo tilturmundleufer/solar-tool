@@ -16,11 +16,47 @@
       }
     }catch(_){ }
   }
-  function observeCheckoutTaxLabel(){
+  function setupCheckoutTaxObserver(){
     try{
+      // Direkter initialer Versuch
       renameTaxLabels(document);
-      var mo = new MutationObserver(function(){ renameTaxLabels(document); });
-      try{ mo.observe(document.body, {childList:true, subtree:true}); }catch(_){ }
+      // Spezifisches Ziel wie im Vorschlag: Liste der Extra-Items im Checkout
+      var target = document.querySelector('.w-commerce-commercecheckoutordersummaryextraitemslist');
+      var config = { attributes:false, childList:true, characterData:false, subtree:true };
+      var handler = function(mutations){
+        try{
+          mutations.forEach(function(mutation){
+            if(mutation && mutation.addedNodes && mutation.addedNodes.length){
+              mutation.addedNodes.forEach(function(node){
+                try{
+                  if(!(node instanceof Element)) return;
+                  // Prüfe, ob der Node oder seine Kinder den Text enthalten
+                  var hasCountry = false;
+                  if(/country\s+tax(es)?/i.test((node.textContent||''))){ hasCountry = true; }
+                  if(hasCountry){
+                    // Statt entfernen → Text ersetzen
+                    var label = node.querySelector(':scope > div:first-child');
+                    if(label){ label.textContent = 'Mehrwertsteuer'; }
+                  }
+                  // Sicherheitshalber komplette Liste erneut umbenennen
+                  renameTaxLabels(node);
+                }catch(_){ }
+              });
+            }
+          });
+        }catch(_){ }
+      };
+      if(target){
+        var observer = new MutationObserver(handler);
+        observer.observe(target, config);
+      } else {
+        // Fallback: beobachte body, bis das Ziel erscheint
+        var waitMo = new MutationObserver(function(){
+          var t = document.querySelector('.w-commerce-commercecheckoutordersummaryextraitemslist');
+          if(t){ try{ waitMo.disconnect(); }catch(_){ } setupCheckoutTaxObserver(); }
+        });
+        try{ waitMo.observe(document.body, { childList:true, subtree:true }); }catch(_){ }
+      }
     }catch(_){ }
   }
   function isPrivate(){
@@ -526,7 +562,7 @@
     try{ initSegmentedCmsSearch(); }catch(_){ }
 
     // Checkout: "Country Taxes" → "Mehrwertsteuer"
-    try{ observeCheckoutTaxLabel(); }catch(_){ }
+    try{ setupCheckoutTaxObserver(); }catch(_){ }
 
     // === Warenkorb-Kompatibilitätslogik (global, auf jeder Seite aktiv) ===
     try{
