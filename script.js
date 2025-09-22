@@ -8307,10 +8307,13 @@
 			}
     			
 			// Lade die gewünschte Konfiguration aus dem Cache, ohne Orientation zu überschreiben
-			// Lade IMMER die erste Konfiguration visuell und richte die UI exakt nach deren Orientation aus
-    			if (this.configs.length > 0) {
-    				this.loadFirstConfigFromCache();
-    			}
+			// Lade die zuletzt aktive Konfiguration (Index aus Cache), aber orientiere UI strikt an dieser Config
+			const safeIndex = (Number.isInteger(data.currentConfig) && data.currentConfig >= 0 && data.currentConfig < this.configs.length)
+				? data.currentConfig
+				: 0;
+			if (this.configs.length > 0) {
+				this.loadConfigFromCache(safeIndex);
+			}
     			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
