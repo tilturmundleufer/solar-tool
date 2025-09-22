@@ -1077,7 +1077,7 @@
             </thead>
             <tbody class="pdf-table-body"></tbody>
           </table>
-          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:flex; justify-content:space-between; align-items:center;">
+          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm; display:flex; justify-content:space-between; align-items:center;">
             <div style="font-weight:700;">GESAMTPREIS</div>
             <div class="pdf-total-price" style="font-size:14pt; font-weight:700;"></div>
           </div>
@@ -1122,6 +1122,7 @@
         }
 
         // Paginierung: Wenn Tabelle zu lang ist, auf mehrere .pdf-page Elemente aufteilen
+        let productPages = null;
         try {
           const rootEl = document.getElementById('pdf-root');
           if (rootEl && !productsPage.parentNode) {
@@ -1194,7 +1195,7 @@
             return pagesArr;
           };
 
-          const productPages = paginateProductsPage(productsPage);
+          productPages = paginateProductsPage(productsPage);
           // Footer später für jede Seite hinzufügen (siehe unten)
           // Falls mehrere Seiten entstanden, werden sie weiter unten verarbeitet
           // productsPage wurde intern ersetzt; referenzieren wir die neue erste Seite
@@ -1235,23 +1236,15 @@
         };
 
         page.appendChild(makeFooter());
-        // Alle Produktseiten (durch Paginierung können mehrere existieren)
-        const productPagesAll = Array.from(root.querySelectorAll('.pdf-page')).filter(el => el !== page);
-        // Fallback: wenn keine zusätzlichen Seiten gefunden wurden, ist productsPage die einzige
-        if (productPagesAll.length === 0) {
-          productsPage.appendChild(makeFooter());
-          root.appendChild(page);
-          root.appendChild(productsPage);
-        } else {
-          // Stelle sicher, dass footers auf allen Produktseiten vorhanden sind
-          productPagesAll.forEach(p => {
-            // Verhindere doppelten Footer
-            const hasFooter = Array.from(p.children).some(ch => (ch.style && ch.style.position === 'absolute' && ch.style.bottom === '0px'));
-            if (!hasFooter) p.appendChild(makeFooter());
-          });
-          root.appendChild(page);
-          // Produktseiten sind bereits im DOM; optional könnten wir sie umsortieren
-        }
+        // Produktseiten nach der Übersichtsseite anhängen (korrekte Reihenfolge)
+        const pagesToAppend = (productPages && productPages.length) ? productPages : [productsPage];
+        pagesToAppend.forEach(p => {
+          const hasFooter = Array.from(p.children).some(ch => (ch.style && ch.style.position === 'absolute' && ch.style.bottom === '0px'));
+          if (!hasFooter) p.appendChild(makeFooter());
+          if (p.parentNode === root) root.removeChild(p);
+        });
+        root.appendChild(page);
+        pagesToAppend.forEach(p => root.appendChild(p));
       }
 
       // Nach allen Konfigurationen: optionale Zusatzprodukte-Seite (einmal pro PDF)
@@ -6990,7 +6983,7 @@
   		this.rows -= 1;
   		this.selection.shift();
   		this.updateGridAfterStructureChange();
-		}
+				}
 
     updateGridAfterStructureChange() {
   		this.updateSize();
@@ -8212,7 +8205,7 @@
     			if (this.erdungsband && typeof data.erdungsband === 'boolean') {
     				this.erdungsband.checked = data.erdungsband;
     			}
-						if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
+    						if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
 				this.ulicaModule.checked = data.ulicaModule;
 			}
 			
