@@ -1077,9 +1077,9 @@
             </thead>
             <tbody class="pdf-table-body"></tbody>
           </table>
-          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm; display:flex; justify-content:space-between; align-items:baseline;">
-            <div style="font-weight:700; line-height:1;">GESAMTPREIS</div>
-            <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1;"></div>
+          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm;">
+            <div style="font-weight:700; line-height:1; margin:0;">GESAMTPREIS</div>
+            <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1; margin:0;"></div>
           </div>
         `;
 
