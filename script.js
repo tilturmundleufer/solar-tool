@@ -8296,21 +8296,22 @@
 				this.hIn.value = data.cellHeight;
 			}
     			
-    			// Lade Orientierung VOR dem Laden der Konfiguration
-			if (this.orH && this.orV && typeof data.orientation === 'string') {
-				this.orH.checked = data.orientation === 'horizontal';
-				this.orV.checked = data.orientation === 'vertical';
-				
-				// Synchronisiere mit den Orientation Buttons (robuster)
-				this.syncOrientationButtons();
-				
-				// Aktualisiere die erste Konfiguration mit der globalen Orientation
-				this.updateFirstConfigOrientation(data.orientation);
+			// Lade die gewünschte Konfiguration aus dem Cache, ohne Orientation zu überschreiben
+			const safeIndex = (Number.isInteger(data.currentConfig) && data.currentConfig >= 0 && data.currentConfig < this.configs.length)
+				? data.currentConfig
+				: 0;
+			if (this.configs.length > 0) {
+				this.loadConfigFromCache(safeIndex);
+				// UI-Orientierung an die geladene Konfiguration angleichen
+				try {
+					const cfgOrient = this.configs[safeIndex]?.orientation;
+					if (this.orH && this.orV && typeof cfgOrient === 'string') {
+						this.orH.checked = cfgOrient === 'horizontal';
+						this.orV.checked = cfgOrient === 'vertical';
+						this.syncOrientationButtons?.();
+					}
+				} catch (_) {}
 			}
-    			// Lade die erste Konfiguration
-    			if (this.configs.length > 0) {
-    				this.loadFirstConfigFromCache();
-    			}
     			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
