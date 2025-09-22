@@ -1108,6 +1108,18 @@
                 hint.style.whiteSpace = 'nowrap';
                 rightCol.appendChild(hint);
                 totalContainer.appendChild(rightCol);
+                // Stelle sicher: unten genug Padding – exakt so hoch wie der Hinweis
+                setTimeout(() => {
+                  try {
+                    const hintRect = hint.getBoundingClientRect();
+                    const desiredPb = Math.ceil(hintRect.height); // px
+                    const cs = window.getComputedStyle(totalContainer);
+                    const currentPb = parseFloat(cs.paddingBottom) || 0;
+                    if (currentPb < desiredPb) {
+                      totalContainer.style.paddingBottom = desiredPb + 'px';
+                    }
+                  } catch (_) {}
+                }, 0);
             }
           }
         }
@@ -1317,6 +1329,13 @@
                     const delta = rt - lt;
                     if (Math.abs(delta) > 0.5) {
                       rightCol.style.marginTop = `${-delta}px`;
+                    }
+                    const hintRect = hint.getBoundingClientRect();
+                    const desiredPb = Math.ceil(hintRect.height);
+                    const cs = window.getComputedStyle(totalContainer);
+                    const currentPb = parseFloat(cs.paddingBottom) || 0;
+                    if (currentPb < desiredPb) {
+                      totalContainer.style.paddingBottom = desiredPb + 'px';
                     }
                   } catch (_) {}
                 }, 0);
