@@ -1086,7 +1086,7 @@
         // Produkte rendern (neues Tabellenlayout: Anzahl | Produkt+VE | benötigte Menge | Preis)
         // Zusatzprodukte werden hier explizit ausgeschlossen – sie kommen gesammelt auf eine separate Seite
         const pdfTotalPriceEl = productsPage.querySelector('.pdf-total-price');
-        if (pdfTotalPriceEl) {
+          if (pdfTotalPriceEl) {
           // Hinweis nur für Firmenkunden, unter dem Preis anordnen (rechts, Spalte)
           if (!isPrivateCustomer()) {
             const totalContainer = productsPage.querySelector('.pdf-total');
@@ -1106,6 +1106,19 @@
               hint.style.opacity = '0.9';
               rightCol.appendChild(hint);
               totalContainer.appendChild(rightCol);
+                // Nach dem Einfügen: vertikal exakt mit linkem Label ausrichten
+                setTimeout(() => {
+                  try {
+                    const labelEl = totalContainer.firstElementChild;
+                    if (!labelEl) return;
+                    const lt = labelEl.getBoundingClientRect().top;
+                    const rt = rightCol.getBoundingClientRect().top;
+                    const delta = rt - lt;
+                    if (Math.abs(delta) > 0.5) {
+                      rightCol.style.marginTop = `${-delta}px`;
+                    }
+                  } catch (_) {}
+                }, 0);
             }
           }
         }
@@ -1306,6 +1319,18 @@
                 hint.style.opacity = '0.9';
                 rightCol.appendChild(hint);
                 totalContainer.appendChild(rightCol);
+                setTimeout(() => {
+                  try {
+                    const labelEl = totalContainer.firstElementChild;
+                    if (!labelEl) return;
+                    const lt = labelEl.getBoundingClientRect().top;
+                    const rt = rightCol.getBoundingClientRect().top;
+                    const delta = rt - lt;
+                    if (Math.abs(delta) > 0.5) {
+                      rightCol.style.marginTop = `${-delta}px`;
+                    }
+                  } catch (_) {}
+                }, 0);
               }
             }
           }
