@@ -70,6 +70,11 @@
   .qty input { width: 48px; font-size: 14px; }
 }
 
+/* Desktop: Produkte ohne Lücke direkt oben (Spalte 1/Zeile 1) */
+@media (min-width: 921px){
+  .fp-right { grid-column: 1; grid-row: 1; }
+}
+
 /* rechte Spalte */
 .fp-right { display: flex; flex-direction: column; gap: 16px; }
 .fp-cart-items { display: flex; flex-direction: column; gap: 10px; }
