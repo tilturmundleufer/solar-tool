@@ -370,58 +370,7 @@
         quickSlot.appendChild(qb);
       }
     }catch(_){ }
-    try{
-      var paypalSlot = document.getElementById('fp-paypal-slot');
-      if(paypalSlot){
-        paypalSlot.innerHTML='';
-
-        // Teleportiere den nativen Smart-Buttons-Container in ein Overlay über unserem Slot
-        (function teleportPayPal(started){
-          try{
-            var host = document.querySelector('[data-wf-paypal-button]');
-            var el = host && host.querySelector('div[id^="zoid_paypal_buttons"]');
-            if(el){
-              // Platzhalter am Ursprungsort lassen, damit der native Cart nicht springt
-              if(!el.__fp_placeholder){
-                var ph=document.createElement('div');
-                ph.style.height=(el.offsetHeight||200)+'px';
-                ph.style.width='100%';
-                el.parentNode.insertBefore(ph, el);
-                el.__fp_placeholder = ph;
-              }
-              // Overlay erstellen
-              var overlay = document.getElementById('fp-pp-overlay');
-              if(!overlay){ overlay=document.createElement('div'); overlay.id='fp-pp-overlay'; document.body.appendChild(overlay); }
-              overlay.style.position='fixed'; overlay.style.zIndex='2147483000'; overlay.style.pointerEvents='auto';
-              // Element in Overlay verschieben
-              if(el.parentNode !== overlay){ overlay.appendChild(el); }
-              try{ el.style.position='static'; el.style.opacity='1'; el.style.pointerEvents='auto'; el.style.width='100%'; }catch(_){ }
-              // Position overlay über unseren Slot
-              var place=function(){ try{ var r=paypalSlot.getBoundingClientRect(); overlay.style.left=r.left+'px'; overlay.style.top=r.top+'px'; overlay.style.width=r.width+'px'; }catch(_){ } };
-              place(); try{ window.addEventListener('resize', place); window.addEventListener('scroll', place, true); }catch(_){ }
-              // Wenn nativer Cart geöffnet wird → zurück an Ursprungsort
-              try{
-                var cartWrap = document.querySelector('.w-commerce-commercecartcontainerwrapper, .w-commerce-commercecartwrapper');
-                if(cartWrap && !cartWrap.__fp_observed){
-                  cartWrap.__fp_observed=true;
-                  var mo=new MutationObserver(function(){
-                    try{
-                      var open=(cartWrap.getAttribute('aria-hidden')==='false');
-                      if(open && el.__fp_placeholder){ el.__fp_placeholder.parentNode.insertBefore(el, el.__fp_placeholder); }
-                      if(open){ overlay.style.display='none'; } else { overlay.style.display='block'; place(); }
-                    }catch(_){ }
-                  });
-                  mo.observe(cartWrap,{attributes:true, attributeFilter:['aria-hidden','style','class']});
-                }
-              }catch(_){ }
-              return;
-            }
-          }catch(_){ }
-          if(Date.now()-started>10000) return;
-          setTimeout(function(){ teleportPayPal(started); }, 250);
-        })(Date.now());
-      }
-    }catch(_){ }
+    // PayPal bewusst deaktiviert/ausgeblendet (Feature wird später reaktiviert)
   }
 
   function clickNativeCheckout(){
