@@ -1077,7 +1077,7 @@
             </thead>
             <tbody class="pdf-table-body"></tbody>
           </table>
-          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm; position:relative;">
+          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm;">
             <div style="font-weight:700; line-height:1; margin:0;">GESAMTPREIS</div>
             <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1; margin:0;"></div>
           </div>
@@ -1092,9 +1092,6 @@
             const totalContainer = productsPage.querySelector('.pdf-total');
             if (totalContainer && pdfTotalPriceEl.parentElement === totalContainer) {
                 const rightCol = document.createElement('div');
-                rightCol.style.position = 'absolute';
-                rightCol.style.top = '6mm';
-                rightCol.style.right = '6mm';
                 rightCol.style.display = 'flex';
                 rightCol.style.flexDirection = 'column';
                 rightCol.style.alignItems = 'flex-end';
@@ -1107,6 +1104,9 @@
                 hint.style.opacity = '0.9';
                 hint.style.whiteSpace = 'nowrap';
                 rightCol.appendChild(hint);
+                // Rechts-Spalte in die zweite Grid-Spalte setzen
+                rightCol.style.gridColumn = '2 / 3';
+                rightCol.style.justifySelf = 'end';
                 totalContainer.appendChild(rightCol);
                 // Stelle sicher: unten genug Padding – exakt so hoch wie der Hinweis
                 setTimeout(() => {
