@@ -1077,7 +1077,7 @@
             </thead>
             <tbody class="pdf-table-body"></tbody>
           </table>
-          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm; position:relative;">
+          <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm 8mm 6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm; position:relative;">
             <div style="font-weight:700; line-height:1; margin:0;">GESAMTPREIS</div>
             <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1; margin:0;"></div>
           </div>
@@ -1105,6 +1105,7 @@
                 hint.style.fontWeight = '400';
                 hint.style.marginTop = '2mm';
                 hint.style.opacity = '0.9';
+                hint.style.whiteSpace = 'nowrap';
                 rightCol.appendChild(hint);
                 totalContainer.appendChild(rightCol);
             }
@@ -1282,9 +1283,9 @@
               </thead>
               <tbody class="pdf-additional-table-body"></tbody>
             </table>
-            <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:flex; justify-content:space-between; align-items:center;">
-              <div style="font-weight:700;">GESAMTPREIS</div>
-              <div class="pdf-additional-total-price" style="font-size:14pt; font-weight:700;"></div>
+            <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:4mm 6mm; display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:700; line-height:1;">GESAMTPREIS</div>
+              <div class="pdf-additional-total-price" style="font-size:14pt; font-weight:700; line-height:1;"></div>
             </div>
           `;
 
