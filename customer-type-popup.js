@@ -24,55 +24,57 @@
       }
     }catch(_){ }
   }
-  function setupCheckoutTaxObserver(){
+  function setupCheckoutExtraItemTranslations(){
     try{
-      // Direkter initialer Versuch
-      renameTaxLabels(document);
-      // Spezifisches Ziel wie im Vorschlag: Liste der Extra-Items im Checkout
-      var target = document.querySelector('.w-commerce-commercecheckoutordersummaryextraitemslist');
-      var config = { attributes:true, childList:true, characterData:true, subtree:true };
-      var handler = function(mutations){
+      var translations = {
+        'State Taxes': 'Mehrwertsteuer',
+        'City Taxes': 'Mehrwertsteuer',
+        'County Taxes': 'Mehrwertsteuer',
+        'Country Taxes': 'Mehrwertsteuer',
+        'Tax': 'Mehrwertsteuer',
+        'Taxes': 'Mehrwertsteuer'
+      };
+      var list = document.getElementsByClassName('w-commerce-commercecheckoutordersummaryextraitemslist')[0];
+      var config = { characterData:true, attributes:true, childList:true, subtree:true };
+      var replaceInNode = function(node){
         try{
-          mutations.forEach(function(mutation){
-            if(mutation && mutation.addedNodes && mutation.addedNodes.length){
-              mutation.addedNodes.forEach(function(node){
-                try{
-                  if(!(node instanceof Element)) return;
-                  // Prüfe, ob der Node oder seine Kinder den Text enthalten
-                  var hasCountry = false;
-                  if(/country\s*tax(es)?/i.test((node.textContent||''))){ hasCountry = true; }
-                  if(hasCountry){
-                    // Statt entfernen → Text ersetzen
-                    var label = node.querySelector(':scope > div, :scope > [data-wf-bindings]');
-                    if(label){ label.textContent = 'Mehrwertsteuer'; }
-                  }
-                  // Sicherheitshalber komplette Liste erneut umbenennen
-                  renameTaxLabels(node);
-                }catch(_){ }
-              });
+          // Wir bearbeiten ausschließlich das erste Kind (Label-Spalte)
+          var labelEl = node && node.firstChild && node.firstChild.nodeType === 1 ? node.firstChild : null;
+          if(!labelEl) return;
+          var txt = (labelEl.innerText||'').trim();
+          Object.keys(translations).forEach(function(key){
+            if(txt.indexOf(key) !== -1){
+              labelEl.innerText = labelEl.innerText.replace(key, translations[key]);
             }
-            // Auch bei Textänderungen/Attributänderungen versuchen
-            try{ renameTaxLabels(document); }catch(_){ }
           });
         }catch(_){ }
       };
-      if(target){
-        var observer = new MutationObserver(handler);
-        observer.observe(target, config);
+      var callback = function(mutationsList){
+        for(var i=0;i<mutationsList.length;i++){
+          var mu = mutationsList[i];
+          if(mu.type !== 'childList') continue;
+          var added = mu.addedNodes || [];
+          for(var j=0;j<added.length;j++){
+            var an = added[j];
+            if(!an || !an.firstChild) continue;
+            replaceInNode(an);
+          }
+        }
+      };
+      // Initial lauf durch vorhandene Items
+      try{ Array.from(document.querySelectorAll('.w-commerce-commercecheckoutordersummaryextraitemslistitem')).forEach(replaceInNode); }catch(_){ }
+      if(list){
+        var Obs = window.WebKitMutationObserver || window.MutationObserver;
+        var observer = new Obs(callback);
+        observer.observe(list, config);
       } else {
-        // Fallback: beobachte body, bis das Ziel erscheint
-        var waitMo = new MutationObserver(function(){
-          var t = document.querySelector('.w-commerce-commercecheckoutordersummaryextraitemslist');
-          if(t){ try{ waitMo.disconnect(); }catch(_){ } setupCheckoutTaxObserver(); }
+        // Warten bis Liste existiert
+        var wait = new (window.WebKitMutationObserver || window.MutationObserver)(function(){
+          var l = document.getElementsByClassName('w-commerce-commercecheckoutordersummaryextraitemslist')[0];
+          if(l){ try{ wait.disconnect(); }catch(_){ } setupCheckoutExtraItemTranslations(); }
         });
-        try{ waitMo.observe(document.body, { childList:true, subtree:true }); }catch(_){ }
+        try{ wait.observe(document.body, { childList:true, subtree:true }); }catch(_){ }
       }
-      // Zusätzlicher Poll-Fallback (10s)
-      var tries = 0; var maxTries = 50; // 50 * 200ms = 10s
-      var iv = setInterval(function(){
-        try{ renameTaxLabels(document); }catch(_){ }
-        if(++tries >= maxTries){ clearInterval(iv); }
-      }, 200);
     }catch(_){ }
   }
   function isPrivate(){
@@ -577,8 +579,8 @@
     // CMS-Suche (segmentiert) initialisieren
     try{ initSegmentedCmsSearch(); }catch(_){ }
 
-    // Checkout: "Country Taxes" → "Mehrwertsteuer"
-    try{ setupCheckoutTaxObserver(); }catch(_){ }
+    // Checkout-Übersetzungen (Extra Items: Country/State/City/County Taxes → Mehrwertsteuer)
+    try{ setupCheckoutExtraItemTranslations(); }catch(_){ }
 
     // === Warenkorb-Kompatibilitätslogik (global, auf jeder Seite aktiv) ===
     try{
