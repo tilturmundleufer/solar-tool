@@ -3,80 +3,7 @@
       return (str||'').toString().toLowerCase().replace(/\s+/g,' ').trim();
     }catch(_){ return ''; }
   }
-(function(){
-  function renameTaxLabels(root){
-    try{
-      var scope = root || document;
-      // Suche breit nach Labels innerhalb der Extra-Items-List
-      var items = scope.querySelectorAll('.w-commerce-commercecheckoutordersummaryextraitemslistitem');
-      for(var i=0;i<items.length;i++){
-        var item = items[i];
-        // Kandidaten: erste Divs oder data-wf-bindings-Knoten
-        var cands = item.querySelectorAll('div, [data-wf-bindings]');
-        for(var j=0;j<cands.length;j++){
-          var n = cands[j];
-          var txt = ((n.textContent||'').trim());
-          if(/^country\s*tax(es)?:?$/i.test(txt) || /\bcountry\s*tax(es)?\b/i.test(txt)){
-            n.textContent = 'Mehrwertsteuer';
-            break;
-          }
-        }
-      }
-    }catch(_){ }
-  }
-  function setupCheckoutExtraItemTranslations(){
-    try{
-      var translations = {
-        'State Taxes': 'Mehrwertsteuer',
-        'City Taxes': 'Mehrwertsteuer',
-        'County Taxes': 'Mehrwertsteuer',
-        'Country Taxes': 'Mehrwertsteuer',
-        'Tax': 'Mehrwertsteuer',
-        'Taxes': 'Mehrwertsteuer'
-      };
-      var list = document.getElementsByClassName('w-commerce-commercecheckoutordersummaryextraitemslist')[0];
-      var config = { characterData:true, attributes:true, childList:true, subtree:true };
-      var replaceInNode = function(node){
-        try{
-          // Wir bearbeiten ausschließlich das erste Kind (Label-Spalte)
-          var labelEl = node && node.firstChild && node.firstChild.nodeType === 1 ? node.firstChild : null;
-          if(!labelEl) return;
-          var txt = (labelEl.innerText||'').trim();
-          Object.keys(translations).forEach(function(key){
-            if(txt.indexOf(key) !== -1){
-              labelEl.innerText = labelEl.innerText.replace(key, translations[key]);
-            }
-          });
-        }catch(_){ }
-      };
-      var callback = function(mutationsList){
-        for(var i=0;i<mutationsList.length;i++){
-          var mu = mutationsList[i];
-          if(mu.type !== 'childList') continue;
-          var added = mu.addedNodes || [];
-          for(var j=0;j<added.length;j++){
-            var an = added[j];
-            if(!an || !an.firstChild) continue;
-            replaceInNode(an);
-          }
-        }
-      };
-      // Initial lauf durch vorhandene Items
-      try{ Array.from(document.querySelectorAll('.w-commerce-commercecheckoutordersummaryextraitemslistitem')).forEach(replaceInNode); }catch(_){ }
-      if(list){
-        var Obs = window.WebKitMutationObserver || window.MutationObserver;
-        var observer = new Obs(callback);
-        observer.observe(list, config);
-      } else {
-        // Warten bis Liste existiert
-        var wait = new (window.WebKitMutationObserver || window.MutationObserver)(function(){
-          var l = document.getElementsByClassName('w-commerce-commercecheckoutordersummaryextraitemslist')[0];
-          if(l){ try{ wait.disconnect(); }catch(_){ } setupCheckoutExtraItemTranslations(); }
-        });
-        try{ wait.observe(document.body, { childList:true, subtree:true }); }catch(_){ }
-      }
-    }catch(_){ }
-  }
+// Entfernt: Country Tax Text-Bearbeitung (auf Wunsch deaktiviert)
   function isPrivate(){
     return getStoredCustomerType() === 'private';
   }
@@ -579,8 +506,7 @@
     // CMS-Suche (segmentiert) initialisieren
     try{ initSegmentedCmsSearch(); }catch(_){ }
 
-    // Checkout-Übersetzungen (Extra Items: Country/State/City/County Taxes → Mehrwertsteuer)
-    try{ setupCheckoutExtraItemTranslations(); }catch(_){ }
+    // Checkout-Übersetzungen entfernt
 
     // === Warenkorb-Kompatibilitätslogik (global, auf jeder Seite aktiv) ===
     try{
