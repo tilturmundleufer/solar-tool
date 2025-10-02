@@ -1089,3 +1089,53 @@
     }
   };
 })();
+
+// === Domain-Übertragung Kundentyp (unterkonstruktion.de ↔ foxycart.com) ===
+(function(){
+  function getType(){
+    try{
+      var m = document.cookie.match(/(?:^|; )ukc_customer_type=([^;]+)/);
+      if(m) return decodeURIComponent(m[1]);
+      try{ var ls = window.localStorage.getItem('ukc_customer_type'); if(ls) return ls; }catch(_){ }
+      // Fallback: auf vorhandenen Solar-Tool Speicher (48h JSON)
+      try{
+        var raw = window.localStorage.getItem('solarTool_customerType');
+        if(raw){ var data = JSON.parse(raw); if(data && data.type){ return data.type === 'business' ? 'business' : 'private'; } }
+      }catch(_){ }
+      return 'private';
+    }catch(_){ return 'private'; }
+  }
+
+  function setType(val){
+    try{
+      document.cookie = 'ukc_customer_type='+encodeURIComponent(val)+';path=/;max-age=31536000;SameSite=Lax';
+      localStorage.setItem('ukc_customer_type', val);
+    }catch(_){}
+  }
+
+  try{
+    var host = (location && location.hostname) || '';
+    // 1) Unterkonstruktion.de → Links zur Foxy-Domain anreichern
+    if(host.endsWith('unterkonstruktion.de')){
+      var type = getType();
+      try{ setType(type); }catch(_){}
+      document.addEventListener('click', function(e){
+        var a = e && e.target && e.target.closest && e.target.closest('a[href]');
+        if(!a) return;
+        var href = a.getAttribute('href') || '';
+        if(!href) return;
+        var url = new URL(href, location.href);
+        if(url.hostname && url.hostname.endsWith('foxycart.com')){
+          url.searchParams.set('customer_type', type);
+          a.setAttribute('href', url.toString());
+        }
+      }, true);
+    }
+    // 2) Foxy-Domain → Param in Domain-Cookie persistieren
+    else if(host.endsWith('foxycart.com')){
+      var urlType = null;
+      try{ urlType = new URL(location.href).searchParams.get('customer_type'); }catch(_){ urlType = null; }
+      if(urlType){ setType(urlType); }
+    }
+  }catch(_){ }
+})();
