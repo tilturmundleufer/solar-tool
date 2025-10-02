@@ -1139,3 +1139,43 @@
     }
   }catch(_){ }
 })();
+
+// === Auto-Fill: customer_type Hidden-Feld in Foxy-Forms ===
+(function(){
+  function getType(){
+    try{
+      var m = document.cookie.match(/(?:^|; )ukc_customer_type=([^;]+)/);
+      if(m) return decodeURIComponent(m[1]);
+      var ls = localStorage.getItem('ukc_customer_type');
+      if(ls) return ls;
+      try{
+        var raw = localStorage.getItem('solarTool_customerType');
+        if(raw){ var d = JSON.parse(raw); if(d && d.type){ return d.type==='business'?'business':'private'; } }
+      }catch(_){ }
+    }catch(_){ }
+    return 'private';
+  }
+  function setFormType(form){
+    try{
+      var input = form && form.querySelector && form.querySelector('input[name="customer_type"]');
+      if(input){ input.value = getType(); }
+    }catch(_){ }
+  }
+  function isFoxyForm(form){
+    try{ var a = (form && form.getAttribute && form.getAttribute('action')) || ''; return /foxycart\.com\/cart/i.test(a||''); }catch(_){ return false; }
+  }
+  function init(){
+    try{
+      var forms = Array.prototype.slice.call(document.querySelectorAll('form'));
+      for(var i=0;i<forms.length;i++){
+        var f = forms[i];
+        if(!isFoxyForm(f)) continue;
+        setFormType(f);
+        try{ f.addEventListener('submit', function(ev){ setFormType(ev.currentTarget||f); }, true); }catch(_){ }
+      }
+    }catch(_){ }
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  }else{ init(); }
+})();
