@@ -12,16 +12,8 @@
     return getStoredCustomerType() === 'business';
   }
   function updateCustomerTypeVisibility(){
-    try{
-      const privSel = ['#privat','[data-customer-type="privat"]','[data-customer-segment="privat"]','[data-list="privat"]','.collection-list-privat'];
-      const gewSel  = ['#gewerbe','[data-customer-type="gewerbe"]','[data-customer-segment="gewerbe"]','[data-list="gewerbe"]','.collection-list-gewerbe'];
-      const qAll = sels => sels.flatMap(s=>Array.from(document.querySelectorAll(s)));
-      const hideSet = (els, hidden)=>els.forEach(el=>{ if(el&&el.style){ el.style.display = hidden? 'none':''; }});
-      const privEls = qAll(privSel);
-      const gewEls  = qAll(gewSel);
-      hideSet(privEls, !isPrivate());
-      hideSet(gewEls, isPrivate());
-    }catch(e){}
+    // Deaktiviert: CMS-Collections werden nicht mehr kundentyp-basiert ein-/ausgeblendet
+    try{ /* no-op */ }catch(_){ }
   }
   function setActiveButtons(){
     try{
@@ -109,24 +101,8 @@
   }
 
   function itemMatchesCurrentCustomerType(item){
-    try{
-      var preferBrutto = isBusiness();
-      // 1) Bereits ermittelte Klassifizierung nutzen
-      var resolved = (item.getAttribute('data-price-resolved')||'').toLowerCase();
-      if(resolved === 'brutto') return preferBrutto === true;
-      if(resolved === 'netto')  return preferBrutto === false;
-      // 2) Versuche sofortige ID-basierte Auflösung (synchron)
-      var sync = extractIdsFromCmsItemSync(item);
-      if(sync.productId || sync.variantId){
-        var t = resolvePriceTypeFromIds(sync.productId, sync.variantId);
-        if(t){ item.setAttribute('data-price-resolved', t); return preferBrutto ? t==='brutto' : t==='netto'; }
-      }
-      // 3) Heuristik (Fallback)
-      var cls = classifyItemGrossNet(item);
-      if(cls){ item.setAttribute('data-price-resolved', cls); return preferBrutto ? cls==='brutto' : cls==='netto'; }
-      // 4) Unbekannt → bei Firmenkunden strikt ausblenden, bei Privatkunden toleranter anzeigen
-      return preferBrutto ? false : true;
-    }catch(_){ return true; }
+    // Deaktiviert: keine kundentyp-basierte Filterung mehr in der CMS-Suche
+    try{ return true; }catch(_){ return true; }
   }
 
   // Caches für ID-Auflösung
@@ -411,33 +387,8 @@
   }
 
   function refilterSegmentedCmsSearchForCurrentCustomerType(){
-    try{
-      var inputs = document.querySelectorAll('[data-input^="search-"]');
-      for(var i=0;i<inputs.length;i++){
-        var inp = inputs[i];
-        var val = (inp.value||'');
-        var attr = inp.getAttribute('data-input')||'';
-        var m = attr.match(/^search-(.+)$/); if(!m) continue; var key = m[1];
-        var root = getListRootForInput(inp) || getSegmentRootForElement(inp) || getVisibleSegmentRoot() || document;
-        // Vor dem Refilter evtl. alte Klassifizierungen entfernen (Wechsel Firma ↔ Privat)
-        try{
-          var allItems = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
-          for(var r=0;r<allItems.length;r++){
-            allItems[r].removeAttribute('data-price-resolved');
-          }
-        }catch(_){ }
-        if(val !== ''){ handleSearchInput(inp); }
-        else{
-          // Leeres Feld: nichts anzeigen (Anforderung)
-          try{
-            var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
-            for(var k=0;k<items.length;k++){ items[k].style.display='none'; }
-            var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'); if(noRes) noRes.style.display='none';
-            var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]'); if(wrapper) wrapper.style.display='none';
-          }catch(_){ }
-        }
-      }
-    }catch(_){ }
+    // Deaktiviert: kein Re-Filter basierend auf Kundentyp notwendig
+    try{ /* no-op */ }catch(_){ }
   }
   function setCustomerType(type){
     storeCustomerType(type==='business'?'business':'private');
