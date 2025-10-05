@@ -688,28 +688,22 @@
     }
 
     async updatePricesFromHTML() {
+      // Webflow-Extraction deaktiviert – Preise werden aus PRICE_MAP übernommen
       if (this.isUpdating) return;
-      
       this.isUpdating = true;
-      
-      const allKeys = Array.from(new Set([
-        ...Object.keys(PRODUCT_MAP || {}),
-        ...Object.keys(PRODUCT_MAP_BRUTTO || {})
-      ]));
-      const promises = allKeys.map(async (productKey) => {
-        const price = await this.getPriceFromHTMLAsync(productKey);
-        this.cache.set(productKey, price);
-        return { productKey, price };
-      });
-
       try {
-        const results = await Promise.all(promises);
+        const keys = Array.from(new Set([
+          ...Object.keys(PRICE_MAP || {}),
+          ...Object.keys(PRODUCT_MAP || {}),
+          ...Object.keys(PRODUCT_MAP_BRUTTO || {})
+        ]));
+        keys.forEach((k) => {
+          const v = PRICE_MAP[k];
+          if (typeof v === 'number' && v > 0) this.cache.set(k, v);
+        });
         this.lastUpdate = Date.now();
         this.saveToStorage();
-        
-        results.forEach(({ productKey, price }) => {
-        });
-      } catch (error) {
+      } catch (_) {
       } finally {
         this.isUpdating = false;
       }
@@ -737,71 +731,8 @@
     }
 
     extractPriceFromHTML(productKey) {
-      try {
-      const productInfo = PRODUCT_MAP[productKey];
-      if (!productInfo) return PRICE_MAP[productKey] || 0;
-      
-      const productId = productInfo.productId;
-      const variantId = productInfo.variantId;
-      
-      const productForm = document.querySelector(`[data-commerce-product-id="${productId}"]`) ||
-                         document.querySelector(`[data-commerce-sku-id="${variantId}"]`);
-      
-      if (productForm) {
-        // Mehrere mögliche Selektoren/Attribute versuchen
-        const selectors = [
-          '[data-wf-sku-bindings*="f_price_"]',
-          '[data-commerce-sku-price]','[data-commerce-product-price]',
-          '.w-commerce-commerceproductprice','.w-commerce-commerceaddtocartprice'
-        ];
-        // Hilfsfunktion: robustes Parsen deutscher/englischer Preisformate
-        const parsePriceStrict = (txt) => {
-          if (!txt) return null;
-          let s = String(txt).replace(/\u00a0|\s+/g, '');
-          // Kandidaten: längste Zahlenkette mit Trennzeichen
-          const candidates = s.match(/[0-9][0-9.,-]*/g) || [];
-          if (candidates.length === 0) return null;
-          // Bevorzugt letztes Element (meist der Betrag, nicht z. B. (36)) mit Länge > 3
-          let cand = candidates.filter(c => c && c.length > 3).pop() || candidates[candidates.length - 1];
-          // Erlaube nur Ziffern und Trennzeichen
-          cand = cand.replace(/[^0-9.,-]/g, '');
-          const lastComma = cand.lastIndexOf(',');
-          const lastDot = cand.lastIndexOf('.');
-          if (lastComma === -1 && lastDot === -1) {
-            const v = parseFloat(cand);
-            return Number.isFinite(v) ? v : null;
-          }
-          // Bestimme Dezimaltrennzeichen: das letzte auftretende Separator-Zeichen
-          const decimalSep = lastComma > lastDot ? ',' : '.';
-          if (decimalSep === ',') {
-            // Entferne Tausenderpunkte und alle Kommas bis auf das letzte
-            let t = cand.replace(/\./g, '');
-            const parts = t.split(',');
-            const frac = parts.pop();
-            t = parts.join('') + '.' + frac;
-            const v = parseFloat(t);
-            return Number.isFinite(v) ? v : null;
-          } else {
-            // Dezimalpunkt – entferne Tausenderkommas
-            const t = cand.replace(/,/g, '');
-            const v = parseFloat(t);
-            return Number.isFinite(v) ? v : null;
-          }
-        };
-
-        for (const sel of selectors) {
-          const el = productForm.querySelector(sel);
-          if (!el) continue;
-          let priceText = (el.getAttribute('data-commerce-sku-price') || el.getAttribute('data-commerce-product-price') || el.textContent || el.innerHTML || '').toString();
-          priceText = priceText.replace(/&nbsp;/g, ' ').replace(/&euro;/g, '€').trim();
-          const val = parsePriceStrict(priceText);
-          if (Number.isFinite(val) && val > 0) return val;
-        }
-      }
-    } catch (error) {
-    }
-    
-    return PRICE_MAP[productKey] || 0;
+      // Deaktiviert: wir scrapen keine Webflow-Preise mehr
+      return PRICE_MAP[productKey] || 0;
     }
 
     getPrice(productKey) {
