@@ -8409,53 +8409,34 @@
       });
     }
 
-    addProductToCart(productKey, quantity, isLastItem = false) {
-      // Firmenkunden: Brutto-Formulare bevorzugen
-      const preferBrutto = !isPrivateCustomer() && Object.prototype.hasOwnProperty.call(PRODUCT_MAP_BRUTTO, productKey);
-      let form = null;
-      if (preferBrutto && this.webflowFormMapBrutto) {
-        form = this.webflowFormMapBrutto[productKey] || null;
-      }
-      if (!form && this.webflowFormMap) {
-        form = this.webflowFormMap[productKey] || null;
-      }
+    addProductToCart(productKey, quantity) {
+      // Foxy.io: Formular per Produktname finden und submitten
+      const displayName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
+      const form = this.findFoxyFormByName ? this.findFoxyFormByName(displayName) : null;
       if (!form) {
-        // Fallback: DOM-Suche anhand IDs
-        const info = getCartProductInfo(productKey);
-        if (info) {
-          form = document.querySelector(`[data-commerce-product-id="${info.productId}"]`) ||
-                 document.querySelector(`[data-commerce-sku-id="${info.variantId}"]`);
-          if (form) {
-            if (preferBrutto) {
-              this.webflowFormMapBrutto = this.webflowFormMapBrutto || {};
-              this.webflowFormMapBrutto[productKey] = form;
-            } else {
-              this.webflowFormMap = this.webflowFormMap || {};
-              this.webflowFormMap[productKey] = form;
-            }
-          }
-        }
+        console.warn(`[SolarGrid] Foxy-Formular nicht gefunden für '${displayName}'`);
+        return;
       }
-      if (!form) return;
-      
-      const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
-      if (qtyInput) {
-        qtyInput.value = quantity;
-      }
-      // Optional-Selects (Webflow Produkt-Optionen) automatisch setzen, falls required
       try {
-        form.querySelectorAll('select[required]').forEach(sel => {
-          if (!sel.value) {
-            const first = sel.querySelector('option[value]:not([value=""])');
-            if (first) sel.value = first.value;
+        const qtyInput = form.querySelector('input[name="quantity"]');
+        if (qtyInput) qtyInput.value = Math.max(1, parseInt(quantity, 10) || 1);
+        const customerInput = form.querySelector('input[name="customer_type"]');
+        try {
+          const raw = localStorage.getItem('solarTool_customerType');
+          if (customerInput && raw) {
+            const parsed = JSON.parse(raw);
+            const type = parsed && parsed.type ? String(parsed.type) : '';
+            if (type) customerInput.value = type;
           }
-        });
-      } catch (e) {}
-      
-      // Klassen/Node-Typen sind unzuverlässig → breite Selektoren nutzen
-      const addToCartButton = form.querySelector('input[data-node-type="commerce-add-to-cart-button"], input[type="submit"][value*="cart" i], [data-wf-cart-action="add-item"], [data-wf-cart-action*="add" i]');
-      if (addToCartButton) {
-        this.clickWebflowButtonSafely(form, addToCartButton, productKey, quantity, isLastItem);
+        } catch(_) {}
+        const submitBtn = form.querySelector('button[data-fc-add-to-cart]') || form.querySelector('button[type="submit"]');
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit(submitBtn || undefined);
+        } else {
+          (submitBtn && submitBtn.click()) || form.submit();
+        }
+      } catch (e) {
+        console.warn('[SolarGrid] Foxy-Submit Fehler:', e);
       }
     }
 
@@ -8479,17 +8460,16 @@
     addPartsListToCart(parts) {
       const entries = Object.entries(parts).filter(([_, qty]) => qty > 0);
       if (!entries.length) return;
-      
-      if (this.isAddingToCart) {
-        this.showToast('Warenkorb wird bereits befüllt… Bitte warten.', 2000);
+      // Wenn Foxy-Formulare vorhanden sind → einfacher Foxy-Flow (kein Webflow-Observer)
+      const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
+      if (hasFoxy) {
+        entries.forEach(([key, qty], i) => {
+          const packsNeeded = Math.ceil(qty / (VE[key] || 1));
+          setTimeout(() => this.addProductToCart(key, packsNeeded), i * 200);
+        });
         return;
       }
-      this.isAddingToCart = true;
-      this.showLoading('Warenkorb wird befüllt… bitte warten');
-      
-      // Overlay verbergen bis der Prozess abgeschlossen ist
-      this.hideCartContainer();
-      
+      // Fallback: alter Webflow-Flow (historisch)
       const items = entries.map(([key, qty]) => ({ key, qty }));
       const processSequentially = async () => {
         try {
@@ -8500,7 +8480,6 @@
             await this.addSingleItemAndWait(key, packsNeeded, i === items.length - 1);
           }
         } finally {
-          // Nach Abschluss: Overlay zeigen und Status zurücksetzen
           this.showCartContainer();
           this.hideLoading();
           this.isAddingToCart = false;
@@ -9453,7 +9432,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     // Kundentyp-UI (Listen/Buttons) wird global im customer-type-popup.js verwaltet
     const grid = new SolarGrid();
-    grid.generateHiddenCartForms();
+    // Foxy: kein Webflow-Mapping mehr – stattdessen Foxy-Form-Mapping initialisieren, falls vorhanden
+    if (typeof grid.initFoxyFormMap === 'function') {
+      grid.initFoxyFormMap();
+    }
     window.solarGrid = grid;
   });
 
