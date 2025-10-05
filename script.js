@@ -149,8 +149,8 @@
     Solarmodul: 59.70,
     UlicaSolarBlackJadeFlow: 67.90,
     // Paletten-Fallbackpreise (Netto) – falls Collection Price nicht gefunden wird
-    SolarmodulPalette: 2394.76, // 450 W Palette
-    UlicaSolarBlackJadeFlowPalette: 2694.64, // 500 W Palette
+    SolarmodulPalette: 2012.40, // 36x Ulica 450 W – Palette
+    UlicaSolarBlackJadeFlowPalette: 2264.40, // 36x Ulica 500 W – Palette
     Endklemmen: 49.50,
     Schrauben: 22.00,
     Dachhaken: 69.00,
@@ -168,8 +168,8 @@
     Erdungsband: 8.70,
     Tellerkopfschraube: 26.00,
     // Optimierer (Netto VK pro VE)
-    HuaweiOpti: 34.50,
-    BRCOpti: 33.50
+    HuaweiOpti: 39.68,
+    BRCOpti: 38.53
   };
 
   // Staffelpreis-Konfiguration: thresholds immer in Stück (benötigte Menge),
@@ -9498,6 +9498,21 @@
     if (typeof grid.initFoxyFormMap === 'function') {
       grid.initFoxyFormMap();
     }
+    // Verstecke Collection-List/Wrapper der Foxy-Forms (bleiben im DOM für Submit nutzbar)
+    try {
+      const wrappers = document.querySelectorAll('.w-dyn-list, .w-dyn-items, .w-dyn-item, .rt-component-section');
+      wrappers.forEach(el => {
+        if (!el || !el.style) return;
+        el.style.position = 'absolute';
+        el.style.left = '-9999px';
+        el.style.top = '-9999px';
+        el.style.width = '1px';
+        el.style.height = '1px';
+        el.style.overflow = 'hidden';
+        el.style.clip = 'rect(0, 0, 0, 0)';
+        el.style.whiteSpace = 'nowrap';
+      });
+    } catch(_) {}
     window.solarGrid = grid;
   });
 
