@@ -822,15 +822,43 @@
 		}
     
     initFoxyFormMap() {
-      // Baue ein Mapping: Produktname -> Formular (aus der CMS-Collection)
+      // Mapping Container bereitstellen
       this.foxyFormsByName = new Map();
+
+      // Sofortiger Scan + Wiederholversuche (CMS baut DOM asynchron)
+      let attemptsLeft = 15; // ~4.5s bei 300ms Intervall
+      const tryScan = () => {
+        this.refreshFoxyFormMap();
+        if (this.foxyFormsByName.size === 0 && attemptsLeft-- > 0) {
+          setTimeout(tryScan, 300);
+        }
+      };
+      tryScan();
+
+      // MutationObserver für spätere DOM-Änderungen (Pagination/Filter)
+      try { this._foxyObserver && this._foxyObserver.disconnect(); } catch(_) {}
+      let debounceTimer = null;
+      const debouncedRefresh = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => this.refreshFoxyFormMap(), 50);
+      };
+      this._foxyObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.addedNodes && m.addedNodes.length) { debouncedRefresh(); break; }
+        }
+      });
+      this._foxyObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    refreshFoxyFormMap() {
+      const map = new Map();
       const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
       forms.forEach((form) => {
         const nameInput = form.querySelector('input[name="name"]');
-        if (nameInput && nameInput.value) {
-          this.foxyFormsByName.set(nameInput.value.trim(), form);
-        }
+        const val = nameInput && typeof nameInput.value === 'string' ? nameInput.value.trim() : '';
+        if (val) map.set(val, form);
       });
+      this.foxyFormsByName = map;
     }
 
     // Webflow-Buttons werden nicht mehr benötigt
@@ -873,15 +901,31 @@
 
     // Foxy-Helfer: Formular anhand Produktnamen finden (Map + Fallback-Query)
     findFoxyFormByName(name) {
-      if (this.foxyFormsByName && this.foxyFormsByName.has(name)) return this.foxyFormsByName.get(name);
-      const selector = `form[action*="foxycart.com/cart"] input[name="name"][value="${CSS.escape(name)}"]`;
-      const input = document.querySelector(selector);
-      const form = input ? input.closest('form') : null;
-      if (form) {
-        this.foxyFormsByName = this.foxyFormsByName || new Map();
-        this.foxyFormsByName.set(name, form);
+      const wanted = String(name || '').trim();
+      if (!wanted) return null;
+      // 1) Exaktes Mapping
+      if (this.foxyFormsByName && this.foxyFormsByName.has(wanted)) return this.foxyFormsByName.get(wanted);
+      // 2) Exakte Value-Suche
+      try {
+        const selector = `form[action*=\"foxycart.com/cart\"] input[name=\"name\"][value=\"${CSS.escape(wanted)}\"]`;
+        const input = document.querySelector(selector);
+        if (input) return input.closest('form');
+      } catch(_) {}
+      // 3) Case-insensitive exakter Vergleich
+      const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+      const lw = wanted.toLowerCase();
+      for (const form of forms) {
+        const val = form.querySelector('input[name="name"]')?.value?.trim();
+        if (val && val.toLowerCase() === lw) return form;
       }
-      return form;
+      // 4) Teilstring-Fallback mit Normalisierung
+      const norm = (s) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+      const nW = norm(wanted);
+      for (const form of forms) {
+        const val = form.querySelector('input[name="name"]')?.value;
+        if (val && norm(val).includes(nW)) return form;
+      }
+      return null;
     }
 
     addPartsListToCart(parts) {
