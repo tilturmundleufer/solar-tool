@@ -8409,6 +8409,68 @@
       });
     }
 
+    // Foxy.io Formular-Mapping (CMS-Listen sind dynamisch)
+    initFoxyFormMap() {
+      this.foxyFormsByName = new Map();
+      let attemptsLeft = 15; // ~4,5s bei 300ms Intervall
+      const tryScan = () => {
+        this.refreshFoxyFormMap();
+        if (this.foxyFormsByName.size === 0 && attemptsLeft-- > 0) {
+          setTimeout(tryScan, 300);
+        }
+      };
+      tryScan();
+
+      try { this._foxyObserver && this._foxyObserver.disconnect(); } catch(_) {}
+      let debounceTimer = null;
+      const debounced = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => this.refreshFoxyFormMap(), 60); };
+      this._foxyObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.addedNodes && m.addedNodes.length) { debounced(); break; }
+        }
+      });
+      this._foxyObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    refreshFoxyFormMap() {
+      const map = new Map();
+      const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+      forms.forEach((form) => {
+        const nameInput = form.querySelector('input[name="name"]');
+        const val = nameInput && typeof nameInput.value === 'string' ? nameInput.value.trim() : '';
+        if (val) map.set(val, form);
+      });
+      this.foxyFormsByName = map;
+    }
+
+    findFoxyFormByName(name) {
+      const wanted = String(name || '').trim();
+      if (!wanted) return null;
+      const normalize = (s) => s.replace(/[\u2013\u2014]/g, '-').replace(/\s+/g, ' ').trim().toLowerCase();
+
+      if (this.foxyFormsByName && this.foxyFormsByName.has(wanted)) return this.foxyFormsByName.get(wanted);
+      try {
+        const sel = `form[action*=\"foxycart.com/cart\"] input[name=\"name\"][value=\"${CSS.escape(wanted)}\"]`;
+        const input = document.querySelector(sel);
+        if (input) return input.closest('form');
+      } catch(_) {}
+      const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+      const nWanted = normalize(wanted);
+      let best = null;
+      forms.forEach((form) => {
+        const val = form.querySelector('input[name="name"]')?.value;
+        if (!val) return;
+        if (normalize(val) === nWanted && !best) best = form;
+      });
+      if (best) return best;
+      forms.forEach((form) => {
+        if (best) return;
+        const val = form.querySelector('input[name="name"]')?.value;
+        if (val && normalize(val).includes(nWanted)) best = form;
+      });
+      return best;
+    }
+
     addProductToCart(productKey, quantity) {
       // Foxy.io: Formular per Produktname finden und submitten
       const displayName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
