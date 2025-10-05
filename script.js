@@ -367,18 +367,27 @@
   };
   
   const PRODUCT_NAME_MAP = {
+    // Module und Paletten
     'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
     'UlicaSolarBlackJadeFlow': 'Ulica Solar Black Jade-Flow 500 W',
-    'SolarmodulPalette': 'Palette (36× Ulica Solar Black Jade-Flow 450 W)',
-    'UlicaSolarBlackJadeFlowPalette': 'Palette (36× Ulica Solar Black Jade-Flow 500 W)',
-    'Schrauben': 'Schraube M10x25',
-    'Solarkabel': 'Solarkabel',
-    'Holzunterleger': 'Unterlegholz für Dachhaken',
-    // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
-    'Erdungsklemme': 'Erdungsklemme - ?? Stücl',
-    'Quetschkabelschuhe': 'Quetschkabelschuhe',
-    'Erdungsband': 'Erdungsband',
-    'Tellerkopfschraube': 'Tellerkopfschraube 8x100',
+    'SolarmodulPalette': '36x Ulica Solar Black Jade-Flow 450 W - Palette',
+    'UlicaSolarBlackJadeFlowPalette': '36x Ulica Solar Black Jade-Flow 500 W  - Palette',
+    // Standardteile (exakte Foxy-Bezeichnungen)
+    'Endklemmen': 'Endklemmen - 50 Stück',
+    'Mittelklemmen': 'Mittelklemmen - 50 Stück',
+    'Endkappen': 'Endkappen - 50 Stück',
+    'Dachhaken': 'Dachhaken 3-fach verstellbar - 20 Stück',
+    'Schienenverbinder': 'Schienenverbinder - 50 Stück',
+    'Schiene_360_cm': 'Schiene 360 cm',
+    'Schiene_240_cm': 'Schiene 240cm',
+    'MC4_Stecker': 'MC4 Stecker - 50 Steckerpaare',
+    'Schrauben': 'Schraube M10x25 - 100 Stück inkl. Muttern',
+    'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück',
+    'Quetschkabelschuhe': 'Ringkabelschuhe - 100 Stück',
+    'Erdungsband': 'Erdungsband - 6M',
+    'Solarkabel': 'Solarkabel 100M',
+    'Holzunterleger': 'Unterlegholz für Dachhacken - 50 Stück',
+    // Optimierer (aus Liste)
     'HuaweiOpti': 'Huawei Smart PV Optimierer 600W',
     'BRCOpti': 'BRC M600M Optimierer'
   };
