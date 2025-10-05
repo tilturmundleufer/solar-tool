@@ -28,18 +28,19 @@
   	Holzunterleger: 0.5
 	};
 
-  const PRODUCT_MAP = {
-    Solarmodul:        { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
-    Endklemmen:        { productId:'6853c34fe99f6e3d878db38b', variantId:'6853c350edab8f13fc18c1b9' },
-    Schrauben:         { productId:'6853c2782b14f4486dd26f52', variantId:'6853c2798bf6755ddde26a8e' },
-    Dachhaken:         { productId:'6853c1d0f350bf620389664c', variantId:'6853c1d04d7c01769211b8d6' },
-    Mittelklemmen:     { productId:'68531088654d1468dca962c', variantId:'6853c1084c04541622ba3e26' },
-    Endkappen:         { productId:'6853be0895a5a578324f9682', variantId:'6853be0805e96b5a16c705cd' },
-    Schienenverbinder: { productId:'6853c2018bf6755ddde216a8', variantId:'6853c202c488ee61eb51a3dc' },
-    Schiene_240_cm:    { productId:'6853bd882f00db0c9a42d653', variantId:'6853bd88c4173dbe72bab10f' },
-    Schiene_360_cm:    { productId:'6853bc8f3f6abf360c605142', variantId:'6853bc902f00db0c9a423d97' },
-    MC4_Stecker:       { productId:'xxx-mc4', variantId:'xxx-mc4-v' },
-    Holzunterleger:    { productId:'xxx-holz', variantId:'xxx-holz-v' }
+  // Foxy.io Integration: Identifikation über Produktnamen (keine IDs mehr)
+  const PRODUCT_NAME_MAP = {
+    Solarmodul:        'Solarmodul',
+    Endklemmen:        'Endklemmen',
+    Schrauben:         'Schrauben',
+    Dachhaken:         'Dachhaken',
+    Mittelklemmen:     'Mittelklemmen',
+    Endkappen:         'Endkappen',
+    Schienenverbinder: 'Schienenverbinder',
+    Schiene_240_cm:    'Schiene 240 cm',
+    Schiene_360_cm:    'Schiene 360 cm',
+    MC4_Stecker:       'MC4 Stecker',
+    Holzunterleger:    'Holzunterleger'
   };
 
   class SolarGrid {
@@ -820,227 +821,67 @@
   		this.summaryList.style.display = entries.length ? 'flex' : 'none';
 		}
     
-    generateHiddenCartForms() {
-      // Remove old forms first
-      const existingForms = document.getElementById('hidden-cart-forms');
-      if (existingForms) {
-        existingForms.remove();
-      }
-      
-      // Create container for forms - visible but positioned off-screen to avoid accessibility issues
-      const hiddenCartForms = document.createElement('div');
-      hiddenCartForms.id = 'hidden-cart-forms';
-      hiddenCartForms.style.cssText = `
-        position: absolute;
-        left: -9999px;
-        top: -9999px;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border: 0;
-        margin: 0;
-        padding: 0;
-      `;
-      
-      Object.entries(PRODUCT_MAP).forEach(([key, val]) => {
-        // Create a simple form that mimics Webflow's structure
-        const form = document.createElement('form');
-        form.setAttribute('data-product-key', key);
-        form.setAttribute('data-product-id', val.productId);
-        form.setAttribute('aria-hidden', 'true');
-        form.setAttribute('tabindex', '-1');
-        // Remove action to prevent redirect
-        form.setAttribute('method', 'POST');
-        form.innerHTML = `
-          <input type="hidden" name="product-id" value="${val.productId}" />
-          <input type="hidden" name="variant-id" value="${val.variantId}" />
-          <input type="number" name="quantity" value="1" min="1" tabindex="-1" aria-hidden="true" />
-          <button type="submit" class="w-commerce-commerceaddtocartbutton" tabindex="-1" aria-hidden="true"></button>
-        `;
-        
-        // Prevent form from redirecting by default
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-        });
-        
-        hiddenCartForms.appendChild(form);
+    initFoxyFormMap() {
+      // Baue ein Mapping: Produktname -> Formular (aus der CMS-Collection)
+      this.foxyFormsByName = new Map();
+      const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+      forms.forEach((form) => {
+        const nameInput = form.querySelector('input[name="name"]');
+        if (nameInput && nameInput.value) {
+          this.foxyFormsByName.set(nameInput.value.trim(), form);
+        }
       });
-      
-      document.body.appendChild(hiddenCartForms);
-      
-      // Add event listeners to the buttons
-      this.attachCartButtonListeners();
     }
 
-    attachCartButtonListeners() {
-      const buttons = document.querySelectorAll('#hidden-cart-forms .add-to-cart-btn');
-      buttons.forEach(button => {
-        button.addEventListener('click', (e) => {
-          e.preventDefault();
-          const productKey = button.getAttribute('data-product-key');
-          const form = button.closest('form');
-          const quantity = parseInt(form.querySelector('input[name="quantity"]').value) || 1;
-          
-          this.performActualCartAdd(productKey, quantity);
-        });
-      });
-    }
+    // Webflow-Buttons werden nicht mehr benötigt
+    attachCartButtonListeners() {}
 
     addProductToCart(productKey, quantity) {
-      const product = PRODUCT_MAP[productKey];
-      if (!product) {
-        console.warn(`[SolarGrid] Kein Produkt für Schlüssel '${productKey}' im PRODUCT_MAP gefunden.`);
-        return;
-      }
-      
-      // Try multiple methods to add to Webflow cart without redirect
-      if (this.tryWebflowCartAPI(product, quantity, productKey)) {
-        return;
-      }
-      
-      if (this.tryWebflowFormSubmit(product, quantity, productKey)) {
-        return;
-      }
-      
-      // Final fallback
-      this.fallbackAddToCart(product, quantity, productKey);
-    }
-
-    tryWebflowCartAPI(product, quantity, productKey) {
-      // Method 1: Try Webflow's commerce API
-      if (window.Webflow && window.Webflow.commerce && window.Webflow.commerce.addToCart) {
-        try {
-          window.Webflow.commerce.addToCart({
-            productId: product.productId,
-            variantId: product.variantId,
-            quantity: quantity
-          });
-          console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (API).`);
-          return true;
-        } catch (error) {
-          console.warn(`[SolarGrid] Webflow API fehlgeschlagen für ${productKey}:`, error);
-        }
-      }
-      return false;
-    }
-
-    tryWebflowFormSubmit(product, quantity, productKey) {
-      // Method 2: Try to simulate Webflow's add-to-cart behavior without redirect
-      const form = document.querySelector(`form[data-product-id="${product.productId}"]`);
+      const displayName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
+      let form = this.findFoxyFormByName(displayName);
       if (!form) {
-        return false;
+        console.warn(`[SolarGrid] Foxy-Formular für Produktname '${displayName}' nicht gefunden.`);
+        return;
       }
-      
-      const qtyInput = form.querySelector('input[name="quantity"]');
-      const submitBtn = form.querySelector('button[type="submit"]');
-      
-      if (!qtyInput || !submitBtn) {
-        return false;
-      }
-      
       try {
-        qtyInput.value = quantity;
-        
-        // Try to use Webflow's internal cart methods
-        if (window.Webflow && window.Webflow.commerce) {
-          // Look for Webflow's cart instance
-          const commerceInstance = window.Webflow.commerce;
-          
-          // Try different possible method names
-          const addMethods = ['addProductToCart', 'addToCart', 'updateCart', 'addItem'];
-          
-          for (const methodName of addMethods) {
-            if (typeof commerceInstance[methodName] === 'function') {
-              try {
-                commerceInstance[methodName]({
-                  productId: product.productId,
-                  variantId: product.variantId,
-                  quantity: quantity
-                });
-                console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (${methodName}).`);
-                setTimeout(() => { qtyInput.value = 1; }, 100);
-                return true;
-              } catch (methodError) {
-                console.warn(`[SolarGrid] Methode ${methodName} fehlgeschlagen:`, methodError);
-                continue;
-              }
-            }
+        // Menge setzen
+        const qtyInput = form.querySelector('input[name="quantity"]');
+        if (qtyInput) qtyInput.value = Math.max(1, parseInt(quantity, 10) || 1);
+        // Kundentyp setzen (falls Feld vorhanden)
+        const customerInput = form.querySelector('input[name="customer_type"]');
+        try {
+          const raw = localStorage.getItem('solarTool_customerType');
+          if (customerInput && raw) {
+            const parsed = JSON.parse(raw);
+            const type = parsed && parsed.type ? String(parsed.type) : '';
+            if (type) customerInput.value = type;
           }
+        } catch(_) {}
+        // Absenden ohne Redirect (Foxy-Loader interceptet Submit bzw. Button-Click)
+        const submitBtn = form.querySelector('button[data-fc-add-to-cart]') || form.querySelector('button[type="submit"]');
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit(submitBtn || undefined);
+        } else {
+          // Fallback für ältere Browser
+          (submitBtn && submitBtn.click()) || form.submit();
         }
-        
-        // Alternative: Try to trigger form submission with AJAX to prevent redirect
-        const formData = new FormData(form);
-        
-        // Prevent default form behavior
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }, { once: true });
-        
-        // Try AJAX submission to Webflow's cart endpoint
-        fetch('/cart/add', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        })
-        .then(response => {
-          if (response.ok) {
-            console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum Warenkorb hinzugefügt (AJAX).`);
-            // Update cart UI if possible
-            this.updateCartUI();
-          } else {
-            throw new Error('Cart update failed');
-          }
-        })
-        .catch(error => {
-          console.warn(`[SolarGrid] AJAX cart update fehlgeschlagen für ${productKey}:`, error);
-        });
-        
-        setTimeout(() => { qtyInput.value = 1; }, 100);
-        return true;
-        
-      } catch (error) {
-        console.warn(`[SolarGrid] Form-Submit fehlgeschlagen für ${productKey}:`, error);
-        return false;
+        console.log(`[SolarGrid] ${qtyInput ? qtyInput.value : quantity}× '${displayName}' an Foxy übergeben.`);
+      } catch (e) {
+        console.warn(`[SolarGrid] Foxy-Submit fehlgeschlagen für '${displayName}':`, e);
       }
     }
 
-    updateCartUI() {
-      // Try to refresh cart count and other UI elements
-      if (window.Webflow && window.Webflow.commerce && window.Webflow.commerce.refreshCart) {
-        window.Webflow.commerce.refreshCart();
+    // Foxy-Helfer: Formular anhand Produktnamen finden (Map + Fallback-Query)
+    findFoxyFormByName(name) {
+      if (this.foxyFormsByName && this.foxyFormsByName.has(name)) return this.foxyFormsByName.get(name);
+      const selector = `form[action*="foxycart.com/cart"] input[name="name"][value="${CSS.escape(name)}"]`;
+      const input = document.querySelector(selector);
+      const form = input ? input.closest('form') : null;
+      if (form) {
+        this.foxyFormsByName = this.foxyFormsByName || new Map();
+        this.foxyFormsByName.set(name, form);
       }
-      
-      // Dispatch custom event for cart update
-      const cartUpdateEvent = new CustomEvent('cartUpdated', {
-        bubbles: true,
-        detail: { source: 'solarGrid' }
-      });
-      document.dispatchEvent(cartUpdateEvent);
-    }
-
-    fallbackAddToCart(product, quantity, productKey) {
-      // Method 3: Manual cart management (fallback)
-      console.log(`[SolarGrid] Fallback: ${quantity}x ${productKey} wird verarbeitet.`);
-      
-      // Try to update cart count in UI if possible
-      const cartCountElements = document.querySelectorAll('[data-wf-cart-quantity]');
-      cartCountElements.forEach(el => {
-        const currentCount = parseInt(el.textContent) || 0;
-        el.textContent = currentCount + quantity;
-      });
-      
-      // Store in localStorage as backup
-      const cartKey = 'webflow-cart-backup';
-      let cartBackup = JSON.parse(localStorage.getItem(cartKey) || '{}');
-      cartBackup[product.productId] = (cartBackup[product.productId] || 0) + quantity;
-      localStorage.setItem(cartKey, JSON.stringify(cartBackup));
-      
-      console.log(`[SolarGrid] ${quantity}x ${productKey} wurde zum lokalen Warenkorb hinzugefügt.`);
+      return form;
     }
 
     addPartsListToCart(parts) {
@@ -1122,19 +963,18 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     const grid = new SolarGrid();
-    grid.generateHiddenCartForms();
+    grid.initFoxyFormMap();
     window.solarGrid = grid;
     
-    // Debug function to check cart forms
-    window.debugCartForms = () => {
-      const forms = document.querySelectorAll('#hidden-cart-forms form');
-      console.log(`[Debug] Gefundene Cart-Formulare: ${forms.length}`);
+    // Debug: Foxy-Formulare prüfen
+    window.debugFoxyForms = () => {
+      const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+      console.log(`[Debug] Foxy-Formulare gefunden: ${forms.length}`);
       forms.forEach((form, i) => {
-        const productKey = form.getAttribute('data-product-key');
-        const productId = form.getAttribute('data-product-id');
-        const qtyInput = form.querySelector('input[name="quantity"]');
-        const button = form.querySelector('.add-to-cart-btn');
-        console.log(`[Debug] Form ${i+1}: ProductKey=${productKey}, ProductID=${productId}, Quantity Input=${!!qtyInput}, Button=${!!button}`);
+        const name = form.querySelector('input[name="name"]')?.value;
+        const sku = form.querySelector('input[name="code"]')?.value;
+        const qty = form.querySelector('input[name="quantity"]')?.value;
+        console.log(`[Debug] Form ${i+1}: name='${name}', sku='${sku}', qty=${qty}`);
       });
       return forms;
     };
@@ -1146,7 +986,7 @@
     };
     
     console.log('[SolarGrid] Initialisierung abgeschlossen. Debug-Funktionen verfügbar:');
-    console.log('- window.debugCartForms() - Zeigt alle Cart-Formulare');
+    console.log('- window.debugFoxyForms() - Zeigt alle Foxy-Formulare');
     console.log('- window.testAddToCart(productKey, quantity) - Testet Hinzufügung eines Produkts');
   });
 })();
