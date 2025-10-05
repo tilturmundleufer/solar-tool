@@ -91,15 +91,14 @@ Das Solar-Tool ist eine Web-Anwendung zur einfachen Konfiguration und Bestellung
  - **PDF-Erstellung** - Dynamische A4-Seiten via `html2canvas` + `jsPDF` (Template in `#pdf-root`)
 
 ### **Backend-Integration:**
-- **Webflow E-Commerce** - Warenkorb-System
+- **Foxy.io** - Warenkorb-System via Formular-Submit
  - **Webhook (kompakt)** - Übertragung nur essenzieller Daten (siehe unten)
-### **Warenkorb-Ablauf (stabiler Add-Flow)**
-- Hinzufügen zum Warenkorb erfolgt sequenziell über eine Queue.
-- Bestätigung über DOM-Änderungen des Webflow-Cart-Containers (MutationObserver), Fallback-Timeout pro Item (~1.5s).
-- Asynchrone Webflow-Forms werden per MutationObserver fortlaufend erkannt und gemappt; die Forms bleiben visuell versteckt.
-- Sicherheit: Alle Webflow "Add-to-Cart" Produktformulare werden grundsätzlich unsichtbar gemacht (auch wenn sie im Konfigurator nicht verwendet werden), um UI-Konflikte und unbeabsichtigte Klicks zu vermeiden.
-- Während der Queue ist der Cart-Overlay verborgen und wird erst am Ende gezeigt.
-- Der frühere Hidden-Iframe-Workaround wurde entfernt.
+### **Warenkorb-Ablauf (Foxy‑Add-Flow)**
+- Hinzufügen zum Warenkorb erfolgt über bestehende CMS‑Formulare pro Produkt.
+- Identifikation der Produkte ausschließlich über den Formular‑Feldwert `name` (IDs entfallen).
+- Die Menge wird vor dem Submit in das Feld `quantity` geschrieben; optional wird `customer_type` gesetzt (aus `localStorage.solarTool_customerType`).
+- Submit erfolgt ohne Redirect via `form.requestSubmit()` bzw. Button mit `data-fc-add-to-cart`.
+- Es werden keine Hidden‑Webflow‑Formulare mehr erzeugt; Webflow‑Commerce‑APIs werden nicht mehr genutzt.
 
 - **Webhook-Analytics** - Nutzungsauswertung für Optimierungen
 - **Keine ERP-Anbindung** (noch nicht, geplant für Zukunft)
@@ -162,6 +161,7 @@ Hinweise:
 - `selection.selectedCount` stimmt mit `selectedCoords.length` überein.
 
 ### 📓 Changelog
+ - 2025-10-05: Warenkorb auf Foxy.io umgestellt. Produkte werden über CMS‑Formulare anhand des Feldes `name` und `quantity` hinzugefügt. Webflow‑Cart‑APIs und Hidden‑Form‑Mapping entfernt. Debug‑Helfer `window.debugFoxyForms()` hinzugefügt.
 - 2025-08-30: Schienenverbinder-Logik korrigiert (Produktliste): pro Reihe jetzt Verbinder = Anzahl der Schienen − 2. Beispiel: Bei 4 Schienen in einer Reihe werden 2 Verbinder angezeigt (vorher 4). Test: Konfiguration mit einer Reihe, die zwei Schienenstücke pro Rail benötigt; prüfen, dass Verbinderanzahl halbiert ist.
 - 2025-08-25: Webhook-Payload verschlankt (ohne Bilddaten), hinzugefügt: `selection`-Metadaten und kompaktes `productQuantities`.
 - 2025-08-26: Smart Config – Verteilungsmodus `gleichmäßig` deaktiviert; Nutzerhinweis ergänzt und Beispiele angepasst.
