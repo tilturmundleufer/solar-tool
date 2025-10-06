@@ -8506,20 +8506,20 @@
       // Wenn Foxy-Formulare vorhanden sind → einfacher Foxy-Flow (kein Webflow-Observer)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
       if (hasFoxy) {
-        // Sequenzielle Foxy-Queue mit Retries; Redirect erst nach Abschluss
+        // Sequenzielle Foxy-Queue mit konservativen Delays und mehr Retries; Redirect erst nach Abschluss
         const queue = entries.map(([key, qty]) => ({ key, qty: Math.ceil(qty / (VE[key] || 1)) }));
         const results = [];
-        const maxRetries = 3;
-        const delay = (ms) => new Promise(r => setTimeout(r, ms));
-        const waitShort = (ms) => new Promise(r => setTimeout(r, ms));
+        const maxRetries = 5;
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         const submitOne = async (item, attempt = 1) => {
           try {
             this.addProductToCart(item.key, item.qty);
-            await waitShort(200 + attempt * 150);
+            // Warte konservativ, damit Foxy den Submit sicher verarbeitet
+            await sleep(600 + attempt * 200);
             results.push({ item, ok: true });
           } catch (e) {
             if (attempt < maxRetries) {
-              await delay(150 * attempt);
+              await sleep(300 * attempt);
               return submitOne(item, attempt + 1);
             }
             results.push({ item, ok: false, error: e });
@@ -8528,15 +8528,21 @@
         const runQueue = async () => {
           try { this.showLoading('Warenkorb wird befüllt… bitte warten'); } catch(_) {}
           try {
-            for (const it of queue) { await submitOne(it, 1); }
+            for (const it of queue) {
+              await submitOne(it, 1);
+              // Inter-Item-Pause, um Kollisionen zu vermeiden
+              await sleep(400);
+            }
           } finally {
             try { this.hideLoading(); } catch(_) {}
           }
           const failed = results.filter(r => !r.ok);
           if (failed.length) {
             console.warn('[SolarGrid] Einige Artikel konnten nicht hinzugefügt werden:', failed);
-            this.showToast(`${failed.length} Position(en) konnten nicht hinzugefügt werden`, 2500);
+            this.showToast(`${failed.length} Position(en) konnten nicht hinzugefügt werden`, 3000);
           }
+          // Kleine Abschluss-Pause vor Redirect
+          await sleep(800);
           try { window.location.href = 'https://unterkonstruktion.foxycart.com/cart'; } catch(_) {}
         };
         runQueue();
