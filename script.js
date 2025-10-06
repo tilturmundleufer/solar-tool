@@ -8506,63 +8506,69 @@
       // Wenn Foxy-Formulare vorhanden sind → einfacher Foxy-Flow (kein Webflow-Observer)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
       if (hasFoxy) {
-        // Robuster: Ein einziger Bulk-Submit an Foxy mit allen Positionen
-        try { this.showLoading('Warenkorb wird vorbereitet…'); } catch(_) {}
-        try {
-          const form = document.createElement('form');
-          form.action = 'https://unterkonstruktion.foxycart.com/cart';
-          form.method = 'POST';
-          form.style.position = 'absolute';
-          form.style.left = '-9999px';
-          form.style.top = '-9999px';
-          // Optional: Kundentyp global mitschicken
+        // Robuster: Sequenzieller Submit aller Items in ein verstecktes Iframe-Target, danach Redirect
+        this._ensureFoxySilentTarget();
+        const targetName = 'foxy_silent';
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const runQueue = async () => {
+          try { this.showLoading('Warenkorb wird befüllt… bitte warten'); } catch(_) {}
           try {
-            const raw = localStorage.getItem('solarTool_customerType');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              const type = parsed && parsed.type ? String(parsed.type) : '';
-              if (type) {
-                const ct = document.createElement('input');
-                ct.type = 'hidden';
-                ct.name = 'customer_type';
-                ct.value = type;
-                form.appendChild(ct);
+            for (const [key, qty] of entries) {
+              const packs = Math.ceil(qty / (VE[key] || 1));
+              if (!packs || packs <= 0) { await sleep(150); continue; }
+              const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
+              // 1) Versuche CMS-Form zu finden und darüber zu submitten (bevorzugt)
+              const cmsForm = this.findFoxyFormByName ? this.findFoxyFormByName(displayName) : null;
+              if (cmsForm) {
+                const prevTarget = cmsForm.getAttribute('target');
+                try {
+                  // Menge setzen
+                  const qEl = cmsForm.querySelector('input[name="quantity"]');
+                  if (qEl) qEl.value = String(packs);
+                  // Kundentyp
+                  try {
+                    const raw = localStorage.getItem('solarTool_customerType');
+                    const ct = cmsForm.querySelector('input[name="customer_type"]');
+                    if (ct && raw) { const p = JSON.parse(raw); const t = p && p.type ? String(p.type) : ''; if (t) ct.value = t; }
+                  } catch(_) {}
+                  cmsForm.setAttribute('target', targetName);
+                  if (typeof cmsForm.requestSubmit === 'function') { cmsForm.requestSubmit(); }
+                  else { cmsForm.submit(); }
+                } finally {
+                  if (prevTarget !== null) cmsForm.setAttribute('target', prevTarget); else cmsForm.removeAttribute('target');
+                }
+              } else {
+                // 2) Fallback: synthetisches Form mit Pflichtfeldern
+                try {
+                  const f = document.createElement('form');
+                  f.action = 'https://unterkonstruktion.foxycart.com/cart';
+                  f.method = 'POST';
+                  f.target = targetName;
+                  f.style.position = 'absolute'; f.style.left = '-9999px'; f.style.top = '-9999px';
+                  const price = getPackPriceForQuantity(key, qty);
+                  f.innerHTML = `
+                    <input type="hidden" name="name" value="${displayName}">
+                    <input type="hidden" name="price" value="${Number(price).toFixed(2)}">
+                    <input type="hidden" name="code" value="">
+                    <input type="hidden" name="quantity" value="${packs}">
+                  `;
+                  document.body.appendChild(f);
+                  f.submit();
+                  setTimeout(() => { try { f.remove(); } catch(_) {} }, 2000);
+                } catch(_) {}
               }
+              // Konservativer Delay pro Item
+              await sleep(900);
             }
-          } catch(_) {}
-          // Alle Positionen als wiederholte Feldgruppen hinzufügen
-          entries.forEach(([key, qty]) => {
-            const packs = Math.ceil(qty / (VE[key] || 1));
-            if (!packs || packs <= 0) return;
-            const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
-            const packPrice = getPackPriceForQuantity(key, qty); // Packpreis
-            const nameIn = document.createElement('input');
-            nameIn.type = 'hidden';
-            nameIn.name = 'name';
-            nameIn.value = displayName;
-            form.appendChild(nameIn);
-            const priceIn = document.createElement('input');
-            priceIn.type = 'hidden';
-            priceIn.name = 'price';
-            priceIn.value = Number(packPrice).toFixed(2);
-            form.appendChild(priceIn);
-            const codeIn = document.createElement('input');
-            codeIn.type = 'hidden';
-            codeIn.name = 'code';
-            codeIn.value = '';
-            form.appendChild(codeIn);
-            const qtyIn = document.createElement('input');
-            qtyIn.type = 'hidden';
-            qtyIn.name = 'quantity';
-            qtyIn.value = String(packs);
-            form.appendChild(qtyIn);
-          });
-          document.body.appendChild(form);
-          form.submit(); // Foxy zeigt anschließend die Cart-Seite mit allen Items
-          return;
-        } finally {
-          try { this.hideLoading(); } catch(_) {}
-        }
+          } finally {
+            try { this.hideLoading(); } catch(_) {}
+          }
+          // Kurze Pause vor Redirect
+          await sleep(600);
+          try { window.location.href = 'https://unterkonstruktion.foxycart.com/cart'; } catch(_) {}
+        };
+        runQueue();
+        return;
       }
       // Fallback: alter Webflow-Flow (historisch)
       const items = entries.map(([key, qty]) => ({ key, qty }));
