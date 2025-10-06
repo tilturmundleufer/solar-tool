@@ -5489,11 +5489,15 @@
 				deleteConfigBtn.style.display = this.configs.length >= 2 ? '' : 'none';
 			}
 			
-			// Express Checkout (alter "In den Warenkorb" Button)
+			// Ersetzt: Express Checkout → Gesamte Auswahl in den Warenkorb
 			const expressCheckoutBtn = document.getElementById('express-checkout-btn');
 			if (expressCheckoutBtn) {
+				// Visuell und funktional angleichen
+				try{ expressCheckoutBtn.textContent = 'Gesamte Auswahl in den Warenkorb'; }catch(_){ }
+				try{ expressCheckoutBtn.setAttribute('aria-label','Gesamte Auswahl in den Warenkorb'); }catch(_){ }
+				try{ expressCheckoutBtn.setAttribute('title','Gesamte Auswahl in den Warenkorb'); }catch(_){ }
 				expressCheckoutBtn.addEventListener('click', () => {
-					this.addCurrentToCart();
+					this.addAllConfigsToCart();
 				});
 			}
 			
@@ -5505,12 +5509,11 @@
 				});
 			}
 			
-			// Gesamte Auswahl in Warenkorb
+			// Optionaler separater Add-All Button bleibt kompatibel; bei vorhandenem expressCheckoutBtn ausblenden
 			const addAllToCartBtn = document.getElementById('add-all-to-cart-btn');
 			if (addAllToCartBtn) {
-				addAllToCartBtn.addEventListener('click', () => {
-					this.addAllConfigsToCart();
-				});
+				addAllToCartBtn.addEventListener('click', () => { this.addAllConfigsToCart(); });
+				if (expressCheckoutBtn) { try{ addAllToCartBtn.style.display = 'none'; }catch(_){ } }
 			}
 			
 			// Alle Konfigurationen zurücksetzen
