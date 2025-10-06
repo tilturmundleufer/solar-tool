@@ -8414,8 +8414,32 @@
       const displayName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
       const form = this.findFoxyFormByName ? this.findFoxyFormByName(displayName) : null;
       if (!form) {
-        console.warn(`[SolarGrid] Foxy-Formular nicht gefunden für '${displayName}'`);
-        return;
+        // Fallback: synthetisches Foxy-Form in verstecktem Iframe submitten
+        try {
+          this._ensureFoxySilentTarget();
+          const tempForm = document.createElement('form');
+          tempForm.action = 'https://unterkonstruktion.foxycart.com/cart';
+          tempForm.method = 'POST';
+          tempForm.target = 'foxy_silent';
+          tempForm.style.position = 'absolute';
+          tempForm.style.left = '-9999px';
+          tempForm.style.top = '-9999px';
+          // Pflichtfelder
+          const pricePerPack = getPackPriceForQuantity(productKey, VE[productKey] || 1);
+          tempForm.innerHTML = `
+            <input type="hidden" name="name" value="${displayName}">
+            <input type="hidden" name="price" value="${Number(pricePerPack).toFixed(2)}">
+            <input type="hidden" name="code" value="">
+            <input type="hidden" name="quantity" value="${Math.max(1, parseInt(quantity, 10) || 1)}">
+          `;
+          document.body.appendChild(tempForm);
+          tempForm.submit();
+          setTimeout(() => { try { tempForm.remove(); } catch(_) {} }, 2000);
+          return; // Fallback erfolgreich ausgelöst
+        } catch (e) {
+          console.warn(`[SolarGrid] Foxy-Fallback fehlgeschlagen für '${displayName}':`, e);
+          return;
+        }
       }
       try {
         const qtyInput = form.querySelector('input[name="quantity"]');
@@ -8438,6 +8462,25 @@
       } catch (e) {
         console.warn('[SolarGrid] Foxy-Submit Fehler:', e);
       }
+    }
+
+    _ensureFoxySilentTarget() {
+      try {
+        let iframe = document.getElementById('foxy_silent');
+        if (!iframe) {
+          iframe = document.createElement('iframe');
+          iframe.name = 'foxy_silent';
+          iframe.id = 'foxy_silent';
+          iframe.width = '1';
+          iframe.height = '1';
+          iframe.style.position = 'absolute';
+          iframe.style.left = '-9999px';
+          iframe.style.top = '-9999px';
+          iframe.setAttribute('aria-hidden', 'true');
+          iframe.setAttribute('tabindex', '-1');
+          document.body.appendChild(iframe);
+        }
+      } catch (_) {}
     }
 
     clickWebflowButtonSafely(form, button, productKey, quantity, isLastItem) {
