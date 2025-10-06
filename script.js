@@ -336,7 +336,7 @@
     if (typeof best.pricePerPiece === 'number') return applyVatIfBusiness(best.pricePerPiece * ve);
     return applyVatIfBusiness(basePackPrice);
   }
-  
+
   const PRODUCT_MAP = {
     Solarmodul: { productId:'685003af0e41d945fb0198d8', variantId:'685003af4a8e88cb58c89d46' },
     UlicaSolarBlackJadeFlow: { productId:'689455ed543f0cbb26ba54e9', variantId:'689455ed7d7ddfd326d5dbf9' },
@@ -5416,13 +5416,13 @@
       
 			// Wenn keine Konfigurationen aus URL/CACHE geladen wurden, erstelle eine Standard-Konfiguration
 			if (this.configs.length === 0) {
-				this.cols = this.default.cols;
-				this.rows = this.default.rows;
-				this.setup();
+  			this.cols = this.default.cols;
+  			this.rows = this.default.rows;
+  			this.setup();
 
-				const defaultConfig = this._makeConfigObject();
-				this.configs.push(defaultConfig);
-				this.loadConfig(0);
+  			const defaultConfig = this._makeConfigObject();
+  			this.configs.push(defaultConfig);
+  			this.loadConfig(0);
 
 				// Standard-Orientation nur für echte Default-Erstellung setzen
 				if (this.orH && this.orV) {
@@ -6296,7 +6296,7 @@
 								this.smartParser.applyPreviewToMainGrid(config);
 								newQuickInput.value = ''; // Input leeren
 								this.showToast('✅ Konfiguration angewendet', 1500);
-							} else {
+			} else {
 								this.showToast('⚠️ Keine gültige Konfiguration erkannt', 2000);
 							}
 						} catch (error) {
@@ -6358,7 +6358,7 @@
 										self.clearGridPreview();
 									}
 								}, 2000); // Reduziert von 3 auf 2 Sekunden für bessere UX
-							} else {
+  			} else {
 								// Keine gültige Konfiguration - Preview löschen
 								this.clearGridPreview();
 							}
@@ -6559,21 +6559,21 @@
     		this.selection.length !== this.rows ||
     		this.selection[0]?.length !== this.cols
   		) {
-    		const oldSel = this.selection;
-    		this.selection = Array.from({ length: this.rows }, (_, y) =>
-      		Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
-    		);
+  		const oldSel = this.selection;
+  		this.selection = Array.from({ length: this.rows }, (_, y) =>
+    		Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
+  		);
   		}
 
   		if (this.listHolder) {
-  			this.listHolder.style.display = 'block';
+  		this.listHolder.style.display = 'block';
   		}
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
   		this.updateSaveButtons();
 		}
-		
+
 		// Neue Funktion für Grid-Event-Listener
 
 		
@@ -6651,7 +6651,7 @@
 				});
 				// Sofortige Synchronisation
 				this.syncOrientationButtons();
-			} else {
+  		} else {
 				// Fallback: Versuche es später nochmal
 				setTimeout(() => {
 					const orientHBtn = document.getElementById('orient-h');
@@ -6701,7 +6701,7 @@
 				this.enableInputs();
 				this.updateSize();
 				this.buildList();
-				this.updateSummaryOnChange();
+    		this.updateSummaryOnChange();
 				// Alle Modul-Checkboxen abwählen
 				this.clearModuleCheckboxes();
 			} else if (this.moduleData[selectedValue]) {
@@ -6987,9 +6987,9 @@
   		this.rows -= 1;
   		this.selection.shift();
   		this.updateGridAfterStructureChange();
-				}
+		}
 
-    updateGridAfterStructureChange() {
+		updateGridAfterStructureChange() {
   		this.updateSize();
   		this.buildGrid();
   		this.buildList();
@@ -7072,7 +7072,7 @@
       		const cell = document.createElement('div');
       		cell.className = 'grid-cell';
       		if (this.selection[y]?.[x]) cell.classList.add('selected');
-      		
+
       		// FEATURE 6: Screen Reader Support - ARIA-Labels
       		cell.setAttribute('role', 'button');
       		cell.setAttribute('tabindex', '0');
@@ -7213,18 +7213,18 @@
       const entries = Object.entries(parts).filter(([,v]) => v > 0);
       if (!entries.length) {
         if (this.listHolder) {
-          this.listHolder.style.display = 'none';
+        this.listHolder.style.display = 'none';
         }
         return;
       }
       if (this.listHolder) {
-        this.listHolder.style.display = 'block';
+      this.listHolder.style.display = 'block';
       }
       if (this.prodList) {
         // Performance: Reduziere DOM-Manipulation
         const fragment = document.createDocumentFragment();
         entries.forEach(([k,v]) => {
-          const packs = Math.ceil(v / VE[k]);
+        const packs = Math.ceil(v / VE[k]);
           const price = getPackPriceForQuantity(k, v);
           const itemTotal = packs * price;
           const div = document.createElement('div');
@@ -7260,7 +7260,7 @@
         });
         this.prodList.innerHTML = '';
         this.prodList.appendChild(fragment);
-        this.prodList.style.display = 'block';
+      this.prodList.style.display = 'block';
       }
       } catch (error) {
         // Fallback: Verstecke Liste bei Fehler
@@ -7329,7 +7329,7 @@
   		this.updateSummaryOnChange();
 		}
     
-    	resetToDefaultGrid() {
+    resetToDefaultGrid() {
 		if (this.colsIn) this.colsIn.value = this.default.cols;
 		if (this.rowsIn) this.rowsIn.value = this.default.rows;
 		if (this.wIn) this.wIn.value = this.default.width;
@@ -7376,7 +7376,7 @@
   		// Erdungsband-Berechnung nur wenn gewünscht
   		if (this.erdungsband && this.erdungsband.checked) {
   			p.Erdungsband = this.calculateErdungsband();
-  		}
+		}
 
   		return p;
 		}
@@ -7572,11 +7572,11 @@
 
 
     
-    		loadConfig(idx) {
-			const cfg = this.configs[idx];
-			this.currentConfig = idx;
+    loadConfig(idx) {
+  		const cfg = this.configs[idx];
+  		this.currentConfig = idx;
 
-			// Input-Werte setzen
+  		// Input-Werte setzen
 			this.wIn.value = cfg.cellWidth;
 			this.hIn.value = cfg.cellHeight;
 			this.orV.checked = cfg.orientation === 'vertical';
@@ -7584,10 +7584,10 @@
 			
 			// Synchronisiere mit den Orientation Buttons
 			this.syncOrientationButtons();
-			this.incM.checked = cfg.incM;
+  		this.incM.checked = cfg.incM;
 			this.mc4.checked = cfg.mc4;
 			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
-			this.holz.checked = cfg.holz;
+  		this.holz.checked = cfg.holz;
 			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
 			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false; // Fallback für alte Konfigurationen
 			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false; // Fallback für alte Konfigurationen
@@ -7634,20 +7634,20 @@
 			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
 			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
 
-			// STATE Werte setzen
-			this.cols = cfg.cols;
-			this.rows = cfg.rows;
-			this.selection = cfg.selection.map(r => [...r]);
+  		// STATE Werte setzen
+  		this.cols = cfg.cols;
+  		this.rows = cfg.rows;
+  		this.selection = cfg.selection.map(r => [...r]);
 
 			// Setup aufrufen
-			this.setup();
+  		this.setup();
 
 			// Produktliste und Summary aktualisieren
 			this.buildList();
 			this.updateSummaryOnChange();
 
-			this.renderConfigList();
-			this.updateSaveButtons();
+  		this.renderConfigList();
+  		this.updateSaveButtons();
 			
 			// Detail-Ansicht aktualisieren wenn aktiv
 			this.updateDetailView();
@@ -7757,10 +7757,10 @@
     		// Direkt zur Detail-Ansicht der neuen Konfiguration wechseln
     		this.showDetailView(this.currentConfig);
   		
-  				this.renderConfigList();
+  		this.renderConfigList();
 		this.updateConfigList(); // Config-Liste in Overview updaten
-		this.updateSaveButtons();
-		
+  		this.updateSaveButtons();
+
 		// 6. Detail-Ansicht aktualisieren wenn aktiv
 		this.updateDetailView();
 		
@@ -7788,7 +7788,7 @@
         this.saveToCache();
         this.showAutoSaveIndicator();
       }
-    }
+		}
 
     updateConfig() {
       const idx = this.currentConfig;
@@ -7835,7 +7835,7 @@
   		const newConfig = this._makeConfigObject();
   		this.configs.push(newConfig);
   		this.currentConfig = this.configs.length - 1;
-  		
+
   		this.renderConfigList();
   		this.updateSaveButtons();
 		}
@@ -7878,11 +7878,11 @@
 
     renderConfigList() {
       // Verwende das gleiche HTML-Design wie updateConfigList()
-      this.configListEl.innerHTML = '';
+  		this.configListEl.innerHTML = '';
       
-      this.configs.forEach((cfg, idx) => {
-        const div = document.createElement('div');
-        div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
+  		this.configs.forEach((cfg, idx) => {
+    		const div = document.createElement('div');
+    		div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
         
         const totalPrice = this.calculateConfigPrice(cfg);
         const canDelete = this.configs.length >= 2;
@@ -7912,17 +7912,17 @@
           
           // Auto-Save der aktuellen Konfiguration vor dem Wechsel
           if (this.currentConfig !== null && this.currentConfig !== idx) {
-            this.updateConfig();
-          }
+    				this.updateConfig();
+  				}
           
           // Wechsle immer in die Detail-Ansicht der gewählten Konfiguration
           this.showDetailView(idx);
           this.showToast('Konfiguration geladen', 1000);
         });
         
-        this.configListEl.appendChild(div);
-      });
-    }
+    		this.configListEl.appendChild(div);
+  		});
+		}
 
     // Performance: Schnellerer Array-Vergleich
     arraysEqual(a, b) {
@@ -8053,9 +8053,9 @@
     resetAllConfigurations() {
     	// Bestätigungsabfrage
     	if (!confirm('Möchten Sie wirklich alle Konfigurationen löschen und von vorne anfangen?')) {
-    		return;
-    	}
-    	
+        return;
+      }
+      
     	// Cache löschen
     	this.cacheManager.clearCache();
     	
@@ -8163,7 +8163,7 @@
     		
     		// Zeige Auto-Save Indicator
     		this.showAutoSaveIndicator();
-    	} catch (error) {
+        } catch (error) {
     		console.error('Fehler beim Speichern des Caches:', error);
     	}
     }
@@ -8175,14 +8175,14 @@
     		const data = this.cacheManager.loadData();
     		if (!data) {
     			console.log('Kein Cache gefunden oder Cache abgelaufen');
-    			return false;
-    		}
-    		
+      return false;
+    }
+
     		// Prüfe localStorage Verfügbarkeit
     		if (!this.cacheManager.isLocalStorageAvailable()) {
     			this.showToast('Es wurde nichts im Speicher gefunden', 3000);
-    			return false;
-    		}
+        return false;
+      }
     		
     		// Lade Konfigurationen
     		if (data.configs && Array.isArray(data.configs)) {
@@ -8276,7 +8276,7 @@
     			this.updateOverviewTotalPrice();
     			
     			this.showToast('Konfiguration aus Cache geladen', 2000);
-    			return true;
+                return true;
     		}
     	} catch (error) {
     		console.error('Fehler beim Laden des Caches:', error);
@@ -8463,10 +8463,40 @@
       // Wenn Foxy-Formulare vorhanden sind → einfacher Foxy-Flow (kein Webflow-Observer)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
       if (hasFoxy) {
-        entries.forEach(([key, qty], i) => {
-          const packsNeeded = Math.ceil(qty / (VE[key] || 1));
-          setTimeout(() => this.addProductToCart(key, packsNeeded), i * 200);
-        });
+        // Sequenzielle Foxy-Queue mit Retries; Redirect erst nach Abschluss
+        const queue = entries.map(([key, qty]) => ({ key, qty: Math.ceil(qty / (VE[key] || 1)) }));
+        const results = [];
+        const maxRetries = 3;
+        const delay = (ms) => new Promise(r => setTimeout(r, ms));
+        const waitShort = (ms) => new Promise(r => setTimeout(r, ms));
+        const submitOne = async (item, attempt = 1) => {
+          try {
+            this.addProductToCart(item.key, item.qty);
+            await waitShort(200 + attempt * 150);
+            results.push({ item, ok: true });
+          } catch (e) {
+            if (attempt < maxRetries) {
+              await delay(150 * attempt);
+              return submitOne(item, attempt + 1);
+            }
+            results.push({ item, ok: false, error: e });
+          }
+        };
+        const runQueue = async () => {
+          try { this.showLoading('Warenkorb wird befüllt… bitte warten'); } catch(_) {}
+          try {
+            for (const it of queue) { await submitOne(it, 1); }
+          } finally {
+            try { this.hideLoading(); } catch(_) {}
+          }
+          const failed = results.filter(r => !r.ok);
+          if (failed.length) {
+            console.warn('[SolarGrid] Einige Artikel konnten nicht hinzugefügt werden:', failed);
+            this.showToast(`${failed.length} Position(en) konnten nicht hinzugefügt werden`, 2500);
+          }
+          try { window.location.href = 'https://unterkonstruktion.foxycart.com/cart'; } catch(_) {}
+        };
+        runQueue();
         return;
       }
       // Fallback: alter Webflow-Flow (historisch)
@@ -8787,11 +8817,11 @@
       
       try {
         // Temporär setzen für Berechnung
-        this.selection = sel;
+      this.selection = sel;
         let parts = await this.calculateParts();
         
         // Module nur hinzufügen wenn Checkbox aktiviert ist
-        if (!incM) delete parts.Solarmodul;
+      if (!incM) delete parts.Solarmodul;
         if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
         
         // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
@@ -8841,7 +8871,7 @@
           }
         } catch (e) {}
         
-        return parts;
+      return parts;
       } finally {
         // Ursprüngliche Auswahl wiederherstellen
         this.selection = originalSelection;
