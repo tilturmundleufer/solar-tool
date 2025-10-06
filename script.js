@@ -8506,47 +8506,63 @@
       // Wenn Foxy-Formulare vorhanden sind → einfacher Foxy-Flow (kein Webflow-Observer)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
       if (hasFoxy) {
-        // Sequenzielle Foxy-Queue mit konservativen Delays und mehr Retries; Redirect erst nach Abschluss
-        const queue = entries.map(([key, qty]) => ({ key, qty: Math.ceil(qty / (VE[key] || 1)) }));
-        const results = [];
-        const maxRetries = 5;
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-        const submitOne = async (item, attempt = 1) => {
+        // Robuster: Ein einziger Bulk-Submit an Foxy mit allen Positionen
+        try { this.showLoading('Warenkorb wird vorbereitet…'); } catch(_) {}
+        try {
+          const form = document.createElement('form');
+          form.action = 'https://unterkonstruktion.foxycart.com/cart';
+          form.method = 'POST';
+          form.style.position = 'absolute';
+          form.style.left = '-9999px';
+          form.style.top = '-9999px';
+          // Optional: Kundentyp global mitschicken
           try {
-            this.addProductToCart(item.key, item.qty);
-            // Warte konservativ, damit Foxy den Submit sicher verarbeitet
-            await sleep(600 + attempt * 200);
-            results.push({ item, ok: true });
-          } catch (e) {
-            if (attempt < maxRetries) {
-              await sleep(300 * attempt);
-              return submitOne(item, attempt + 1);
+            const raw = localStorage.getItem('solarTool_customerType');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const type = parsed && parsed.type ? String(parsed.type) : '';
+              if (type) {
+                const ct = document.createElement('input');
+                ct.type = 'hidden';
+                ct.name = 'customer_type';
+                ct.value = type;
+                form.appendChild(ct);
+              }
             }
-            results.push({ item, ok: false, error: e });
-          }
-        };
-        const runQueue = async () => {
-          try { this.showLoading('Warenkorb wird befüllt… bitte warten'); } catch(_) {}
-          try {
-            for (const it of queue) {
-              await submitOne(it, 1);
-              // Inter-Item-Pause, um Kollisionen zu vermeiden
-              await sleep(400);
-            }
-          } finally {
-            try { this.hideLoading(); } catch(_) {}
-          }
-          const failed = results.filter(r => !r.ok);
-          if (failed.length) {
-            console.warn('[SolarGrid] Einige Artikel konnten nicht hinzugefügt werden:', failed);
-            this.showToast(`${failed.length} Position(en) konnten nicht hinzugefügt werden`, 3000);
-          }
-          // Kleine Abschluss-Pause vor Redirect
-          await sleep(800);
-          try { window.location.href = 'https://unterkonstruktion.foxycart.com/cart'; } catch(_) {}
-        };
-        runQueue();
-        return;
+          } catch(_) {}
+          // Alle Positionen als wiederholte Feldgruppen hinzufügen
+          entries.forEach(([key, qty]) => {
+            const packs = Math.ceil(qty / (VE[key] || 1));
+            if (!packs || packs <= 0) return;
+            const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
+            const packPrice = getPackPriceForQuantity(key, qty); // Packpreis
+            const nameIn = document.createElement('input');
+            nameIn.type = 'hidden';
+            nameIn.name = 'name';
+            nameIn.value = displayName;
+            form.appendChild(nameIn);
+            const priceIn = document.createElement('input');
+            priceIn.type = 'hidden';
+            priceIn.name = 'price';
+            priceIn.value = Number(packPrice).toFixed(2);
+            form.appendChild(priceIn);
+            const codeIn = document.createElement('input');
+            codeIn.type = 'hidden';
+            codeIn.name = 'code';
+            codeIn.value = '';
+            form.appendChild(codeIn);
+            const qtyIn = document.createElement('input');
+            qtyIn.type = 'hidden';
+            qtyIn.name = 'quantity';
+            qtyIn.value = String(packs);
+            form.appendChild(qtyIn);
+          });
+          document.body.appendChild(form);
+          form.submit(); // Foxy zeigt anschließend die Cart-Seite mit allen Items
+          return;
+        } finally {
+          try { this.hideLoading(); } catch(_) {}
+        }
       }
       // Fallback: alter Webflow-Flow (historisch)
       const items = entries.map(([key, qty]) => ({ key, qty }));
