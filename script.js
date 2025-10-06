@@ -5508,11 +5508,17 @@
 				});
 			}
 			
-			// Optionaler separater Add-All Button bleibt kompatibel; bei vorhandenem expressCheckoutBtn ausblenden
-			const addAllToCartBtn = document.getElementById('add-all-to-cart-btn');
-			if (addAllToCartBtn) {
-				addAllToCartBtn.addEventListener('click', () => { this.addAllConfigsToCart(); });
-			}
+			// Delegiertes Click-Handling: Unterstützt mehrere Add-All Buttons (Overview & Detail)
+			document.addEventListener('click', (ev) => {
+				try{
+					var target = ev.target;
+					if (!target || !target.closest) return;
+					var btn = target.closest('#add-all-to-cart-btn, .add-all-to-cart-btn, [data-action="add-all-to-cart"], [data-add-all-to-cart="true"]');
+					if (!btn) return;
+					try{ ev.preventDefault(); }catch(_){ }
+					this.addAllConfigsToCart();
+				}catch(_){ }
+			}, true);
 			
 			// Alle Konfigurationen zurücksetzen
 			const continueLaterBtn = document.getElementById('continue-later-btn');
