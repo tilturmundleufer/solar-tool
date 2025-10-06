@@ -118,12 +118,12 @@
   
   // Zentrale Produkt-Konfiguration (direkt eingebettet)
   const VE = {
-    Endklemmen: 50,
-    Schrauben: 100,
+    Endklemmen: 20,
+    Schrauben: 50,
     Dachhaken: 20,
-    Mittelklemmen: 50,
+    Mittelklemmen: 20,
     Endkappen: 50,
-    Schienenverbinder: 50,
+    Schienenverbinder: 10,
     Schiene_240_cm: 1,
     Schiene_360_cm: 1,
     Solarmodul: 1,
@@ -373,15 +373,15 @@
     'SolarmodulPalette': '36x Ulica Solar Black Jade-Flow 450 W - Palette',
     'UlicaSolarBlackJadeFlowPalette': '36x Ulica Solar Black Jade-Flow 500 W  - Palette',
     // Standardteile (exakte Foxy-Bezeichnungen)
-    'Endklemmen': 'Endklemmen - 50 Stück',
-    'Mittelklemmen': 'Mittelklemmen - 50 Stück',
+    'Endklemmen': 'Endklemmen - 20 Stück',
+    'Mittelklemmen': 'Mittelklemmen - 20 Stück',
     'Endkappen': 'Endkappen - 50 Stück',
     'Dachhaken': 'Dachhaken 3-fach verstellbar - 20 Stück',
-    'Schienenverbinder': 'Schienenverbinder - 50 Stück',
+    'Schienenverbinder': 'Schienenverbinder - 10 Stück',
     'Schiene_360_cm': 'Schiene 360 cm',
     'Schiene_240_cm': 'Schiene 240cm',
     'MC4_Stecker': 'MC4 Stecker - 50 Steckerpaare',
-    'Schrauben': 'Schraube M10x25 - 100 Stück inkl. Muttern',
+    'Schrauben': 'Schraube M10x25 - 50 Stück inkl. Muttern',
     'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück',
     'Quetschkabelschuhe': 'Ringkabelschuhe - 100 Stück',
     'Erdungsband': 'Erdungsband - 6M',
@@ -765,9 +765,7 @@
       return this.updatePricesFromHTML();
     }
   }
-
   // Entfernt - wird jetzt über zentrale Konfiguration verwaltet
-
   // Globale Price Cache Instanz (nach PRODUCT_MAP Definition)
   const priceCache = new PriceCache();
   // Debug-Funktionen für Price Cache (nur für Entwicklung)
@@ -1555,7 +1553,6 @@
       });
       return this._invertedLogoBase64Promise;
     }
-
     // Footer mit Logo (invertiert) – neues Design
     async addFooter(pdf, pageWidth, pageHeight) {
       const footerY = pageHeight - 25;
@@ -5786,7 +5783,7 @@
 						<span class="item-quantity">${packagesNeeded}×</span>
 						<div class="item-info">
 							<span class="item-name">MC4 Stecker</span>
-							<span class="item-ve">50 Stück</span>
+							<span class="item-ve">${VE['MC4_Stecker']} Stück</span>
 						</div>
 					</div>
 					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
@@ -5828,7 +5825,7 @@
 						<span class="item-quantity">1×</span>
 						<div class="item-info">
 							<span class="item-name">Unterlegholz für Dachhaken</span>
-							<span class="item-ve">50 Stück</span>
+							<span class="item-ve">${VE['Holzunterleger']} Stück</span>
 						</div>
 					</div>
 					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
@@ -5849,7 +5846,7 @@
 						<span class="item-quantity">1×</span>
 						<div class="item-info">
 							<span class="item-name">Quetschkabelschuhe</span>
-							<span class="item-ve">100 Stück</span>
+							<span class="item-ve">${VE['Quetschkabelschuhe']} Stück</span>
 						</div>
 					</div>
 					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
@@ -7242,7 +7239,7 @@
             itemVE = '100 m';
           }
           if (k === 'MC4_Stecker') {
-            itemVE = '50 Stück';
+            itemVE = `${VE[k]} Stück`;
           }
           
           div.innerHTML = `
@@ -8261,7 +8258,6 @@
 			if (this.configs.length > 0) {
 				this.loadConfigFromCache(safeIndex);
 			}
-    			
     			// Grid und UI nach dem Laden wiederherstellen
     			this.setup(); // Grid-Event-Listener wiederherstellen
     			this.buildGrid(); // Grid visuell wiederherstellen
@@ -8898,7 +8894,7 @@
         // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
         const moduleCount = (this.selection || []).flat().filter(Boolean).length;
         if (mc4 && moduleCount > 0) {
-          const veMc4 = VE.MC4_Stecker || 50;
+          const veMc4 = VE.MC4_Stecker || 20;
           const packs = Math.ceil(moduleCount / 30);
           parts.MC4_Stecker = packs * veMc4;
         } else {
@@ -9001,7 +8997,6 @@
       // Aktualisiere auch die Produktliste in der detailed-overview
       this.buildList();
     }
-
     // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF
     createConfigSnapshot() {
       // Auto-Save der aktuellen Konfiguration falls nötig
