@@ -5492,8 +5492,7 @@
 			// Ersetzt: Express Checkout → Gesamte Auswahl in den Warenkorb
 			const expressCheckoutBtn = document.getElementById('express-checkout-btn');
 			if (expressCheckoutBtn) {
-				// Visuell und funktional angleichen
-				try{ expressCheckoutBtn.textContent = 'Gesamte Auswahl in den Warenkorb'; }catch(_){ }
+				// Funktion umstellen, Icon/Markup unverändert lassen
 				try{ expressCheckoutBtn.setAttribute('aria-label','Gesamte Auswahl in den Warenkorb'); }catch(_){ }
 				try{ expressCheckoutBtn.setAttribute('title','Gesamte Auswahl in den Warenkorb'); }catch(_){ }
 				expressCheckoutBtn.addEventListener('click', () => {
@@ -5513,7 +5512,6 @@
 			const addAllToCartBtn = document.getElementById('add-all-to-cart-btn');
 			if (addAllToCartBtn) {
 				addAllToCartBtn.addEventListener('click', () => { this.addAllConfigsToCart(); });
-				if (expressCheckoutBtn) { try{ addAllToCartBtn.style.display = 'none'; }catch(_){ } }
 			}
 			
 			// Alle Konfigurationen zurücksetzen
