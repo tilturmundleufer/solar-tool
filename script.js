@@ -4732,6 +4732,29 @@
     }
   }
   class SolarGrid {
+    // Bündelt Gesamtmodule aus allen Konfigurationen in Paletten (36er) bevor in den Warenkorb gepostet wird
+    bundleTotalModulesIntoPallets(total) {
+      try {
+        const single450Key = 'Solarmodul';
+        const single500Key = 'UlicaSolarBlackJadeFlow';
+        const pallet450Key = 'SolarmodulPalette';
+        const pallet500Key = 'UlicaSolarBlackJadeFlowPalette';
+        const count450 = Number(total[single450Key] || 0);
+        const count500 = Number(total[single500Key] || 0);
+        const makeBundle = (singleKey, palletKey, singleCount) => {
+          if (!singleCount || singleCount < 36) return { single: singleCount, pallets: 0 };
+          const pallets = Math.floor(singleCount / 36);
+          const rest = singleCount % 36;
+          return { single: rest, pallets };
+        };
+        const res450 = makeBundle(single450Key, pallet450Key, count450);
+        const res500 = makeBundle(single500Key, pallet500Key, count500);
+        if (res450.pallets > 0) total[pallet450Key] = (total[pallet450Key] || 0) + res450.pallets * 36;
+        if (res500.pallets > 0) total[pallet500Key] = (total[pallet500Key] || 0) + res500.pallets * 36;
+        total[single450Key] = res450.single;
+        total[single500Key] = res500.single;
+      } catch (_) {}
+    }
     constructor() {
       this.gridEl        = document.getElementById('grid');
       this.wrapper       = document.querySelector('.grid-wrapper');
@@ -8859,6 +8882,8 @@
           total[k] = (total[k] || 0) + v;
         });
       });
+      // Bündelung über ALLE Konfigurationen: bilde Paletten aus Gesamtmodul-Zahlen
+      this.bundleTotalModulesIntoPallets(total);
       // Opti-Zusatz aus globaler UI berücksichtigen
       try {
         const hCb = document.getElementById('huawei-opti');
