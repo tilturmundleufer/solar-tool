@@ -4741,20 +4741,26 @@
         if (this.lastExtras && typeof this.lastExtras === 'object') return this.lastExtras;
         // Fallback: aus DOM (Summary) parsen
         const root = document.getElementById('summary-list') || document;
+        const items = Array.from(root.querySelectorAll('.produkt-item'));
+        const findQtyForLabel = (label) => {
+          // Durchsuche alle Items und finde das, dessen Text den Label enthält
+          const item = items.find(it => (it.textContent || '').toLowerCase().includes(String(label).toLowerCase()));
+          if (!item) return 0;
+          // Die erste <span> enthält in der Regel "N×"
+          const firstSpan = item.querySelector('span');
+          if (!firstSpan || !firstSpan.textContent) return 0;
+          const m = firstSpan.textContent.trim().match(/^(\d+)\s*×/);
+          return m ? parseInt(m[1], 10) : 0;
+        };
         keys.forEach(k => {
-          // Suche nach item-name Text und hole die Vorangestellte Packungszahl ("X×")
-          const label = (PRODUCT_NAME_MAP[k] || k).split(' - ')[0];
-          const node = Array.from(root.querySelectorAll('.item-name')).find(n => n.textContent && n.textContent.trim().toLowerCase().includes(label.toLowerCase())) || null;
-          if (!node) { extras[k] = 0; return; }
-          const row = node.closest('.produkt-item, .summary-row, .summary-item') || node.parentElement;
-          if (!row) { extras[k] = 0; return; }
-          const qtyNode = row.querySelector('.item-quantity');
-          let qty = 0;
-          if (qtyNode && qtyNode.textContent) {
-            const m = qtyNode.textContent.trim().match(/(\d+)×/);
-            qty = m ? parseInt(m[1], 10) : 0;
+          // MC4: Sonderfall – nur 1x wenn Checkbox aktiviert, keine Berechnung
+          if (k === 'MC4_Stecker') {
+            extras[k] = (this.mc4 && this.mc4.checked) ? 1 : 0;
+            return;
           }
-          extras[k] = Number.isFinite(qty) ? qty : 0;
+          const label = (PRODUCT_NAME_MAP[k] || k).split(' - ')[0];
+          extras[k] = findQtyForLabel(label);
+          if (!Number.isFinite(extras[k])) extras[k] = 0;
         });
         this.lastExtras = extras;
       } catch(_) {
@@ -8931,7 +8937,11 @@
       // SCHRITT 3b: Zusatzprodukte einmalig aus der globalen Zusatzproduktliste übernehmen
       try {
         const extras = this.readExtrasFromSummaryList();
-        Object.entries(extras).forEach(([k, v]) => { if (v > 0) total[k] = v; });
+        Object.entries(extras).forEach(([k, v]) => {
+          if (v > 0) total[k] = v;
+          // MC4 als 1 Paket, nicht mengenabhängig
+          if (k === 'MC4_Stecker' && v > 0) total[k] = 1;
+        });
       } catch(_) {}
       // Opti-Zusatz aus globaler UI berücksichtigen
       try {
