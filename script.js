@@ -8522,7 +8522,8 @@
       // Wenn Foxy-Formulare vorhanden sind → Top-Level Bulk-POST (kein Iframe, ein Request)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
       if (hasFoxy) {
-        try { this.showLoading('Warenkorb wird vorbereitet…'); } catch(_) {}
+        // Zuverlässig auf allen Geräten: top-level Einzel-POSTs in ein benanntes Fenster
+        try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
         const sanitizePrice = (v) => {
           const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
           const num = parseFloat(n);
@@ -8535,48 +8536,53 @@
           inp.value = value == null ? '' : String(value);
           form.appendChild(inp);
         };
-        try {
-          const form = document.createElement('form');
-          form.action = 'https://unterkonstruktion.foxycart.com/cart';
-          form.method = 'POST';
-          // Für Debugging: neuen Tab öffnen, damit Console auf der Seite sichtbar bleibt
-          try { form.target = '_blank'; } catch(_) {}
-          form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
-          const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        (async () => {
+          let cartWin = null;
+          try { cartWin = window.open('', 'foxy_cart'); } catch(_) {}
           // Optional global customer_type
+          let customerType = '';
           try {
             const raw = localStorage.getItem('solarTool_customerType');
             if (raw) {
               const parsed = JSON.parse(raw);
-              const type = parsed && parsed.type ? String(parsed.type) : '';
-              if (type) append(form, 'customer_type', type);
+              customerType = parsed && parsed.type ? String(parsed.type) : '';
             }
           } catch(_) {}
-          entries.forEach(([key, qty]) => {
+          const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
+          for (const [key, qty] of entries) {
             const packs = Math.ceil(qty / (VE[key] || 1));
-            if (!packs || packs <= 0) return;
+            if (!packs || packs <= 0) { await sleep(120); continue; }
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
             const d = getData(displayName) || {};
             const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
-            // Array-Felder, damit Foxy alle Positionen übernimmt
-            append(form, 'name[]', displayName);
-            append(form, 'price[]', price);
-            append(form, 'code[]', d.code || '');
-            append(form, 'image[]', d.image || '');
-            append(form, 'url[]', d.url || '');
-            append(form, 'description[]', d.description || '');
-            append(form, 'weight[]', d.weight || '');
-            append(form, 'width[]', d.width || '');
-            append(form, 'height[]', d.height || '');
-            append(form, 'length[]', d.length || '');
-            append(form, 'quantity[]', String(packs));
-          });
-          document.body.appendChild(form);
-          form.submit();
-          return;
-        } finally {
+            const form = document.createElement('form');
+            form.action = 'https://unterkonstruktion.foxycart.com/cart';
+            form.method = 'POST';
+            try { form.target = 'foxy_cart'; } catch(_) {}
+            form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
+            if (customerType) append(form, 'customer_type', customerType);
+            append(form, 'name', displayName);
+            append(form, 'price', price);
+            append(form, 'code', d.code || '');
+            append(form, 'image', d.image || '');
+            append(form, 'url', d.url || '');
+            append(form, 'description', d.description || '');
+            append(form, 'weight', d.weight || '');
+            append(form, 'width', d.width || '');
+            append(form, 'height', d.height || '');
+            append(form, 'length', d.length || '');
+            append(form, 'quantity', String(packs));
+            document.body.appendChild(form);
+            try { form.submit(); } catch(_) {}
+            // kurzen Delay pro POST, damit Foxy sauber verarbeiten kann
+            await sleep(600);
+            try { form.remove(); } catch(_) {}
+          }
+          try { if (cartWin) cartWin.focus(); } catch(_) {}
           try { this.hideLoading(); } catch(_) {}
-        }
+        })();
+        return;
       }
       // Fallback: alter Webflow-Flow (historisch)
       const items = entries.map(([key, qty]) => ({ key, qty }));
