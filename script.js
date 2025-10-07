@@ -4741,14 +4741,14 @@
         const pallet500Key = 'UlicaSolarBlackJadeFlowPalette';
         const count450 = Number(total[single450Key] || 0);
         const count500 = Number(total[single500Key] || 0);
-        const makeBundle = (singleKey, palletKey, singleCount) => {
+        const makeBundle = (singleCount) => {
           if (!singleCount || singleCount < 36) return { single: singleCount, pallets: 0 };
           const pallets = Math.floor(singleCount / 36);
-          const rest = singleCount % 36;
+          const rest = singleCount - pallets * 36;
           return { single: rest, pallets };
         };
-        const res450 = makeBundle(single450Key, pallet450Key, count450);
-        const res500 = makeBundle(single500Key, pallet500Key, count500);
+        const res450 = makeBundle(count450);
+        const res500 = makeBundle(count500);
         if (res450.pallets > 0) total[pallet450Key] = (total[pallet450Key] || 0) + res450.pallets * 36;
         if (res500.pallets > 0) total[pallet500Key] = (total[pallet500Key] || 0) + res500.pallets * 36;
         total[single450Key] = res450.single;
@@ -8540,7 +8540,10 @@
     }
 
     addPartsListToCart(parts) {
-      const entries = Object.entries(parts).filter(([_, qty]) => qty > 0);
+      // 1) Snapshot der Teile erstellen und deterministisch sortieren (stabil für Debugging)
+      const entries = Object.entries(parts)
+        .filter(([_, qty]) => qty > 0)
+        .sort(([aKey],[bKey]) => aKey.localeCompare(bKey));
       if (!entries.length) return;
       // Wenn Foxy-Formulare vorhanden sind → Top-Level Bulk-POST (kein Iframe, ein Request)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
@@ -8573,8 +8576,13 @@
             }
           } catch(_) {}
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
-          for (const [key, qty] of entries) {
-            const packs = Math.ceil(qty / (VE[key] || 1));
+          for (const [key, qtyRaw] of entries) {
+            // Exakte Ganzzahlmengen sicherstellen (CMS-Werte könnten strings sein)
+            const qty = Math.max(0, Math.floor(Number(qtyRaw)));
+            const ve = VE[key] || 1;
+            const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
+            // Für Paletten niemals aufrunden – Anzahl Paletten = Stück / 36 (ganzzahlig)
+            const packs = isPallet ? Math.floor(qty / ve) : Math.ceil(qty / ve);
             if (!packs || packs <= 0) { await sleep(120); continue; }
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
             const d = getData(displayName) || {};
