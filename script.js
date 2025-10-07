@@ -8594,8 +8594,8 @@
         };
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         (async () => {
+          // Öffne das sichtbare Warenkorbfenster erst nach dem letzten Submit
           let cartWin = null;
-          try { cartWin = window.open('', 'foxy_cart'); } catch(_) {}
           // Optional global customer_type
           let customerType = '';
           try {
@@ -8606,7 +8606,9 @@
             }
           } catch(_) {}
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
-          for (const [key, qtyRaw] of entries) {
+          const lastIndex = entries.length - 1;
+          for (let i = 0; i < entries.length; i++) {
+            const [key, qtyRaw] = entries[i];
             // Exakte Ganzzahlmengen sicherstellen (CMS-Werte könnten strings sein)
             const qty = Math.max(0, Math.floor(Number(qtyRaw)));
             const ve = VE[key] || 1;
@@ -8620,7 +8622,14 @@
             const form = document.createElement('form');
             form.action = 'https://unterkonstruktion.foxycart.com/cart';
             form.method = 'POST';
-            try { form.target = 'foxy_cart'; } catch(_) {}
+            // Für alle bis auf das letzte Item in ein unsichtbares Hintergrundfenster posten
+            try {
+              form.target = (i === lastIndex) ? 'foxy_cart' : 'foxy_cart_bg';
+              if (i !== lastIndex) {
+                // Hintergrundfenster als 1x1 off-screen halten
+                window.open('', 'foxy_cart_bg', 'toolbar=0,location=0,status=0,menubar=0,scrollbars=0,resizable=0,width=1,height=1,left=-10000,top=-10000');
+              }
+            } catch(_) {}
             form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
             if (customerType) append(form, 'customer_type', customerType);
             append(form, 'name', displayName);
@@ -8640,7 +8649,7 @@
             await sleep(600);
             try { form.remove(); } catch(_) {}
           }
-          try { if (cartWin) cartWin.focus(); } catch(_) {}
+          try { cartWin = window.open('', 'foxy_cart'); if (cartWin) cartWin.focus(); } catch(_) {}
           try { this.hideLoading(); } catch(_) {}
         })();
         return;
