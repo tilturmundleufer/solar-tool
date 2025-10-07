@@ -383,10 +383,10 @@
     'MC4_Stecker': 'MC4 Stecker - 50 Steckerpaare',
     'Schrauben': 'Schraube M10x25 - 50 Stück inkl. Muttern',
     'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück',
-    'Quetschkabelschuhe': 'Quetschkabelschuhe',
+    'Quetschkabelschuhe': 'Ringkabelschuhe - 100 Stück',
     'Erdungsband': 'Erdungsband - 6M',
-    'Solarkabel': 'Solarkabel 100m',
-    'Holzunterleger': 'Unterlegholz für Dachhaken - 50 Stück',
+    'Solarkabel': 'Solarkabel 100M',
+    'Holzunterleger': 'Unterlegholz für Dachhacken - 50 Stück',
     // Optimierer (aus Liste)
     'HuaweiOpti': 'Huawei Smart PV Optimierer 600W',
     'BRCOpti': 'BRC M600M Optimierer'
