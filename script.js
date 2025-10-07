@@ -6209,7 +6209,7 @@
 		}
 		
 		ensurePermanentVisibility() {
-			// Stelle sicher, dass Tipps permanent sichtbar sind
+			// Stelle sicher, dass Tipps permanent sichtbar bleiben
 			setTimeout(() => {
 				const usageTips = document.querySelector('.usage-tips');
 				if (usageTips) {
@@ -8368,13 +8368,33 @@
 
     refreshFoxyFormMap() {
       const map = new Map();
+      const data = new Map();
       const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
       forms.forEach((form) => {
+        const getVal = (sel) => {
+          const el = form.querySelector(sel);
+          return el && typeof el.value === 'string' ? el.value.trim() : '';
+        };
         const nameInput = form.querySelector('input[name="name"]');
         const val = nameInput && typeof nameInput.value === 'string' ? nameInput.value.trim() : '';
-        if (val) map.set(val, form);
+        if (val) {
+          map.set(val, form);
+          data.set(val, {
+            name: val,
+            price: getVal('input[name="price"]'),
+            code: getVal('input[name="code"]'),
+            image: getVal('input[name="image"]'),
+            url: getVal('input[name="url"]'),
+            description: getVal('input[name="description"]'),
+            weight: getVal('input[name="weight"]'),
+            width: getVal('input[name="width"]'),
+            height: getVal('input[name="height"]'),
+            length: getVal('input[name="length"]')
+          });
+        }
       });
       this.foxyFormsByName = map;
+      this.foxyDataByName = data;
     }
 
     findFoxyFormByName(name) {
@@ -9561,4 +9581,22 @@
       window.solarGrid.cleanup();
     }
   });
+
+  window.debugFoxy = {
+    list: () => {
+      const out = [];
+      try {
+        if (!window.solarGrid || !window.solarGrid.foxyDataByName) return out;
+        window.solarGrid.foxyDataByName.forEach((v, k) => out.push({ key: k, ...v }));
+      } catch(_) {}
+      console.table(out);
+      return out;
+    },
+    get: (name) => {
+      try {
+        if (window.solarGrid && window.solarGrid.foxyDataByName) return window.solarGrid.foxyDataByName.get(name) || null;
+      } catch(_) {}
+      return null;
+    }
+  };
 })();
