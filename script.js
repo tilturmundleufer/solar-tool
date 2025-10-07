@@ -4732,6 +4732,36 @@
     }
   }
   class SolarGrid {
+    // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
+    readExtrasFromSummaryList() {
+      const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Quetschkabelschuhe','Erdungsband'];
+      const extras = {};
+      try {
+        // Bevorzugt: interne letzte Berechnung, falls vorhanden
+        if (this.lastExtras && typeof this.lastExtras === 'object') return this.lastExtras;
+        // Fallback: aus DOM (Summary) parsen
+        const root = document.getElementById('summary-list') || document;
+        keys.forEach(k => {
+          // Suche nach item-name Text und hole die Vorangestellte Packungszahl ("X×")
+          const label = (PRODUCT_NAME_MAP[k] || k).split(' - ')[0];
+          const node = Array.from(root.querySelectorAll('.item-name')).find(n => n.textContent && n.textContent.trim().toLowerCase().includes(label.toLowerCase())) || null;
+          if (!node) { extras[k] = 0; return; }
+          const row = node.closest('.produkt-item, .summary-row, .summary-item') || node.parentElement;
+          if (!row) { extras[k] = 0; return; }
+          const qtyNode = row.querySelector('.item-quantity');
+          let qty = 0;
+          if (qtyNode && qtyNode.textContent) {
+            const m = qtyNode.textContent.trim().match(/(\d+)×/);
+            qty = m ? parseInt(m[1], 10) : 0;
+          }
+          extras[k] = Number.isFinite(qty) ? qty : 0;
+        });
+        this.lastExtras = extras;
+      } catch(_) {
+        keys.forEach(k => extras[k] = 0);
+      }
+      return extras;
+    }
     // Bündelt Gesamtmodule aus allen Konfigurationen in Paletten (36er) bevor in den Warenkorb gepostet wird
     bundleTotalModulesIntoPallets(total) {
       try {
@@ -8868,15 +8898,20 @@
           			this.showToast('PDF erfolgreich erstellt', 1500);
         }
         
-        // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
-        const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
-        // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
-        if (idx === this.currentConfig) {
-                      return await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
-      } else {
-        return await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz, cfg.quetschkabelschuhe, cfg.erdungsband, cfg.ulicaModule);
-        }
-        }));
+      // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
+      // Zusatzprodukte dürfen NICHT pro Konfiguration summiert werden, sondern nur aus der globalen Zusatzproduktliste stammen.
+      const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
+        const p = (idx === this.currentConfig)
+          ? await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false)
+          : await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz, cfg.quetschkabelschuhe, cfg.erdungsband, cfg.ulicaModule);
+        // Zusatzprodukte aus Einzel-Bundles entfernen – sie werden später einmalig aus der UI-Liste gelesen
+        delete p.MC4_Stecker;
+        delete p.Solarkabel;
+        delete p.Holzunterleger;
+        delete p.Quetschkabelschuhe;
+        delete p.Erdungsband;
+        return p;
+      }));
       
       // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
       if (this.currentConfig === null && this.configs.length === 0) {
@@ -8892,6 +8927,12 @@
       });
       // Bündelung über ALLE Konfigurationen: bilde Paletten aus Gesamtmodul-Zahlen
       this.bundleTotalModulesIntoPallets(total);
+
+      // SCHRITT 3b: Zusatzprodukte einmalig aus der globalen Zusatzproduktliste übernehmen
+      try {
+        const extras = this.readExtrasFromSummaryList();
+        Object.entries(extras).forEach(([k, v]) => { if (v > 0) total[k] = v; });
+      } catch(_) {}
       // Opti-Zusatz aus globaler UI berücksichtigen
       try {
         const hCb = document.getElementById('huawei-opti');
