@@ -383,10 +383,10 @@
     'MC4_Stecker': 'MC4 Stecker - 50 Steckerpaare',
     'Schrauben': 'Schraube M10x25 - 50 Stück inkl. Muttern',
     'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück',
-    'Quetschkabelschuhe': 'Ringkabelschuhe - 100 Stück',
+    'Quetschkabelschuhe': 'Quetschkabelschuhe',
     'Erdungsband': 'Erdungsband - 6M',
-    'Solarkabel': 'Solarkabel 100M',
-    'Holzunterleger': 'Unterlegholz für Dachhacken - 50 Stück',
+    'Solarkabel': 'Solarkabel 100m',
+    'Holzunterleger': 'Unterlegholz für Dachhaken - 50 Stück',
     // Optimierer (aus Liste)
     'HuaweiOpti': 'Huawei Smart PV Optimierer 600W',
     'BRCOpti': 'BRC M600M Optimierer'
@@ -7477,7 +7477,8 @@
         p.UlicaSolarBlackJadeFlow += len;
       }
       p.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
-      p.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
+      // Tellerkopfschrauben nur einmal global berechnen, nicht pro Reihe additiv – hier kein Zuwachs
+      p.Tellerkopfschraube += 0;
     }
 
     mapImage(key) {
@@ -8629,9 +8630,10 @@
             try { form.target = 'foxy_cart'; } catch(_) {}
             form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
             if (customerType) append(form, 'customer_type', customerType);
+            // Stelle sicher, dass code immer aus CMS kommt – bei leeren Codes als leerer String senden (keine Duplikat-Variante)
             append(form, 'name', displayName);
             append(form, 'price', price);
-            append(form, 'code', d.code || '');
+            append(form, 'code', (d && typeof d.code === 'string') ? d.code : '');
             append(form, 'image', d.image || '');
             append(form, 'url', d.url || '');
             append(form, 'description', d.description || '');
