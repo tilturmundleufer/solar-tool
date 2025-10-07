@@ -8539,6 +8539,8 @@
           const form = document.createElement('form');
           form.action = 'https://unterkonstruktion.foxycart.com/cart';
           form.method = 'POST';
+          // Für Debugging: neuen Tab öffnen, damit Console auf der Seite sichtbar bleibt
+          try { form.target = '_blank'; } catch(_) {}
           form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
           // Optional global customer_type
@@ -8556,17 +8558,18 @@
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
             const d = getData(displayName) || {};
             const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
-            append(form, 'name', displayName);
-            append(form, 'price', price);
-            append(form, 'code', d.code || '');
-            append(form, 'image', d.image || '');
-            append(form, 'url', d.url || '');
-            append(form, 'description', d.description || '');
-            append(form, 'weight', d.weight || '');
-            append(form, 'width', d.width || '');
-            append(form, 'height', d.height || '');
-            append(form, 'length', d.length || '');
-            append(form, 'quantity', String(packs));
+            // Array-Felder, damit Foxy alle Positionen übernimmt
+            append(form, 'name[]', displayName);
+            append(form, 'price[]', price);
+            append(form, 'code[]', d.code || '');
+            append(form, 'image[]', d.image || '');
+            append(form, 'url[]', d.url || '');
+            append(form, 'description[]', d.description || '');
+            append(form, 'weight[]', d.weight || '');
+            append(form, 'width[]', d.width || '');
+            append(form, 'height[]', d.height || '');
+            append(form, 'length[]', d.length || '');
+            append(form, 'quantity[]', String(packs));
           });
           document.body.appendChild(form);
           form.submit();
