@@ -641,7 +641,6 @@
   // (Fallback entfernt, wir setzen ausschließlich auf html2pdf.js)
   // Globale Calculation Manager Instanz
   const calculationManager = new CalculationManager();
-
   // ===== PRICE CACHING SYSTEM =====
   class PriceCache {
     constructor() {
@@ -1222,7 +1221,6 @@
         root.appendChild(page);
         pagesToAppend.forEach(p => root.appendChild(p));
       }
-
       // Nach allen Konfigurationen: optionale Zusatzprodukte-Seite (einmal pro PDF)
       try {
         const additionalParts = this.computeAdditionalProductsForSnapshot(snapshot);
@@ -2468,8 +2466,6 @@
     }
 
     // Füge "Produkte pro Modul" Informationen hinzu
-
-
     // Berechne Teile für eine spezifische Konfiguration - VOLLSTÄNDIG ISOLIERT
     async calculateConfigParts(config) {
       if (!config.selection || !config.cols || !config.rows) {
@@ -2536,8 +2532,6 @@
 
       return parts;
     }
-
-    // Entfernt: processGroup war ungenutzt, alle Berechnungen laufen über Worker/Direct
 
     // Generiere Dateinamen basierend auf Konfiguration(en)
     generateFileName(configs) {
@@ -3079,7 +3073,6 @@
         config.orientation = orientationMatch[0].toLowerCase().includes('vertikal') || 
                             orientationMatch[0].toLowerCase().includes('vertical') ? 'vertical' : 'horizontal';
       }
-
       // Erweiterte Checkbox-Syntax parsen
       const checkboxAllExceptMatch = input.match(this.patterns.checkboxAllExcept);
       const checkboxOnlyMatch = input.match(this.patterns.checkboxOnly);
@@ -4759,8 +4752,12 @@
             return;
           }
           const label = (PRODUCT_NAME_MAP[k] || k).split(' - ')[0];
-          extras[k] = findQtyForLabel(label);
-          if (!Number.isFinite(extras[k])) extras[k] = 0;
+          let v = findQtyForLabel(label);
+          // Fallback auf Checkboxen, falls Summary noch nicht gemountet oder Label abweichend ist
+          if ((k === 'Solarkabel') && (!v) && this.solarkabel && this.solarkabel.checked) v = 1;
+          if ((k === 'Holzunterleger') && (!v) && this.holz && this.holz.checked) v = 1;
+          if ((k === 'Quetschkabelschuhe') && (!v) && this.quetschkabelschuhe && this.quetschkabelschuhe.checked) v = 1;
+          extras[k] = Number.isFinite(v) ? v : 0;
         });
         this.lastExtras = extras;
       } catch(_) {
@@ -5340,7 +5337,6 @@
         }
       }
     }
-
     // Desktop Intro Overlay (Desktop only; zeigt bei leerem Cache/ohne URL jedes Mal)
     maybeShowIntroOverlay(cacheLoaded, hasUrlConfig) {
       try {
@@ -5987,7 +5983,6 @@
 			}
 			syncDisplayAndUpdate();
 		}
-		
 		editConfigName() {
 			const titleEl = document.getElementById('current-config-title');
 			if (!titleEl) return;
@@ -6631,8 +6626,6 @@
 		}
 
 		// Neue Funktion für Grid-Event-Listener
-
-		
 		// Neue Funktion für alle Event-Listener
 		setupAllEventListeners() {
 			// Input-Event-Listener
@@ -7187,7 +7180,6 @@
   		this.gridEl.innerHTML = '';
   		this.gridEl.appendChild(fragment);
 		}
-    
     async buildList() {
       try {
         // Performance: Cached panel count calculation
@@ -7817,7 +7809,6 @@
   		this.renderConfigList();
 		this.updateConfigList(); // Config-Liste in Overview updaten
   		this.updateSaveButtons();
-
 		// 6. Detail-Ansicht aktualisieren wenn aktiv
 		this.updateDetailView();
 		
@@ -8559,6 +8550,20 @@
       } catch (_) {}
     }
 
+    // Warte auf Navigations-/Load-Ack des versteckten iFrames nach einem POST
+    async _waitForFoxyIframeAck(timeoutMs = 2500) {
+      return new Promise(resolve => {
+        try {
+          const iframe = document.getElementById('foxy_silent');
+          if (!iframe) return resolve();
+          let settled = false;
+          const onLoad = () => { if (!settled) { settled = true; resolve(); } };
+          iframe.addEventListener('load', onLoad, { once: true });
+          setTimeout(() => { if (!settled) { settled = true; resolve(); } }, timeoutMs);
+        } catch(_) { resolve(); }
+      });
+    }
+
     clickWebflowButtonSafely(form, button, productKey, quantity, isLastItem) {
       const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
       if (qtyInput) qtyInput.value = quantity;
@@ -8585,7 +8590,7 @@
       // Wenn Foxy-Formulare vorhanden sind → Top-Level Bulk-POST (kein Iframe, ein Request)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
       if (hasFoxy) {
-        // Zuverlässig auf allen Geräten: top-level Einzel-POSTs in ein benanntes Fenster
+        // Stabil: Sequenzielle POSTs in einen versteckten iFrame, mit Load-Ack
         try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
         const sanitizePrice = (v) => {
           const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
@@ -8601,24 +8606,18 @@
         };
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         (async () => {
-          let cartWin = null;
-          try { cartWin = window.open('', 'foxy_cart'); } catch(_) {}
+          this._ensureFoxySilentTarget();
           // Optional global customer_type
           let customerType = '';
           try {
             const raw = localStorage.getItem('solarTool_customerType');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              customerType = parsed && parsed.type ? String(parsed.type) : '';
-            }
+            if (raw) { const parsed = JSON.parse(raw); customerType = parsed && parsed.type ? String(parsed.type) : ''; }
           } catch(_) {}
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
           for (const [key, qtyRaw] of entries) {
-            // Exakte Ganzzahlmengen sicherstellen (CMS-Werte könnten strings sein)
             const qty = Math.max(0, Math.floor(Number(qtyRaw)));
             const ve = VE[key] || 1;
             const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
-            // Für Paletten niemals aufrunden – Anzahl Paletten = Stück / 36 (ganzzahlig)
             const packs = isPallet ? Math.floor(qty / ve) : Math.ceil(qty / ve);
             if (!packs || packs <= 0) { await sleep(120); continue; }
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
@@ -8627,10 +8626,9 @@
             const form = document.createElement('form');
             form.action = 'https://unterkonstruktion.foxycart.com/cart';
             form.method = 'POST';
-            try { form.target = 'foxy_cart'; } catch(_) {}
+            form.target = 'foxy_silent';
             form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
             if (customerType) append(form, 'customer_type', customerType);
-            // Stelle sicher, dass code immer aus CMS kommt – bei leeren Codes als leerer String senden (keine Duplikat-Variante)
             append(form, 'name', displayName);
             append(form, 'price', price);
             append(form, 'code', (d && typeof d.code === 'string') ? d.code : '');
@@ -8644,11 +8642,9 @@
             append(form, 'quantity', String(packs));
             document.body.appendChild(form);
             try { form.submit(); } catch(_) {}
-            // kurzen Delay pro POST, damit Foxy sauber verarbeiten kann
-            await sleep(600);
+            await this._waitForFoxyIframeAck(2500);
             try { form.remove(); } catch(_) {}
           }
-          try { if (cartWin) cartWin.focus(); } catch(_) {}
           try { this.hideLoading(); } catch(_) {}
         })();
         return;
@@ -8783,7 +8779,6 @@
         cartContainer.classList.add('st-cart-hidden');
       }
     }
-
     showCartContainer() {
       const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
       if (cartContainer) {
