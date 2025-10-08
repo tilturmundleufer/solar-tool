@@ -8665,6 +8665,7 @@
             append(form, 'height', d.height || '');
             append(form, 'length', d.length || '');
             append(form, 'quantity', String(packs));
+            append(form, 'coupon', (d && typeof d.coupon === 'string') ? d.coupon : '');
             
             // Debug: Logge Formular-Daten vor Submit
             const formData = new FormData(form);
@@ -8708,6 +8709,7 @@
                 append(navForm, 'height', e.meta?.height || '');
                 append(navForm, 'length', e.meta?.length || '');
                 append(navForm, 'quantity', String(e.packs));
+                append(navForm, 'coupon', (e.meta && typeof e.meta.coupon === 'string') ? e.meta.coupon : '');
               });
               document.body.appendChild(navForm);
               console.log('[Foxy Debug] Safari-Fallback Formular abgesendet');
