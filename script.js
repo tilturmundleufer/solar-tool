@@ -8605,85 +8605,88 @@
         .filter(([_, qty]) => qty > 0)
         .sort(([aKey],[bKey]) => aKey.localeCompare(bKey));
       if (!entries.length) return;
-      // Wenn Foxy-Formulare vorhanden sind → Top-Level Bulk-POST (kein Iframe, ein Request)
-      const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
-      if (hasFoxy) {
-        // Stabil: Sequenzielle POSTs in einen versteckten iFrame, mit Load-Ack
-        try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
-        const sanitizePrice = (v) => {
-          const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
-          const num = parseFloat(n);
-          return Number.isFinite(num) ? num.toFixed(2) : '0.00';
-        };
-        const append = (form, name, value) => {
-          const inp = document.createElement('input');
-          inp.type = 'hidden';
-          inp.name = name;
-          inp.value = value == null ? '' : String(value);
-          form.appendChild(inp);
-        };
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-        (async () => {
-          this._ensureFoxySilentTarget();
-          // Optional global customer_type
-          let customerType = '';
-          try {
-            const raw = localStorage.getItem('solarTool_customerType');
-            if (raw) { const parsed = JSON.parse(raw); customerType = parsed && parsed.type ? String(parsed.type) : ''; }
-          } catch(_) {}
-          const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
-          for (const [key, qtyRaw] of entries) {
-            const qty = Math.max(0, Math.floor(Number(qtyRaw)));
-            const ve = VE[key] || 1;
-            const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
-            const packs = isPallet ? Math.floor(qty / ve) : Math.ceil(qty / ve);
-            if (!packs || packs <= 0) { await sleep(120); continue; }
-            const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
-            const d = getData(displayName) || {};
-            const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
-            const form = document.createElement('form');
-            form.action = 'https://unterkonstruktion.foxycart.com/cart';
-            form.method = 'POST';
-            form.target = 'foxy_silent';
-            form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
-            if (customerType) append(form, 'customer_type', customerType);
-            append(form, 'name', displayName);
-            append(form, 'price', price);
-            append(form, 'code', (d && typeof d.code === 'string') ? d.code : '');
-            append(form, 'image', d.image || '');
-            append(form, 'url', d.url || '');
-            append(form, 'description', d.description || '');
-            append(form, 'weight', d.weight || '');
-            append(form, 'width', d.width || '');
-            append(form, 'height', d.height || '');
-            append(form, 'length', d.length || '');
-            append(form, 'quantity', String(packs));
-            document.body.appendChild(form);
-            try { form.submit(); } catch(_) {}
-            await this._waitForFoxyIframeAck(2500);
-            try { form.remove(); } catch(_) {}
-          }
-          try { this.hideLoading(); } catch(_) {}
-        })();
-        return;
-      }
-      // Fallback: alter Webflow-Flow (historisch)
-      const items = entries.map(([key, qty]) => ({ key, qty }));
-      const processSequentially = async () => {
-        try {
-          await this.ensureCartObservers();
-          for (let i = 0; i < items.length; i++) {
-            const { key, qty } = items[i];
-            const packsNeeded = Math.ceil(qty / VE[key]);
-            await this.addSingleItemAndWait(key, packsNeeded, i === items.length - 1);
-          }
-        } finally {
-          this.showCartContainer();
-          this.hideLoading();
-          this.isAddingToCart = false;
-        }
+      
+      // Robusteres System: Direkte Weiterleitung zur Foxycart-Seite nach Produkthinzufügung
+      try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
+      
+      const sanitizePrice = (v) => {
+        const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
+        const num = parseFloat(n);
+        return Number.isFinite(num) ? num.toFixed(2) : '0.00';
       };
-      processSequentially();
+      
+      const append = (form, name, value) => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = name;
+        inp.value = value == null ? '' : String(value);
+        form.appendChild(inp);
+      };
+      
+      // Optional global customer_type
+      let customerType = '';
+      try {
+        const raw = localStorage.getItem('solarTool_customerType');
+        if (raw) { const parsed = JSON.parse(raw); customerType = parsed && parsed.type ? String(parsed.type) : ''; }
+      } catch(_) {}
+      
+      const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
+      
+      // Erstelle ein einziges Formular mit allen Produkten
+      const masterForm = document.createElement('form');
+      masterForm.action = 'https://unterkonstruktion.foxycart.com/cart';
+      masterForm.method = 'POST';
+      masterForm.style.position = 'absolute'; 
+      masterForm.style.left = '-9999px'; 
+      masterForm.style.top = '-9999px';
+      
+      if (customerType) append(masterForm, 'customer_type', customerType);
+      
+      // Füge alle Produkte zum Master-Formular hinzu
+      entries.forEach(([key, qtyRaw], index) => {
+        const qty = Math.max(0, Math.floor(Number(qtyRaw)));
+        const ve = VE[key] || 1;
+        const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
+        const packs = isPallet ? Math.floor(qty / ve) : Math.ceil(qty / ve);
+        if (!packs || packs <= 0) return;
+        
+        const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
+        const d = getData(displayName) || {};
+        const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
+        
+        // Produkt-spezifische Felder mit Index
+        append(masterForm, `name[${index}]`, displayName);
+        append(masterForm, `price[${index}]`, price);
+        append(masterForm, `code[${index}]`, (d && typeof d.code === 'string') ? d.code : '');
+        append(masterForm, `image[${index}]`, d.image || '');
+        append(masterForm, `url[${index}]`, d.url || '');
+        append(masterForm, `description[${index}]`, d.description || '');
+        append(masterForm, `weight[${index}]`, d.weight || '');
+        append(masterForm, `width[${index}]`, d.width || '');
+        append(masterForm, `height[${index}]`, d.height || '');
+        append(masterForm, `length[${index}]`, d.length || '');
+        append(masterForm, `quantity[${index}]`, String(packs));
+      });
+      
+      document.body.appendChild(masterForm);
+      
+      // Nach kurzer Verzögerung: Formular absenden und zur Foxycart-Seite weiterleiten
+      setTimeout(() => {
+        try { 
+          masterForm.submit(); 
+          // Nach dem Submit: Weiterleitung zur Foxycart-Seite
+          setTimeout(() => {
+            try { this.hideLoading(); } catch(_) {}
+            window.location.href = 'https://unterkonstruktion.foxycart.com/cart';
+          }, 1000);
+        } catch(e) {
+          console.warn('Formular-Submit fehlgeschlagen:', e);
+          try { this.hideLoading(); } catch(_) {}
+          // Fallback: Direkte Weiterleitung
+          window.location.href = 'https://unterkonstruktion.foxycart.com/cart';
+        }
+      }, 500);
+      
     }
 
     async addSingleItemAndWait(productKey, quantity, isLast) {
