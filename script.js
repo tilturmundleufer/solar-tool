@@ -8637,6 +8637,17 @@
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
             const d = getData(displayName) || {};
             const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
+            
+            // Debug: Logge alle Produktdaten
+            console.log(`[Foxy Debug] Produkt ${key}:`, {
+              displayName,
+              price,
+              packs,
+              qty,
+              ve,
+              meta: d
+            });
+            
             builtEntries.push({ displayName, price, packs, meta: d });
             const form = document.createElement('form');
             form.action = 'https://unterkonstruktion.foxycart.com/cart';
@@ -8654,8 +8665,22 @@
             append(form, 'height', d.height || '');
             append(form, 'length', d.length || '');
             append(form, 'quantity', String(packs));
+            
+            // Debug: Logge Formular-Daten vor Submit
+            const formData = new FormData(form);
+            const formObj = {};
+            for (let [k, v] of formData.entries()) {
+              formObj[k] = v;
+            }
+            console.log(`[Foxy Debug] Formular-Daten für ${displayName}:`, formObj);
+            
             document.body.appendChild(form);
-            try { form.submit(); } catch(_) {}
+            try { 
+              form.submit(); 
+              console.log(`[Foxy Debug] Formular für ${displayName} abgesendet`);
+            } catch(e) {
+              console.error(`[Foxy Debug] Fehler beim Absenden von ${displayName}:`, e);
+            }
             await this._waitForFoxyIframeAck(2500);
             try { form.remove(); } catch(_) {}
           }
@@ -8664,12 +8689,14 @@
           const ua = (navigator.userAgent||'').toLowerCase();
           const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('crios') && !ua.includes('android');
           if (isSafari && builtEntries.length) {
+            console.log('[Foxy Debug] Safari erkannt, verwende Fallback-POST mit', builtEntries.length, 'Produkten');
             try {
               const navForm = document.createElement('form');
               navForm.action = 'https://unterkonstruktion.foxycart.com/cart';
               navForm.method = 'POST';
               // Wiederhole Felder ohne Indizes für mehrere Produkte
-              builtEntries.forEach(e => {
+              builtEntries.forEach((e, idx) => {
+                console.log(`[Foxy Debug] Safari-Fallback Produkt ${idx}:`, e);
                 append(navForm, 'name', e.displayName);
                 append(navForm, 'price', e.price);
                 append(navForm, 'code', (e.meta && typeof e.meta.code === 'string') ? e.meta.code : '');
@@ -8683,9 +8710,11 @@
                 append(navForm, 'quantity', String(e.packs));
               });
               document.body.appendChild(navForm);
+              console.log('[Foxy Debug] Safari-Fallback Formular abgesendet');
               navForm.submit();
               return;
-            } catch(_) {
+            } catch(e) {
+              console.error('[Foxy Debug] Safari-Fallback fehlgeschlagen:', e);
               // Fallback: Nur navigieren
             }
           }
