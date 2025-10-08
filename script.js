@@ -8626,13 +8626,8 @@
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         (async () => {
           this._ensureFoxySilentTarget();
-          // Optional global customer_type
-          let customerType = '';
-          try {
-            const raw = localStorage.getItem('solarTool_customerType');
-            if (raw) { const parsed = JSON.parse(raw); customerType = parsed && parsed.type ? String(parsed.type) : ''; }
-          } catch(_) {}
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
+          const builtEntries = [];
           for (const [key, qtyRaw] of entries) {
             const qty = Math.max(0, Math.floor(Number(qtyRaw)));
             const ve = VE[key] || 1;
@@ -8642,12 +8637,12 @@
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
             const d = getData(displayName) || {};
             const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
+            builtEntries.push({ displayName, price, packs, meta: d });
             const form = document.createElement('form');
             form.action = 'https://unterkonstruktion.foxycart.com/cart';
             form.method = 'POST';
             form.target = 'foxy_silent';
             form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
-            if (customerType) append(form, 'customer_type', customerType);
             append(form, 'name', displayName);
             append(form, 'price', price);
             append(form, 'code', (d && typeof d.code === 'string') ? d.code : '');
@@ -8665,10 +8660,36 @@
             try { form.remove(); } catch(_) {}
           }
           try { this.hideLoading(); } catch(_) {}
-          // Nach allen Produkten: Weiterleitung zur Foxycart-Seite
-          setTimeout(() => {
-            window.location.href = 'https://unterkonstruktion.foxycart.com/cart';
-          }, 1000);
+          // Nach allen Produkten: Weiterleitung zur Foxycart-Seite – Safari-Fallback per Top-Level POST
+          const ua = (navigator.userAgent||'').toLowerCase();
+          const isSafari = ua.includes('safari') && !ua.includes('chrome') && !ua.includes('crios') && !ua.includes('android');
+          if (isSafari && builtEntries.length) {
+            try {
+              const navForm = document.createElement('form');
+              navForm.action = 'https://unterkonstruktion.foxycart.com/cart';
+              navForm.method = 'POST';
+              // Wiederhole Felder ohne Indizes für mehrere Produkte
+              builtEntries.forEach(e => {
+                append(navForm, 'name', e.displayName);
+                append(navForm, 'price', e.price);
+                append(navForm, 'code', (e.meta && typeof e.meta.code === 'string') ? e.meta.code : '');
+                append(navForm, 'image', e.meta?.image || '');
+                append(navForm, 'url', e.meta?.url || '');
+                append(navForm, 'description', e.meta?.description || '');
+                append(navForm, 'weight', e.meta?.weight || '');
+                append(navForm, 'width', e.meta?.width || '');
+                append(navForm, 'height', e.meta?.height || '');
+                append(navForm, 'length', e.meta?.length || '');
+                append(navForm, 'quantity', String(e.packs));
+              });
+              document.body.appendChild(navForm);
+              navForm.submit();
+              return;
+            } catch(_) {
+              // Fallback: Nur navigieren
+            }
+          }
+          setTimeout(() => { window.location.href = 'https://unterkonstruktion.foxycart.com/cart'; }, 600);
         })();
         return;
       }
