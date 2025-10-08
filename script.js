@@ -1427,6 +1427,21 @@
         if (anyQuetsch) {
           result.Quetschkabelschuhe = 1;
         }
+        // Optimierer (Huawei/BRC) – Menge aus globaler UI lesen
+        try {
+          const hCb = document.getElementById('huawei-opti');
+          const bCb = document.getElementById('brc-opti');
+          const qEl = document.getElementById('opti-qty');
+          if (qEl) {
+            const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+            if (hCb && hCb.checked) {
+              result.HuaweiOpti = (result.HuaweiOpti || 0) + qty;
+            }
+            if (bCb && bCb.checked) {
+              result.BRCOpti = (result.BRCOpti || 0) + qty;
+            }
+          }
+        } catch (_) {}
         return result;
       } catch (err) {
         console.warn('computeAdditionalProductsForSnapshot failed:', err);
@@ -7421,12 +7436,15 @@
     		if (run) this.processGroup(run, p);
   		}
 
-  		// Erdungsband-Berechnung nur wenn gewünscht
-  		if (this.erdungsband && this.erdungsband.checked) {
-  			p.Erdungsband = this.calculateErdungsband();
+		// Erdungsband-Berechnung nur wenn gewünscht
+		if (this.erdungsband && this.erdungsband.checked) {
+			p.Erdungsband = this.calculateErdungsband();
 		}
 
-  		return p;
+		// Tellerkopfschrauben global berechnen: 2 × Dachhaken (entspricht früherer Gruppenformel)
+		p.Tellerkopfschraube = (p.Dachhaken || 0) * 2;
+
+		return p;
 		}
     processGroup(len, p) {
       // Verwende die korrekte Schienenlogik (wie im Worker)
