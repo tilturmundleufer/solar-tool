@@ -161,6 +161,7 @@ Hinweise:
 - `selection.selectedCount` stimmt mit `selectedCoords.length` überein.
 
 ### 📓 Changelog
+ - 2025-10-08: Fix: „Gesamte Auswahl in den Warenkorb“ ergänzt jetzt die Tellerkopfschrauben korrekt (global = 2× Dachhaken). PDF: Optimierer (Huawei/BRC) erscheinen auf der Zusatzprodukte-Seite; Menge aus UI (`opti-qty`).
  - 2025-10-05: Warenkorb auf Foxy.io umgestellt. Produkte werden über CMS‑Formulare anhand des Feldes `name` und `quantity` hinzugefügt. Webflow‑Cart‑APIs und Hidden‑Form‑Mapping entfernt. Debug‑Helfer `window.debugFoxyForms()` hinzugefügt.
 - 2025-08-30: Schienenverbinder-Logik korrigiert (Produktliste): pro Reihe jetzt Verbinder = Anzahl der Schienen − 2. Beispiel: Bei 4 Schienen in einer Reihe werden 2 Verbinder angezeigt (vorher 4). Test: Konfiguration mit einer Reihe, die zwei Schienenstücke pro Rail benötigt; prüfen, dass Verbinderanzahl halbiert ist.
 - 2025-08-25: Webhook-Payload verschlankt (ohne Bilddaten), hinzugefügt: `selection`-Metadaten und kompaktes `productQuantities`.
