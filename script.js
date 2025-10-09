@@ -8666,7 +8666,9 @@
             const qty = Math.max(0, Math.floor(Number(qtyRaw)));
             const ve = VE[key] || 1;
             const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
-            const packs = isPallet ? Math.floor(qty / ve) : Math.ceil(qty / ve);
+            // Für Einzelmodule (keine Palette) die exakte Stückzahl verwenden (keine Rundung)
+            const isSingleModule = (key === 'Solarmodul' || key === 'UlicaSolarBlackJadeFlow');
+            const packs = isPallet ? Math.floor(qty / ve) : (isSingleModule ? qty : Math.ceil(qty / ve));
             if (!packs || packs <= 0) { await sleep(120); continue; }
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
             const d = getData(displayName) || {};
