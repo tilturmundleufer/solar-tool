@@ -8225,10 +8225,16 @@
     // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
     saveToCache() {
     	try {
-    		const cacheData = {
-    			configs: this.configs,
-    			currentConfig: this.currentConfig,
-    			selection: this.selection, // Aktuelle Grid-Auswahl
+        // Deep-Clones erstellen, damit keine Referenzen zwischen Konfigurationen geteilt werden
+        const deepCloneSelection = (sel) => Array.isArray(sel) ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel;
+        const deepCloneConfig = (cfg) => ({
+          ...cfg,
+          selection: deepCloneSelection(cfg.selection)
+        });
+        const cacheData = {
+          configs: Array.isArray(this.configs) ? this.configs.map(deepCloneConfig) : [],
+          currentConfig: this.currentConfig,
+          selection: deepCloneSelection(this.selection), // Aktuelle Grid-Auswahl
     			// Aktuelle Grid-Einstellungen
     			cols: this.cols,
     			rows: this.rows,
@@ -8259,7 +8265,7 @@
     		};
     		
     		// Verwende CacheManager für bessere Performance und Error Handling
-    		this.cacheManager.saveData(cacheData);
+        this.cacheManager.saveData(cacheData);
     		
     		// Zeige Auto-Save Indicator
     		this.showAutoSaveIndicator();
@@ -8285,13 +8291,19 @@
       }
     		
     		// Lade Konfigurationen
-    		if (data.configs && Array.isArray(data.configs)) {
-    			this.configs = data.configs;
+        if (data.configs && Array.isArray(data.configs)) {
+          // Deep-Kopie beim Laden
+          const deepCloneSelection = (sel) => Array.isArray(sel) ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel;
+          const deepCloneConfig = (cfg) => ({
+            ...cfg,
+            selection: deepCloneSelection(cfg.selection)
+          });
+          this.configs = data.configs.map(deepCloneConfig);
     			this.currentConfig = data.currentConfig;
     			
     			// Lade Grid-Auswahl
-    		if (data.selection && Array.isArray(data.selection)) {
-    			this.selection = data.selection;
+        if (data.selection && Array.isArray(data.selection)) {
+          this.selection = data.selection.map(r => Array.isArray(r) ? r.slice() : r);
     		}
     			
     			// Lade Grid-Einstellungen
@@ -8652,6 +8664,9 @@
         };
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         (async () => {
+          // iFrame für GET-Requests verwenden, damit die Seite nicht navigiert
+          this._ensureFoxySilentTarget();
+          const silentIframe = document.getElementById('foxy_silent');
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
           for (const [key, qtyRaw] of entries) {
             const qty = Math.max(0, Math.floor(Number(qtyRaw)));
@@ -8691,29 +8706,30 @@
             if (d.coupon) params.append('coupon', d.coupon);
             
             const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
-            console.log(`[Foxy Debug] Link-URL: ${foxyUrl}`);
+            console.log(`[Foxy Debug] GET-URL: ${foxyUrl}`);
             
             // WICHTIG: Logge die gesendete Menge für Vergleich
             console.log(`[Foxy Debug] SENDEN: ${displayName} - Menge: ${packs} (aus ${qty} Stück, VE: ${ve})`);
             
-            // Erstelle versteckten Link und klicke ihn
-            const link = document.createElement('a');
-            link.href = foxyUrl;
-            link.style.position = 'absolute';
-            link.style.left = '-9999px';
-            link.style.top = '-9999px';
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            
+            // Sende per iFrame (ohne Navigation) und warte auf Load-Ack
+            let ack = false;
             try {
-              link.click();
-              console.log(`[Foxy Debug] Link geklickt für ${displayName} - Menge ${packs} gesendet`);
+              if (silentIframe) {
+                silentIframe.src = foxyUrl;
+                ack = await this._waitForFoxyIframeAck(3000);
+                if (!ack) {
+                  // Retry einmal
+                  silentIframe.src = foxyUrl + '&_retry=1';
+                  ack = await this._waitForFoxyIframeAck(3000);
+                }
+                console.log(`[Foxy Debug] ACK für ${displayName}: ${ack ? 'OK' : 'TIMEOUT'}`);
+              } else {
+                console.warn('[Foxy Debug] Silent iFrame nicht verfügbar, überspringe');
+              }
             } catch (e) {
-              console.error(`[Foxy Debug] Link-Klick Fehler für ${displayName}:`, e);
+              console.error(`[Foxy Debug] iFrame-GET Fehler für ${displayName}:`, e);
             }
-            
-            try { link.remove(); } catch(_) {}
-            await sleep(300); // Pause zwischen Links
+            await sleep(200); // kurze Pause zwischen Requests
           }
           try { this.hideLoading(); } catch(_) {}
           
