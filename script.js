@@ -8664,9 +8664,7 @@
         };
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         (async () => {
-          // iFrame für GET-Requests verwenden, damit die Seite nicht navigiert
-          this._ensureFoxySilentTarget();
-          const silentIframe = document.getElementById('foxy_silent');
+          // Link-basierte GET-Requests (keine iFrames)
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
           for (const [key, qtyRaw] of entries) {
             const qty = Math.max(0, Math.floor(Number(qtyRaw)));
@@ -8711,25 +8709,22 @@
             // WICHTIG: Logge die gesendete Menge für Vergleich
             console.log(`[Foxy Debug] SENDEN: ${displayName} - Menge: ${packs} (aus ${qty} Stück, VE: ${ve})`);
             
-            // Sende per iFrame (ohne Navigation) und warte auf Load-Ack
-            let ack = false;
+            // Erstelle versteckten Link und klicke ihn (GET wie in der Doku)
+            const link = document.createElement('a');
+            link.href = foxyUrl;
+            link.style.position = 'absolute';
+            link.style.left = '-9999px';
+            link.style.top = '-9999px';
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
             try {
-              if (silentIframe) {
-                silentIframe.src = foxyUrl;
-                ack = await this._waitForFoxyIframeAck(3000);
-                if (!ack) {
-                  // Retry einmal
-                  silentIframe.src = foxyUrl + '&_retry=1';
-                  ack = await this._waitForFoxyIframeAck(3000);
-                }
-                console.log(`[Foxy Debug] ACK für ${displayName}: ${ack ? 'OK' : 'TIMEOUT'}`);
-              } else {
-                console.warn('[Foxy Debug] Silent iFrame nicht verfügbar, überspringe');
-              }
+              link.click();
+              console.log(`[Foxy Debug] LINK GESENDET: ${displayName} – Menge ${packs}`);
             } catch (e) {
-              console.error(`[Foxy Debug] iFrame-GET Fehler für ${displayName}:`, e);
+              console.error(`[Foxy Debug] Link-Klick Fehler für ${displayName}:`, e);
             }
-            await sleep(200); // kurze Pause zwischen Requests
+            try { link.remove(); } catch(_) {}
+            await sleep(250); // kurze Pause zwischen Links
           }
           try { this.hideLoading(); } catch(_) {}
           
