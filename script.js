@@ -6257,8 +6257,20 @@
 				delete parts.UlicaSolarBlackJadeFlow;
 			}
 			
-			// Palettenlogik ENTFERNT: Wird nur am Ende für alle Konfigurationen zusammen berechnet
-			// (Siehe bundleTotalModulesIntoPallets in addAllToCart)
+			// Palettenlogik: 36er bündeln je nach Modultyp
+			try {
+				const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+				const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+				const count = Number(parts[pieceKey] || 0);
+				if (count > 0) {
+					const pallets = Math.floor(count / 36);
+					const remainder = count % 36;
+					if (pallets > 0) {
+						parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+					}
+					parts[pieceKey] = remainder;
+				}
+			} catch (e) {}
 			
 			let totalPrice = 0;
 			Object.entries(parts).forEach(([partName, quantity]) => {
@@ -9118,8 +9130,20 @@
           delete parts.Erdungsband;
         }
         
-        // Palettenlogik ENTFERNT: Wird nur am Ende für alle Konfigurationen zusammen berechnet
-        // (Siehe bundleTotalModulesIntoPallets in addAllToCart)
+        // Palettenlogik anwenden (36er Bündel je Modultyp)
+        try {
+          const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+          const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+          const count = Number(parts[pieceKey] || 0);
+          if (count > 0) {
+            const pallets = Math.floor(count / 36);
+            const remainder = count % 36;
+            if (pallets > 0) {
+              parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+            }
+            parts[pieceKey] = remainder;
+          }
+        } catch (e) {}
         
       return parts;
       } finally {
