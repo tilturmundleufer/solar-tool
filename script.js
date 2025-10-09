@@ -8640,28 +8640,19 @@
         .sort(([aKey],[bKey]) => aKey.localeCompare(bKey));
       if (!entries.length) return;
       
-      // Wenn Foxy-Formulare vorhanden sind → Sequenzielle POSTs in iFrame (silent), ohne Cart aufzurufen
+      // Wenn Foxy-Formulare vorhanden sind → Sequenzielle GET-Requests via versteckte Links (robuster als iframe)
       const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
       if (hasFoxy) {
-        // Stabil: Sequenzielle POSTs in einen versteckten iFrame, mit Load-Ack; keine Redirects
+        // Stabil: Sequenzielle GET-Requests via versteckte Links, keine iframe-Probleme
         try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
         const sanitizePrice = (v) => {
           const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
           const num = parseFloat(n);
           return Number.isFinite(num) ? num.toFixed(2) : '0.00';
         };
-        const append = (form, name, value) => {
-          const inp = document.createElement('input');
-          inp.type = 'hidden';
-          inp.name = name;
-          inp.value = value == null ? '' : String(value);
-          form.appendChild(inp);
-        };
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         (async () => {
-          this._ensureFoxySilentTarget();
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
-          const builtEntries = [];
           for (const [key, qtyRaw] of entries) {
             const qty = Math.max(0, Math.floor(Number(qtyRaw)));
             const ve = VE[key] || 1;
@@ -8675,7 +8666,7 @@
             const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
             
             // Debug: Logge alle Produktdaten
-            console.log(`[Foxy Debug] Produkt ${key}:`, {
+            console.log(`[Foxy Debug] Link-Produkt ${key}:`, {
               displayName,
               price,
               packs,
@@ -8684,33 +8675,42 @@
               meta: d
             });
             
-            builtEntries.push({ displayName, price, packs, meta: d });
-            const form = document.createElement('form');
-            form.action = 'https://unterkonstruktion.foxycart.com/cart';
-            form.method = 'POST';
-            form.target = 'foxy_silent';
-            form.style.position = 'absolute'; form.style.left = '-9999px'; form.style.top = '-9999px';
-            append(form, 'name', displayName);
-            append(form, 'price', price);
-            append(form, 'code', (d && typeof d.code === 'string') ? d.code : '');
-            append(form, 'image', d.image || '');
-            append(form, 'url', d.url || '');
-            append(form, 'description', d.description || '');
-            append(form, 'weight', d.weight || '');
-            append(form, 'width', d.width || '');
-            append(form, 'height', d.height || '');
-            append(form, 'length', d.length || '');
-            append(form, 'quantity', String(packs));
-            append(form, 'coupon', (d && typeof d.coupon === 'string') ? d.coupon : '');
-            document.body.appendChild(form);
-            let ack = false;
-            try { form.submit(); } catch(_) {}
-            ack = await this._waitForFoxyIframeAck(2500);
-            if (!ack) {
-              try { form.submit(); } catch(_) {}
-              ack = await this._waitForFoxyIframeAck(2500);
+            // Baue URL mit Query-Parametern (wie im Link Example)
+            const params = new URLSearchParams();
+            params.append('name', displayName);
+            params.append('price', price);
+            params.append('quantity', String(packs));
+            if (d.code) params.append('code', d.code);
+            if (d.image) params.append('image', d.image);
+            if (d.url) params.append('url', d.url);
+            if (d.description) params.append('description', d.description);
+            if (d.weight) params.append('weight', d.weight);
+            if (d.width) params.append('width', d.width);
+            if (d.height) params.append('height', d.height);
+            if (d.length) params.append('length', d.length);
+            if (d.coupon) params.append('coupon', d.coupon);
+            
+            const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
+            console.log(`[Foxy Debug] Link-URL: ${foxyUrl}`);
+            
+            // Erstelle versteckten Link und klicke ihn
+            const link = document.createElement('a');
+            link.href = foxyUrl;
+            link.style.position = 'absolute';
+            link.style.left = '-9999px';
+            link.style.top = '-9999px';
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            
+            try {
+              link.click();
+              console.log(`[Foxy Debug] Link geklickt für ${displayName}`);
+            } catch (e) {
+              console.error(`[Foxy Debug] Link-Klick Fehler für ${displayName}:`, e);
             }
-            try { form.remove(); } catch(_) {}
+            
+            try { link.remove(); } catch(_) {}
+            await sleep(300); // Pause zwischen Links
           }
           try { this.hideLoading(); } catch(_) {}
           // Keine Weiterleitung gewünscht
