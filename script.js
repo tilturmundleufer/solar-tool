@@ -8693,6 +8693,9 @@
             const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
             console.log(`[Foxy Debug] Link-URL: ${foxyUrl}`);
             
+            // WICHTIG: Logge die gesendete Menge für Vergleich
+            console.log(`[Foxy Debug] SENDEN: ${displayName} - Menge: ${packs} (aus ${qty} Stück, VE: ${ve})`);
+            
             // Erstelle versteckten Link und klicke ihn
             const link = document.createElement('a');
             link.href = foxyUrl;
@@ -8704,7 +8707,7 @@
             
             try {
               link.click();
-              console.log(`[Foxy Debug] Link geklickt für ${displayName}`);
+              console.log(`[Foxy Debug] Link geklickt für ${displayName} - Menge ${packs} gesendet`);
             } catch (e) {
               console.error(`[Foxy Debug] Link-Klick Fehler für ${displayName}:`, e);
             }
@@ -8713,6 +8716,22 @@
             await sleep(300); // Pause zwischen Links
           }
           try { this.hideLoading(); } catch(_) {}
+          
+          // Zusammenfassung der gesendeten Mengen
+          console.log(`[Foxy Debug] ZUSAMMENFASSUNG - Gesendete Produkte:`);
+          for (const [key, qtyRaw] of entries) {
+            const qty = Math.max(0, Math.floor(Number(qtyRaw)));
+            const ve = VE[key] || 1;
+            const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
+            const isSingleModule = (key === 'Solarmodul' || key === 'UlicaSolarBlackJadeFlow');
+            const packs = isPallet ? Math.floor(qty / ve) : (isSingleModule ? qty : Math.ceil(qty / ve));
+            if (packs > 0) {
+              const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
+              console.log(`[Foxy Debug] - ${displayName}: ${packs} Stück (Konfigurator: ${qty}, VE: ${ve})`);
+            }
+          }
+          console.log(`[Foxy Debug] Bitte vergleiche diese Mengen mit dem Warenkorb!`);
+          
           // Keine Weiterleitung gewünscht
         })();
         return;
