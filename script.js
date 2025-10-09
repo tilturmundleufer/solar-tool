@@ -6257,20 +6257,8 @@
 				delete parts.UlicaSolarBlackJadeFlow;
 			}
 			
-			// Palettenlogik: 36er bündeln je nach Modultyp
-			try {
-				const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
-				const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
-				const count = Number(parts[pieceKey] || 0);
-				if (count > 0) {
-					const pallets = Math.floor(count / 36);
-					const remainder = count % 36;
-					if (pallets > 0) {
-						parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
-					}
-					parts[pieceKey] = remainder;
-				}
-			} catch (e) {}
+			// Palettenlogik AUSGEKLAMMERT: Module werden als Einzelmodule behandelt
+			// (Keine 36er Bündelung mehr)
 			
 			let totalPrice = 0;
 			Object.entries(parts).forEach(([partName, quantity]) => {
@@ -9036,8 +9024,8 @@
           total[k] = (total[k] || 0) + v;
         });
       });
-      // Bündelung über ALLE Konfigurationen: bilde Paletten aus Gesamtmodul-Zahlen
-      this.bundleTotalModulesIntoPallets(total);
+      // Palettenlogik AUSGEKLAMMERT: Module werden als Einzelmodule behandelt
+      // this.bundleTotalModulesIntoPallets(total); // Nicht mehr verwendet
 
       // SCHRITT 3b: Zusatzprodukte einmalig aus der globalen Zusatzproduktliste übernehmen
       try {
@@ -9130,20 +9118,8 @@
           delete parts.Erdungsband;
         }
         
-        // Palettenlogik anwenden (36er Bündel je Modultyp)
-        try {
-          const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
-          const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
-          const count = Number(parts[pieceKey] || 0);
-          if (count > 0) {
-            const pallets = Math.floor(count / 36);
-            const remainder = count % 36;
-            if (pallets > 0) {
-              parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
-            }
-            parts[pieceKey] = remainder;
-          }
-        } catch (e) {}
+        // Palettenlogik AUSGEKLAMMERT: Module werden als Einzelmodule behandelt
+        // (Keine 36er Bündelung mehr)
         
       return parts;
       } finally {
