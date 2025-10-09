@@ -6245,15 +6245,17 @@
 				}
 			}
 			
-			// Module nur hinzufügen wenn Checkbox aktiviert ist
-			const includeModules = document.getElementById('include-modules')?.checked || false;
-			const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+			// Module nur hinzufügen wenn Konfig-Flags es erlauben (DOM-unabhängig)
+			// Default: Module sind enthalten, außer incM ist explizit false
+			const includeModules = (config && config.incM === false) ? false : true;
+			// Ulica-Module nur wenn explizit true
+			const ulicaModule = (config && config.ulicaModule === true);
 			
-			if (!includeModules) {
+			if (includeModules === false) {
 				delete parts.Solarmodul;
 			}
 			
-			if (!ulicaModule) {
+			if (ulicaModule !== true) {
 				delete parts.UlicaSolarBlackJadeFlow;
 			}
 			
@@ -8605,12 +8607,12 @@
       return new Promise(resolve => {
         try {
           const iframe = document.getElementById('foxy_silent');
-          if (!iframe) return resolve();
+          if (!iframe) return resolve(false);
           let settled = false;
-          const onLoad = () => { if (!settled) { settled = true; resolve(); } };
+          const onLoad = () => { if (!settled) { settled = true; resolve(true); } };
           iframe.addEventListener('load', onLoad, { once: true });
-          setTimeout(() => { if (!settled) { settled = true; resolve(); } }, timeoutMs);
-        } catch(_) { resolve(); }
+          setTimeout(() => { if (!settled) { settled = true; resolve(false); } }, timeoutMs);
+        } catch(_) { resolve(false); }
       });
     }
 
@@ -8708,13 +8710,20 @@
             console.log(`[Foxy Debug] Formular-Daten für ${displayName}:`, formObj);
             
             document.body.appendChild(form);
+            let ack = false;
             try { 
               form.submit(); 
               console.log(`[Foxy Debug] Formular für ${displayName} abgesendet`);
             } catch(e) {
               console.error(`[Foxy Debug] Fehler beim Absenden von ${displayName}:`, e);
             }
-            await this._waitForFoxyIframeAck(2500);
+            ack = await this._waitForFoxyIframeAck(2500);
+            if (!ack) {
+              console.warn(`[Foxy Debug] Keine iFrame-Antwort für ${displayName} – versuche erneut`);
+              try { form.submit(); } catch(_) {}
+              ack = await this._waitForFoxyIframeAck(2500);
+              if (!ack) console.error(`[Foxy Debug] Keine Bestätigung nach zweitem Versuch für ${displayName}`);
+            }
             try { form.remove(); } catch(_) {}
           }
           try { this.hideLoading(); } catch(_) {}
@@ -9013,8 +9022,8 @@
       // Zusatzprodukte dürfen NICHT pro Konfiguration summiert werden, sondern nur aus der globalen Zusatzproduktliste stammen.
       const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
         const p = (idx === this.currentConfig)
-          ? await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false)
-          : await this._buildPartsFor(cfg.selection, cfg.incM, cfg.mc4, cfg.solarkabel, cfg.holz, cfg.quetschkabelschuhe, cfg.erdungsband, cfg.ulicaModule);
+          ? await this._buildPartsFor(this.selection, (this.incM && this.incM.checked) !== false, this.mc4 && this.mc4.checked, this.solarkabel && this.solarkabel.checked, this.holz && this.holz.checked, this.quetschkabelschuhe && this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false)
+          : await this._buildPartsFor(cfg.selection, (cfg.incM === false) ? false : true, !!cfg.mc4, !!cfg.solarkabel, !!cfg.holz, !!cfg.quetschkabelschuhe, !!cfg.erdungsband, !!cfg.ulicaModule);
         // Zusatzprodukte aus Einzel-Bundles entfernen – sie werden später einmalig aus der UI-Liste gelesen
         delete p.MC4_Stecker;
         delete p.Solarkabel;
@@ -9094,11 +9103,11 @@
       this.selection = sel;
         let parts = await this.calculateParts();
         
-        // Module nur hinzufügen wenn Checkbox aktiviert ist
-      if (!incM) delete parts.Solarmodul;
-        if (!ulicaModule) delete parts.UlicaSolarBlackJadeFlow;
+			// Module nur entfernen, wenn Flags explizit false sind
+			if (incM === false) delete parts.Solarmodul;
+			if (ulicaModule === false) delete parts.UlicaSolarBlackJadeFlow;
         
-        // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
+			// Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
         const moduleCount = (this.selection || []).flat().filter(Boolean).length;
         if (mc4 && moduleCount > 0) {
           const veMc4 = VE.MC4_Stecker || 20;
