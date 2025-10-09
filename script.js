@@ -5719,6 +5719,21 @@
 					subtitle.style.display = isPrivateCustomer() ? 'none' : '';
 					subtitle.textContent = 'exkl. MwSt';
 				}
+				
+				// Disclaimer-Text: immer sichtbar unter dem Subtitle
+				let disclaimer = section ? section.querySelector('.total-disclaimer') : null;
+				if (!disclaimer && section) {
+					disclaimer = document.createElement('div');
+					disclaimer.className = 'total-disclaimer';
+					disclaimer.style.fontSize = '12px';
+					disclaimer.style.color = '#666';
+					disclaimer.style.marginTop = '4px';
+					disclaimer.style.lineHeight = '1.3';
+					section.appendChild(disclaimer);
+				}
+				if (disclaimer) {
+					disclaimer.textContent = 'Der sichtbare Preis ist eine Vorberechnung, minimale Mengenanpassungen und Optimierungen werden im Warenkorb potentiell einen anderen Preis ergeben.';
+				}
 			}
 		}
 		
@@ -5780,6 +5795,21 @@
 			if (subtitle) {
 				subtitle.style.display = isPrivateCustomer() ? 'none' : '';
 				subtitle.textContent = 'exkl. MwSt';
+			}
+			
+			// Disclaimer-Text: immer sichtbar unter dem Subtitle
+			let disclaimer = section ? section.querySelector('.total-disclaimer') : null;
+			if (!disclaimer && section) {
+				disclaimer = document.createElement('div');
+				disclaimer.className = 'total-disclaimer';
+				disclaimer.style.fontSize = '12px';
+				disclaimer.style.color = '#666';
+				disclaimer.style.marginTop = '4px';
+				disclaimer.style.lineHeight = '1.3';
+				section.appendChild(disclaimer);
+			}
+			if (disclaimer) {
+				disclaimer.textContent = 'Der sichtbare Preis ist eine Vorberechnung, minimale Mengenanpassungen und Optimierungen werden im Warenkorb potentiell einen anderen Preis ergeben.';
 			}
 		}
 		
