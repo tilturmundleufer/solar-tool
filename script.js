@@ -8072,6 +8072,11 @@
 
         // Totals neu berechnen und persistieren (debounced Kontext)
         try { this.recomputeTotalsDebounced && this.recomputeTotalsDebounced(); } catch(_) {}
+        // Zusätzlich: aktuellen State sofort in den Cache schreiben (kein alter Merge)
+        try {
+          const snap = this.totalPartsCache || this.computeAllTotalsSnapshot();
+          this.saveTotalsToCache(snap);
+        } catch(_) {}
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
@@ -9783,9 +9788,41 @@
 
     saveTotalsToCache(snapshot) {
       try {
-        const data = this.cacheManager.loadData() || {};
-        const copy = Object.assign({}, data, { totals: snapshot });
-        this.cacheManager.saveData(copy);
+        // WICHTIG: Nicht alten Cache-Stand zurückschreiben. Stattdessen aktuellen In-Memory-State verwenden
+        const deepCloneSelection = (sel) => Array.isArray(sel) ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel;
+        const deepCloneConfig = (cfg) => ({
+          ...cfg,
+          selection: deepCloneSelection(cfg.selection)
+        });
+        const cacheData = {
+          configs: Array.isArray(this.configs) ? this.configs.map(deepCloneConfig) : [],
+          currentConfig: this.currentConfig,
+          selection: deepCloneSelection(this.selection),
+          cols: this.cols,
+          rows: this.rows,
+          cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+          cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10),
+          orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+          includeModules: this.incM ? this.incM.checked : false,
+          mc4: this.mc4 ? this.mc4.checked : false,
+          solarkabel: this.solarkabel ? this.solarkabel.checked : false,
+          holz: this.holz ? this.holz.checked : false,
+          quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+          erdungsband: this.erdungsband ? this.erdungsband.checked : false,
+          ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
+          huaweiOpti: (document.getElementById('huawei-opti')?.checked) || false,
+          brcOpti: (document.getElementById('brc-opti')?.checked) || false,
+          optiQty: parseInt(document.getElementById('opti-qty')?.value || '1', 10),
+          moduleSelectValue: this.moduleSelect ? this.moduleSelect.value : '',
+          gridStructure: {
+            cols: this.cols,
+            rows: this.rows,
+            cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+            cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10)
+          },
+          totals: snapshot
+        };
+        this.cacheManager.saveData(cacheData);
         this.totalPartsCache = snapshot;
       } catch(_) {}
     }
