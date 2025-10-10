@@ -7815,13 +7815,9 @@
   		// 2. Temporär currentConfig auf null setzen für neue Konfiguration
   		this.currentConfig = null;
 
-			// 2a. Erzwinge Default-Startzustand für neue Konfiguration: 5x5, vertikal
-			if (this.default) {
-				this.cols = this.default.cols;
-				this.rows = this.default.rows;
-				if (this.wIn) this.wIn.value = this.default.width;
-				if (this.hIn) this.hIn.value = this.default.height;
-			}
+      // 2a. Behalte aktuelle Maße der Module (wIn/hIn) und Grid-Dimensionen bei
+      //     – keine Rücksetzung auf Default-Werte
+      //     Grid-Orientierung setzen wir weiterhin auf vertikal als Start, falls gewünscht
 			if (this.orH && this.orV) {
 				this.orH.checked = false;
 				this.orV.checked = true;
@@ -7916,17 +7912,20 @@
 		}
 
     createNewConfig() {
-  		// Erstelle eine neue Standard-Konfiguration
-  		this.currentConfig = null;
-			this.resetGridToDefault(); // Setzt 5x5 und vertikal
-  		
-  		// Neue Konfiguration erstellen und hinzufügen
-  		const newConfig = this._makeConfigObject();
-  		this.configs.push(newConfig);
-  		this.currentConfig = this.configs.length - 1;
+      // Erstelle eine neue Konfiguration mit aktuellen Maßen und leerer Auswahl
+      this.currentConfig = null;
+      const keepCols = this.cols;
+      const keepRows = this.rows;
+      const emptySel = Array.from({ length: keepRows }, () => Array.from({ length: keepCols }, () => false));
+      const prevSel = this.selection;
+      this.selection = emptySel;
+      const newConfig = this._makeConfigObject();
+      this.configs.push(newConfig);
+      this.currentConfig = this.configs.length - 1;
+      this.setup(); // Grid mit leerer Auswahl neu aufbauen (Maße wIn/hIn bleiben unverändert)
 
-  		this.renderConfigList();
-  		this.updateSaveButtons();
+      this.renderConfigList();
+      this.updateSaveButtons();
 		}
     _makeConfigObject(customName = null) {
       // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
@@ -7950,7 +7949,7 @@
         name:        configName,
         selection:   this.selection.map(r => [...r]),
         // Für neue Konfigurationen immer vertikal als Startzustand speichern
-        orientation: this.currentConfig === null ? 'vertical' : (this.orV && this.orV.checked ? 'vertical' : 'horizontal'),
+        orientation: (this.orV && this.orV.checked) ? 'vertical' : 'horizontal',
         incM:        this.incM && this.incM.checked,
         mc4:         this.mc4 && this.mc4.checked,
         solarkabel:  this.solarkabel && this.solarkabel.checked,
@@ -8043,6 +8042,16 @@
           this.updateDetailView();
         }
         
+        // Maße aus Inputs stets in aktuelle Config spiegeln
+        try {
+          if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+            this.configs[this.currentConfig].cellWidth = parseFloat(this.wIn ? this.wIn.value : '179');
+            this.configs[this.currentConfig].cellHeight = parseFloat(this.hIn ? this.hIn.value : '113');
+            this.configs[this.currentConfig].cols = this.cols;
+            this.configs[this.currentConfig].rows = this.rows;
+          }
+        } catch(_) {}
+
         // Gesamtpreis aktualisieren
         this.updateCurrentTotalPrice();
         
