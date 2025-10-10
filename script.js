@@ -827,6 +827,17 @@
       this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6893249274128869974e58ec_schneider%20logo%20png.png';
     }
 
+    // Öffnet PDFs auf Touch-Geräten in neuem Tab statt Download
+    isTouchDevice() {
+      try {
+        // iOS/iPadOS/Android + generisches Touch-Feature
+        const ua = navigator.userAgent || '';
+        const touchUA = /iPad|iPhone|iPod|Android|Mobile/i.test(ua);
+        const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        return touchUA || hasTouch;
+      } catch (_) { return false; }
+    }
+
     // Prüfe ob PDF-Libraries verfügbar sind
     isAvailable() {
       return !!(this.jsPDF && this.html2canvas);
@@ -892,9 +903,22 @@
           pdf.addImage(imgData, 'JPEG', 0, 0, 794, 1123);
         }
 
-        // 5) Speichern und Root zurücksetzen
+        // 5) Speichern/Öffnen: Auf Touch-Geräten in neuem Tab öffnen
         const fileName = this.generateFileName(snapshot.configs);
-        pdf.save(fileName);
+        if (this.isTouchDevice()) {
+          try {
+            const blob = pdf.output('blob');
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            // Objekt-URL nach kurzer Zeit freigeben
+            setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 15000);
+          } catch (_) {
+            // Fallback: normal speichern
+            pdf.save(fileName);
+          }
+        } else {
+          pdf.save(fileName);
+        }
         rootEl.setAttribute('style', prevStyle);
       } catch (err) {
         console.error('PDF-Erstellung fehlgeschlagen:', err);
