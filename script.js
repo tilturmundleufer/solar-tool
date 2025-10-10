@@ -9764,17 +9764,27 @@
     // Globale Palettenbündelung über alle Konfigurationen anwenden (36er)
     try { this.bundleTotalModulesIntoPallets(totals); } catch(_) {}
 
-      // Konsolen-Ausgabe
-      try {
-        const rows = Object.entries(totals)
-          .sort(([a],[b]) => a.localeCompare(b))
-          .map(([k,v]) => ({ key: k, name: PRODUCT_NAME_MAP[k] || k, qty: v }));
-        console.groupCollapsed('[Totals] Aktualisiert');
-        console.table(rows);
-        console.groupEnd();
-      } catch(_) {}
+    // In Pack-Mengen (Stückzahl der zu sendenden Produkte) umwandeln
+    const sendTotals = {};
+    try {
+      Object.entries(totals).forEach(([k, v]) => {
+        const ve = VE[k] || 1;
+        const packs = Math.ceil((Number(v) || 0) / ve);
+        if (packs > 0) sendTotals[k] = packs;
+      });
+    } catch(_) {}
 
-      return totals;
+    // Konsolen-Ausgabe (Pack-Mengen)
+    try {
+      const rows = Object.entries(sendTotals)
+        .sort(([a],[b]) => a.localeCompare(b))
+        .map(([k,v]) => ({ key: k, name: PRODUCT_NAME_MAP[k] || k, qty: v }));
+      console.groupCollapsed('[Totals] Aktualisiert (Packs)');
+      console.table(rows);
+      console.groupEnd();
+    } catch(_) {}
+
+    return sendTotals;
     }
 
     saveTotalsToCache(snapshot) {
