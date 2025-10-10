@@ -1,7 +1,7 @@
 (function() {
   const ADD_TO_CART_DELAY = 400;
   // Global debug toggle: disable noisy logs in production
-  const DEBUG_MODE = false;
+  const DEBUG_MODE = true;
   if (!DEBUG_MODE) {
     // In Produktion: laute Debug-Logs stummschalten, Warnungen/Fehler beibehalten
     try {
@@ -8652,9 +8652,8 @@
         .sort(([aKey],[bKey]) => aKey.localeCompare(bKey));
       if (!entries.length) return;
       
-      // Wenn Foxy-Formulare vorhanden sind → Sequenzielle GET-Requests via versteckte Links (robuster als iframe)
-      const hasFoxy = !!document.querySelector('form[action*="foxycart.com/cart"]');
-      if (hasFoxy) {
+      // Immer: Sequenzielle GET-Requests via versteckte Links (robust, keine iFrames)
+      {
         // Stabil: Sequenzielle GET-Requests via versteckte Links, keine iframe-Probleme
         try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
         const sanitizePrice = (v) => {
@@ -8747,24 +8746,6 @@
         })();
         return;
       }
-      
-      // Fallback: alter Webflow-Flow (historisch)
-      const items = entries.map(([key, qty]) => ({ key, qty }));
-      const processSequentially = async () => {
-        try {
-          await this.ensureCartObservers();
-          for (let i = 0; i < items.length; i++) {
-            const { key, qty } = items[i];
-            const packsNeeded = Math.ceil(qty / VE[key]);
-            await this.addSingleItemAndWait(key, packsNeeded, i === items.length - 1);
-          }
-        } finally {
-          this.showCartContainer();
-          this.hideLoading();
-          this.isAddingToCart = false;
-        }
-      };
-      processSequentially();
     }
 
     async addSingleItemAndWait(productKey, quantity, isLast) {
