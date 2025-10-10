@@ -9750,8 +9750,19 @@
         if (bCb && bCb.checked) add('BRCOpti', optiQty);
       } catch(_) {}
 
-      // Tellerkopfschraube 2 × Dachhaken (falls nicht bereits global konsistent)
-      if (totals.Dachhaken && !totals.Tellerkopfschraube) add('Tellerkopfschraube', totals.Dachhaken * 2);
+    // Tellerkopfschraube 2 × Dachhaken (falls nicht bereits global konsistent)
+    if (totals.Dachhaken && !totals.Tellerkopfschraube) add('Tellerkopfschraube', totals.Dachhaken * 2);
+
+    // Modul-Inklusionsregeln gemäß UI-Checkboxen anwenden
+    try {
+      const includeModules = this.incM ? this.incM.checked !== false : true; // default true
+      const ulicaEnabled = this.ulicaModule ? this.ulicaModule.checked === true : false;
+      if (!includeModules) delete totals.Solarmodul;
+      if (!ulicaEnabled) delete totals.UlicaSolarBlackJadeFlow;
+    } catch(_) {}
+
+    // Globale Palettenbündelung über alle Konfigurationen anwenden (36er)
+    try { this.bundleTotalModulesIntoPallets(totals); } catch(_) {}
 
       // Konsolen-Ausgabe
       try {
