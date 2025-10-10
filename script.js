@@ -1667,11 +1667,7 @@
         return false;
       };
 
-      console.log(`PDF-Seite für Konfiguration: ${config.name}`, {
-        dimensions: `${config.cols}x${config.rows}`,
-        selectedCells: config.selectedCells,
-        totalCells: config.totalCells
-      });
+      /* pdf debug removed */
 
       // Header zeichnen (auf jeder Seite identisch)
       positionRef.y = this.addHeader(pdf, pageWidth, config);
@@ -1798,14 +1794,7 @@
           })
         );
 
-        // Debug: Log der normalisierten Konfiguration
-        console.log('Grid Debug - Normalized:', {
-          originalRows: selection.length,
-          originalCols: selection[0] ? selection[0].length : 0,
-          targetRows: rows,
-          targetCols: cols,
-          normalizedSelection: normalizedSelection
-        });
+        /* preview debug removed */
 
         // Erstelle alle Grid-Zellen
         for (let y = 0; y < rows; y++) {
@@ -1815,10 +1804,7 @@
             // Verwende die normalisierte Selection
             const isSelected = normalizedSelection[y][x];
             
-            // Debug: Log für problematische Bereiche
-            if (y >= rows - 2 || x >= cols - 2) { 
-              console.log(`Cell [${y}][${x}]: isSelected =`, isSelected);
-            }
+            /* preview debug removed */
             
             // Basis-Styles für alle Zellen
             cell.style.width = `${cellSize}px`;
