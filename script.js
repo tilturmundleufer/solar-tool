@@ -8677,24 +8677,18 @@
           // Link-basierte GET-Requests (keine iFrames)
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
           for (const [key, qtyRaw] of entries) {
-            const qty = Math.max(0, Math.floor(Number(qtyRaw)));
-            const ve = VE[key] || 1;
-            const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
-            // Für Einzelmodule (keine Palette) die exakte Stückzahl verwenden (keine Rundung)
-            const isSingleModule = (key === 'Solarmodul' || key === 'UlicaSolarBlackJadeFlow');
-            const packs = isPallet ? Math.floor(qty / ve) : (isSingleModule ? qty : Math.ceil(qty / ve));
+            // Achtung: qtyRaw ist bereits die Pack-Menge (qty/VE) aus dem Totals-Snapshot
+            const packs = Math.max(0, Math.floor(Number(qtyRaw)));
             if (!packs || packs <= 0) { await sleep(120); continue; }
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
             const d = getData(displayName) || {};
-            const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, qty));
+            const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, packs));
             
             // Debug: Logge alle Produktdaten
             console.log(`[Foxy Debug] Link-Produkt ${key}:`, {
               displayName,
               price,
               packs,
-              qty,
-              ve,
               meta: d
             });
             
@@ -8717,7 +8711,7 @@
             console.log(`[Foxy Debug] GET-URL: ${foxyUrl}`);
             
             // WICHTIG: Logge die gesendete Menge für Vergleich
-            console.log(`[Foxy Debug] SENDEN: ${displayName} - Menge: ${packs} (aus ${qty} Stück, VE: ${ve})`);
+            console.log(`[Foxy Debug] SENDEN: ${displayName} - Pack-Menge: ${packs}`);
             
             // Erstelle versteckten Link und klicke ihn (GET wie in der Doku)
             const link = document.createElement('a');
