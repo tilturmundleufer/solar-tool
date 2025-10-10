@@ -4817,6 +4817,9 @@
       this.quetschkabelschuhe = document.getElementById('quetschkabelschuhe');
       this.erdungsband   = document.getElementById('erdungsband');
       this.ulicaModule   = document.getElementById('ulica-module');
+
+      // Vorab berechnete Gesamtmengen (persistiert)
+      this.totalPartsCache = null;
       
 
       		this.listHolder    = document.querySelector('.product-section');
@@ -8066,6 +8069,9 @@
         
         // Automatisches Cache-Speichern bei jeder Änderung
         this.saveToCache();
+
+        // Totals neu berechnen und persistieren (debounced Kontext)
+        try { this.recomputeTotalsDebounced && this.recomputeTotalsDebounced(); } catch(_) {}
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
@@ -8646,8 +8652,13 @@
     }
 
     addPartsListToCart(parts) {
-      // 1) Snapshot der Teile erstellen und deterministisch sortieren (stabil für Debugging)
-      const entries = Object.entries(parts)
+      // 1) Totals aus Cache verwenden (falls vorhanden), sonst live berechnen
+      let totals = this.loadTotalsFromCache() || null;
+      if (!totals) {
+        try { totals = this.computeAllTotalsSnapshot(); this.saveTotalsToCache(totals); } catch(_) { totals = parts || {}; }
+      }
+      // deterministisch sortieren (stabil für Debugging)
+      const entries = Object.entries(totals)
         .filter(([_, qty]) => qty > 0)
         .sort(([aKey],[bKey]) => aKey.localeCompare(bKey));
       if (!entries.length) return;
@@ -9702,9 +9713,87 @@
         this.pdfGenerator = null;
       }
     }
+
+    // --- Vorab-Berechnung aller Produkt-Gesamtmengen ---
+    computeAllTotalsSnapshot() {
+      // Aggregiert alle Konfigurationen + Zusatzprodukte gemäß aktuellem UI-State
+      const totals = {};
+      const add = (key, qty) => { if (!qty || qty <= 0) return; totals[key] = (totals[key] || 0) + qty; };
+
+      // Durch alle Konfigurationen iterieren (Deep-Inputs aus gespeicherten Configs)
+      for (let i = 0; i < (this.configs?.length || 0); i++) {
+        const cfg = this.configs[i]; if (!cfg) continue;
+        // Temporär mit isolierten Daten rechnen
+        const originalSel = this.selection; const originalRows = this.rows; const originalCols = this.cols;
+        const originalOrV = this.orV && this.orV.checked;
+        try {
+          this.selection = (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r);
+          this.rows = cfg.rows; this.cols = cfg.cols;
+          if (this.orV) { this.orV.checked = (cfg.orientation === 'vertical'); }
+          const p = this.calculatePartsSync();
+          Object.entries(p).forEach(([k,v]) => add(k, v));
+        } catch(_) {
+        } finally {
+          this.selection = originalSel; this.rows = originalRows; this.cols = originalCols;
+          if (this.orV) { this.orV.checked = originalOrV; }
+        }
+      }
+
+      // Zusatzprodukte global nachziehen (Huawei/BRC Optimierer, Erdungsband, Quetsch etc.)
+      try {
+        // Optimierer: Menge aus UI
+        const hCb = document.getElementById('huawei-opti');
+        const bCb = document.getElementById('brc-opti');
+        const qEl = document.getElementById('opti-qty');
+        const optiQty = Math.max(1, parseInt(qEl && qEl.value || '1', 10));
+        if (hCb && hCb.checked) add('HuaweiOpti', optiQty);
+        if (bCb && bCb.checked) add('BRCOpti', optiQty);
+      } catch(_) {}
+
+      // Tellerkopfschraube 2 × Dachhaken (falls nicht bereits global konsistent)
+      if (totals.Dachhaken && !totals.Tellerkopfschraube) add('Tellerkopfschraube', totals.Dachhaken * 2);
+
+      // Konsolen-Ausgabe
+      try {
+        const rows = Object.entries(totals)
+          .sort(([a],[b]) => a.localeCompare(b))
+          .map(([k,v]) => ({ key: k, name: PRODUCT_NAME_MAP[k] || k, qty: v }));
+        console.groupCollapsed('[Totals] Aktualisiert');
+        console.table(rows);
+        console.groupEnd();
+      } catch(_) {}
+
+      return totals;
+    }
+
+    saveTotalsToCache(snapshot) {
+      try {
+        const data = this.cacheManager.loadData() || {};
+        const copy = Object.assign({}, data, { totals: snapshot });
+        this.cacheManager.saveData(copy);
+        this.totalPartsCache = snapshot;
+      } catch(_) {}
+    }
+
+    loadTotalsFromCache() {
+      try {
+        const data = this.cacheManager.loadData();
+        const totals = data && data.totals ? data.totals : null;
+        if (totals) { this.totalPartsCache = totals; }
+        return totals;
+      } catch(_) { return null; }
+    }
+
+    recomputeTotalsDebounced() {
+      if (this._recomputeTotalsTimer) clearTimeout(this._recomputeTotalsTimer);
+      this._recomputeTotalsTimer = setTimeout(() => {
+        const snap = this.computeAllTotalsSnapshot();
+        this.saveTotalsToCache(snap);
+      }, 150);
+    }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     // Kundentyp-UI (Listen/Buttons) wird global im customer-type-popup.js verwaltet
     const grid = new SolarGrid();
     // Foxy: kein Webflow-Mapping mehr – stattdessen Foxy-Form-Mapping initialisieren, falls vorhanden
