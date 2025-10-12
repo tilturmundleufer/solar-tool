@@ -151,12 +151,12 @@
     // Paletten-Fallbackpreise (Netto) – falls Collection Price nicht gefunden wird
     SolarmodulPalette: 2012.40, // 36x Ulica 450 W – Palette
     UlicaSolarBlackJadeFlowPalette: 2264.40, // 36x Ulica 500 W – Palette
-    Endklemmen: 49.50,
+    Endklemmen: 19.80,
     Schrauben: 22.00,
     Dachhaken: 69.00,
-    Mittelklemmen: 49.50,
+    Mittelklemmen: 19.80,
     Endkappen: 7.00,
-    Schienenverbinder: 65.00,
+    Schienenverbinder: 13.00,
     Schiene_240_cm: 11.99,
     Schiene_360_cm: 17.49,
     MC4_Stecker: 39.50,
@@ -181,14 +181,8 @@
     ],
     // Schiene 360 cm: Keine Staffelpreise mehr – Shoppreis 17,49 verwenden
     Schiene_360_cm: [],
-    Mittelklemmen: [
-      { minPieces: 300, pricePerPiece: 0.95 },
-      { minPieces: 1200, pricePerPiece: 0.79 }
-    ],
-    Endklemmen: [
-      { minPieces: 300, pricePerPiece: 0.95 },
-      { minPieces: 1200, pricePerPiece: 0.79 }
-    ],
+    Mittelklemmen: [],
+    Endklemmen: [],
     Endkappen: [
       { minPieces: 300, pricePerPiece: 0.13 },
       { minPieces: 1200, pricePerPiece: 0.12 }
@@ -197,10 +191,7 @@
       { minPieces: 100, pricePerPiece: 3.42 },
       { minPieces: 720, pricePerPiece: 3.39 }
     ],
-    Schienenverbinder: [
-      { minPieces: 200, pricePerPiece: 1.19 },
-      { minPieces: 1000, pricePerPiece: 0.99 }
-    ],
+    Schienenverbinder: [],
     Schrauben: [
       { minPieces: 1000, pricePerPiece: 0.19 },
       { minPieces: 5000, pricePerPiece: 0.18 }
@@ -218,10 +209,7 @@
       { minPieces: 360, pricePerPiece: 61.90 }
     ],
     // Für Paletten keine Staffel – Shoppreis pro Palette wird gelesen
-    MC4_Stecker: [
-      { minPieces: 1000, pricePerPiece: 0.69 },
-      { minPieces: 3000, pricePerPiece: 0.65 }
-    ],
+    MC4_Stecker: [],
     Solarkabel: [
       { minPieces: 10, pricePerPiece: 83.90 },
       { minPieces: 30, pricePerPiece: 79.90 }
