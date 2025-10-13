@@ -7995,12 +7995,14 @@
 
     async renderConfigList() {
       // Verwende das gleiche HTML-Design wie updateConfigList()
-      this.configListEl.innerHTML = '';
+      const renderToken = (this._renderListToken || 0) + 1;
+      this._renderListToken = renderToken;
+      const fragments = [];
       
       for (let idx = 0; idx < this.configs.length; idx++) {
         const cfg = this.configs[idx];
-    		const div = document.createElement('div');
-    		div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
+        const div = document.createElement('div');
+        div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
         
         // Preis je Konfiguration konsistent zu current-total: alle benötigten Produkte gemäß Flags
         let totalPrice = 0;
@@ -8057,8 +8059,13 @@
           this.showToast('Konfiguration geladen', 1000);
         });
         
-    		this.configListEl.appendChild(div);
+        fragments.push(div);
       }
+      // Abbruch, falls zwischenzeitlich ein neuer Render gestartet wurde
+      if (renderToken !== this._renderListToken) return;
+      // Atomar ersetzen, um Duplikate durch konkurrierende Renders zu vermeiden
+      this.configListEl.innerHTML = '';
+      fragments.forEach(node => this.configListEl.appendChild(node));
 		}
 
     // Performance: Schnellerer Array-Vergleich
@@ -8232,11 +8239,11 @@
     	if (this.wIn) this.wIn.value = this.default.width;
     	if (this.hIn) this.hIn.value = this.default.height;
     	
-    	// Orientation auf Default zurücksetzen
-    	if (this.orH && this.orV) {
-    		this.orH.checked = true;
-    		this.orV.checked = false;
-    	}
+    // Orientation auf Default zurücksetzen → vertikal starten
+    if (this.orH && this.orV) {
+      this.orH.checked = false;
+      this.orV.checked = true;
+    }
     	
     	// Orientation-Buttons visuell aktualisieren
     	this.syncOrientationButtons();
