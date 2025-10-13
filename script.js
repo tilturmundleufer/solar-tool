@@ -8127,6 +8127,9 @@
           
           // Wechsle immer in die Detail-Ansicht der gewählten Konfiguration
           this.showDetailView(idx);
+          // Sicherstellen, dass der aktuelle Gesamtpreis direkt nach Auswahl sichtbar korrekt ist
+          try { this.updateCurrentTotalPrice(); } catch (_) {}
+          try { this.updateOverviewTotalPrice(); } catch (_) {}
           this.showToast('Konfiguration geladen', 1000);
         });
         
