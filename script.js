@@ -5697,31 +5697,37 @@
 				}
 		}
 		
-		updateCurrentTotalPrice() {
+		async updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
-				// Aktueller Preis: Nur Module (+ optional Erdungsband) für die aktive Konfiguration,
-				// basierend auf dem DOM-Zustand (Selection, Maße, Checkboxen)
+				// Aktueller Preis: alle benötigten Produkte für diese Konfiguration
+				// (Montagematerial, Module je nach Checkbox, optional Erdungsband & Extras gemäß DOM)
 				let totalPrice = 0;
 				try {
-					const includeModules = this.incM ? this.incM.checked !== false : true;
-					const useUlica = this.ulicaModule ? this.ulicaModule.checked === true : false;
-					const pieceKey = useUlica ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
-					const moduleCount = (this.selection || []).flat().filter(Boolean).length;
-					if (includeModules && moduleCount > 0) {
-						const pricePerPack = getPackPriceForQuantity(pieceKey, moduleCount);
-						const packs = Math.ceil(moduleCount / (VE[pieceKey] || 1));
+					const incM = this.incM ? this.incM.checked !== false : true;
+					const mc4 = !!(this.mc4 && this.mc4.checked);
+					const solarkabel = !!(this.solarkabel && this.solarkabel.checked);
+					const holz = !!(this.holz && this.holz.checked);
+					const quetsch = !!(this.quetschkabelschuhe && this.quetschkabelschuhe.checked);
+					const erd = !!(this.erdungsband && this.erdungsband.checked);
+					const ulica = !!(this.ulicaModule && this.ulicaModule.checked);
+
+					const parts = await this._buildPartsFor(
+						this.selection,
+						incM,
+						mc4,
+						solarkabel,
+						holz,
+						quetsch,
+						erd,
+						ulica
+					);
+					Object.entries(parts || {}).forEach(([key, qty]) => {
+						if (!qty || qty <= 0) return;
+						const packs = Math.ceil(qty / (VE[key] || 1));
+						const pricePerPack = getPackPriceForQuantity(key, qty);
 						totalPrice += packs * pricePerPack;
-					}
-					// Erdungsband nur wenn Checkbox aktiv
-					if (this.erdungsband && this.erdungsband.checked) {
-						const qty = this.calculateErdungsband();
-						if (qty > 0) {
-							const pricePerPack = getPackPriceForQuantity('Erdungsband', qty);
-							const packs = Math.ceil(qty / (VE.Erdungsband || 1));
-							totalPrice += packs * pricePerPack;
-						}
-					}
+					});
 				} catch(_) {}
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 				// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
