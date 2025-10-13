@@ -1708,24 +1708,31 @@
       try {
         const gridImage = await this.captureGridVisualizationFromSnapshot(config);
         if (gridImage) {
-          // Maximal 70% der A4-Höhe für das Grid-Bild
-          const maxHeight = Math.floor(pageHeight * 0.5); // 50% der Seite
-          const targetWidth = 170; // mm
-          // Berechne proportional die Bildhöhe anhand Zielbreite (Grid-Images werden im Verhältnis ~4:3 erzeugt)
-          let computedHeight = Math.round((targetWidth * 3) / 4);
-          if (computedHeight > maxHeight) {
-            // Skaliere runter, wenn höher als 70% der Seite
-            const scale = maxHeight / computedHeight;
-            computedHeight = Math.round(computedHeight * scale);
-          }
+          // Bild-Abmessungen originär ermitteln, um Seitenverhältnis zu bewahren
+          const img = new Image();
+          const computed = await new Promise((resolve) => {
+            img.onload = () => {
+              const imgW = img.naturalWidth || img.width || 1;
+              const imgH = img.naturalHeight || img.height || 1;
+              // Zielbox in mm
+              const maxWmm = 170;              // Breite begrenzen
+              const maxHmm = Math.floor(pageHeight * 0.5); // 50% Höhe
+              // Skala aus mm-Box und Bildverhältnis ableiten
+              const scaleW = maxWmm / imgW;
+              const scaleH = maxHmm / imgH;
+              const scale = Math.min(scaleW, scaleH);
+              const w = Math.max(1, Math.round(imgW * scale));
+              const h = Math.max(1, Math.round(imgH * scale));
+              resolve({ w, h });
+            };
+            img.src = gridImage;
+          });
 
-          await checkPageBreak(computedHeight + 15);
-
-          // Zentriert platzieren
-          const centerX = (pageWidth - targetWidth) / 2;
+          await checkPageBreak(computed.h + 15);
+          const centerX = (pageWidth - computed.w) / 2;
           const centerY = positionRef.y;
-          pdf.addImage(gridImage, 'PNG', centerX, centerY, targetWidth, computedHeight);
-          positionRef.y += computedHeight + 10;
+          pdf.addImage(gridImage, 'PNG', centerX, centerY, computed.w, computed.h);
+          positionRef.y += computed.h + 10;
         }
       } catch (error) {
         console.warn('Grid-Screenshot fehlgeschlagen:', error);
