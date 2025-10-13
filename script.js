@@ -810,9 +810,9 @@
       this.html2canvas = window.html2canvas;
       this.html2pdf = window.html2pdf; // html2pdf.js (optional, moderner Pfad)
       // Weiße Footer-Logo-Variante (für dunklen Footer-Hintergrund)
-      this.companyLogoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68a715060ec3ecf5508ca480_Element%201.svg';
+      this.companyLogoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/688f3fff157b70cefcaa97df_Schneider%20logo.png';
       // Blaues Header-Logo
-      this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68a715060ec3ecf5508ca480_Element%201.svg';
+      this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6893249274128869974e58ec_schneider%20logo%20png.png';
     }
 
     // Öffnet PDFs auf Touch-Geräten in neuem Tab statt Download
@@ -1708,31 +1708,24 @@
       try {
         const gridImage = await this.captureGridVisualizationFromSnapshot(config);
         if (gridImage) {
-          // Bild-Abmessungen originär ermitteln, um Seitenverhältnis zu bewahren
-          const img = new Image();
-          const computed = await new Promise((resolve) => {
-            img.onload = () => {
-              const imgW = img.naturalWidth || img.width || 1;
-              const imgH = img.naturalHeight || img.height || 1;
-              // Zielbox in mm
-              const maxWmm = 170;              // Breite begrenzen
-              const maxHmm = Math.floor(pageHeight * 0.5); // 50% Höhe
-              // Skala aus mm-Box und Bildverhältnis ableiten
-              const scaleW = maxWmm / imgW;
-              const scaleH = maxHmm / imgH;
-              const scale = Math.min(scaleW, scaleH);
-              const w = Math.max(1, Math.round(imgW * scale));
-              const h = Math.max(1, Math.round(imgH * scale));
-              resolve({ w, h });
-            };
-            img.src = gridImage;
-          });
+          // Maximal 70% der A4-Höhe für das Grid-Bild
+          const maxHeight = Math.floor(pageHeight * 0.5); // 50% der Seite
+          const targetWidth = 170; // mm
+          // Berechne proportional die Bildhöhe anhand Zielbreite (Grid-Images werden im Verhältnis ~4:3 erzeugt)
+          let computedHeight = Math.round((targetWidth * 3) / 4);
+          if (computedHeight > maxHeight) {
+            // Skaliere runter, wenn höher als 70% der Seite
+            const scale = maxHeight / computedHeight;
+            computedHeight = Math.round(computedHeight * scale);
+          }
 
-          await checkPageBreak(computed.h + 15);
-          const centerX = (pageWidth - computed.w) / 2;
+          await checkPageBreak(computedHeight + 15);
+
+          // Zentriert platzieren
+          const centerX = (pageWidth - targetWidth) / 2;
           const centerY = positionRef.y;
-          pdf.addImage(gridImage, 'PNG', centerX, centerY, computed.w, computed.h);
-          positionRef.y += computed.h + 10;
+          pdf.addImage(gridImage, 'PNG', centerX, centerY, targetWidth, computedHeight);
+          positionRef.y += computedHeight + 10;
         }
       } catch (error) {
         console.warn('Grid-Screenshot fehlgeschlagen:', error);
@@ -2142,26 +2135,6 @@
         // Rendern lassen und Screenshot erstellen
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => setTimeout(r, 50));
-        // Orientierung als gut sichtbares Badge oben rechts über dem Grid
-        try {
-          const badge = document.createElement('div');
-          const isVertical = config.orientation === 'vertical';
-          badge.textContent = isVertical ? 'VERTIKAL' : 'HORIZONTAL';
-          badge.style.position = 'absolute';
-          badge.style.top = '8px';
-          badge.style.right = '8px';
-          badge.style.zIndex = '3';
-          badge.style.padding = '4px 8px';
-          badge.style.borderRadius = '9999px';
-          badge.style.fontWeight = '700';
-          badge.style.fontSize = '12px';
-          badge.style.letterSpacing = '0.5px';
-          badge.style.background = '#0e1e34';
-          badge.style.color = '#ffffff';
-          badge.style.pointerEvents = 'none';
-          tempRoot.appendChild(badge);
-        } catch (_) {}
-
         const canvas = await this.html2canvas(tempRoot, {
           backgroundColor: '#ffffff',
           scale: 2,
@@ -5634,7 +5607,7 @@
 		showOverview() {
 			// Aktuelle Konfiguration speichern um Progress nicht zu verlieren
 			if (this.currentConfig !== null) {
-        this.updateConfig(); // explizites Persistieren beim Wechsel in Overview
+				this.updateConfig();
 			}
 			
 			const detailView = document.getElementById('config-detail-view');
@@ -5691,29 +5664,9 @@
 				overviewView.classList.remove('active');
 				detailView.classList.add('active');
 				
-                if (configIndex !== null) {
-                    // vorherige, debounced Updates abbrechen und vorherige Config persistieren,
-                    // damit kein State verloren geht
-                    this.cancelPendingUpdates && this.cancelPendingUpdates();
-                    if (this.currentConfig !== null) {
-                      this.updateConfig();
-                    }
-                    this.loadConfig(configIndex);
-                    // Stelle sicher, dass UI-Orientation den Zielwert zeigt (Buttons + Radios)
-                    try {
-                      const cfg = this.configs[configIndex];
-                      if (cfg && this.orV && this.orH) {
-                        this.orV.checked = (cfg.orientation === 'vertical');
-                        this.orH.checked = !this.orV.checked;
-                        this.syncOrientationButtons?.();
-                      }
-                    } catch(_) {}
-                    // Nach dem Laden sofort Grid/Preis/Liste aktualisieren
-                    try { this.buildGrid(); } catch(_) {}
-                    try { this.buildList(); } catch(_) {}
-                    try { this.updateCurrentTotalPrice(); } catch(_) {}
-                    try { this.updateOverviewTotalPrice(); } catch(_) {}
-                }
+				if (configIndex !== null) {
+					this.loadConfig(configIndex);
+				}
 				
 				// Detail-Ansicht aktualisieren
 				this.updateDetailView();
@@ -5744,38 +5697,21 @@
 				}
 		}
 		
-		async updateCurrentTotalPrice() {
+		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
-				// Aktueller Preis: alle benötigten Produkte für diese Konfiguration
-				// (Montagematerial, Module je nach Checkbox, optional Erdungsband & Extras gemäß DOM)
-				let totalPrice = 0;
-				try {
-					const incM = this.incM ? this.incM.checked !== false : true;
-					const mc4 = !!(this.mc4 && this.mc4.checked);
-					const solarkabel = !!(this.solarkabel && this.solarkabel.checked);
-					const holz = !!(this.holz && this.holz.checked);
-					const quetsch = !!(this.quetschkabelschuhe && this.quetschkabelschuhe.checked);
-					const erd = !!(this.erdungsband && this.erdungsband.checked);
-					const ulica = !!(this.ulicaModule && this.ulicaModule.checked);
-
-					const parts = await this._buildPartsFor(
-						this.selection,
-						incM,
-						mc4,
-						solarkabel,
-						holz,
-						quetsch,
-						erd,
-						ulica
-					);
-					Object.entries(parts || {}).forEach(([key, qty]) => {
-						if (!qty || qty <= 0) return;
-						const packs = Math.ceil(qty / (VE[key] || 1));
-						const pricePerPack = getPackPriceForQuantity(key, qty);
-						totalPrice += packs * pricePerPack;
-					});
-				} catch(_) {}
+				// Verwende die gleiche Berechnungslogik wie calculateConfigPrice
+				const currentConfig = {
+					selection: this.selection,
+					cols: this.cols,
+					rows: this.rows,
+					cellWidth: parseInt(this.wIn?.value || '179'),
+					cellHeight: parseInt(this.hIn?.value || '113'),
+					orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+					ulicaModule: document.getElementById('ulica-module')?.checked || false
+				};
+				
+				const totalPrice = this.calculateConfigPrice(currentConfig);
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 				// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
 				const section = totalPriceEl.closest('.total-section');
@@ -5844,15 +5780,15 @@
 			const totalPriceEl = document.getElementById('overview-total-price');
 			if (!totalPriceEl) return;
 			
-			// Gesamtpreis aus gecachten Totals/Price Map (Packpreise) bilden
+			// Berechne Gesamtpreis aller Konfigurationen
 			let totalPrice = 0;
-			try {
-				const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot(); // Packs pro Produkt
-				Object.entries(totals || {}).forEach(([key, packs]) => {
-					const pricePerPack = getPackPriceForQuantity(key, packs);
-					totalPrice += (Number(packs)||0) * pricePerPack;
-				});
-			} catch(_) {}
+			this.configs.forEach(config => {
+				totalPrice += this.calculateConfigPrice(config);
+			});
+			
+			// Füge Zusatzprodukte hinzu
+			const additionalProductsPrice = this.calculateAdditionalProductsPrice();
+			totalPrice += additionalProductsPrice;
 			
 			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 			// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
@@ -7253,9 +7189,9 @@
         		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
         		
         		// Performance: Update aktuelle Konfiguration ohne Deep Copy
-        if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-        	// WICHTIG: Deep Copy statt Referenz zuweisen, um Überschreiben zu verhindern
-        	this.configs[this.currentConfig].selection = this.selection.map(r => Array.isArray(r) ? r.slice() : r);
+        		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+        			// Direkte Referenz statt JSON.parse/stringify
+        			this.configs[this.currentConfig].selection = this.selection;
         			// Speichere die Konfiguration automatisch
         			this.updateConfig();
         		}
@@ -7290,36 +7226,9 @@
     		}
   		}
   		
-      // Einmalige DOM-Manipulation
-      this.gridEl.innerHTML = '';
-      this.gridEl.appendChild(fragment);
-
-      // Deutlicher Orientierungsindikator als nicht-invasives Overlay
-      try {
-        const isVertical = this.orV && this.orV.checked;
-        if (this.gridEl && !this._orientationBadgeEl) {
-          this.gridEl.style.position = this.gridEl.style.position || 'relative';
-          const badge = document.createElement('div');
-          badge.className = 'orientation-badge';
-          badge.style.position = 'absolute';
-          badge.style.top = '8px';
-          badge.style.right = '8px';
-          badge.style.zIndex = '2';
-          badge.style.padding = '4px 8px';
-          badge.style.borderRadius = '9999px';
-          badge.style.fontWeight = '700';
-          badge.style.fontSize = '12px';
-          badge.style.letterSpacing = '0.5px';
-          badge.style.background = '#0e1e34';
-          badge.style.color = '#ffffff';
-          badge.style.pointerEvents = 'none';
-          this._orientationBadgeEl = badge;
-          this.gridEl.appendChild(badge);
-        }
-        if (this._orientationBadgeEl) {
-          this._orientationBadgeEl.textContent = isVertical ? 'VERTIKAL' : 'HORIZONTAL';
-        }
-      } catch (_) {}
+  		// Einmalige DOM-Manipulation
+  		this.gridEl.innerHTML = '';
+  		this.gridEl.appendChild(fragment);
 		}
     async buildList() {
       try {
@@ -7515,10 +7424,7 @@
   		this.setup();
   		this.buildGrid();
   		this.buildList();
-  		// Preise & Zusatzprodukte sofort neu zeichnen
-  		this.updateCurrentTotalPrice();
-  		this.updateOverviewTotalPrice();
-  		this.renderAdditionalProducts();
+  		this.updateSummaryOnChange();
 		}
     
     resetToDefaultGrid() {
@@ -7772,10 +7678,6 @@
   		const cfg = this.configs[idx];
   		this.currentConfig = idx;
 
-			// Verhindere, dass ein noch laufendes, debounced Update den alten Zustand überschreibt
-			this.cancelPendingUpdates && this.cancelPendingUpdates();
-			this.isSwitchingConfig = true;
-
   		// Input-Werte setzen
 			this.wIn.value = cfg.cellWidth;
 			this.hIn.value = cfg.cellHeight;
@@ -7797,15 +7699,12 @@
 			this.rows = cfg.rows;
 			this.selection = cfg.selection.map(r => [...r]);
 
-			// Anstatt setup() (das ggf. alte Auswahl überträgt) bauen wir explizit und atomar neu
-			this.updateSize();
-			this.buildGrid();
+			// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
+			this.setup();
 
-			// Produktliste und Summary sofort aktualisieren (ohne Debounce)
+			// Produktliste und Summary aktualisieren
 			this.buildList();
-			this.updateCurrentTotalPrice();
-			this.updateOverviewTotalPrice();
-			this.isSwitchingConfig = false;
+			this.updateSummaryOnChange();
 
 			this.renderConfigList();
 			this.updateSaveButtons();
@@ -7990,11 +7889,7 @@
 
     updateConfig() {
       const idx = this.currentConfig;
-      if (idx === null || idx === undefined || idx < 0) return;
-      // Sichere, tief kopierte Speicherung ohne Referenzen
-      const obj = this._makeConfigObject();
-      obj.selection = Array.isArray(obj.selection) ? obj.selection.map(r => Array.isArray(r) ? r.slice() : r) : obj.selection;
-      this.configs[idx] = obj;
+      this.configs[idx] = this._makeConfigObject();
       this.renderConfigList();
       this.updateSaveButtons();
     }
@@ -8030,35 +7925,19 @@
 
     createNewConfig() {
       // Erstelle eine neue Konfiguration mit aktuellen Maßen und leerer Auswahl
-      // 1) Vorherige Konfiguration (falls vorhanden) sicher persistieren
-      if (this.currentConfig !== null) {
-        try { this.updateConfig(); } catch(_) {}
-      }
-      // 2) Aktuelle als inaktiv markieren
       this.currentConfig = null;
-      // 3) Leere Auswahl auf Basis der aktuellen Dimensionen erzeugen (NEUE Kopie)
       const keepCols = this.cols;
       const keepRows = this.rows;
       const emptySel = Array.from({ length: keepRows }, () => Array.from({ length: keepCols }, () => false));
+      const prevSel = this.selection;
       this.selection = emptySel;
       const newConfig = this._makeConfigObject();
       this.configs.push(newConfig);
       this.currentConfig = this.configs.length - 1;
-      // Grid/Liste/Preise explizit aus leerer Auswahl aufbauen
-      this.isSwitchingConfig = true;
-      this.updateSize();
-      this.buildGrid();
-      this.buildList();
-      this.updateCurrentTotalPrice();
-      this.updateOverviewTotalPrice();
-      this.isSwitchingConfig = false;
+      this.setup(); // Grid mit leerer Auswahl neu aufbauen (Maße wIn/hIn bleiben unverändert)
 
       this.renderConfigList();
       this.updateSaveButtons();
-      // UI-Totals/Additional sofort initialisieren
-      this.updateCurrentTotalPrice();
-      this.updateOverviewTotalPrice();
-      this.renderAdditionalProducts();
 		}
     _makeConfigObject(customName = null) {
       // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
@@ -8097,37 +7976,15 @@
       };
     }
 
-    async renderConfigList() {
+    renderConfigList() {
       // Verwende das gleiche HTML-Design wie updateConfigList()
-      const renderToken = (this._renderListToken || 0) + 1;
-      this._renderListToken = renderToken;
-      const fragments = [];
+  		this.configListEl.innerHTML = '';
       
-      for (let idx = 0; idx < this.configs.length; idx++) {
-        const cfg = this.configs[idx];
-        const div = document.createElement('div');
-        div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
+  		this.configs.forEach((cfg, idx) => {
+    		const div = document.createElement('div');
+    		div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
         
-        // Preis je Konfiguration konsistent zu current-total: alle benötigten Produkte gemäß Flags
-        let totalPrice = 0;
-        try {
-          const parts = await this._buildPartsFor(
-            cfg.selection,
-            (cfg.incM === false) ? false : true,
-            !!cfg.mc4,
-            !!cfg.solarkabel,
-            !!cfg.holz,
-            !!cfg.quetschkabelschuhe,
-            !!cfg.erdungsband,
-            !!cfg.ulicaModule
-          );
-          Object.entries(parts || {}).forEach(([key, qty]) => {
-            if (!qty || qty <= 0) return;
-            const packs = Math.ceil(qty / (VE[key] || 1));
-            const pricePerPack = getPackPriceForQuantity(key, qty);
-            totalPrice += packs * pricePerPack;
-          });
-        } catch(_) {}
+        const totalPrice = this.calculateConfigPrice(cfg);
         const canDelete = this.configs.length >= 2;
         
         div.innerHTML = `
@@ -8160,19 +8017,11 @@
           
           // Wechsle immer in die Detail-Ansicht der gewählten Konfiguration
           this.showDetailView(idx);
-          // Sicherstellen, dass der aktuelle Gesamtpreis direkt nach Auswahl sichtbar korrekt ist
-          try { this.updateCurrentTotalPrice(); } catch (_) {}
-          try { this.updateOverviewTotalPrice(); } catch (_) {}
           this.showToast('Konfiguration geladen', 1000);
         });
         
-        fragments.push(div);
-      }
-      // Abbruch, falls zwischenzeitlich ein neuer Render gestartet wurde
-      if (renderToken !== this._renderListToken) return;
-      // Atomar ersetzen, um Duplikate durch konkurrierende Renders zu vermeiden
-      this.configListEl.innerHTML = '';
-      fragments.forEach(node => this.configListEl.appendChild(node));
+    		this.configListEl.appendChild(div);
+  		});
 		}
 
     // Performance: Schnellerer Array-Vergleich
@@ -8192,12 +8041,8 @@
       if (this.updateTimeout) {
         clearTimeout(this.updateTimeout);
       }
-      // Während eines harten Config-Wechsels keine UI-Updates schedulen
-      if (this.isSwitchingConfig) return;
       
-      const scheduledIndex = this.currentConfig;
       this.updateTimeout = setTimeout(async () => {
-        if (this.isSwitchingConfig) return; // Guard: nicht während Switch
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
         
@@ -8209,16 +8054,24 @@
           this.updateDetailView();
         }
         
-        // Produktliste der aktiven Ansicht aktualisieren und Preise fortlaufend updaten
-        this.buildList();
-        this.updateCurrentTotalPrice();
-        this.updateOverviewTotalPrice();
+        // Maße aus Inputs stets in aktuelle Config spiegeln
+        try {
+          if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+            this.configs[this.currentConfig].cellWidth = parseFloat(this.wIn ? this.wIn.value : '179');
+            this.configs[this.currentConfig].cellHeight = parseFloat(this.hIn ? this.hIn.value : '113');
+            this.configs[this.currentConfig].cols = this.cols;
+            this.configs[this.currentConfig].rows = this.rows;
+          }
+        } catch(_) {}
 
-        // Persistieren/Liste nur, wenn weiterhin dieselbe Config aktiv ist
-        if (this.currentConfig === scheduledIndex && this.currentConfig !== null) {
-          try { this.updateConfig(); } catch(_) {}
-          try { this.renderConfigList(); } catch(_) {}
-          try { this.saveToCache(); } catch(_) {}
+        // Gesamtpreis aktualisieren
+        this.updateCurrentTotalPrice();
+        
+        // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+        if (this.currentConfig !== null) {
+          // Speichere die Konfiguration automatisch
+          this.updateConfig();
+          this.updateConfigList();
         }
         
         // Automatisches Cache-Speichern bei jeder Änderung
@@ -8235,14 +8088,6 @@
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
       }, this.updateDelay);
-    }
-
-    // Sofort alle geplanten, verzögerten Updates abbrechen (z. B. beim Config-Wechsel)
-    cancelPendingUpdates() {
-      if (this.updateTimeout) {
-        clearTimeout(this.updateTimeout);
-        this.updateTimeout = null;
-      }
     }
 
 
@@ -8350,11 +8195,11 @@
     	if (this.wIn) this.wIn.value = this.default.width;
     	if (this.hIn) this.hIn.value = this.default.height;
     	
-    // Orientation auf Default zurücksetzen → vertikal starten
-    if (this.orH && this.orV) {
-      this.orH.checked = false;
-      this.orV.checked = true;
-    }
+    	// Orientation auf Default zurücksetzen
+    	if (this.orH && this.orV) {
+    		this.orH.checked = true;
+    		this.orV.checked = false;
+    	}
     	
     	// Orientation-Buttons visuell aktualisieren
     	this.syncOrientationButtons();
@@ -8389,17 +8234,8 @@
     	// Orientation-Buttons nach createNewConfig() aktualisieren
     	this.syncOrientationButtons();
     	
-    	// Preise und UI sofort aktualisieren
+    	// Preise aktualisieren
     	this.updateCurrentTotalPrice();
-    	this.updateOverviewTotalPrice();
-    	this.renderAdditionalProducts();
-    	// Liste/Holder ggf. ausblenden
-    	try {
-    		const additionalProductsListEl = document.getElementById('additional-products-list');
-    		if (additionalProductsListEl) additionalProductsListEl.innerHTML = '';
-    		if (this.listHolder) this.listHolder.style.display = 'none';
-    		if (this.prodList) this.prodList.innerHTML = '';
-    	} catch(_) {}
     	
     	this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
     }
@@ -9890,22 +9726,23 @@
       const totals = {};
       const add = (key, qty) => { if (!qty || qty <= 0) return; totals[key] = (totals[key] || 0) + qty; };
 
-      // WICHTIG: Nie den Haupt-State mutieren; berechne immer isoliert
+      // Durch alle Konfigurationen iterieren (Deep-Inputs aus gespeicherten Configs)
       for (let i = 0; i < (this.configs?.length || 0); i++) {
-        const cfg = this.configs[i];
-        if (!cfg) continue;
+        const cfg = this.configs[i]; if (!cfg) continue;
+        // Temporär mit isolierten Daten rechnen
+        const originalSel = this.selection; const originalRows = this.rows; const originalCols = this.cols;
+        const originalOrV = this.orV && this.orV.checked;
         try {
-          const parts = this.calculatePartsDirectly({
-            selection: (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r),
-            rows: cfg.rows,
-            cols: cfg.cols,
-            cellWidth: cfg.cellWidth,
-            cellHeight: cfg.cellHeight,
-            orientation: cfg.orientation,
-            options: { ulicaModule: !!cfg.ulicaModule }
-          });
-          Object.entries(parts || {}).forEach(([k, v]) => add(k, v));
-        } catch(_) {}
+          this.selection = (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r);
+          this.rows = cfg.rows; this.cols = cfg.cols;
+          if (this.orV) { this.orV.checked = (cfg.orientation === 'vertical'); }
+          const p = this.calculatePartsSync();
+          Object.entries(p).forEach(([k,v]) => add(k, v));
+        } catch(_) {
+        } finally {
+          this.selection = originalSel; this.rows = originalRows; this.cols = originalCols;
+          if (this.orV) { this.orV.checked = originalOrV; }
+        }
       }
 
       // Zusatzprodukte global nachziehen (Huawei/BRC Optimierer, Erdungsband, Quetsch etc.)
