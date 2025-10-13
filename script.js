@@ -7774,6 +7774,7 @@
 
 			// Verhindere, dass ein noch laufendes, debounced Update den alten Zustand überschreibt
 			this.cancelPendingUpdates && this.cancelPendingUpdates();
+			this.isSwitchingConfig = true;
 
   		// Input-Werte setzen
 			this.wIn.value = cfg.cellWidth;
@@ -7804,6 +7805,7 @@
 			this.buildList();
 			this.updateCurrentTotalPrice();
 			this.updateOverviewTotalPrice();
+			this.isSwitchingConfig = false;
 
 			this.renderConfigList();
 			this.updateSaveButtons();
@@ -8043,11 +8045,13 @@
       this.configs.push(newConfig);
       this.currentConfig = this.configs.length - 1;
       // Grid/Liste/Preise explizit aus leerer Auswahl aufbauen
+      this.isSwitchingConfig = true;
       this.updateSize();
       this.buildGrid();
       this.buildList();
       this.updateCurrentTotalPrice();
       this.updateOverviewTotalPrice();
+      this.isSwitchingConfig = false;
 
       this.renderConfigList();
       this.updateSaveButtons();
@@ -8188,9 +8192,12 @@
       if (this.updateTimeout) {
         clearTimeout(this.updateTimeout);
       }
+      // Während eines harten Config-Wechsels keine UI-Updates schedulen
+      if (this.isSwitchingConfig) return;
       
       const scheduledIndex = this.currentConfig;
       this.updateTimeout = setTimeout(async () => {
+        if (this.isSwitchingConfig) return; // Guard: nicht während Switch
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
         
