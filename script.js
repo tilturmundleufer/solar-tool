@@ -7244,9 +7244,9 @@
         		cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
         		
         		// Performance: Update aktuelle Konfiguration ohne Deep Copy
-        		if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-        			// Direkte Referenz statt JSON.parse/stringify
-        			this.configs[this.currentConfig].selection = this.selection;
+        if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+        	// WICHTIG: Deep Copy statt Referenz zuweisen, um Überschreiben zu verhindern
+        	this.configs[this.currentConfig].selection = this.selection.map(r => Array.isArray(r) ? r.slice() : r);
         			// Speichere die Konfiguration automatisch
         			this.updateConfig();
         		}
@@ -7979,7 +7979,11 @@
 
     updateConfig() {
       const idx = this.currentConfig;
-      this.configs[idx] = this._makeConfigObject();
+      if (idx === null || idx === undefined || idx < 0) return;
+      // Sichere, tief kopierte Speicherung ohne Referenzen
+      const obj = this._makeConfigObject();
+      obj.selection = Array.isArray(obj.selection) ? obj.selection.map(r => Array.isArray(r) ? r.slice() : r) : obj.selection;
+      this.configs[idx] = obj;
       this.renderConfigList();
       this.updateSaveButtons();
     }
@@ -8015,16 +8019,26 @@
 
     createNewConfig() {
       // Erstelle eine neue Konfiguration mit aktuellen Maßen und leerer Auswahl
+      // 1) Vorherige Konfiguration (falls vorhanden) sicher persistieren
+      if (this.currentConfig !== null) {
+        try { this.updateConfig(); } catch(_) {}
+      }
+      // 2) Aktuelle als inaktiv markieren
       this.currentConfig = null;
+      // 3) Leere Auswahl auf Basis der aktuellen Dimensionen erzeugen (NEUE Kopie)
       const keepCols = this.cols;
       const keepRows = this.rows;
       const emptySel = Array.from({ length: keepRows }, () => Array.from({ length: keepCols }, () => false));
-      const prevSel = this.selection;
       this.selection = emptySel;
       const newConfig = this._makeConfigObject();
       this.configs.push(newConfig);
       this.currentConfig = this.configs.length - 1;
-      this.setup(); // Grid mit leerer Auswahl neu aufbauen (Maße wIn/hIn bleiben unverändert)
+      // Grid/Liste/Preise explizit aus leerer Auswahl aufbauen
+      this.updateSize();
+      this.buildGrid();
+      this.buildList();
+      this.updateCurrentTotalPrice();
+      this.updateOverviewTotalPrice();
 
       this.renderConfigList();
       this.updateSaveButtons();
