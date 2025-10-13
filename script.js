@@ -5634,7 +5634,7 @@
 		showOverview() {
 			// Aktuelle Konfiguration speichern um Progress nicht zu verlieren
 			if (this.currentConfig !== null) {
-				this.updateConfig();
+        this.updateConfig(); // explizites Persistieren beim Wechsel in Overview
 			}
 			
 			const detailView = document.getElementById('config-detail-view');
@@ -5692,9 +5692,12 @@
 				detailView.classList.add('active');
 				
                 if (configIndex !== null) {
-                    // Sicherstellen, dass vorherige, debounced Updates abgebrochen sind,
-                    // bevor wir den neuen Zustand laden
+                    // vorherige, debounced Updates abbrechen und vorherige Config persistieren,
+                    // damit kein State verloren geht
                     this.cancelPendingUpdates && this.cancelPendingUpdates();
+                    if (this.currentConfig !== null) {
+                      this.updateConfig();
+                    }
                     this.loadConfig(configIndex);
                 }
 				
@@ -8166,25 +8169,11 @@
           this.updateDetailView();
         }
         
-        // Maße aus Inputs stets in aktuelle Config spiegeln
-        try {
-          if (this.currentConfig !== null && this.configs[this.currentConfig]) {
-            this.configs[this.currentConfig].cellWidth = parseFloat(this.wIn ? this.wIn.value : '179');
-            this.configs[this.currentConfig].cellHeight = parseFloat(this.hIn ? this.hIn.value : '113');
-            this.configs[this.currentConfig].cols = this.cols;
-            this.configs[this.currentConfig].rows = this.rows;
-          }
-        } catch(_) {}
-
-        // Gesamtpreis aktualisieren
+        // Gesamtpreis aktualisieren (nur UI, kein Persist)
         this.updateCurrentTotalPrice();
         
-        // Update config-list und overview wenn eine Konfiguration ausgewählt ist
-        if (this.currentConfig !== null) {
-          // Speichere die Konfiguration automatisch
-          this.updateConfig();
-          this.updateConfigList();
-        }
+        // Hinweis: Kein automatisches Persistieren mehr hier,
+        // um Überschreiben beim schnellen Wechsel zu vermeiden.
         
         // Automatisches Cache-Speichern bei jeder Änderung
         this.saveToCache();
