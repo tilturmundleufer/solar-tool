@@ -8157,6 +8157,7 @@
         clearTimeout(this.updateTimeout);
       }
       
+      const scheduledIndex = this.currentConfig;
       this.updateTimeout = setTimeout(async () => {
         // FEATURE 5: Performance-Monitoring - Update Time
         const startTime = performance.now();
@@ -8169,11 +8170,17 @@
           this.updateDetailView();
         }
         
-        // Gesamtpreis aktualisieren (nur UI, kein Persist)
+        // Produktliste der aktiven Ansicht aktualisieren und Preise fortlaufend updaten
+        this.buildList();
         this.updateCurrentTotalPrice();
-        
-        // Hinweis: Kein automatisches Persistieren mehr hier,
-        // um Überschreiben beim schnellen Wechsel zu vermeiden.
+        this.updateOverviewTotalPrice();
+
+        // Persistieren/Liste nur, wenn weiterhin dieselbe Config aktiv ist
+        if (this.currentConfig === scheduledIndex && this.currentConfig !== null) {
+          try { this.updateConfig(); } catch(_) {}
+          try { this.renderConfigList(); } catch(_) {}
+          try { this.saveToCache(); } catch(_) {}
+        }
         
         // Automatisches Cache-Speichern bei jeder Änderung
         this.saveToCache();
