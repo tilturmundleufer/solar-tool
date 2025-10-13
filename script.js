@@ -5691,9 +5691,12 @@
 				overviewView.classList.remove('active');
 				detailView.classList.add('active');
 				
-				if (configIndex !== null) {
-					this.loadConfig(configIndex);
-				}
+                if (configIndex !== null) {
+                    // Sicherstellen, dass vorherige, debounced Updates abgebrochen sind,
+                    // bevor wir den neuen Zustand laden
+                    this.cancelPendingUpdates && this.cancelPendingUpdates();
+                    this.loadConfig(configIndex);
+                }
 				
 				// Detail-Ansicht aktualisieren
 				this.updateDetailView();
@@ -7752,6 +7755,9 @@
   		const cfg = this.configs[idx];
   		this.currentConfig = idx;
 
+			// Verhindere, dass ein noch laufendes, debounced Update den alten Zustand überschreibt
+			this.cancelPendingUpdates && this.cancelPendingUpdates();
+
   		// Input-Werte setzen
 			this.wIn.value = cfg.cellWidth;
 			this.hIn.value = cfg.cellHeight;
@@ -7776,9 +7782,10 @@
 			// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
 			this.setup();
 
-			// Produktliste und Summary aktualisieren
+			// Produktliste und Summary sofort aktualisieren (ohne Debounce)
 			this.buildList();
-			this.updateSummaryOnChange();
+			this.updateCurrentTotalPrice();
+			this.updateOverviewTotalPrice();
 
 			this.renderConfigList();
 			this.updateSaveButtons();
@@ -8193,6 +8200,14 @@
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
       }, this.updateDelay);
+    }
+
+    // Sofort alle geplanten, verzögerten Updates abbrechen (z. B. beim Config-Wechsel)
+    cancelPendingUpdates() {
+      if (this.updateTimeout) {
+        clearTimeout(this.updateTimeout);
+        this.updateTimeout = null;
+      }
     }
 
 
