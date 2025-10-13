@@ -7993,15 +7993,35 @@
       };
     }
 
-    renderConfigList() {
+    async renderConfigList() {
       // Verwende das gleiche HTML-Design wie updateConfigList()
-  		this.configListEl.innerHTML = '';
+      this.configListEl.innerHTML = '';
       
-  		this.configs.forEach((cfg, idx) => {
+      for (let idx = 0; idx < this.configs.length; idx++) {
+        const cfg = this.configs[idx];
     		const div = document.createElement('div');
     		div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
         
-        const totalPrice = this.calculateConfigPrice(cfg);
+        // Preis je Konfiguration konsistent zu current-total: alle benötigten Produkte gemäß Flags
+        let totalPrice = 0;
+        try {
+          const parts = await this._buildPartsFor(
+            cfg.selection,
+            (cfg.incM === false) ? false : true,
+            !!cfg.mc4,
+            !!cfg.solarkabel,
+            !!cfg.holz,
+            !!cfg.quetschkabelschuhe,
+            !!cfg.erdungsband,
+            !!cfg.ulicaModule
+          );
+          Object.entries(parts || {}).forEach(([key, qty]) => {
+            if (!qty || qty <= 0) return;
+            const packs = Math.ceil(qty / (VE[key] || 1));
+            const pricePerPack = getPackPriceForQuantity(key, qty);
+            totalPrice += packs * pricePerPack;
+          });
+        } catch(_) {}
         const canDelete = this.configs.length >= 2;
         
         div.innerHTML = `
@@ -8038,7 +8058,7 @@
         });
         
     		this.configListEl.appendChild(div);
-  		});
+      }
 		}
 
     // Performance: Schnellerer Array-Vergleich
