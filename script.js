@@ -7495,7 +7495,10 @@
   		this.setup();
   		this.buildGrid();
   		this.buildList();
-  		this.updateSummaryOnChange();
+  		// Preise & Zusatzprodukte sofort neu zeichnen
+  		this.updateCurrentTotalPrice();
+  		this.updateOverviewTotalPrice();
+  		this.renderAdditionalProducts();
 		}
     
     resetToDefaultGrid() {
@@ -8009,6 +8012,10 @@
 
       this.renderConfigList();
       this.updateSaveButtons();
+      // UI-Totals/Additional sofort initialisieren
+      this.updateCurrentTotalPrice();
+      this.updateOverviewTotalPrice();
+      this.renderAdditionalProducts();
 		}
     _makeConfigObject(customName = null) {
       // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
@@ -8332,8 +8339,17 @@
     	// Orientation-Buttons nach createNewConfig() aktualisieren
     	this.syncOrientationButtons();
     	
-    	// Preise aktualisieren
+    	// Preise und UI sofort aktualisieren
     	this.updateCurrentTotalPrice();
+    	this.updateOverviewTotalPrice();
+    	this.renderAdditionalProducts();
+    	// Liste/Holder ggf. ausblenden
+    	try {
+    		const additionalProductsListEl = document.getElementById('additional-products-list');
+    		if (additionalProductsListEl) additionalProductsListEl.innerHTML = '';
+    		if (this.listHolder) this.listHolder.style.display = 'none';
+    		if (this.prodList) this.prodList.innerHTML = '';
+    	} catch(_) {}
     	
     	this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
     }
