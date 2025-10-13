@@ -5700,14 +5700,26 @@
 		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
-				// Verwende die gleiche Berechnungslogik wie calculateConfigPrice
-				const currentConfig = {
+				// Verwende bevorzugt die gespeicherten Daten der aktiven Konfiguration,
+				// damit UI-Abweichungen (Inputs/DOM) den Preis nicht verfälschen
+				const cfg = (this.currentConfig !== null && this.configs[this.currentConfig]) ? this.configs[this.currentConfig] : null;
+				const currentConfig = cfg ? {
+					selection: Array.isArray(cfg.selection) ? cfg.selection.map(r => Array.isArray(r) ? r.slice() : r) : [],
+					cols: Number(cfg.cols || this.cols),
+					rows: Number(cfg.rows || this.rows),
+					cellWidth: Number(cfg.cellWidth || parseInt(this.wIn?.value || '179')),
+					cellHeight: Number(cfg.cellHeight || parseInt(this.hIn?.value || '113')),
+					orientation: (cfg.orientation || (this.orV?.checked ? 'vertical' : 'horizontal')),
+					incM: (cfg.incM === false) ? false : true,
+					ulicaModule: !!cfg.ulicaModule
+				} : {
 					selection: this.selection,
 					cols: this.cols,
 					rows: this.rows,
 					cellWidth: parseInt(this.wIn?.value || '179'),
 					cellHeight: parseInt(this.hIn?.value || '113'),
 					orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+					incM: (this.incM && this.incM.checked) !== false,
 					ulicaModule: document.getElementById('ulica-module')?.checked || false
 				};
 				
