@@ -8236,10 +8236,10 @@
     	if (this.wIn) this.wIn.value = this.default.width;
     	if (this.hIn) this.hIn.value = this.default.height;
     	
-    	// Orientation auf Default zurücksetzen (VERTIKAL als Standard)
+    	// Orientation auf Default zurücksetzen
     	if (this.orH && this.orV) {
-    		this.orH.checked = false;
-    		this.orV.checked = true;
+    		this.orH.checked = true;
+    		this.orV.checked = false;
     	}
     	
     	// Orientation-Buttons visuell aktualisieren
@@ -8271,15 +8271,6 @@
     	
     	// Bestehende Konfigurationserstellung verwenden
     	this.createNewConfig();
-
-    	// Zusatzprodukte visuell sofort leeren
-    	try {
-    		const additionalProductsListEl = document.getElementById('additional-products-list');
-    		if (additionalProductsListEl) additionalProductsListEl.innerHTML = '';
-    	} catch(_) {}
-
-    	// Overview-Preis neu berechnen
-    	try { this.updateOverviewTotalPrice(); } catch(_) {}
     	
     	// Orientation-Buttons nach createNewConfig() aktualisieren
     	this.syncOrientationButtons();
