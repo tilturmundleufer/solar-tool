@@ -5699,6 +5699,11 @@
                       this.updateConfig();
                     }
                     this.loadConfig(configIndex);
+                    // Nach dem Laden sofort Grid/Preis/Liste aktualisieren
+                    try { this.buildGrid(); } catch(_) {}
+                    try { this.buildList(); } catch(_) {}
+                    try { this.updateCurrentTotalPrice(); } catch(_) {}
+                    try { this.updateOverviewTotalPrice(); } catch(_) {}
                 }
 				
 				// Detail-Ansicht aktualisieren
@@ -7782,8 +7787,9 @@
 			this.rows = cfg.rows;
 			this.selection = cfg.selection.map(r => [...r]);
 
-			// Setup aufrufen (baut Grid mit korrekter Auswahl auf)
-			this.setup();
+			// Anstatt setup() (das ggf. alte Auswahl überträgt) bauen wir explizit und atomar neu
+			this.updateSize();
+			this.buildGrid();
 
 			// Produktliste und Summary sofort aktualisieren (ohne Debounce)
 			this.buildList();
