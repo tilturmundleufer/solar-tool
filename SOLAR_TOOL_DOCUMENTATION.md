@@ -303,6 +303,10 @@ Hinweis: Der Verteilungsmodus `gleichmäßig` ist deaktiviert. Bitte verwenden S
 - Grid-Übersicht mit Bild der aktuellen Konfiguration
 - Produktliste auf separater Seite, Zusatzprodukte ggf. auf eigener Sammelseite
 
+#### Änderungen 2025-10-13
+- PDF-Logo aktualisiert: Verwendung des Logos unter `https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68a715060ec3ecf5508ca480_Element%201.svg` für Header und Footer.
+- Orientierungsindikator: In der Grid-Visualisierung (UI und PDF) wird die aktuelle Ausrichtung als deutliches Badge angezeigt ("HORIZONTAL" oder "VERTIKAL"). Zellgrößen und Seitenverhältnis bleiben unverändert.
+
 ---
 
 ## 📈 Zukünftige Entwicklung

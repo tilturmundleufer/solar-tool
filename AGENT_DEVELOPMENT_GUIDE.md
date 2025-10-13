@@ -204,6 +204,12 @@ node -c script.min.js
 - Testing: Desktop shows intro when kein Cache/URL; mobile still shows mobile-warning; outside click and × close work
 - Doc Update: SOLAR_TOOL_DOCUMENTATION.md ✅ (Hinweis zur Intro-Overlay-Anzeige), README.md ✅ (Kurzbeschreibung)
 
+## Changes Made - [2025-10-13]
+- Modified: `SolarPDFGenerator` (Logo-URLs auf neues SVG umgestellt), `SolarGrid.buildGrid()` (UI-Orientierungs-Badge), `captureGridVisualizationFromSnapshot()` (PDF-Orientierungs-Badge)
+- Files Updated: script.js ✅, script.min.js ✅
+- Testing: UI zeigt Badge "HORIZONTAL"/"VERTIKAL" ohne Layoutänderung; PDF enthält entsprechendes Badge im Grid-Bild; Logo lädt per CORS (SVG), Fallback-Text greift bei Fehler.
+- Doc Update: SOLAR_TOOL_DOCUMENTATION.md ✅ (Logo-Link & Orientierungsindikator)
+
 ## Changes Made - [2025-08-25]
 - Modified: `getConfigData`, `sendConfigToWebhook` (kompakte Webhook-Payload, ohne Bilddaten)
 - Files Updated: script.js ✅, script.min.js ✅

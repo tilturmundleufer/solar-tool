@@ -132,6 +132,9 @@ Ergebnis:
 5. **Grid-Layout**: Befehle wie `kompakt`, `mit lücken`, `1 reihe abstand`, `doppelter abstand` sind kombinierbar mit Größenangaben
 6. **Verteilung**: `in reihen`, `in spalten`, `zufällig` (Hinweis: `gleichmäßig` ist deaktiviert)
 
+### 🧭 Sichtbarer Orientierungsindikator
+- Die aktuelle Ausrichtung (horizontal/vertikal) wird im UI-Grid als Badge angezeigt. In der PDF-Grid-Übersicht ist derselbe Hinweis enthalten. Zellgrößen und Seitenverhältnis bleiben identisch zum normalen Grid, um die Konfiguration klar erkennbar zu halten.
+
 ### ⚠️ Hinweise zur Verteilung
 `gleichmäßig` (inkl. Varianten wie `gleich-mäßig`, `gleichmaessig`, `optimal`) ist deaktiviert.
 `zufällig` (inkl. `random`, `zufaellig`) ist deaktiviert.
