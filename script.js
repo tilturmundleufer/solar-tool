@@ -5700,18 +5700,29 @@
 		updateCurrentTotalPrice() {
 			const totalPriceEl = document.getElementById('current-total-price');
 			if (totalPriceEl) {
-				// Verwende die gleiche Berechnungslogik wie calculateConfigPrice
-				const currentConfig = {
-					selection: this.selection,
-					cols: this.cols,
-					rows: this.rows,
-					cellWidth: parseInt(this.wIn?.value || '179'),
-					cellHeight: parseInt(this.hIn?.value || '113'),
-					orientation: this.orV?.checked ? 'vertical' : 'horizontal',
-					ulicaModule: document.getElementById('ulica-module')?.checked || false
-				};
-				
-				const totalPrice = this.calculateConfigPrice(currentConfig);
+				// Aktueller Preis: Nur Module (+ optional Erdungsband) für die aktive Konfiguration,
+				// basierend auf dem DOM-Zustand (Selection, Maße, Checkboxen)
+				let totalPrice = 0;
+				try {
+					const includeModules = this.incM ? this.incM.checked !== false : true;
+					const useUlica = this.ulicaModule ? this.ulicaModule.checked === true : false;
+					const pieceKey = useUlica ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+					const moduleCount = (this.selection || []).flat().filter(Boolean).length;
+					if (includeModules && moduleCount > 0) {
+						const pricePerPack = getPackPriceForQuantity(pieceKey, moduleCount);
+						const packs = Math.ceil(moduleCount / (VE[pieceKey] || 1));
+						totalPrice += packs * pricePerPack;
+					}
+					// Erdungsband nur wenn Checkbox aktiv
+					if (this.erdungsband && this.erdungsband.checked) {
+						const qty = this.calculateErdungsband();
+						if (qty > 0) {
+							const pricePerPack = getPackPriceForQuantity('Erdungsband', qty);
+							const packs = Math.ceil(qty / (VE.Erdungsband || 1));
+							totalPrice += packs * pricePerPack;
+						}
+					}
+				} catch(_) {}
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 				// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
 				const section = totalPriceEl.closest('.total-section');
@@ -5780,15 +5791,15 @@
 			const totalPriceEl = document.getElementById('overview-total-price');
 			if (!totalPriceEl) return;
 			
-			// Berechne Gesamtpreis aller Konfigurationen
+			// Gesamtpreis aus gecachten Totals/Price Map (Packpreise) bilden
 			let totalPrice = 0;
-			this.configs.forEach(config => {
-				totalPrice += this.calculateConfigPrice(config);
-			});
-			
-			// Füge Zusatzprodukte hinzu
-			const additionalProductsPrice = this.calculateAdditionalProductsPrice();
-			totalPrice += additionalProductsPrice;
+			try {
+				const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot(); // Packs pro Produkt
+				Object.entries(totals || {}).forEach(([key, packs]) => {
+					const pricePerPack = getPackPriceForQuantity(key, packs);
+					totalPrice += (Number(packs)||0) * pricePerPack;
+				});
+			} catch(_) {}
 			
 			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 			// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
