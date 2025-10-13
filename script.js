@@ -810,9 +810,9 @@
       this.html2canvas = window.html2canvas;
       this.html2pdf = window.html2pdf; // html2pdf.js (optional, moderner Pfad)
       // Weiße Footer-Logo-Variante (für dunklen Footer-Hintergrund)
-      this.companyLogoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/688f3fff157b70cefcaa97df_Schneider%20logo.png';
+      this.companyLogoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68a715060ec3ecf5508ca480_Element%201.svg';
       // Blaues Header-Logo
-      this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6893249274128869974e58ec_schneider%20logo%20png.png';
+      this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68a715060ec3ecf5508ca480_Element%201.svg';
     }
 
     // Öffnet PDFs auf Touch-Geräten in neuem Tab statt Download
@@ -2135,6 +2135,26 @@
         // Rendern lassen und Screenshot erstellen
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => setTimeout(r, 50));
+        // Orientierung als gut sichtbares Badge oben rechts über dem Grid
+        try {
+          const badge = document.createElement('div');
+          const isVertical = config.orientation === 'vertical';
+          badge.textContent = isVertical ? 'VERTIKAL' : 'HORIZONTAL';
+          badge.style.position = 'absolute';
+          badge.style.top = '8px';
+          badge.style.right = '8px';
+          badge.style.zIndex = '3';
+          badge.style.padding = '4px 8px';
+          badge.style.borderRadius = '9999px';
+          badge.style.fontWeight = '700';
+          badge.style.fontSize = '12px';
+          badge.style.letterSpacing = '0.5px';
+          badge.style.background = '#0e1e34';
+          badge.style.color = '#ffffff';
+          badge.style.pointerEvents = 'none';
+          tempRoot.appendChild(badge);
+        } catch (_) {}
+
         const canvas = await this.html2canvas(tempRoot, {
           backgroundColor: '#ffffff',
           scale: 2,
@@ -7243,9 +7263,36 @@
     		}
   		}
   		
-  		// Einmalige DOM-Manipulation
-  		this.gridEl.innerHTML = '';
-  		this.gridEl.appendChild(fragment);
+      // Einmalige DOM-Manipulation
+      this.gridEl.innerHTML = '';
+      this.gridEl.appendChild(fragment);
+
+      // Deutlicher Orientierungsindikator als nicht-invasives Overlay
+      try {
+        const isVertical = this.orV && this.orV.checked;
+        if (this.gridEl && !this._orientationBadgeEl) {
+          this.gridEl.style.position = this.gridEl.style.position || 'relative';
+          const badge = document.createElement('div');
+          badge.className = 'orientation-badge';
+          badge.style.position = 'absolute';
+          badge.style.top = '8px';
+          badge.style.right = '8px';
+          badge.style.zIndex = '2';
+          badge.style.padding = '4px 8px';
+          badge.style.borderRadius = '9999px';
+          badge.style.fontWeight = '700';
+          badge.style.fontSize = '12px';
+          badge.style.letterSpacing = '0.5px';
+          badge.style.background = '#0e1e34';
+          badge.style.color = '#ffffff';
+          badge.style.pointerEvents = 'none';
+          this._orientationBadgeEl = badge;
+          this.gridEl.appendChild(badge);
+        }
+        if (this._orientationBadgeEl) {
+          this._orientationBadgeEl.textContent = isVertical ? 'VERTIKAL' : 'HORIZONTAL';
+        }
+      } catch (_) {}
 		}
     async buildList() {
       try {
