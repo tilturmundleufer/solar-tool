@@ -5762,6 +5762,35 @@
 			// Auto-Save Indicator Setup
 			this.autoSaveTimeout = null;
 		}
+
+		updateOverviewTotalPrice() {
+			const totalPriceEl = document.getElementById('overview-total-price');
+			if (!totalPriceEl) return;
+			
+			// Gesamtpreis mit gecachten Totals (Packs) × Preis je VE aus Stufenpreisen
+			let totalPrice = 0;
+			try {
+				const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot();
+				Object.entries(totals || {}).forEach(([key, packs]) => {
+					const ve = VE[key] || 1;
+					const requiredPieces = (Number(packs) || 0) * ve;
+					const pricePerPack = getPackPriceForQuantity(key, requiredPieces);
+					totalPrice += (Number(packs) || 0) * pricePerPack;
+				});
+			} catch (_) {}
+			
+			// Zusatzprodukte (aus UI-Flags, falls aktiv)
+			try { totalPrice += this.calculateAdditionalProductsPrice(); } catch(_) {}
+			
+			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+			// Subtitle pflegen
+			const section = totalPriceEl.closest('.total-section');
+			const subtitle = section ? section.querySelector('.total-subtitle') : null;
+			if (subtitle) {
+				subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+				subtitle.textContent = 'exkl. MwSt';
+			}
+		}
 		showAutoSaveIndicator() {
 			const indicator = document.getElementById('auto-save-indicator');
 			if (!indicator) return;
