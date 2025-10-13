@@ -8236,15 +8236,6 @@
     	if (this.wIn) this.wIn.value = this.default.width;
     	if (this.hIn) this.hIn.value = this.default.height;
     	
-    	// Orientation auf Default zurücksetzen
-    	if (this.orH && this.orV) {
-    		this.orH.checked = true;
-    		this.orV.checked = false;
-    	}
-    	
-    	// Orientation-Buttons visuell aktualisieren
-    	this.syncOrientationButtons();
-    	
     	// Checkboxen auf Default zurücksetzen (ALLE abwählen)
     	if (this.incM) this.incM.checked = false;
     	if (this.mc4) this.mc4.checked = false;
@@ -8269,14 +8260,18 @@
     		this.enableInputs();
     	}
     	
-    	// Bestehende Konfigurationserstellung verwenden
+    	// Neue erste Konfiguration anlegen (Standard-Setup übernimmt Orientation)
     	this.createNewConfig();
-    	
-    	// Orientation-Buttons nach createNewConfig() aktualisieren
-    	this.syncOrientationButtons();
+
+    	// Additional-Products visuell zurücksetzen
+    	try {
+    		const additionalProductsListEl = document.getElementById('additional-products-list');
+    		if (additionalProductsListEl) additionalProductsListEl.innerHTML = '';
+    	} catch(_) {}
     	
     	// Preise aktualisieren
     	this.updateCurrentTotalPrice();
+    	this.updateOverviewTotalPrice && this.updateOverviewTotalPrice();
     	
     	this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
     }
