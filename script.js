@@ -5699,6 +5699,15 @@
                       this.updateConfig();
                     }
                     this.loadConfig(configIndex);
+                    // Stelle sicher, dass UI-Orientation den Zielwert zeigt (Buttons + Radios)
+                    try {
+                      const cfg = this.configs[configIndex];
+                      if (cfg && this.orV && this.orH) {
+                        this.orV.checked = (cfg.orientation === 'vertical');
+                        this.orH.checked = !this.orV.checked;
+                        this.syncOrientationButtons?.();
+                      }
+                    } catch(_) {}
                     // Nach dem Laden sofort Grid/Preis/Liste aktualisieren
                     try { this.buildGrid(); } catch(_) {}
                     try { this.buildList(); } catch(_) {}
@@ -9874,23 +9883,22 @@
       const totals = {};
       const add = (key, qty) => { if (!qty || qty <= 0) return; totals[key] = (totals[key] || 0) + qty; };
 
-      // Durch alle Konfigurationen iterieren (Deep-Inputs aus gespeicherten Configs)
+      // WICHTIG: Nie den Haupt-State mutieren; berechne immer isoliert
       for (let i = 0; i < (this.configs?.length || 0); i++) {
-        const cfg = this.configs[i]; if (!cfg) continue;
-        // Temporär mit isolierten Daten rechnen
-        const originalSel = this.selection; const originalRows = this.rows; const originalCols = this.cols;
-        const originalOrV = this.orV && this.orV.checked;
+        const cfg = this.configs[i];
+        if (!cfg) continue;
         try {
-          this.selection = (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r);
-          this.rows = cfg.rows; this.cols = cfg.cols;
-          if (this.orV) { this.orV.checked = (cfg.orientation === 'vertical'); }
-          const p = this.calculatePartsSync();
-          Object.entries(p).forEach(([k,v]) => add(k, v));
-        } catch(_) {
-        } finally {
-          this.selection = originalSel; this.rows = originalRows; this.cols = originalCols;
-          if (this.orV) { this.orV.checked = originalOrV; }
-        }
+          const parts = this.calculatePartsDirectly({
+            selection: (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r),
+            rows: cfg.rows,
+            cols: cfg.cols,
+            cellWidth: cfg.cellWidth,
+            cellHeight: cfg.cellHeight,
+            orientation: cfg.orientation,
+            options: { ulicaModule: !!cfg.ulicaModule }
+          });
+          Object.entries(parts || {}).forEach(([k, v]) => add(k, v));
+        } catch(_) {}
       }
 
       // Zusatzprodukte global nachziehen (Huawei/BRC Optimierer, Erdungsband, Quetsch etc.)
