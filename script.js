@@ -2283,9 +2283,9 @@
           includeModules: config.includeModules
         });
 
-        // Erstelle isolierte Calculation-Data aus Snapshot
+        // Erstelle isolierte Calculation-Data aus Snapshot (optimiert)
         const calculationData = {
-          selection: config.selection.map(row => [...row]), // Deep copy
+          selection: config.selection, // Direkte Referenz - Worker arbeitet isoliert
           rows: config.rows,
           cols: config.cols,
           cellWidth: config.cellWidth || 179,
@@ -2485,9 +2485,9 @@
         return {};
       }
 
-      // ISOLIERTE Berechnung ohne Grid-Eigenschaften zu berühren!
+      // ISOLIERTE Berechnung ohne Grid-Eigenschaften zu berühren! (optimiert)
       const calculationData = {
-        selection: config.selection.map(row => [...row]), // Deep copy
+        selection: config.selection, // Direkte Referenz - Worker arbeitet isoliert
         rows: config.rows,
         cols: config.cols,
         cellWidth: config.cellWidth || 179,
@@ -4737,6 +4737,9 @@
       });
     }
   }
+
+  // CartCompatibility-Modul entfernt - nicht mehr benötigt mit Foxy.io
+
   class SolarGrid {
     // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
     readExtrasFromSummaryList() {
@@ -8279,8 +8282,13 @@
     // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
     saveToCache() {
     	try {
-        // Deep-Clones erstellen, damit keine Referenzen zwischen Konfigurationen geteilt werden
-        const deepCloneSelection = (sel) => Array.isArray(sel) ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel;
+        // Optimierte Clones - nur bei Bedarf deep-clonen
+        const deepCloneSelection = (sel) => {
+          if (!Array.isArray(sel)) return sel;
+          // Nur bei großen Arrays (>100 Zellen) deep-clonen, sonst shallow copy
+          const totalCells = sel.reduce((sum, row) => sum + (Array.isArray(row) ? row.length : 0), 0);
+          return totalCells > 100 ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel.slice();
+        };
         const deepCloneConfig = (cfg) => ({
           ...cfg,
           selection: deepCloneSelection(cfg.selection)
@@ -8479,12 +8487,7 @@
       });
       
       this.hideWebflowForms();
-      // Nach dem (Neu-)Mapping einen Kompatibilitätscheck über Popup-Modul einplanen (falls vorhanden)
-      try {
-        if (window.CartCompatibility && typeof window.CartCompatibility.schedule === 'function') {
-          window.CartCompatibility.schedule(150);
-        }
-      } catch (e) {}
+      // CartCompatibility-Check entfernt - nicht mehr benötigt mit Foxy.io
     }
 
     hideWebflowForms() {
@@ -9735,6 +9738,12 @@
         this.resizeObserver = null;
       }
       
+      // Foxy Observer cleanup
+      if (this._foxyObserver) {
+        this._foxyObserver.disconnect();
+        this._foxyObserver = null;
+      }
+      
       // FEATURE 5: Performance-Monitoring Cleanup
       if (this.performanceMetrics) {
         this.performanceMetrics = null;
@@ -9923,6 +9932,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.solarGrid) {
       window.solarGrid.cleanup();
     }
+    
+    // CartCompatibility-Cleanup entfernt - nicht mehr benötigt mit Foxy.io
   });
 
   window.debugFoxy = {

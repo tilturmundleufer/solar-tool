@@ -4,17 +4,7 @@
 // Worker-Logs an Haupt-Console weiterleiten
 
 
-// Worker-Message-Handler hinzufügen
-self.onmessage = function(e) {
-  const { type, data, id } = e.data;
-  
-  if (type === 'calculateParts') {
-  
-    const result = calculateParts(data.selection, data.rows, data.cols, data.cellWidth, data.cellHeight, data.orientation, data.options);
-    
-    self.postMessage({ type: 'result', id, data: result });
-  }
-};
+// Worker-Message-Handler wird weiter unten mit addEventListener implementiert
 
 // VE-Werte für Berechnungen
 const VE_VALUES = {
@@ -330,6 +320,18 @@ self.addEventListener('message', function(e) {
       id,
       data: result
     });
+    
+    // Memory-Cleanup nach großen Berechnungen
+    if (type === 'calculateMultipleConfigs' || type === 'optimizeRailCombination') {
+      if (typeof result === 'object' && result !== null) {
+        // Große Arrays explizit löschen
+        Object.keys(result).forEach(key => {
+          if (Array.isArray(result[key]) && result[key].length > 1000) {
+            result[key] = null;
+          }
+        });
+      }
+    }
     
   } catch (error) {
     // Sende Fehler zurück
