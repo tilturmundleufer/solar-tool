@@ -40,9 +40,16 @@
       
       // Alle Such-Items für diesen Key finden
       var itemsAll = Array.prototype.slice.call(root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"], .search-cms-item-2, .search-cms-item'));
-      var nodesForKey = Array.prototype.slice.call(root.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]'));
       
-      console.log('[CMS-SEARCH] handle input', {key, term, items: itemsAll.length, nodesForKey: nodesForKey.length});
+      console.log('[CMS-SEARCH] handle input', {key, term, items: itemsAll.length});
+      
+      // Debug: Zeige alle gefundenen Items
+      if(itemsAll.length > 0){
+        console.log('[CMS-SEARCH] Found items:', itemsAll.map(function(item){
+          var nameEl = item.querySelector('.search-name');
+          return nameEl ? nameEl.textContent : 'No name element';
+        }));
+      }
       
       // Sonderfall: leerer Begriff → nichts anzeigen
       if(term === ''){
@@ -72,63 +79,36 @@
         return;
       }
       
-      // Suche durchführen
-      var considered = new WeakSet();
+      // Vereinfachte Suche: Direkt über Produktnamen
       var anyVisible = 0;
       
-      if(nodesForKey.length){
-        // Suche über spezifische data-text-Knoten
-        for(var i=0;i<nodesForKey.length;i++){
-          var tn = nodesForKey[i];
-          var it = tn.closest('[data-search^="cms-item-"], [data-search^="cms_item_"]');
-          if(!it) continue;
-          
-          considered.add(it);
-          var txt = normalizeSearchText(tn.textContent||'');
-          if(!txt){ 
-            txt = normalizeSearchText(it.textContent||''); 
-          }
-          
-          var match = txt.indexOf(term) !== -1;
-          it.style.display = match ? '' : 'none';
-          if(match){ 
-            try{ 
-              if(getComputedStyle(it).display === 'none'){ 
-                it.style.display = 'block'; 
-              } 
-            }catch(_){ } 
-            anyVisible++; 
-          }
+      for(var i=0;i<itemsAll.length;i++){
+        var item = itemsAll[i];
+        
+        // Suche über .search-name Element (Produktname)
+        var nameEl = item.querySelector('.search-name');
+        var nameText = nameEl ? normalizeSearchText(nameEl.textContent||'') : '';
+        
+        // Fallback: Suche über gesamten Item-Text
+        if(!nameText){
+          nameText = normalizeSearchText(item.textContent||'');
         }
         
-        // Alle übrigen Items verstecken
-        for(var j=0;j<itemsAll.length;j++){
-          var it2 = itemsAll[j]; 
-          if(considered.has(it2)) continue; 
-          it2.style.display = 'none';
-        }
-      }else{
-        // Fallback: Suche über gesamte Item-Texte
-        for(var k=0;k<itemsAll.length;k++){
-          var it3 = itemsAll[k];
-          var txt3 = normalizeSearchText(it3.textContent||'');
-          var match3 = txt3.indexOf(term) !== -1;
-          it3.style.display = match3 ? '' : 'none';
-          if(match3){ 
-            try{ 
-              if(getComputedStyle(it3).display === 'none'){ 
-                it3.style.display = 'block'; 
-              } 
-            }catch(_){ } 
-            anyVisible++; 
-          }
+        var match = nameText.indexOf(term) !== -1;
+        
+        if(match){
+          item.style.display = '';
+          anyVisible++;
+          console.log('[CMS-SEARCH] Match found:', nameText, 'for term:', term);
+        }else{
+          item.style.display = 'none';
         }
       }
       
       // No-Results anzeigen/verstecken
       var total = itemsAll.length, hidden = 0;
-      for(var j2=0;j2<itemsAll.length;j2++){ 
-        if(getComputedStyle(itemsAll[j2]).display === 'none') hidden++; 
+      for(var j=0;j<itemsAll.length;j++){ 
+        if(getComputedStyle(itemsAll[j]).display === 'none') hidden++; 
       }
       var noRes = root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]');
       if(noRes){ 
@@ -164,7 +144,9 @@
           window.history.pushState({}, '', url);
         }catch(_){ }
       }
-    }catch(_){ }
+    }catch(e){ 
+      console.error('[CMS-SEARCH] Error:', e);
+    }
   }
   
   // === Event-Listener Setup ===
@@ -212,10 +194,11 @@
         
         if(term){
           for(var i=0;i<items.length;i++){
-            var it = items[i];
-            var txt = normalizeSearchText(it.textContent||'');
-            var match = txt.indexOf(term) !== -1;
-            it.style.display = match ? '' : 'none';
+            var item = items[i];
+            var nameEl = item.querySelector('.search-name');
+            var nameText = nameEl ? normalizeSearchText(nameEl.textContent||'') : normalizeSearchText(item.textContent||'');
+            var match = nameText.indexOf(term) !== -1;
+            item.style.display = match ? '' : 'none';
           }
           var wrapper = root.querySelector('.search-cms-wrapper-2, .search-cms-wrapper, [role="list"]');
           if(wrapper) wrapper.style.display = 'block';
