@@ -4740,6 +4740,234 @@
 
   // CartCompatibility-Modul entfernt - nicht mehr benötigt mit Foxy.io
 
+  // ===== CMS-SUCH-MODUL (migriert aus customer-type-popup.js) =====
+  (function(){
+    var cmsSearchInitialized = false;
+    
+    // Lokale Helpers für Kundentyp
+    function getStoredCustomerTypeLocal(){
+      try{
+        const raw = localStorage.getItem('solarTool_customerType');
+        if(!raw) return null;
+        const data = JSON.parse(raw);
+        if(!data || !data.type) return null;
+        if(typeof data.expiresAt === 'number' && Date.now() > data.expiresAt){
+          localStorage.removeItem('solarTool_customerType');
+          return null;
+        }
+        return data.type === 'private' ? 'private' : 'business';
+      }catch(_){ return null; }
+    }
+    function isBusiness(){ return getStoredCustomerTypeLocal() === 'business'; }
+    function isPrivate(){ return getStoredCustomerTypeLocal() === 'private'; }
+
+    function getSegmentRootForElement(el){
+      try{
+        const privSel = ['#privat','[data-customer-type="privat"]','[data-customer-segment="privat"]','[data-list="privat"]','.collection-list-privat'];
+        const gewSel  = ['#gewerbe','[data-customer-type="gewerbe"]','[data-customer-segment="gewerbe"]','[data-list="gewerbe"]','.collection-list-gewerbe'];
+        const sels = privSel.concat(gewSel);
+        var node = el;
+        while(node && node !== document){
+          for(var i=0;i<sels.length;i++){
+            try{ if(node.matches && node.matches(sels[i])) return node; }catch(_){ }
+          }
+          node = node.parentElement;
+        }
+        return null;
+      }catch(_){ return null; }
+    }
+
+    function getVisibleSegmentRoot(){
+      try{
+        const privSel = ['#privat','[data-customer-type="privat"]','[data-customer-segment="privat"]','[data-list="privat"]','.collection-list-privat'];
+        const gewSel  = ['#gewerbe','[data-customer-type="gewerbe"]','[data-customer-segment="gewerbe"]','[data-list="gewerbe"]','.collection-list-gewerbe'];
+        const sels = isPrivate() ? privSel : gewSel;
+        for(var i=0;i<sels.length;i++){
+          var node = document.querySelector(sels[i]);
+          if(node){ try{ var cs = window.getComputedStyle(node); if(cs.display !== 'none' && cs.visibility !== 'hidden') return node; }catch(_){ return node; } }
+        }
+        return null;
+      }catch(_){ return null; }
+    }
+
+    function getListRootForInput(input){
+      try{
+        var p = input;
+        for(var i=0;i<6 && p; i++){
+          var r = p.querySelector && p.querySelector('.search-cms-wrapper');
+          if(r) return r;
+          p = p.parentElement;
+        }
+        var any = document.querySelector('.search-cms-wrapper');
+        if(any) return any;
+      }catch(_){ }
+      return null;
+    }
+
+    function normalizeSearchText(text){
+      try{
+        return (text||'').toString().toLowerCase().replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
+      }catch(_){ return ''; }
+    }
+
+    function itemMatchesCurrentCustomerType(item){
+      // Deaktiviert: keine kundentyp-basierte Filterung mehr in der CMS-Suche
+      try{ return true; }catch(_){ return true; }
+    }
+
+    function handleSearchInput(input){
+      try{
+        var DBG = false; try{ DBG = localStorage && localStorage.getItem('CMS_SEARCH_DEBUG')==='1'; }catch(_){ }
+        var attr = (input.getAttribute('data-input')||'').toString();
+        var m = attr.match(/^search-(.+)$/);
+        if(!m) return;
+        var key = m[1];
+        var segmentRoot = getSegmentRootForElement(input) || getVisibleSegmentRoot() || document;
+        var root = getListRootForInput(input) || segmentRoot || document;
+        var term = normalizeSearchText((input.value||''));
+        var scope = root || document;
+        var itemsAll = Array.prototype.slice.call(scope.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"], .search-cms-item, .w-dyn-item'));
+        var nodesForKey = Array.prototype.slice.call(scope.querySelectorAll('[data-text="search-'+key+'"], [data-text="search_'+key+'"], [data-text*="search"]'));
+        try{ console.warn('[CMS-SEARCH] handle input', {type: isBusiness()?'business':'private', key, term, items: itemsAll.length, nodesForKey: nodesForKey.length}); }catch(_){ }
+
+        // Sonderfall: leerer Begriff → nichts anzeigen
+        if(term === ''){
+          for(var s=0;s<itemsAll.length;s++){ itemsAll[s].style.display = 'none'; }
+          var nr0 = root.querySelector('[data-div="noResult-'+key+'"]');
+          if(nr0) nr0.style.display='none';
+          var pf0 = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
+          if(pf0){ try{ var u0=new URL(window.location.href); u0.searchParams.delete('search-'+key); window.history.pushState({},'',u0);}catch(_){}}
+          try{ 
+            var wrap0 = root.querySelector('.search-cms-wrapper, [role="list"]'); if(wrap0) wrap0.style.display='none';
+            var list0 = root.querySelector('[role="list"], .search-cms-list, .w-dyn-items'); if(list0) list0.style.display='none';
+          }catch(_){ }
+          return;
+        }
+
+        // Suche primär über die Knoten für den Key
+        var considered = new WeakSet();
+        var anyVisible = 0;
+        if(nodesForKey.length){
+          for(var i=0;i<nodesForKey.length;i++){
+            var tn = nodesForKey[i];
+            var it = tn.closest('[data-search^="cms-item-"], [data-search^="cms_item_"]');
+            if(!it) continue;
+            considered.add(it);
+            var txt = normalizeSearchText(tn.textContent||'');
+            if(!txt){ txt = normalizeSearchText(it.textContent||''); }
+            var match = txt.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it);
+            it.style.display = match ? '' : 'none';
+            if(match){ try{ if(getComputedStyle(it).display === 'none'){ it.style.display = 'block'; } }catch(_){ } anyVisible++; }
+          }
+          // Alle übrigen Items verstecken
+          for(var j=0;j<itemsAll.length;j++){
+            var it2 = itemsAll[j]; if(considered.has(it2)) continue; it2.style.display = 'none';
+          }
+        }else{
+          // Fallback: gesamte Item-Texte durchsuchen
+          for(var k=0;k<itemsAll.length;k++){
+            var it3 = itemsAll[k];
+            var txt3 = normalizeSearchText(it3.textContent||'');
+            var match3 = txt3.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it3);
+            it3.style.display = match3 ? '' : 'none';
+            if(match3){ try{ if(getComputedStyle(it3).display === 'none'){ it3.style.display = 'block'; } }catch(_){ } anyVisible++; }
+          }
+        }
+
+        var total = itemsAll.length, hidden = 0;
+        for(var j2=0;j2<itemsAll.length;j2++){ if(getComputedStyle(itemsAll[j2]).display === 'none') hidden++; }
+        var noRes = (root.querySelector('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]') || segmentRoot.querySelector?.('[data-div="noResult-'+key+'"], [data-div="noResult_'+key+'"]'));
+        if(noRes){ noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; }
+        
+        // Ergebnisse-Wrapper Sichtbarkeit steuern
+        try{
+          var wrapper = (root.classList && root.classList.contains('search-cms-wrapper')) ? root : (root.querySelector('.search-cms-wrapper, [role="list"]') || (itemsAll[0] && itemsAll[0].parentElement));
+          if(wrapper){
+            if(anyVisible>0 && term){ wrapper.style.display = 'block'; }
+            else { wrapper.style.display = 'none'; }
+          }
+          var listEl = root.querySelector('[role="list"], .search-cms-list, .w-dyn-items');
+          if(listEl){
+            if(anyVisible>0 && term){ listEl.style.display = 'block'; }
+            else { listEl.style.display = 'none'; }
+          }
+        }catch(_){ }
+        
+        var paramFlag = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
+        if(paramFlag){
+          try{
+            var url = new URL(window.location.href);
+            url.searchParams.set('search-'+key, input.value);
+            window.history.pushState({}, '', url);
+          }catch(_){ }
+        }
+      }catch(_){ }
+    }
+
+    function initSegmentedCmsSearch(){
+      try{
+        if(cmsSearchInitialized) return;
+        cmsSearchInitialized = true;
+        
+        try{ console.warn('[CMS-SEARCH] init binding events'); }catch(_){ }
+        var DBG = false; try{ DBG = localStorage && localStorage.getItem('CMS_SEARCH_DEBUG')==='1'; }catch(_){ }
+        
+        document.addEventListener('input', function(e){
+          var t = e.target;
+          try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+          try{ console.warn('[CMS-SEARCH] input event fired'); }catch(_){ }
+          handleSearchInput(t);
+        }, true);
+        
+        document.addEventListener('keyup', function(e){
+          var t = e.target;
+          try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+          try{ console.warn('[CMS-SEARCH] keyup event fired'); }catch(_){ }
+          handleSearchInput(t);
+        }, true);
+        
+        // Fokus/Blur: Ergebnisse zeigen/verbergen
+        document.addEventListener('focusin', function(e){
+          var t = e.target; try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+          var attr = (t.getAttribute('data-input')||'').toString();
+          var m = attr.match(/^search-(.+)$/);
+          if(!m) return;
+          var key = m[1];
+          var root = getListRootForInput(t) || getVisibleSegmentRoot() || document;
+          var items = root.querySelectorAll('[data-search="cms-item-'+key+'"], [data-search="cms_item_'+key+'"]');
+          var term = normalizeSearchText((t.value||''));
+          if(term){
+            for(var i=0;i<items.length;i++){
+              var it = items[i];
+              var txt = normalizeSearchText(it.textContent||'');
+              var match = txt.indexOf(term) !== -1 && itemMatchesCurrentCustomerType(it);
+              it.style.display = match ? '' : 'none';
+            }
+            var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]');
+            if(wrapper) wrapper.style.display = 'block';
+          }
+        }, true);
+        
+        document.addEventListener('focusout', function(e){
+          var t = e.target; try{ if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; }catch(_){ return; }
+          var attr = (t.getAttribute('data-input')||'').toString();
+          var m = attr.match(/^search-(.+)$/);
+          if(!m) return;
+          var key = m[1];
+          var root = getListRootForInput(t) || getVisibleSegmentRoot() || document;
+          var wrapper = root.querySelector('.search-cms-wrapper, [role="list"]');
+          if(wrapper) wrapper.style.display = 'none';
+        }, true);
+      }catch(_){ }
+    }
+
+    // Globale CMS-Suche initialisieren
+    window.CmsSearch = {
+      init: initSegmentedCmsSearch,
+      handleInput: handleSearchInput
+    };
+  })();
+
   class SolarGrid {
     // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
     readExtrasFromSummaryList() {
@@ -9903,6 +10131,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Foxy: kein Webflow-Mapping mehr – stattdessen Foxy-Form-Mapping initialisieren, falls vorhanden
     if (typeof grid.initFoxyFormMap === 'function') {
       grid.initFoxyFormMap();
+    }
+    
+    // CMS-Suche initialisieren
+    if (window.CmsSearch && typeof window.CmsSearch.init === 'function') {
+      window.CmsSearch.init();
     }
     // Verstecke Collection-List/Wrapper der Foxy-Forms (bleiben im DOM für Submit nutzbar)
     try {
