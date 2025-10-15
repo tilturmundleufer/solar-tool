@@ -13,18 +13,42 @@
   
   function getListRootForInput(input){
     try{
+      console.log('[CMS-SEARCH] Finding root for input:', input);
+      
       // Suche nach dem search-cms-wrapper in der Nähe des Inputs
       var p = input;
       for(var i=0;i<6 && p; i++){
         var r = p.querySelector && p.querySelector('.search-cms-wrapper-2, .search-cms-wrapper');
-        if(r) return r;
+        if(r) {
+          console.log('[CMS-SEARCH] Found wrapper in parent:', r.className);
+          return r;
+        }
         p = p.parentElement;
       }
+      
       // Fallback: Suche global
       var any = document.querySelector('.search-cms-wrapper-2, .search-cms-wrapper');
-      if(any) return any;
-    }catch(_){ }
-    return null;
+      if(any) {
+        console.log('[CMS-SEARCH] Found global wrapper:', any.className);
+        return any;
+      }
+      
+      // Letzter Fallback: Suche nach dem Form-Element
+      var form = input.closest('form');
+      if(form) {
+        var formWrapper = form.querySelector('.search-cms-wrapper-2, .search-cms-wrapper');
+        if(formWrapper) {
+          console.log('[CMS-SEARCH] Found form wrapper:', formWrapper.className);
+          return formWrapper;
+        }
+      }
+      
+      console.log('[CMS-SEARCH] No wrapper found, using document');
+      return document;
+    }catch(e){ 
+      console.error('[CMS-SEARCH] getListRootForInput error:', e);
+      return document;
+    }
   }
   
   // === Hauptfunktion: Such-Input verarbeiten ===
@@ -49,6 +73,18 @@
           var nameEl = item.querySelector('.search-name');
           return nameEl ? nameEl.textContent : 'No name element';
         }));
+        
+        // Debug: Überprüfe Sichtbarkeit der ersten 3 Items
+        for(var d=0; d<Math.min(3, itemsAll.length); d++){
+          var debugItem = itemsAll[d];
+          var computedStyle = getComputedStyle(debugItem);
+          console.log('[CMS-SEARCH] Item visibility check:', {
+            name: debugItem.querySelector('.search-name')?.textContent || 'No name',
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity
+          });
+        }
       }
       
       // Sonderfall: leerer Begriff → nichts anzeigen
@@ -115,25 +151,54 @@
         noRes.style.display = (total>0 && hidden===total) ? '' : 'none'; 
       }
       
-      // Wrapper-Sichtbarkeit steuern
+      // Wrapper-Sichtbarkeit steuern - Debug-Version
       try{
+        console.log('[CMS-SEARCH] Wrapper visibility check:', {anyVisible, term, total});
+        
+        // Alle möglichen Wrapper finden
         var wrapper = root.querySelector('.search-cms-wrapper-2, .search-cms-wrapper, [role="list"]');
+        var listEl = root.querySelector('[role="list"], .search-cms-list, .w-dyn-items');
+        
+        console.log('[CMS-SEARCH] Found wrappers:', {
+          wrapper: wrapper ? wrapper.className : 'none',
+          listEl: listEl ? listEl.className : 'none'
+        });
+        
         if(wrapper){
           if(anyVisible>0 && term){ 
-            wrapper.style.display = 'block'; 
+            wrapper.style.display = 'block';
+            wrapper.style.visibility = 'visible';
+            console.log('[CMS-SEARCH] Showing wrapper:', wrapper.className);
           }else { 
-            wrapper.style.display = 'none'; 
+            wrapper.style.display = 'none';
+            console.log('[CMS-SEARCH] Hiding wrapper:', wrapper.className);
           }
         }
-        var listEl = root.querySelector('[role="list"], .search-cms-list, .w-dyn-items');
+        
         if(listEl){
           if(anyVisible>0 && term){ 
-            listEl.style.display = 'block'; 
+            listEl.style.display = 'block';
+            listEl.style.visibility = 'visible';
+            console.log('[CMS-SEARCH] Showing list:', listEl.className);
           }else { 
-            listEl.style.display = 'none'; 
+            listEl.style.display = 'none';
+            console.log('[CMS-SEARCH] Hiding list:', listEl.className);
           }
         }
-      }catch(_){ }
+        
+        // Zusätzlich: Alle gefundenen Items explizit sichtbar machen
+        if(anyVisible > 0){
+          for(var k=0;k<itemsAll.length;k++){
+            var item = itemsAll[k];
+            if(getComputedStyle(item).display !== 'none'){
+              item.style.display = 'block';
+              item.style.visibility = 'visible';
+            }
+          }
+        }
+      }catch(e){ 
+        console.error('[CMS-SEARCH] Wrapper error:', e);
+      }
       
       // URL-Parameter setzen
       var paramFlag = ((input.getAttribute('data-url')||'').toString().toLowerCase() === 'true');
@@ -267,3 +332,4 @@
     initCmsSearch(); 
   }
 })();
+
