@@ -5761,6 +5761,8 @@
       this.renderConfigList();
       this.updateOverviewTotalPrice();
       this.renderAdditionalProducts();
+      // Gesamtpreis sofort aktualisieren nach Config-List-Update
+      this.updateCurrentTotalPrice();
     }
 		
 		initAutoSaveIndicator() {
@@ -7406,6 +7408,10 @@
         this.prodList.appendChild(fragment);
       this.prodList.style.display = 'block';
       }
+      
+      // Gesamtpreis sofort aktualisieren nach Produktliste-Update
+      this.updateCurrentTotalPrice();
+      
       } catch (error) {
         // Fallback: Verstecke Liste bei Fehler
         if (this.listHolder) {
@@ -7938,6 +7944,8 @@
       this.configs[idx] = this._makeConfigObject();
       this.renderConfigList();
       this.updateSaveButtons();
+      // Gesamtpreis sofort aktualisieren nach Config-Update
+      this.updateCurrentTotalPrice();
     }
     
     deleteConfig(configIndex) {
