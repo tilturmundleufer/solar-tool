@@ -453,6 +453,20 @@
         this.isWorkerReady = false;
       }
     }
+    
+    // Memory: Worker Cleanup
+    cleanup() {
+      try {
+        if (this.worker) {
+          this.worker.terminate();
+          this.worker = null;
+        }
+        this.isWorkerReady = false;
+        this.pendingCalculations.clear();
+      } catch (error) {
+        console.warn('[CalculationManager] Cleanup error:', error);
+      }
+    }
 
     async calculate(type, data) {
       if (!this.isWorkerReady || !this.worker) {
@@ -5708,8 +5722,9 @@
 				// Verwende bevorzugt die gespeicherten Daten der aktiven Konfiguration,
 				// damit UI-Abweichungen (Inputs/DOM) den Preis nicht verfälschen
 				const cfg = (this.currentConfig !== null && this.configs[this.currentConfig]) ? this.configs[this.currentConfig] : null;
+				// Memory: Optimierte Config-Erstellung ohne unnötige Deep Copies
 				const currentConfig = cfg ? {
-					selection: Array.isArray(cfg.selection) ? cfg.selection.map(r => Array.isArray(r) ? r.slice() : r) : [],
+					selection: Array.isArray(cfg.selection) ? cfg.selection : [], // Direkte Referenz - Worker arbeitet isoliert
 					cols: Number(cfg.cols || this.cols),
 					rows: Number(cfg.rows || this.rows),
 					cellWidth: Number(cfg.cellWidth || parseInt(this.wIn?.value || '179')),
@@ -5718,7 +5733,7 @@
 					incM: (cfg.incM === false) ? false : true,
 					ulicaModule: !!cfg.ulicaModule
 				} : {
-					selection: this.selection,
+					selection: this.selection, // Direkte Referenz - Worker arbeitet isoliert
 					cols: this.cols,
 					rows: this.rows,
 					cellWidth: parseInt(this.wIn?.value || '179'),
@@ -8292,12 +8307,17 @@
     // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
     saveToCache() {
     	try {
-        // Optimierte Clones - nur bei Bedarf deep-clonen
+        // Memory: Cache Size Management - Begrenze Cache-Größe
+        this.manageCacheSize();
+        // Memory: Optimierte Clones - nur bei Bedarf deep-clonen
         const deepCloneSelection = (sel) => {
           if (!Array.isArray(sel)) return sel;
           // Nur bei großen Arrays (>100 Zellen) deep-clonen, sonst shallow copy
           const totalCells = sel.reduce((sum, row) => sum + (Array.isArray(row) ? row.length : 0), 0);
-          return totalCells > 100 ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel.slice();
+          if (totalCells <= 100) return sel.slice(); // Shallow copy für kleine Arrays
+          
+          // Deep copy nur für große Arrays - aber optimiert
+          return sel.map(r => Array.isArray(r) ? r.slice() : r);
         };
         const deepCloneConfig = (cfg) => ({
           ...cfg,
@@ -9785,6 +9805,9 @@
       // Memory: DOM Reference cleanup
       this.cleanupDOMReferences();
       
+      // Memory: Web Worker cleanup
+      this.cleanupWorkers();
+      
       // FEATURE 5: Performance-Monitoring Cleanup
       if (this.performanceMetrics) {
         this.performanceMetrics = null;
@@ -9861,13 +9884,120 @@
         this.configListEl = null;
         this.foxyFormsByName = null;
         
-        // Array References nullen
-        this.selection = null;
-        this.configs = null;
-        this.moduleData = null;
+        // Array References nullen und Garbage Collection triggern
+        this.cleanupArrays();
         
       } catch (error) {
         console.warn('[SolarGrid] DOM reference cleanup error:', error);
+      }
+    }
+    
+    // Memory: Web Worker Cleanup
+    cleanupWorkers() {
+      try {
+        // CalculationManager Worker cleanup
+        if (this.calculationManager && typeof this.calculationManager.cleanup === 'function') {
+          this.calculationManager.cleanup();
+          this.calculationManager = null;
+        }
+        
+        // Weitere Worker-Instanzen falls vorhanden
+        if (this.worker) {
+          this.worker.terminate();
+          this.worker = null;
+        }
+        
+      } catch (error) {
+        console.warn('[SolarGrid] Worker cleanup error:', error);
+      }
+    }
+    
+    // Memory: Cache Size Management
+    manageCacheSize() {
+      try {
+        const MAX_CACHE_SIZE = 50; // Maximale Anzahl Konfigurationen
+        const MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000; // 7 Tage in ms
+        
+        // Begrenze Anzahl der Konfigurationen
+        if (this.configs && this.configs.length > MAX_CACHE_SIZE) {
+          // Behalte die neuesten Konfigurationen
+          this.configs = this.configs.slice(-MAX_CACHE_SIZE);
+          console.log(`[SolarGrid] Cache size limited to ${MAX_CACHE_SIZE} configurations`);
+        }
+        
+        // Entferne alte Konfigurationen basierend auf Timestamp
+        if (this.configs && this.configs.length > 0) {
+          const now = Date.now();
+          this.configs = this.configs.filter(config => {
+            if (!config.timestamp) return true; // Behalte Konfigurationen ohne Timestamp
+            const age = now - new Date(config.timestamp).getTime();
+            return age < MAX_CACHE_AGE;
+          });
+        }
+        
+        // Memory: Bereinige große Arrays in Konfigurationen
+        if (this.configs) {
+          this.configs.forEach(config => {
+            if (config.selection && Array.isArray(config.selection)) {
+              const totalCells = config.selection.reduce((sum, row) => 
+                sum + (Array.isArray(row) ? row.length : 0), 0);
+              if (totalCells > 1000) {
+                // Komprimiere sehr große Selection-Arrays
+                config.selection = config.selection.map(row => 
+                  Array.isArray(row) ? row.slice(0, 50) : row);
+              }
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.warn('[SolarGrid] Cache size management error:', error);
+      }
+    }
+    
+    // Memory: Array Garbage Collection
+    cleanupArrays() {
+      try {
+        // Explizite Array-Bereinigung
+        if (this.selection) {
+          this.selection.forEach(row => {
+            if (Array.isArray(row)) {
+              row.length = 0; // Leere Array-Inhalte
+            }
+          });
+          this.selection.length = 0; // Leere das Array
+          this.selection = null;
+        }
+        
+        if (this.configs) {
+          this.configs.forEach(config => {
+            if (config.selection && Array.isArray(config.selection)) {
+              config.selection.forEach(row => {
+                if (Array.isArray(row)) {
+                  row.length = 0;
+                }
+              });
+              config.selection.length = 0;
+            }
+          });
+          this.configs.length = 0;
+          this.configs = null;
+        }
+        
+        if (this.moduleData) {
+          Object.keys(this.moduleData).forEach(key => {
+            delete this.moduleData[key];
+          });
+          this.moduleData = null;
+        }
+        
+        // Memory: Explizite Garbage Collection triggern (falls verfügbar)
+        if (typeof gc === 'function') {
+          gc();
+        }
+        
+      } catch (error) {
+        console.warn('[SolarGrid] Array cleanup error:', error);
       }
       
       // FEATURE 8: Pinch-to-Zoom Cleanup
