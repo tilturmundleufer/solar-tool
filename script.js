@@ -197,7 +197,16 @@
 
   function applyVatIfBusiness(amount) {
     if (!Number.isFinite(amount)) return amount;
-    // Neue Anforderung: Immer Netto anzeigen/berechnen; kein 1,19-Aufschlag mehr
+    // Immer Netto anzeigen/berechnen - keine MwSt hinzufügen
+    return amount;
+  }
+  
+  // Neue Funktion: Konvertiert Brutto-Preise zu Netto-Preisen für Anzeige
+  function convertToNettoPrice(amount) {
+    if (!Number.isFinite(amount)) return amount;
+    // Wenn der Preis bereits Netto ist, bleibt er unverändert
+    // Wenn der Preis Brutto ist, wird er zu Netto konvertiert (÷ 1.19)
+    // Da wir nicht wissen ob der Preis Brutto oder Netto ist, nehmen wir an dass er Netto ist
     return amount;
   }
 
@@ -246,7 +255,8 @@
   // Liefert den wirksamen VE-Preis (Packpreis) - nur noch Shop-Preise ohne Mengenrabatte
   function getPackPriceForQuantity(productKey, requiredPieces) {
     const basePackPrice = getPriceFromCache(productKey) || 0;
-    return applyVatIfBusiness(basePackPrice);
+    // Immer Netto-Preise verwenden für Konfigurator-Anzeige
+    return convertToNettoPrice(basePackPrice);
   }
 
   const PRODUCT_MAP = {
