@@ -4679,6 +4679,29 @@
   // CartCompatibility-Modul entfernt - nicht mehr benötigt mit Foxy.io
 
   // CMS-Suche entfernt - jetzt in cms-search.js
+  
+  // Einfaches Queue-System nur für addAllToCart
+  class SimpleCartQueue {
+    constructor() {
+      this.isProcessing = false;
+    }
+    
+    async execute(operation, operationName) {
+      // Warte bis vorherige Operation fertig ist
+      while (this.isProcessing) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      this.isProcessing = true;
+      try {
+        console.log(`[SimpleCartQueue] Processing: ${operationName}`);
+        const result = await operation();
+        return result;
+      } finally {
+        this.isProcessing = false;
+      }
+    }
+  }
 
   class SolarGrid {
     // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
@@ -9041,9 +9064,15 @@
     }
 
     async addAllToCart() {
-      try {
-      // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
-      this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
+      // QUEUE: Verwende SimpleCartQueue nur für addAllToCart
+      if (!this.simpleCartQueue) {
+        this.simpleCartQueue = new SimpleCartQueue();
+      }
+      
+      return await this.simpleCartQueue.execute(async () => {
+        try {
+        // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
+        this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
       
         // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
         const configSnapshot = this.createConfigSnapshot();
@@ -9129,6 +9158,7 @@
         this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
         this.hideLoading();
       }
+      }, 'addAllToCart');
     }
 
     async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe, erdungsband, ulicaModule) {
