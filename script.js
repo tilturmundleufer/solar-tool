@@ -5473,15 +5473,13 @@
 			const totalPriceEl = document.getElementById('overview-total-price');
 			if (!totalPriceEl) return;
 			
-			// Gesamtpreis mit gecachten Totals (Packs) × Preis je VE aus Stufenpreisen
+			// Gesamtpreis: Gecachte Totals (Quantities) × Preise aus PRICE_MAP
 			let totalPrice = 0;
 			try {
 				const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot();
-				Object.entries(totals || {}).forEach(([key, packs]) => {
-					const ve = VE[key] || 1;
-					const requiredPieces = (Number(packs) || 0) * ve;
-					const pricePerPack = getPackPriceForQuantity(key, requiredPieces);
-					totalPrice += (Number(packs) || 0) * pricePerPack;
+				Object.entries(totals || {}).forEach(([key, quantity]) => {
+					const pricePerUnit = PRICE_MAP[key] || 0;
+					totalPrice += (Number(quantity) || 0) * pricePerUnit;
 				});
 			} catch (_) {}
 			
