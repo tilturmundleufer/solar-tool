@@ -5394,6 +5394,9 @@
           text-align: center;
           z-index: 10000;
           font-family: Arial, sans-serif;
+          width: 95vw;
+          max-width: 400px;
+          box-sizing: border-box;
         `;
         redirectMessage.innerHTML = `
           <h3>Weiterleitung zur Desktop-Website</h3>
