@@ -4757,6 +4757,24 @@
   // CMS-Suche entfernt - jetzt in cms-search.js
 
   class SolarGrid {
+    // Memory: Monitoring System
+    constructor() {
+      this.memoryMonitor = {
+        startTime: Date.now(),
+        lastCleanup: Date.now(),
+        cleanupCount: 0,
+        memorySnapshots: [],
+        leakDetected: false,
+        performanceMetrics: {
+          memoryUsage: 0,
+          arrayOperations: 0,
+          deepCopies: 0,
+          cacheHits: 0,
+          cacheMisses: 0
+        }
+      };
+    }
+    
     // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
     readExtrasFromSummaryList() {
       const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Quetschkabelschuhe','Erdungsband'];
@@ -7424,8 +7442,12 @@
       this.prodList.style.display = 'block';
       }
       
-      // Gesamtpreis sofort aktualisieren nach Produktliste-Update
-      this.updateCurrentTotalPrice();
+        // Gesamtpreis sofort aktualisieren nach Produktliste-Update
+        this.updateCurrentTotalPrice();
+        
+        // Memory: Track Memory Usage
+        this.trackMemoryUsage();
+        this.autoCleanupIfNeeded();
       
       } catch (error) {
         // Fallback: Verstecke Liste bei Fehler
@@ -8314,9 +8336,14 @@
           if (!Array.isArray(sel)) return sel;
           // Nur bei großen Arrays (>100 Zellen) deep-clonen, sonst shallow copy
           const totalCells = sel.reduce((sum, row) => sum + (Array.isArray(row) ? row.length : 0), 0);
-          if (totalCells <= 100) return sel.slice(); // Shallow copy für kleine Arrays
+          if (totalCells <= 100) {
+            this.memoryMonitor.performanceMetrics.arrayOperations++;
+            return sel.slice(); // Shallow copy für kleine Arrays
+          }
           
           // Deep copy nur für große Arrays - aber optimiert
+          this.memoryMonitor.performanceMetrics.deepCopies++;
+          this.memoryMonitor.performanceMetrics.arrayOperations++;
           return sel.map(r => Array.isArray(r) ? r.slice() : r);
         };
         const deepCloneConfig = (cfg) => ({
@@ -9999,20 +10026,238 @@
       } catch (error) {
         console.warn('[SolarGrid] Array cleanup error:', error);
       }
-      
-      // FEATURE 8: Pinch-to-Zoom Cleanup
-      if (this.zoomObserver) {
-        this.zoomObserver = null;
+    }
+    
+    // Memory: Memory Usage Tracking
+    trackMemoryUsage() {
+      try {
+        const snapshot = {
+          timestamp: Date.now(),
+          memoryUsage: this.getMemoryUsage(),
+          configsCount: this.configs ? this.configs.length : 0,
+          selectionSize: this.getSelectionSize(),
+          cacheSize: this.getCacheSize(),
+          uptime: Date.now() - this.memoryMonitor.startTime
+        };
+        
+        this.memoryMonitor.memorySnapshots.push(snapshot);
+        
+        // Behalte nur die letzten 10 Snapshots
+        if (this.memoryMonitor.memorySnapshots.length > 10) {
+          this.memoryMonitor.memorySnapshots.shift();
+        }
+        
+        // Update Performance Metrics
+        this.memoryMonitor.performanceMetrics.memoryUsage = snapshot.memoryUsage;
+        
+        return snapshot;
+      } catch (error) {
+        console.warn('[SolarGrid] Memory tracking error:', error);
+        return null;
       }
-      
-      // Event-Listener entfernen
-      if (this.gridEl) {
-        this.gridEl.innerHTML = '';
+    }
+    
+    // Memory: Get Memory Usage (approximation)
+    getMemoryUsage() {
+      try {
+        // Approximation basierend auf verfügbaren Daten
+        let memoryUsage = 0;
+        
+        // Selection Array Size
+        if (this.selection) {
+          memoryUsage += this.getSelectionSize() * 8; // ~8 bytes per boolean
+        }
+        
+        // Configs Size
+        if (this.configs) {
+          memoryUsage += this.configs.length * 1024; // ~1KB per config
+        }
+        
+        // Module Data Size
+        if (this.moduleData) {
+          memoryUsage += Object.keys(this.moduleData).length * 512; // ~512 bytes per module
+        }
+        
+        return memoryUsage;
+      } catch (error) {
+        return 0;
       }
-      
-      // PDF Generator cleanup
-      if (this.pdfGenerator) {
-        this.pdfGenerator = null;
+    }
+    
+    // Memory: Get Selection Array Size
+    getSelectionSize() {
+      if (!this.selection || !Array.isArray(this.selection)) return 0;
+      return this.selection.reduce((total, row) => {
+        return total + (Array.isArray(row) ? row.length : 0);
+      }, 0);
+    }
+    
+    // Memory: Get Cache Size
+    getCacheSize() {
+      try {
+        const cacheData = localStorage.getItem('solarTool_cache');
+        return cacheData ? cacheData.length : 0;
+      } catch (error) {
+        return 0;
+      }
+    }
+    
+    // Memory: Leak Detection
+    detectMemoryLeaks() {
+      try {
+        const snapshots = this.memoryMonitor.memorySnapshots;
+        if (snapshots.length < 3) return false; // Nicht genug Daten
+        
+        const recent = snapshots.slice(-3);
+        const memoryTrend = recent.map((s, i) => i > 0 ? s.memoryUsage - recent[i-1].memoryUsage : 0);
+        const avgGrowth = memoryTrend.reduce((sum, growth) => sum + growth, 0) / memoryTrend.length;
+        
+        // Leak Detection: Kontinuierliches Wachstum ohne Cleanup
+        const timeSinceCleanup = Date.now() - this.memoryMonitor.lastCleanup;
+        const isGrowing = avgGrowth > 1000; // >1KB Wachstum
+        const noRecentCleanup = timeSinceCleanup > 30000; // >30s ohne Cleanup
+        
+        if (isGrowing && noRecentCleanup) {
+          this.memoryMonitor.leakDetected = true;
+          console.warn('[SolarGrid] Memory leak detected:', {
+            avgGrowth: Math.round(avgGrowth),
+            timeSinceCleanup: Math.round(timeSinceCleanup / 1000) + 's',
+            memoryUsage: this.getMemoryUsage()
+          });
+          return true;
+        }
+        
+        return false;
+      } catch (error) {
+        console.warn('[SolarGrid] Leak detection error:', error);
+        return false;
+      }
+    }
+    
+    // Memory: Auto-Cleanup bei Leak Detection
+    autoCleanupIfNeeded() {
+      try {
+        if (this.detectMemoryLeaks()) {
+          console.log('[SolarGrid] Auto-cleanup triggered due to memory leak');
+          this.performMemoryCleanup();
+          this.memoryMonitor.leakDetected = false;
+          this.memoryMonitor.lastCleanup = Date.now();
+          this.memoryMonitor.cleanupCount++;
+        }
+      } catch (error) {
+        console.warn('[SolarGrid] Auto-cleanup error:', error);
+      }
+    }
+    
+    // Memory: Perform Memory Cleanup
+    performMemoryCleanup() {
+      try {
+        // Cache bereinigen
+        this.manageCacheSize();
+        
+        // Alte Snapshots entfernen
+        if (this.memoryMonitor.memorySnapshots.length > 5) {
+          this.memoryMonitor.memorySnapshots = this.memoryMonitor.memorySnapshots.slice(-5);
+        }
+        
+        // Performance Metrics zurücksetzen
+        this.memoryMonitor.performanceMetrics.arrayOperations = 0;
+        this.memoryMonitor.performanceMetrics.deepCopies = 0;
+        
+        console.log('[SolarGrid] Memory cleanup performed');
+      } catch (error) {
+        console.warn('[SolarGrid] Memory cleanup error:', error);
+      }
+    }
+    
+    // Memory: Performance Metrics
+    getPerformanceMetrics() {
+      try {
+        const uptime = Date.now() - this.memoryMonitor.startTime;
+        const avgMemoryUsage = this.memoryMonitor.memorySnapshots.length > 0 
+          ? this.memoryMonitor.memorySnapshots.reduce((sum, s) => sum + s.memoryUsage, 0) / this.memoryMonitor.memorySnapshots.length
+          : 0;
+        
+        return {
+          uptime: Math.round(uptime / 1000), // in Sekunden
+          memoryUsage: this.getMemoryUsage(),
+          avgMemoryUsage: Math.round(avgMemoryUsage),
+          configsCount: this.configs ? this.configs.length : 0,
+          selectionSize: this.getSelectionSize(),
+          cacheSize: this.getCacheSize(),
+          cleanupCount: this.memoryMonitor.cleanupCount,
+          leakDetected: this.memoryMonitor.leakDetected,
+          performanceMetrics: { ...this.memoryMonitor.performanceMetrics }
+        };
+      } catch (error) {
+        console.warn('[SolarGrid] Performance metrics error:', error);
+        return null;
+      }
+    }
+    
+    // Memory: Log Performance Metrics
+    logPerformanceMetrics() {
+      try {
+        const metrics = this.getPerformanceMetrics();
+        if (metrics) {
+          console.group('[SolarGrid] Performance Metrics');
+          console.log('Uptime:', metrics.uptime + 's');
+          console.log('Memory Usage:', Math.round(metrics.memoryUsage / 1024) + 'KB');
+          console.log('Avg Memory Usage:', Math.round(metrics.avgMemoryUsage / 1024) + 'KB');
+          console.log('Configs Count:', metrics.configsCount);
+          console.log('Selection Size:', metrics.selectionSize);
+          console.log('Cache Size:', Math.round(metrics.cacheSize / 1024) + 'KB');
+          console.log('Cleanup Count:', metrics.cleanupCount);
+          console.log('Leak Detected:', metrics.leakDetected);
+          console.log('Array Operations:', metrics.performanceMetrics.arrayOperations);
+          console.log('Deep Copies:', metrics.performanceMetrics.deepCopies);
+          console.log('Cache Hits:', metrics.performanceMetrics.cacheHits);
+          console.log('Cache Misses:', metrics.performanceMetrics.cacheMisses);
+          console.groupEnd();
+        }
+      } catch (error) {
+        console.warn('[SolarGrid] Log performance metrics error:', error);
+      }
+    }
+    
+    // Memory: Global Memory Dashboard
+    showMemoryDashboard() {
+      try {
+        const metrics = this.getPerformanceMetrics();
+        if (metrics) {
+          const dashboard = `
+            <div style="position: fixed; top: 10px; right: 10px; background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; z-index: 10000; border: 1px solid #0f0;">
+              <div><strong>SolarGrid Memory Dashboard</strong></div>
+              <div>Uptime: ${metrics.uptime}s</div>
+              <div>Memory: ${Math.round(metrics.memoryUsage / 1024)}KB</div>
+              <div>Avg Memory: ${Math.round(metrics.avgMemoryUsage / 1024)}KB</div>
+              <div>Configs: ${metrics.configsCount}</div>
+              <div>Selection: ${metrics.selectionSize}</div>
+              <div>Cache: ${Math.round(metrics.cacheSize / 1024)}KB</div>
+              <div>Cleanups: ${metrics.cleanupCount}</div>
+              <div>Leak: ${metrics.leakDetected ? '⚠️ YES' : '✅ NO'}</div>
+              <div>Array Ops: ${metrics.performanceMetrics.arrayOperations}</div>
+              <div>Deep Copies: ${metrics.performanceMetrics.deepCopies}</div>
+            </div>
+          `;
+          
+          // Entferne vorheriges Dashboard
+          const existing = document.getElementById('memory-dashboard');
+          if (existing) existing.remove();
+          
+          // Erstelle neues Dashboard
+          const div = document.createElement('div');
+          div.id = 'memory-dashboard';
+          div.innerHTML = dashboard;
+          document.body.appendChild(div);
+          
+          // Auto-remove nach 10 Sekunden
+          setTimeout(() => {
+            if (div.parentNode) div.parentNode.removeChild(div);
+          }, 10000);
+        }
+      } catch (error) {
+        console.warn('[SolarGrid] Memory dashboard error:', error);
       }
     }
 
@@ -10166,6 +10411,16 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('[SolarGrid] Cleanup on unload error:', error);
       }
     });
+    
+    // Memory: Globale Debug-Funktionen
+    window.solarGridDebug = {
+      showDashboard: () => window.solarGrid && window.solarGrid.showMemoryDashboard(),
+      logMetrics: () => window.solarGrid && window.solarGrid.logPerformanceMetrics(),
+      trackMemory: () => window.solarGrid && window.solarGrid.trackMemoryUsage(),
+      autoCleanup: () => window.solarGrid && window.solarGrid.autoCleanupIfNeeded(),
+      detectLeaks: () => window.solarGrid && window.solarGrid.detectMemoryLeaks(),
+      performCleanup: () => window.solarGrid && window.solarGrid.performMemoryCleanup()
+    };
     
     // CMS-Suche wird in cms-search.js initialisiert
     // Verstecke Collection-List/Wrapper der Foxy-Forms (bleiben im DOM für Submit nutzbar)
