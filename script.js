@@ -151,7 +151,7 @@
     SolarmodulPalette: 2012.40, // 36x Ulica 450 W – Palette
     UlicaSolarBlackJadeFlowPalette: 2264.40, // 36x Ulica 500 W – Palette
     Endklemmen: 19.80,
-    Schrauben: 22.00,
+    Schrauben: 11.00,
     Dachhaken: 69.00,
     Mittelklemmen: 19.80,
     Endkappen: 7.00,
