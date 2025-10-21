@@ -662,34 +662,11 @@
       priceCache.loadFromStorage();
       priceCache.forceUpdate();
       console.log('Cache reset complete');
-    },
-    // Schrauben-Preis Debug
-    testSchrauben: () => {
-      console.log('Testing Schrauben price...');
-      console.log('PRICE_MAP:', PRICE_MAP.Schrauben);
-      console.log('Cache value:', priceCache.getPrice('Schrauben'));
-      console.log('Direct fallback:', PRICE_MAP['Schrauben'] || 0);
-      return {
-        priceMap: PRICE_MAP.Schrauben,
-        cacheValue: priceCache.getPrice('Schrauben'),
-        fallback: PRICE_MAP['Schrauben'] || 0
-      };
     }
   };
 
   // Funktion um Preise aus Cache zu lesen (ersetzt getPriceFromHTML)
   function getPriceFromCache(productKey) {
-    // Cache-Clearing bei Preisänderungen - lade immer frische Preise
-    const cachedPrice = priceCache.getPrice(productKey);
-    const directPrice = PRICE_MAP[productKey];
-    
-    // Wenn Cache-Preis != direkter Preis, Cache leeren und neu laden
-    if (cachedPrice !== directPrice && directPrice !== undefined) {
-      console.log(`[PriceCache] Preis-Update erkannt für ${productKey}: ${cachedPrice} → ${directPrice}`);
-      priceCache.clearCache();
-      priceCache.loadFromStorage();
-    }
-    
     return priceCache.getPrice(productKey);
   }
 
