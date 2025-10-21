@@ -505,7 +505,7 @@
 
   // Funktion um Preise direkt aus PRICE_MAP zu lesen (ohne Cache)
   function getPriceFromCache(productKey) {
-    return PRICE_MAP[productKey] || 0;
+      return PRICE_MAP[productKey] || 0;
   }
 
   // Legacy-Funktion für Rückwärtskompatibilität
@@ -747,7 +747,7 @@
         const pdfTotalPriceEl = productsPage.querySelector('.pdf-total-price');
           if (pdfTotalPriceEl) {
           // MwSt-Hinweis entfernt - vereinfachte UI
-          }
+        }
 
         await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), pdfTotalPriceEl, {
           htmlLayout: true,
@@ -8773,9 +8773,9 @@
       }
       
       return await this.simpleCartQueue.execute(async () => {
-        try {
-        // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
-        this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
+      try {
+      // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
+      this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
       
         // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
         const configSnapshot = this.createConfigSnapshot();
@@ -8880,11 +8880,11 @@
         // Berechne Parts mit isolierten Daten
         let parts = await this.calculatePartsIsolated(isolatedGrid);
         
-        // Module nur entfernen, wenn Flags explizit false sind
-        if (incM === false) delete parts.Solarmodul;
-        if (ulicaModule === false) delete parts.UlicaSolarBlackJadeFlow;
+			// Module nur entfernen, wenn Flags explizit false sind
+			if (incM === false) delete parts.Solarmodul;
+			if (ulicaModule === false) delete parts.UlicaSolarBlackJadeFlow;
         
-        // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
+			// Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
         const moduleCount = (sel || []).flat().filter(Boolean).length;
         if (mc4 && moduleCount > 0) {
           const veMc4 = VE.MC4_Stecker || 20;
@@ -8938,7 +8938,7 @@
           }
         } catch (_) {}
         
-        return parts;
+      return parts;
       } catch (error) {
         console.warn('[SolarGrid] _buildPartsFor isolation error:', error);
         return {};
@@ -9531,7 +9531,7 @@
     }
     
     cleanup() {
-      // Memory-Leak Prävention: Timeouts löschen
+      // Memory-Leak Prävention: Alle Timeouts löschen
       if (this.updateTimeout) {
         clearTimeout(this.updateTimeout);
         this.updateTimeout = null;
@@ -9545,6 +9545,26 @@
       if (this.resizeTimeout) {
         clearTimeout(this.resizeTimeout);
         this.resizeTimeout = null;
+      }
+      
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = null;
+      }
+      
+      if (this.toastTimeout) {
+        clearTimeout(this.toastTimeout);
+        this.toastTimeout = null;
+      }
+      
+      if (this.autoSaveTimeout) {
+        clearTimeout(this.autoSaveTimeout);
+        this.autoSaveTimeout = null;
+      }
+      
+      if (this._recomputeTotalsTimer) {
+        clearTimeout(this._recomputeTotalsTimer);
+        this._recomputeTotalsTimer = null;
       }
       
       // Resize Observer cleanup
@@ -9681,8 +9701,8 @@
     // Memory: Cache Size Management
     manageCacheSize() {
       try {
-        const MAX_CACHE_SIZE = 50; // Maximale Anzahl Konfigurationen
-        const MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000; // 7 Tage in ms
+        const MAX_CACHE_SIZE = 20; // Reduziert: Maximale Anzahl Konfigurationen
+        const MAX_CACHE_AGE = 24 * 60 * 60 * 1000; // Reduziert: 1 Tag in ms
         
         // Begrenze Anzahl der Konfigurationen
         if (this.configs && this.configs.length > MAX_CACHE_SIZE) {
@@ -9707,10 +9727,10 @@
             if (config.selection && Array.isArray(config.selection)) {
               const totalCells = config.selection.reduce((sum, row) => 
                 sum + (Array.isArray(row) ? row.length : 0), 0);
-              if (totalCells > 1000) {
-                // Komprimiere sehr große Selection-Arrays
+              if (totalCells > 500) { // Reduziert: Frühere Komprimierung
+                // Komprimiere große Selection-Arrays aggressiver
                 config.selection = config.selection.map(row => 
-                  Array.isArray(row) ? row.slice(0, 50) : row);
+                  Array.isArray(row) ? row.slice(0, 25) : row); // Reduziert: 25 statt 50
               }
             }
           });
@@ -9922,17 +9942,6 @@ document.addEventListener('DOMContentLoaded', () => {
       grid.initFoxyFormMap();
     }
     
-    // Memory: Global cleanup bei Page-Unload
-    window.addEventListener('beforeunload', () => {
-      try {
-        if (window.solarGrid && typeof window.solarGrid.cleanup === 'function') {
-          window.solarGrid.cleanup();
-        }
-      } catch (error) {
-        console.warn('[SolarGrid] Cleanup on unload error:', error);
-      }
-    });
-    
     // CMS-Suche wird in cms-search.js initialisiert
     // Verstecke Collection-List/Wrapper der Foxy-Forms (bleiben im DOM für Submit nutzbar)
     try {
@@ -9952,18 +9961,34 @@ document.addEventListener('DOMContentLoaded', () => {
     window.solarGrid = grid;
   });
 
-  // Cleanup beim Verlassen der Seite
+  // Memory: Einheitlicher Cleanup beim Verlassen der Seite
   window.addEventListener('beforeunload', () => {
+    try {
+      // CalculationManager cleanup
     if (calculationManager) {
       calculationManager.destroy();
     }
     
-    // Memory-Leak Prävention: Event-Listener entfernen
-    if (window.solarGrid) {
+      // SolarGrid cleanup
+      if (window.solarGrid && typeof window.solarGrid.cleanup === 'function') {
       window.solarGrid.cleanup();
+      }
+      
+      // Alle Timeouts löschen
+      const highestTimeoutId = setTimeout(() => {}, 0);
+      for (let i = 0; i < highestTimeoutId; i++) {
+        clearTimeout(i);
+      }
+      
+      // Alle Intervals löschen
+      const highestIntervalId = setInterval(() => {}, 0);
+      for (let i = 0; i < highestIntervalId; i++) {
+        clearInterval(i);
+      }
+      
+    } catch (error) {
+      console.warn('[SolarGrid] Cleanup on unload error:', error);
     }
-    
-    // CartCompatibility-Cleanup entfernt - nicht mehr benötigt mit Foxy.io
   });
 
   window.debugFoxy = {
