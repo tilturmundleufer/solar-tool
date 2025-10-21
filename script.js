@@ -5399,7 +5399,7 @@
           box-sizing: border-box;
         `;
         redirectMessage.innerHTML = `
-          <h3>Weiterleitung zur Desktop-Website</h3>
+          <h3>Weiterleitung zur Homepage</h3>
           <p>Der Konfigurator ist nur auf Desktop-Geräten verfügbar.</p>
           <p>Sie werden automatisch weitergeleitet...</p>
         `;
