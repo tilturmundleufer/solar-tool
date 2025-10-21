@@ -5341,35 +5341,58 @@
 
     showMobileWarning() {
       const mobileWarning = document.getElementById('mobile-warning');
-      const continueBtn = document.getElementById('mobile-continue');
       const closeBtn = document.getElementById('mobile-close');
       
       if (mobileWarning) {
-        // Check if user has already dismissed the warning in this session
-        const hasSeenWarning = sessionStorage.getItem('mobile-warning-seen');
+        // Zeige das Popup immer auf mobilen Geräten
+        mobileWarning.classList.remove('hidden');
         
-        if (!hasSeenWarning) {
-          mobileWarning.classList.remove('hidden');
-          
-          // Event Listeners für Buttons
-          continueBtn?.addEventListener('click', () => {
+        // Event Listener für Close Button
+        closeBtn?.addEventListener('click', () => {
+          mobileWarning.classList.add('hidden');
+        });
+        
+        // Schließen bei Klick außerhalb des Modals
+        mobileWarning.addEventListener('click', (e) => {
+          if (e.target === mobileWarning) {
             mobileWarning.classList.add('hidden');
-            sessionStorage.setItem('mobile-warning-seen', 'true');
-          });
-          
-          closeBtn?.addEventListener('click', () => {
-            mobileWarning.classList.add('hidden');
-            sessionStorage.setItem('mobile-warning-seen', 'true');
-          });
-          
-          // Schließen bei Klick außerhalb des Modals
-          mobileWarning.addEventListener('click', (e) => {
-            if (e.target === mobileWarning) {
-              mobileWarning.classList.add('hidden');
-              sessionStorage.setItem('mobile-warning-seen', 'true');
-            }
-          });
+          }
+        });
+        
+        // Verhindere alle weiteren Aktionen auf mobilen Geräten
+        this.disableMobileFunctionality();
+      }
+    }
+    
+    // Deaktiviere alle Konfigurator-Funktionen auf mobilen Geräten
+    disableMobileFunctionality() {
+      try {
+        // Verstecke den Hauptkonfigurator
+        const mainContainer = document.querySelector('.main-container, #solar-configurator, .configurator-wrapper');
+        if (mainContainer) {
+          mainContainer.style.display = 'none';
         }
+        
+        // Verstecke alle Konfigurator-spezifischen Elemente
+        const configElements = document.querySelectorAll('.grid-container, .config-sidebar, .button-bar, .checkbox-bar');
+        configElements.forEach(el => {
+          if (el) el.style.display = 'none';
+        });
+        
+        // Verhindere Event Listener
+        document.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, true);
+        
+        document.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, true);
+        
+        console.log('[SolarGrid] Mobile functionality disabled - Desktop required');
+      } catch (error) {
+        console.warn('[SolarGrid] Error disabling mobile functionality:', error);
       }
     }
     // Desktop Intro Overlay (Desktop only; zeigt bei leerem Cache/ohne URL jedes Mal)
