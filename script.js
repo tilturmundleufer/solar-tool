@@ -4679,8 +4679,61 @@
   // CartCompatibility-Modul entfernt - nicht mehr benötigt mit Foxy.io
 
   // CMS-Suche entfernt - jetzt in cms-search.js
+  
+  // CartQueue System für Race Condition Prevention
+  class CartQueue {
+    constructor() {
+      this.queue = [];
+      this.processing = false;
+    }
+    
+    async addToQueue(operation, operationName = 'Unknown') {
+      return new Promise((resolve, reject) => {
+        this.queue.push({
+          operation,
+          operationName,
+          resolve,
+          reject
+        });
+        
+        this.processQueue();
+      });
+    }
+    
+    async processQueue() {
+      if (this.processing || this.queue.length === 0) return;
+      
+      this.processing = true;
+      
+      while (this.queue.length > 0) {
+        const { operation, operationName, resolve, reject } = this.queue.shift();
+        
+        try {
+          console.log(`[CartQueue] Processing: ${operationName}`);
+          const result = await operation();
+          resolve(result);
+        } catch (error) {
+          console.error(`[CartQueue] Error in ${operationName}:`, error);
+          reject(error);
+        }
+      }
+      
+      this.processing = false;
+    }
+    
+    async waitForCompletion() {
+      while (this.processing || this.queue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+  }
 
   class SolarGrid {
+    // CartQueue System für Race Condition Prevention
+    constructor() {
+      this.cartQueue = new CartQueue();
+    }
+    
     // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
     readExtrasFromSummaryList() {
       const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Quetschkabelschuhe','Erdungsband'];
