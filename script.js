@@ -5335,34 +5335,12 @@
                        ('ontouchstart' in window && window.innerWidth <= 1024);
       
       if (isMobile) {
-        this.showMobileWarning();
+        // Auf mobilen Geräten: Direkt zur unterkonstruktion.de weiterleiten
+        this.redirectToDesktopSite();
       }
     }
 
-    showMobileWarning() {
-      const mobileWarning = document.getElementById('mobile-warning');
-      const closeBtn = document.getElementById('mobile-close');
-      
-      if (mobileWarning) {
-        // Zeige das Popup immer auf mobilen Geräten
-        mobileWarning.classList.remove('hidden');
-        
-        // Event Listener für Close Button
-        closeBtn?.addEventListener('click', () => {
-          mobileWarning.classList.add('hidden');
-        });
-        
-        // Schließen bei Klick außerhalb des Modals
-        mobileWarning.addEventListener('click', (e) => {
-          if (e.target === mobileWarning) {
-            mobileWarning.classList.add('hidden');
-          }
-        });
-        
-        // Verhindere alle weiteren Aktionen auf mobilen Geräten
-        this.disableMobileFunctionality();
-      }
-    }
+    // showMobileWarning() - Entfernt, da direkte Weiterleitung implementiert
     
     // Deaktiviere alle Konfigurator-Funktionen auf mobilen Geräten
     disableMobileFunctionality() {
@@ -5393,6 +5371,47 @@
         console.log('[SolarGrid] Mobile functionality disabled - Desktop required');
       } catch (error) {
         console.warn('[SolarGrid] Error disabling mobile functionality:', error);
+      }
+    }
+    
+    // Weiterleitung zur Desktop-Website
+    redirectToDesktopSite() {
+      try {
+        // Verstecke alle Konfigurator-Elemente
+        this.disableMobileFunctionality();
+        
+        // Zeige eine kurze Nachricht bevor der Redirect
+        const redirectMessage = document.createElement('div');
+        redirectMessage.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: #0e1e34;
+          color: white;
+          padding: 20px;
+          border-radius: 8px;
+          text-align: center;
+          z-index: 10000;
+          font-family: Arial, sans-serif;
+        `;
+        redirectMessage.innerHTML = `
+          <h3>Weiterleitung zur Desktop-Website</h3>
+          <p>Der Konfigurator ist nur auf Desktop-Geräten verfügbar.</p>
+          <p>Sie werden automatisch weitergeleitet...</p>
+        `;
+        document.body.appendChild(redirectMessage);
+        
+        // Redirect nach 2 Sekunden
+        setTimeout(() => {
+          window.location.href = 'https://unterkonstruktion.de/';
+        }, 2000);
+        
+        console.log('[SolarGrid] Redirecting mobile users to unterkonstruktion.de');
+      } catch (error) {
+        console.warn('[SolarGrid] Error redirecting to desktop site:', error);
+        // Fallback: Direkter Redirect
+        window.location.href = 'https://unterkonstruktion.de/';
       }
     }
     // Desktop Intro Overlay (Desktop only; zeigt bei leerem Cache/ohne URL jedes Mal)
