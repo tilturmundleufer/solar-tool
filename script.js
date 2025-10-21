@@ -172,62 +172,7 @@
     BRCOpti: 38.53
   };
 
-  // Staffelpreis-Konfiguration: thresholds immer in Stück (benötigte Menge),
-  // pricePerPiece = Stückpreis auf dieser Stufe; alternativ packPrice für VE=1/packbasierte Stufen
-  const TIER_PRICING = {
-    Schiene_240_cm: [
-      { minPieces: 40, pricePerPiece: 11.59 },
-      { minPieces: 80, pricePerPiece: 11.25 }
-    ],
-    // Schiene 360 cm: Keine Staffelpreise mehr – Shoppreis 17,49 verwenden
-    Schiene_360_cm: [],
-    Mittelklemmen: [],
-    Endklemmen: [],
-    Endkappen: [
-      { minPieces: 300, pricePerPiece: 0.13 },
-      { minPieces: 1200, pricePerPiece: 0.12 }
-    ],
-    Dachhaken: [
-      { minPieces: 100, pricePerPiece: 3.42 },
-      { minPieces: 720, pricePerPiece: 3.39 }
-    ],
-    Schienenverbinder: [],
-    Schrauben: [
-      { minPieces: 1000, pricePerPiece: 0.19 },
-      { minPieces: 5000, pricePerPiece: 0.18 }
-    ],
-    Tellerkopfschraube: [
-      { minPieces: 1000, pricePerPiece: 0.25 },
-      { minPieces: 5000, pricePerPiece: 0.24 }
-    ],
-    Solarmodul: [
-      { minPieces: 36, pricePerPiece: 55.90 },
-      { minPieces: 360, pricePerPiece: 54.90 }
-    ],
-    UlicaSolarBlackJadeFlow: [
-      { minPieces: 36, pricePerPiece: 62.90 },
-      { minPieces: 360, pricePerPiece: 61.90 }
-    ],
-    // Für Paletten keine Staffel – Shoppreis pro Palette wird gelesen
-    MC4_Stecker: [],
-    Solarkabel: [
-      { minPieces: 10, pricePerPiece: 83.90 },
-      { minPieces: 30, pricePerPiece: 79.90 }
-    ],
-    Quetschkabelschuhe: [
-      // Staffelpreise hier als Packpreise (VE=1) definiert
-      { minPieces: 5, packPrice: 17.90 },
-      { minPieces: 20, packPrice: 17.50 }
-    ],
-    Holzunterleger: [
-      { minPieces: 500, pricePerPiece: 0.29 },
-      { minPieces: 2000, pricePerPiece: 0.28 }
-    ]
-  };
-
-  // Globale Schalter: Welche Produkte dürfen überhaupt Staffelpreise verwenden?
-  // Um Shop-Preise 1:1 zu spiegeln, bleibt diese Liste standardmäßig leer.
-  const USE_TIER_FOR = new Set([]);
+  // TIER_PRICING System entfernt - nur noch Shop-Preise werden verwendet
 
   // ===== Kundentyp & MwSt (48h Speicherung) =====
   function getStoredCustomerType() {
@@ -298,30 +243,9 @@
   }
 
 
-  // Liefert den wirksamen VE-Preis (Packpreis) basierend auf benötigter Stückzahl und Staffelung
+  // Liefert den wirksamen VE-Preis (Packpreis) - nur noch Shop-Preise ohne Mengenrabatte
   function getPackPriceForQuantity(productKey, requiredPieces) {
-    const ve = VE[productKey] || 1;
     const basePackPrice = getPriceFromCache(productKey) || 0;
-    // Paletten: Preis immer aus Shop nehmen (basePackPrice), keine Stück-Staffel anwenden
-    if (productKey === 'SolarmodulPalette' || productKey === 'UlicaSolarBlackJadeFlowPalette') {
-      return applyVatIfBusiness(basePackPrice);
-    }
-    // Staffelpreise nur anwenden, wenn explizit erlaubt
-    if (!USE_TIER_FOR.has(productKey)) {
-      return applyVatIfBusiness(basePackPrice);
-    }
-    const tiers = TIER_PRICING[productKey];
-    if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return applyVatIfBusiness(basePackPrice);
-    const qty = Number(requiredPieces) || 0;
-    let best = null;
-    for (const tier of tiers) {
-      if (qty >= tier.minPieces) {
-        if (!best || tier.minPieces > best.minPieces) best = tier;
-      }
-    }
-    if (!best) return applyVatIfBusiness(basePackPrice);
-    if (typeof best.packPrice === 'number') return applyVatIfBusiness(best.packPrice);
-    if (typeof best.pricePerPiece === 'number') return applyVatIfBusiness(best.pricePerPiece * ve);
     return applyVatIfBusiness(basePackPrice);
   }
 
