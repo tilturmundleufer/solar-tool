@@ -5427,7 +5427,19 @@
 					ulicaModule: document.getElementById('ulica-module')?.checked || false
 				};
 				
-				const totalPrice = this.calculateConfigPrice(currentConfig);
+				// Verwende die gleiche Berechnung wie updateOverviewTotalPrice
+				// Gesamtpreis: Gecachte Totals (Quantities) × Preise aus PRICE_MAP
+				let totalPrice = 0;
+				try {
+					const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot();
+					Object.entries(totals || {}).forEach(([key, quantity]) => {
+						const pricePerUnit = PRICE_MAP[key] || 0;
+						totalPrice += (Number(quantity) || 0) * pricePerUnit;
+					});
+				} catch (_) {}
+				
+				// Zusatzprodukte (aus UI-Flags, falls aktiv)
+				try { totalPrice += this.calculateAdditionalProductsPrice(); } catch(_) {}
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 				// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
 				const section = totalPriceEl.closest('.total-section');
@@ -5525,15 +5537,18 @@
 			const totalPriceEl = document.getElementById('overview-total-price');
 			if (!totalPriceEl) return;
 			
-			// Berechne Gesamtpreis aller Konfigurationen
+			// Gesamtpreis: Gecachte Totals (Quantities) × Preise aus PRICE_MAP
 			let totalPrice = 0;
-			this.configs.forEach(config => {
-				totalPrice += this.calculateConfigPrice(config);
-			});
+			try {
+				const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot();
+				Object.entries(totals || {}).forEach(([key, quantity]) => {
+					const pricePerUnit = PRICE_MAP[key] || 0;
+					totalPrice += (Number(quantity) || 0) * pricePerUnit;
+				});
+			} catch (_) {}
 			
-			// Füge Zusatzprodukte hinzu
-			const additionalProductsPrice = this.calculateAdditionalProductsPrice();
-			totalPrice += additionalProductsPrice;
+			// Zusatzprodukte (aus UI-Flags, falls aktiv)
+			try { totalPrice += this.calculateAdditionalProductsPrice(); } catch(_) {}
 			
 			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 			// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
