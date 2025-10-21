@@ -135,7 +135,6 @@
     Solarkabel: 1,
     Holzunterleger: 50,
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
-    Erdungsklemme: 1,
     Quetschkabelschuhe: 1,
     Erdungsband: 1,
     Tellerkopfschraube: 100,
@@ -162,23 +161,13 @@
     MC4_Stecker: 39.50,
     Solarkabel: 86.90,
     Holzunterleger: 17.50,
-    // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
-    Erdungsklemme: 25.00,
     Quetschkabelschuhe: 18.50,
     Erdungsband: 8.70,
     Tellerkopfschraube: 26.00,
-    // Optimierer (Netto VK pro VE)
     HuaweiOpti: 39.68,
     BRCOpti: 38.53
   };
 
-  // TIER_PRICING System entfernt - nur noch Shop-Preise werden verwendet
-
-  // Kundentyp-Funktionen entfernt - nicht mehr benötigt
-
-  // applyVatIfBusiness entfernt - nicht mehr benötigt
-  
-  // Einfache Preis-Funktion - keine Konvertierung mehr nötig
   function convertToNettoPrice(amount) {
     return Number.isFinite(amount) ? amount : 0;
   }
@@ -218,7 +207,6 @@
     Solarkabel: { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
     Holzunterleger: { productId:'688780821dbbf26153a85117', variantId:'688780ad795c82663cd6e69b' },
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
-    Erdungsklemme: { productId:'6887e8aaa6ca43c15254d224', variantId:'6887e8abb439562cbc88db5d' },
     Quetschkabelschuhe: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
     Erdungsband: { productId:'688760e01c9c7973ee287386', variantId:'688760e0835845affc493354' },
     Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' },
@@ -270,7 +258,6 @@
     Solarkabel: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
     Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
-    Erdungsklemme: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Quetschkabelschuhe: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6887614c64676f0b0c8d5037_Kabelschuh%20Platzhalter.jpg',
     Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Tellerkopfschraube: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg'
