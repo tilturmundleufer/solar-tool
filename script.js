@@ -174,80 +174,19 @@
 
   // TIER_PRICING System entfernt - nur noch Shop-Preise werden verwendet
 
-  // ===== Kundentyp & MwSt (48h Speicherung) =====
-  function getStoredCustomerType() {
-    try {
-      const raw = localStorage.getItem('solarTool_customerType');
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || !parsed.type) return null;
-      if (typeof parsed.expiresAt === 'number' && Date.now() > parsed.expiresAt) {
-        localStorage.removeItem('solarTool_customerType');
-        return null;
-      }
-      return parsed.type === 'private' ? 'private' : 'business';
-    } catch (e) {
-      return null;
-    }
-  }
+  // Kundentyp-Funktionen entfernt - nicht mehr benötigt
 
-  function isPrivateCustomer() {
-    return getStoredCustomerType() === 'private';
-  }
-
-  function applyVatIfBusiness(amount) {
-    if (!Number.isFinite(amount)) return amount;
-    // Immer Netto anzeigen/berechnen - keine MwSt hinzufügen
-    return amount;
-  }
+  // applyVatIfBusiness entfernt - nicht mehr benötigt
   
-  // Neue Funktion: Konvertiert Brutto-Preise zu Netto-Preisen für Anzeige
+  // Einfache Preis-Funktion - keine Konvertierung mehr nötig
   function convertToNettoPrice(amount) {
-    if (!Number.isFinite(amount)) return amount;
-    // Wenn der Preis bereits Netto ist, bleibt er unverändert
-    // Wenn der Preis Brutto ist, wird er zu Netto konvertiert (÷ 1.19)
-    // Da wir nicht wissen ob der Preis Brutto oder Netto ist, nehmen wir an dass er Netto ist
-    return amount;
+    return Number.isFinite(amount) ? amount : 0;
   }
 
-  // Kundentyp-UI (Listen/Buttons) wird zentral in customer-type-popup.js verwaltet
-
-  // Brutto-Produkt-Mapping (Platzhalter) für Zusatzprodukte bei Firmenkunden
-  const PRODUCT_MAP_BRUTTO = {
-    // Module
-    Solarmodul: { productId: '68c7ec7571df9723b8ef5050', variantId: '68c7ec7e71df9723b8ef53cd' }, // Ulica 450 W inkl. MwSt (Einzelprodukt)
-    UlicaSolarBlackJadeFlow: { productId: '68c7ef7fbeeaadb13262a062', variantId: '68c7ef7ff397fcf9d6d7571e' }, // Ulica 500 W inkl. MwSt (Einzelprodukt)
-    // Neue Paletten (inkl. MwSt) – IDs aus Screenshot/Shop (Handles: ganze Palette inkl MwSt)
-    // 450 W Palette inkl. MwSt
-    SolarmodulPalette: { productId: '68c7ec7471df9723b8ef5008', variantId: '68c7ec7c71df9723b8ef5160' },
-    // 500 W Palette inkl. MwSt
-    UlicaSolarBlackJadeFlowPalette: { productId: '68c7ec7471df9723b8ef5006', variantId: '68c7ec7d71df9723b8ef5187' },
-
-    // Zubehör/Komponenten
-    Quetschkabelschuhe: { productId: '68c7ec7471df9723b8ef502d', variantId: '68c7ec7c71df9723b8ef514b' },
-    Solarkabel: { productId: '68c7ec7471df9723b8ef5031', variantId: '68c7ec7d71df9723b8ef5205' },
-    Erdungsband: { productId: '68c7ec7471df9723b8ef5033', variantId: '68c7ec7c71df9723b8ef5159' },
-    Endkappen: { productId: '68c7ec7471df9723b8ef5041', variantId: '68c7ec7e71df9723b8ef533e' },
-    Mittelklemmen: { productId: '68c7ec7471df9723b8ef5043', variantId: '68c7ec7e71df9723b8ef53e0' },
-    Dachhaken: { productId: '68c7ec7471df9723b8ef5045', variantId: '68c7ec7f71df9723b8ef54f9' },
-    Schiene_360_cm: { productId: '68c7ec7471df9723b8ef5047', variantId: '68c7ec7e71df9723b8ef53d6' },
-    Schienenverbinder: { productId: '68c7ec7471df9723b8ef5049', variantId: '68c7ec7e71df9723b8ef533b' },
-    Schiene_240_cm: { productId: '68c7ec7471df9723b8ef504b', variantId: '68c7ec7e71df9723b8ef5387' },
-    MC4_Stecker: { productId: '68c7ec7671df9723b8ef506e', variantId: '68c7ec7d71df9723b8ef5230' },
-    Tellerkopfschraube: { productId: '68c7ec7671df9723b8ef5072', variantId: '68c7ec7f71df9723b8ef544a' },
-    Schrauben: { productId: '68c7ec7771df9723b8ef5085', variantId: '68c7ec7f71df9723b8ef5406' },
-    Endklemmen: { productId: '68c7ec7771df9723b8ef5087', variantId: '68c7ec7f71df9723b8ef542a' },
-    Holzunterleger: { productId: '68c7f04a8fd58d9f974d6eb6', variantId: '68c7f04bb950895d194203e00' },
-    // Optimierer (Brutto)
-    HuaweiOpti: { productId: '68c7ec7471df9723b8ef501e', variantId: '68c7ec7e71df9723b8ef5335' },
-    BRCOpti: { productId: '68c7ec7471df9723b8ef501a', variantId: '68c7ec7b71df9723b8ef510b' }
-  };
+  // Kundentyp-System entfernt - vereinfachte Produktverwaltung
 
   function getCartProductInfo(productKey) {
-    // Firmenkunden: Brutto-Produkt bevorzugen, Privatkunden: Standard-Produkt
-    if (!isPrivateCustomer() && Object.prototype.hasOwnProperty.call(PRODUCT_MAP_BRUTTO, productKey)) {
-      return PRODUCT_MAP_BRUTTO[productKey];
-    }
+    // Nur noch ein Produkt-Mapping - Kundentyp existiert nicht mehr
     return PRODUCT_MAP[productKey];
   }
 
@@ -984,52 +923,8 @@
         // Zusatzprodukte werden hier explizit ausgeschlossen – sie kommen gesammelt auf eine separate Seite
         const pdfTotalPriceEl = productsPage.querySelector('.pdf-total-price');
           if (pdfTotalPriceEl) {
-          // Hinweis nur für Firmenkunden, unter dem Preis anordnen (rechts, Spalte)
-          if (!isPrivateCustomer()) {
-            const totalContainer = productsPage.querySelector('.pdf-total');
-            if (totalContainer && pdfTotalPriceEl.parentElement === totalContainer) {
-                const rightCol = document.createElement('div');
-                rightCol.style.display = 'flex';
-                rightCol.style.flexDirection = 'column';
-                rightCol.style.alignItems = 'flex-end';
-                rightCol.appendChild(pdfTotalPriceEl);
-                const hint = document.createElement('div');
-                hint.textContent = '(exkl. MwSt)';
-                hint.style.fontSize = '9pt';
-                hint.style.fontWeight = '400';
-                hint.style.marginTop = '2mm';
-                hint.style.opacity = '0.9';
-                hint.style.whiteSpace = 'nowrap';
-                rightCol.appendChild(hint);
-                // Positionen in Grid explizit auf erste Zeile setzen
-                const labelEl = totalContainer.firstElementChild;
-                if (labelEl && labelEl.style) {
-                  labelEl.style.gridColumn = '1 / 2';
-                  labelEl.style.gridRow = '1';
-                  labelEl.style.alignSelf = 'start';
-                  labelEl.style.marginTop = '-1px';
-                }
-                rightCol.style.gridColumn = '2 / 3';
-                rightCol.style.gridRow = '1';
-                rightCol.style.justifySelf = 'end';
-                rightCol.style.alignSelf = 'start';
-                rightCol.style.marginTop = '-1px';
-                totalContainer.appendChild(rightCol);
-                // Stelle sicher: unten genug Padding – exakt so hoch wie der Hinweis
-                setTimeout(() => {
-                  try {
-                    const hintRect = hint.getBoundingClientRect();
-                    const desiredPb = Math.ceil(hintRect.height); // px
-                    const cs = window.getComputedStyle(totalContainer);
-                    const currentPb = parseFloat(cs.paddingBottom) || 0;
-                    if (currentPb < desiredPb) {
-                      totalContainer.style.paddingBottom = desiredPb + 'px';
-                    }
-                  } catch (_) {}
-                }, 0);
-            }
+          // MwSt-Hinweis entfernt - vereinfachte UI
           }
-        }
 
         await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), pdfTotalPriceEl, {
           htmlLayout: true,
@@ -1224,43 +1119,7 @@
           // Render Zusatzprodukte-Tabelle
           const pdfAddTotalEl = additionalPage.querySelector('.pdf-additional-total-price');
           if (pdfAddTotalEl) {
-            if (!isPrivateCustomer()) {
-              const totalContainer = additionalPage.querySelector('.pdf-total');
-              if (totalContainer && pdfAddTotalEl.parentElement === totalContainer) {
-                const rightCol = document.createElement('div');
-                rightCol.style.display = 'flex';
-                rightCol.style.flexDirection = 'column';
-                rightCol.style.alignItems = 'flex-end';
-                rightCol.appendChild(pdfAddTotalEl);
-                const hint = document.createElement('div');
-                hint.textContent = '(exkl. MwSt)';
-                hint.style.fontSize = '9pt';
-                hint.style.fontWeight = '400';
-                hint.style.marginTop = '2mm';
-                hint.style.opacity = '0.9';
-                rightCol.appendChild(hint);
-                totalContainer.appendChild(rightCol);
-                setTimeout(() => {
-                  try {
-                    const labelEl = totalContainer.firstElementChild;
-                    if (!labelEl) return;
-                    const lt = labelEl.getBoundingClientRect().top;
-                    const rt = rightCol.getBoundingClientRect().top;
-                    const delta = rt - lt;
-                    if (Math.abs(delta) > 0.5) {
-                      rightCol.style.marginTop = `${-delta}px`;
-                    }
-                    const hintRect = hint.getBoundingClientRect();
-                    const desiredPb = Math.ceil(hintRect.height);
-                    const cs = window.getComputedStyle(totalContainer);
-                    const currentPb = parseFloat(cs.paddingBottom) || 0;
-                    if (currentPb < desiredPb) {
-                      totalContainer.style.paddingBottom = desiredPb + 'px';
-                    }
-                  } catch (_) {}
-                }, 0);
-              }
-            }
+            // MwSt-Hinweis entfernt - vereinfachte UI
           }
           await this.renderAdditionalProductsIntoTable(snapshot, additionalPage.querySelector('.pdf-additional-table-body'), pdfAddTotalEl);
 
@@ -5751,7 +5610,7 @@
 				const section = totalPriceEl.closest('.total-section');
 				const subtitle = section ? section.querySelector('.total-subtitle') : null;
 				if (subtitle) {
-					subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+					subtitle.style.display = 'none'; // Kundentyp entfernt
 					subtitle.textContent = 'exkl. MwSt';
 				}
 				
@@ -5811,7 +5670,7 @@
 			const section = totalPriceEl.closest('.total-section');
 			const subtitle = section ? section.querySelector('.total-subtitle') : null;
 			if (subtitle) {
-				subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+				subtitle.style.display = 'none'; // Kundentyp entfernt
 				subtitle.textContent = 'exkl. MwSt';
 			}
 		}
@@ -5860,7 +5719,7 @@
 			const section = totalPriceEl.closest('.total-section');
 			const subtitle = section ? section.querySelector('.total-subtitle') : null;
 			if (subtitle) {
-				subtitle.style.display = isPrivateCustomer() ? 'none' : '';
+				subtitle.style.display = 'none'; // Kundentyp entfernt
 				subtitle.textContent = 'exkl. MwSt';
 			}
 			
@@ -8857,11 +8716,9 @@
 
     async addSingleItemAndWait(productKey, quantity, isLast) {
       // Safeguards
-      const preferBrutto = !isPrivateCustomer() && Object.prototype.hasOwnProperty.call(PRODUCT_MAP_BRUTTO, productKey);
+      const preferBrutto = false; // Kundentyp entfernt
       let mappedForm = null;
-      if (preferBrutto && this.webflowFormMapBrutto) {
-        mappedForm = this.webflowFormMapBrutto[productKey] || null;
-      }
+      // webflowFormMapBrutto entfernt - Kundentyp existiert nicht mehr
       if (!mappedForm && this.webflowFormMap) {
         mappedForm = this.webflowFormMap[productKey] || null;
       }
@@ -9306,7 +9163,7 @@
       return Object.entries(parts).map(([k,v]) => {
         const ve = VE[k] || 1;
         const packs = Math.ceil(v / ve);
-        const m = (!isPrivateCustomer() && PRODUCT_MAP_BRUTTO[k]) ? PRODUCT_MAP_BRUTTO[k] : PRODUCT_MAP[k];
+        const m = PRODUCT_MAP[k]; // Nur noch ein Produkt-Mapping
         return (!m || packs <= 0) ? null : {
           productId: m.productId,
           variantId: m.variantId,
