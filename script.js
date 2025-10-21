@@ -8538,11 +8538,30 @@
       tryScan();
 
       try { this._foxyObserver && this._foxyObserver.disconnect(); } catch(_) {}
-      let debounceTimer = null;
-      const debounced = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => this.refreshFoxyFormMap(), 60); };
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = null;
+      }
+      let lastMutationTime = 0;
+      const THROTTLE_MS = 100; // Throttling: max 1x pro 100ms
+      
+      const debounced = () => { 
+        clearTimeout(this.debounceTimer); 
+        this.debounceTimer = setTimeout(() => this.refreshFoxyFormMap(), 60); 
+      };
+      
       this._foxyObserver = new MutationObserver((mutations) => {
+        const now = Date.now();
+        if (now - lastMutationTime < THROTTLE_MS) {
+          return; // Throttling: zu früh, ignoriere
+        }
+        lastMutationTime = now;
+        
         for (const m of mutations) {
-          if (m.addedNodes && m.addedNodes.length) { debounced(); break; }
+          if (m.addedNodes && m.addedNodes.length) { 
+            debounced(); 
+            break; 
+          }
         }
       });
       this._foxyObserver.observe(document.body, { childList: true, subtree: true });
@@ -9754,9 +9773,101 @@
         this._foxyObserver = null;
       }
       
+      // Memory: Debounce Timer cleanup
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = null;
+      }
+      
+      // Memory: Event Listener cleanup
+      this.cleanupEventListeners();
+      
+      // Memory: DOM Reference cleanup
+      this.cleanupDOMReferences();
+      
       // FEATURE 5: Performance-Monitoring Cleanup
       if (this.performanceMetrics) {
         this.performanceMetrics = null;
+      }
+    }
+    
+    // Memory: Event Listener Cleanup
+    cleanupEventListeners() {
+      try {
+        // Input-Event-Listener cleanup
+        const inputs = [this.wIn, this.hIn].filter(el => el);
+        inputs.forEach(el => {
+          el.removeEventListener('change', this.handleInputChange);
+        });
+        
+        // Modul-Auswahl-Event-Listener cleanup
+        if (this.moduleSelect) {
+          this.moduleSelect.removeEventListener('change', this.handleModuleSelectChange);
+        }
+        
+        // Orientation-Event-Listener cleanup
+        if (this.orH && this.orV) {
+          [this.orH, this.orV].forEach(el => {
+            el.removeEventListener('change', this.handleOrientationChange);
+          });
+        }
+        
+        // Checkbox-Event-Listener cleanup
+        [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule]
+          .filter(el => el).forEach(el => {
+            el.removeEventListener('change', this.handleCheckboxChange);
+          });
+        
+        // Expansion-Button-Event-Listener cleanup
+        if (this.boundExpansionClick) {
+          document.querySelectorAll('[data-dir="right"], [data-dir="left"]').forEach(btn => {
+            btn.removeEventListener('click', this.boundExpansionClick);
+          });
+          this.boundExpansionClick = null;
+        }
+        
+        // Grid-Event-Listener cleanup
+        if (this.gridEl) {
+          this.gridEl.removeEventListener('click', this.handleGridClick);
+        }
+        
+      } catch (error) {
+        console.warn('[SolarGrid] Event listener cleanup error:', error);
+      }
+    }
+    
+    // Memory: DOM Reference Cleanup
+    cleanupDOMReferences() {
+      try {
+        // DOM Element References nullen
+        this.gridEl = null;
+        this.wrapper = null;
+        this.prodList = null;
+        this.listHolder = null;
+        this.wIn = null;
+        this.hIn = null;
+        this.moduleSelect = null;
+        this.orH = null;
+        this.orV = null;
+        this.incM = null;
+        this.mc4 = null;
+        this.solarkabel = null;
+        this.holz = null;
+        this.quetschkabelschuhe = null;
+        this.erdungsband = null;
+        this.ulicaModule = null;
+        
+        // Cache References nullen
+        this.configListEl = null;
+        this.foxyFormsByName = null;
+        
+        // Array References nullen
+        this.selection = null;
+        this.configs = null;
+        this.moduleData = null;
+        
+      } catch (error) {
+        console.warn('[SolarGrid] DOM reference cleanup error:', error);
       }
       
       // FEATURE 8: Pinch-to-Zoom Cleanup
@@ -9914,6 +10025,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof grid.initFoxyFormMap === 'function') {
       grid.initFoxyFormMap();
     }
+    
+    // Memory: Global cleanup bei Page-Unload
+    window.addEventListener('beforeunload', () => {
+      try {
+        if (window.solarGrid && typeof window.solarGrid.cleanup === 'function') {
+          window.solarGrid.cleanup();
+        }
+      } catch (error) {
+        console.warn('[SolarGrid] Cleanup on unload error:', error);
+      }
+    });
     
     // CMS-Suche wird in cms-search.js initialisiert
     // Verstecke Collection-List/Wrapper der Foxy-Forms (bleiben im DOM für Submit nutzbar)
