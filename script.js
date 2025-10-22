@@ -4462,6 +4462,8 @@
           if ((k === 'Solarkabel') && (!v) && this.solarkabel && this.solarkabel.checked) v = 1;
           if ((k === 'Holzunterleger') && (!v) && this.holz && this.holz.checked) v = 1;
           if ((k === 'Quetschkabelschuhe') && (!v) && this.quetschkabelschuhe && this.quetschkabelschuhe.checked) v = 1;
+          if ((k === 'Kabelbinder') && (!v) && this.kabelbinder && this.kabelbinder.checked) v = 1;
+          if ((k === 'BlechBohrschrauben') && (!v) && this.erdungsband && this.erdungsband.checked) v = 1;
           extras[k] = Number.isFinite(v) ? v : 0;
         });
         this.lastExtras = extras;
@@ -5835,7 +5837,7 @@
 		
 		initAdditionalProductsListeners() {
 			// Event-Listener für Zusatzprodukte-Checkboxen
-			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'kabelbinder', 'huawei-opti', 'brc-opti', 'opti-qty'];
+			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'kabelbinder', 'erdungsband', 'huawei-opti', 'brc-opti', 'opti-qty'];
 			
 			additionalProductCheckboxes.forEach(checkboxId => {
 				const checkbox = document.getElementById(checkboxId);
@@ -9948,15 +9950,11 @@
         if (hCb && hCb.checked) add('HuaweiOpti', optiQty);
         if (bCb && bCb.checked) add('BRCOpti', optiQty);
         
-        // Kabelbinder: 1x wenn Checkbox aktiv
-        if (document.getElementById('kabelbinder')?.checked) {
-          add('Kabelbinder', 1);
-        }
+        // Kabelbinder werden NICHT hier hinzugefügt
+        // Sie werden nur in calculateAdditionalProductsPrice() berechnet
         
-        // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv
-        if (document.getElementById('erdungsband')?.checked) {
-          add('BlechBohrschrauben', 1);
-        }
+        // Blech-Bohrschrauben werden NICHT hier hinzugefügt
+        // Sie werden nur in calculateAdditionalProductsPrice() berechnet
       } catch(_) {}
 
     // Tellerkopfschraube 2 × Dachhaken (falls nicht bereits global konsistent)
