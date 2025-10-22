@@ -7888,7 +7888,15 @@
           }
         } catch(_) {}
 
-        // Gesamtpreis aktualisieren
+        // Totals neu berechnen und persistieren (debounced Kontext)
+        try { this.recomputeTotalsDebounced && this.recomputeTotalsDebounced(); } catch(_) {}
+        // Zusätzlich: aktuellen State sofort in den Cache schreiben (kein alter Merge)
+        try {
+          const snap = this.totalPartsCache || this.computeAllTotalsSnapshot();
+          this.saveTotalsToCache(snap);
+        } catch(_) {}
+        
+        // Gesamtpreis aktualisieren (NACH Cache-Update)
         this.updateCurrentTotalPrice();
         this.updateOverviewTotalPrice();
         
@@ -7901,14 +7909,6 @@
         
         // Automatisches Cache-Speichern bei jeder Änderung
         this.saveToCache();
-
-        // Totals neu berechnen und persistieren (debounced Kontext)
-        try { this.recomputeTotalsDebounced && this.recomputeTotalsDebounced(); } catch(_) {}
-        // Zusätzlich: aktuellen State sofort in den Cache schreiben (kein alter Merge)
-        try {
-          const snap = this.totalPartsCache || this.computeAllTotalsSnapshot();
-          this.saveTotalsToCache(snap);
-        } catch(_) {}
         
         this.performanceMetrics.updateTime = performance.now() - startTime;
         this.updateTimeout = null;
