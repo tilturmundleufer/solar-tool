@@ -5541,10 +5541,10 @@
 			const totalPriceEl = document.getElementById('overview-total-price');
 			if (!totalPriceEl) return;
 			
-			// Gesamtpreis: Gecachte Totals (Quantities) × Preise aus PRICE_MAP
+			// Gesamtpreis: Immer frische Totals berechnen (nicht aus Cache)
 			let totalPrice = 0;
 			try {
-				const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot();
+				const totals = this.computeAllTotalsSnapshot();
 				Object.entries(totals || {}).forEach(([key, quantity]) => {
 					const pricePerUnit = PRICE_MAP[key] || 0;
 					totalPrice += (Number(quantity) || 0) * pricePerUnit;
