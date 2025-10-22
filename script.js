@@ -135,6 +135,8 @@
     Solarkabel: 1,
     Holzunterleger: 50,
     Quetschkabelschuhe: 1,
+    BlechBohrschrauben: 100,
+    Kabelbinder: 100,
     Erdungsband: 1,
     Tellerkopfschraube: 100,
     HuaweiOpti: 1,
@@ -159,7 +161,9 @@
     MC4_Stecker: 39.50,
     Solarkabel: 86.90,
     Holzunterleger: 17.50,
-    Quetschkabelschuhe: 18.50,
+    Quetschkabelschuhe: 21.40,
+    BlechBohrschrauben: 24.70,
+    Kabelbinder: 3.41,
     Erdungsband: 8.70,
     Tellerkopfschraube: 26.00,
     HuaweiOpti: 39.68,
@@ -231,6 +235,8 @@
     'Schrauben': 'Schraube M10x25 - 50 Stück inkl. Muttern',
     'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück',
     'Quetschkabelschuhe': 'Ringkabelschuhe - 100 Stück',
+    'BlechBohrschrauben': 'Blech-Bohrschrauben mit EPDM Dichtung - 100 Stück',
+    'Kabelbinder': 'Kabelbinder - 100 Stück',
     'Erdungsband': 'Erdungsband - 6M',
     'Solarkabel': 'Solarkabel 100M',
     'Holzunterleger': 'Unterlegholz für Dachhacken - 50 Stück',
@@ -257,6 +263,8 @@
     Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
     Quetschkabelschuhe: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6887614c64676f0b0c8d5037_Kabelschuh%20Platzhalter.jpg',
+    BlechBohrschrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/68f81013b62d8044fc41024d_blechschraube.jpg',
+    Kabelbinder: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/68f80b1a4a90df59dba640e9_1_9.png',
     Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     Tellerkopfschraube: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg'
   };
@@ -998,7 +1006,7 @@
       } catch (e) {}
       let totalPrice = 0;
       const rows = [];
-      const ADDITIONAL_KEYS = new Set(['MC4_Stecker', 'Solarkabel', 'Holzunterleger', 'Quetschkabelschuhe']);
+      const ADDITIONAL_KEYS = new Set(['MC4_Stecker', 'Solarkabel', 'Holzunterleger', 'Quetschkabelschuhe', 'Kabelbinder', 'BlechBohrschrauben']);
       for (const [key, value] of Object.entries(parts || {})) {
         if (value <= 0) continue;
         if (options.excludeAdditionalProducts && ADDITIONAL_KEYS.has(key)) continue;
@@ -1980,6 +1988,10 @@
           console.log('Deleting Quetschkabelschuhe - quetschkabelschuhe checkbox false');
           delete parts.Quetschkabelschuhe;
         }
+        if (!config.kabelbinder) {
+          console.log('Deleting Kabelbinder - kabelbinder checkbox false');
+          delete parts.Kabelbinder;
+        }
 
         // Erdungsband hinzufügen wenn aktiviert
         if (config.erdungsband) {
@@ -2219,6 +2231,8 @@
         wood: /(?:mit|ohne)[\s-]*holz(?:unterleger)?/i,
         // "mit quetschkabelschuhe" oder "ohne quetschkabelschuhe"
         quetschkabelschuhe: /(?:mit|ohne)[\s-]*(?:quetschkabelschuhe|kabelschuhe)/i,
+        // "mit kabelbinder" oder "ohne kabelbinder"
+        kabelbinder: /(?:mit|ohne)[\s-]*kabelbinder/i,
         // "3 reihen mit 5 modulen" oder "drei reihen 5 module" oder "20 module in 4 reihen" oder "3 mal 6 module"
         rowPattern: /(?:(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?)\s*(?:mit|à|a)?\s*(\d+)\s*modul[e]?[n]?)|(?:(\d+)\s*modul[e]?[n]?\s*(?:in|auf)?\s*(\d+|ein|eine|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn)\s*(?:reihen?|zeilen?))|(?:(\d+)\s*mal\s*(\d+)\s*modul[e]?[n]?)/i,
         // Reine Reihenangabe: "reihen 3"
@@ -2288,7 +2302,7 @@
         ulicaModule: /ulica(?:\s*(500|450)\s*w?)?|black\s*jade(?:[-\s]*flow)?\s*(500|450)?/i,
         // NEU: "hinzufügen"-Befehle
         addModulesWatt: /\b(450|500)\s*(?:watt|w)\s*modul(?:e|en)?\s*hinzuf(?:ügen|uegen)\b/i,
-        addComponents: /\b(?:mc4|kabel|holz|quetschkabelschuhe|erdungsband)(?:\s*(?:,|und)\s*(?:mc4|kabel|holz|quetschkabelschuhe|erdungsband))*\s*hinzuf(?:ügen|uegen)\b/i
+        addComponents: /\b(?:mc4|kabel|holz|quetschkabelschuhe|kabelbinder|erdungsband)(?:\s*(?:,|und)\s*(?:mc4|kabel|holz|quetschkabelschuhe|kabelbinder|erdungsband))*\s*hinzuf(?:ügen|uegen)\b/i
       };
     }
 
@@ -2313,7 +2327,8 @@
         mc4: null,
         cable: null,
         wood: null,
-        quetschkabelschuhe: null
+        quetschkabelschuhe: null,
+        kabelbinder: null
       };
 
       // Normalisiere Input für bessere Erkennung
@@ -2379,6 +2394,15 @@
             checkboxes.quetschkabelschuhe = false;
           } else {
             checkboxes.quetschkabelschuhe = true;
+          }
+        }
+        
+        // Prüfe auf Kabelbinder
+        if (/\bkabelbinder\b/.test(trimmedPart)) {
+          if (/\bohne[\s-]+kabelbinder\b/.test(trimmedPart) || /\bohne[\s-]+kabelbinder\b/.test(input.toLowerCase())) {
+            checkboxes.kabelbinder = false;
+          } else {
+            checkboxes.kabelbinder = true;
           }
         }
       }
@@ -2779,6 +2803,7 @@
           if (checkboxCombinations.cable !== null) config.cable = checkboxCombinations.cable;
           if (checkboxCombinations.wood !== null) config.wood = checkboxCombinations.wood;
           if (checkboxCombinations.quetschkabelschuhe !== null) config.quetschkabelschuhe = checkboxCombinations.quetschkabelschuhe;
+          if (checkboxCombinations.kabelbinder !== null) config.kabelbinder = checkboxCombinations.kabelbinder;
                 } else {
           // Fallback: Einzelne Checkbox-Patterns parsen
           
@@ -2807,6 +2832,11 @@
           const quetschkabelschuheMatch = input.match(this.patterns.quetschkabelschuhe);
           if (quetschkabelschuheMatch) {
             config.quetschkabelschuhe = quetschkabelschuheMatch[0].toLowerCase().includes('mit');
+          }
+          
+          const kabelbinderMatch = input.match(this.patterns.kabelbinder);
+          if (kabelbinderMatch) {
+            config.kabelbinder = kabelbinderMatch[0].toLowerCase().includes('mit');
           }
         }
       }
@@ -2843,12 +2873,13 @@
       if (addComponents) {
         const list = input
           .toLowerCase()
-          .match(/(?:mc4|kabel|holz|quetschkabelschuhe|erdungsband)/g);
+          .match(/(?:mc4|kabel|holz|quetschkabelschuhe|kabelbinder|erdungsband)/g);
         if (list) {
           if (list.includes('mc4')) config.mc4 = true;
           if (list.includes('kabel')) config.cable = true;
           if (list.includes('holz')) config.wood = true;
           if (list.includes('quetschkabelschuhe')) config.quetschkabelschuhe = true;
+          if (list.includes('kabelbinder')) config.kabelbinder = true;
           if (list.includes('erdungsband')) config.erdungsband = true;
         }
       }
@@ -3194,6 +3225,9 @@
       }
       if (config.hasOwnProperty('quetschkabelschuhe')) {
         if (this.solarGrid.quetschkabelschuhe) this.solarGrid.quetschkabelschuhe.checked = config.quetschkabelschuhe;
+      }
+      if (config.hasOwnProperty('kabelbinder')) {
+        if (this.solarGrid.kabelbinder) this.solarGrid.kabelbinder.checked = config.kabelbinder;
       }
       if (config.hasOwnProperty('ulicaModule')) {
         if (this.solarGrid.ulicaModule) this.solarGrid.ulicaModule.checked = config.ulicaModule === true;
@@ -4398,7 +4432,7 @@
   class SolarGrid {
     // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
     readExtrasFromSummaryList() {
-      const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Quetschkabelschuhe','Erdungsband'];
+      const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Quetschkabelschuhe','Kabelbinder','BlechBohrschrauben','Erdungsband'];
       const extras = {};
       try {
         // Bevorzugt: interne letzte Berechnung, falls vorhanden
@@ -4471,6 +4505,7 @@
       this.solarkabel    = document.getElementById('solarkabel');
       this.holz          = document.getElementById('holz');
       this.quetschkabelschuhe = document.getElementById('quetschkabelschuhe');
+      this.kabelbinder = document.getElementById('kabelbinder');
       this.erdungsband   = document.getElementById('erdungsband');
       this.ulicaModule   = document.getElementById('ulica-module');
 
@@ -5744,7 +5779,7 @@
 		
 		initAdditionalProductsListeners() {
 			// Event-Listener für Zusatzprodukte-Checkboxen
-			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'huawei-opti', 'brc-opti', 'opti-qty'];
+			const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'kabelbinder', 'huawei-opti', 'brc-opti', 'opti-qty'];
 			
 			additionalProductCheckboxes.forEach(checkboxId => {
 				const checkbox = document.getElementById(checkboxId);
@@ -7036,6 +7071,7 @@
         // Module nur hinzufügen wenn Checkbox aktiviert ist (gleiche Logik wie calculateConfigPrice)
         const includeModules = document.getElementById('include-modules')?.checked || false;
         const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+        const kabelbinder = this.kabelbinder?.checked || false;
         
         if (!includeModules) {
           delete parts.Solarmodul;
@@ -7045,11 +7081,21 @@
           delete parts.UlicaSolarBlackJadeFlow;
         }
         
+        // Kabelbinder hinzufügen wenn Checkbox aktiv
+        if (kabelbinder) {
+          parts.Kabelbinder = 1; // pauschal 1 VE
+        } else {
+          delete parts.Kabelbinder;
+        }
+        
         // Zusatzprodukte: Erdungsband wieder in die Produktliste aufnehmen wenn Checkbox aktiv
         if (this.erdungsband && this.erdungsband.checked) {
           parts.Erdungsband = this.calculateErdungsband();
+          // Blech-Bohrschrauben automatisch hinzufügen wenn Erdungsband aktiviert
+          parts.BlechBohrschrauben = 1;
         } else {
           delete parts.Erdungsband;
+          delete parts.BlechBohrschrauben;
         }
 
 
@@ -8908,6 +8954,11 @@
         } else {
           delete parts.Quetschkabelschuhe;
         }
+        if (kabelbinder) {
+          parts.Kabelbinder = 1; // pauschal 1 VE
+        } else {
+          delete parts.Kabelbinder;
+        }
         
         // Erdungsband hinzufügen wenn aktiviert
         if (erdungsband) {
@@ -9622,7 +9673,7 @@
         }
         
         // Checkbox-Event-Listener cleanup
-        [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule]
+        [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.kabelbinder, this.erdungsband, this.ulicaModule]
           .filter(el => el).forEach(el => {
             el.removeEventListener('change', this.handleCheckboxChange);
           });
@@ -9663,6 +9714,7 @@
         this.solarkabel = null;
         this.holz = null;
         this.quetschkabelschuhe = null;
+        this.kabelbinder = null;
         this.erdungsband = null;
         this.ulicaModule = null;
         
