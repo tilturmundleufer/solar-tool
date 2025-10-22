@@ -5640,19 +5640,8 @@
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
-			// Kabelbinder
-			if (document.getElementById('kabelbinder')?.checked) {
-				const packagesNeeded = 1; // 1x Kabelbinder - 100 Stück
-				const pricePerPackage = getPackPriceForQuantity('Kabelbinder', 1);
-				totalPrice += packagesNeeded * pricePerPackage;
-			}
-			
-			// Blech-Bohrschrauben (automatisch bei Erdungsband)
-			if (document.getElementById('erdungsband')?.checked) {
-				const packagesNeeded = 1; // 1x Blech-Bohrschrauben - 100 Stück
-				const pricePerPackage = getPackPriceForQuantity('BlechBohrschrauben', 1);
-				totalPrice += packagesNeeded * pricePerPackage;
-			}
+			// Kabelbinder und Blech-Bohrschrauben werden NICHT hier berechnet
+			// Sie werden in computeAllTotalsSnapshot() berechnet und in den gecachten Totals gespeichert
 			
 			// Optimierer (Huawei/BRC)
 			const hCb = document.getElementById('huawei-opti');
@@ -9943,11 +9932,15 @@
         if (hCb && hCb.checked) add('HuaweiOpti', optiQty);
         if (bCb && bCb.checked) add('BRCOpti', optiQty);
         
-        // Kabelbinder werden NICHT hier hinzugefügt
-        // Sie werden nur in calculateAdditionalProductsPrice() berechnet
+        // Kabelbinder: 1x wenn Checkbox aktiv
+        if (document.getElementById('kabelbinder')?.checked) {
+          add('Kabelbinder', 1);
+        }
         
-        // Blech-Bohrschrauben werden NICHT hier hinzugefügt
-        // Sie werden nur in calculateAdditionalProductsPrice() berechnet
+        // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv
+        if (document.getElementById('erdungsband')?.checked) {
+          add('BlechBohrschrauben', 1);
+        }
       } catch(_) {}
 
     // Tellerkopfschraube 2 × Dachhaken (falls nicht bereits global konsistent)
