@@ -5511,32 +5511,6 @@
 			this.autoSaveTimeout = null;
 		}
 
-		updateOverviewTotalPrice() {
-			const totalPriceEl = document.getElementById('overview-total-price');
-			if (!totalPriceEl) return;
-			
-			// Gesamtpreis: Gecachte Totals (Quantities) × Preise aus PRICE_MAP
-			let totalPrice = 0;
-			try {
-				const totals = this.loadTotalsFromCache() || this.computeAllTotalsSnapshot();
-				Object.entries(totals || {}).forEach(([key, quantity]) => {
-					const pricePerUnit = PRICE_MAP[key] || 0;
-					totalPrice += (Number(quantity) || 0) * pricePerUnit;
-				});
-			} catch (_) {}
-			
-			// Zusatzprodukte (aus UI-Flags, falls aktiv)
-			try { totalPrice += this.calculateAdditionalProductsPrice(); } catch(_) {}
-			
-			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
-			// Subtitle pflegen
-			const section = totalPriceEl.closest('.total-section');
-			const subtitle = section ? section.querySelector('.total-subtitle') : null;
-			if (subtitle) {
-				subtitle.style.display = 'none'; // Kundentyp entfernt
-				subtitle.textContent = 'exkl. MwSt';
-			}
-		}
 		showAutoSaveIndicator() {
 			const indicator = document.getElementById('auto-save-indicator');
 			if (!indicator) return;
