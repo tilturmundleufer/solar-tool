@@ -7501,6 +7501,7 @@
 			this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
   		this.holz.checked = cfg.holz;
 			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
+			if (this.kabelbinder) this.kabelbinder.checked = cfg.kabelbinder || false; // Fallback für alte Konfigurationen
 			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false; // Fallback für alte Konfigurationen
 			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false; // Fallback für alte Konfigurationen
 
@@ -7543,6 +7544,7 @@
 			this.solarkabel.checked = cfg.solarkabel || false;
 			this.holz.checked = cfg.holz;
 			this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
+			if (this.kabelbinder) this.kabelbinder.checked = cfg.kabelbinder || false;
 			if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
 			if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
 
@@ -7779,6 +7781,7 @@
         solarkabel:  this.solarkabel && this.solarkabel.checked,
         holz:        this.holz && this.holz.checked,
         quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked,
+        kabelbinder: this.kabelbinder && this.kabelbinder.checked,
         erdungsband: this.erdungsband ? this.erdungsband.checked : false,
         ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
         cols:        this.cols,
@@ -8771,7 +8774,7 @@
     async addCurrentToCart() {
       try {
         this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
-        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
+        const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.kabelbinder ? this.kabelbinder.checked : false, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
       const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
       
       if (itemCount === 0) {
@@ -8837,20 +8840,22 @@
       // Zusatzprodukte dürfen NICHT pro Konfiguration summiert werden, sondern nur aus der globalen Zusatzproduktliste stammen.
       const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
         const p = (idx === this.currentConfig)
-          ? await this._buildPartsFor(this.selection, (this.incM && this.incM.checked) !== false, this.mc4 && this.mc4.checked, this.solarkabel && this.solarkabel.checked, this.holz && this.holz.checked, this.quetschkabelschuhe && this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false)
-          : await this._buildPartsFor(cfg.selection, (cfg.incM === false) ? false : true, !!cfg.mc4, !!cfg.solarkabel, !!cfg.holz, !!cfg.quetschkabelschuhe, !!cfg.erdungsband, !!cfg.ulicaModule);
+          ? await this._buildPartsFor(this.selection, (this.incM && this.incM.checked) !== false, this.mc4 && this.mc4.checked, this.solarkabel && this.solarkabel.checked, this.holz && this.holz.checked, this.quetschkabelschuhe && this.quetschkabelschuhe.checked, this.kabelbinder ? this.kabelbinder.checked : false, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false)
+          : await this._buildPartsFor(cfg.selection, (cfg.incM === false) ? false : true, !!cfg.mc4, !!cfg.solarkabel, !!cfg.holz, !!cfg.quetschkabelschuhe, !!cfg.kabelbinder, !!cfg.erdungsband, !!cfg.ulicaModule);
         // Zusatzprodukte aus Einzel-Bundles entfernen – sie werden später einmalig aus der UI-Liste gelesen
         delete p.MC4_Stecker;
         delete p.Solarkabel;
         delete p.Holzunterleger;
         delete p.Quetschkabelschuhe;
+        delete p.Kabelbinder;
+        delete p.BlechBohrschrauben;
         delete p.Erdungsband;
         return p;
       }));
       
       // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
       if (this.currentConfig === null && this.configs.length === 0) {
-            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
+            const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.kabelbinder ? this.kabelbinder.checked : false, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
             allBundles.push(currentParts);
       }
       
@@ -8910,7 +8915,7 @@
       }, 'addAllToCart');
     }
 
-    async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe, erdungsband, ulicaModule) {
+    async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe, kabelbinder, erdungsband, ulicaModule) {
       // ISOLATION: Erstelle isolierte Berechnung ohne globale Zustandsänderungen
       try {
         // Erstelle isolierte Grid-Instanz für Berechnung
@@ -8963,8 +8968,11 @@
         // Erdungsband hinzufügen wenn aktiviert
         if (erdungsband) {
           parts.Erdungsband = this.calculateErdungsbandIsolated(sel);
+          // Blech-Bohrschrauben automatisch hinzufügen wenn Erdungsband aktiviert
+          parts.BlechBohrschrauben = 1;
         } else {
           delete parts.Erdungsband;
+          delete parts.BlechBohrschrauben;
         }
         
         // Palettenlogik anwenden (36er Bündel je Modultyp)
