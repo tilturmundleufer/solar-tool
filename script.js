@@ -7916,6 +7916,7 @@
 
         // Gesamtpreis aktualisieren
         this.updateCurrentTotalPrice();
+        this.updateOverviewTotalPrice();
         
         // Update config-list und overview wenn eine Konfiguration ausgewählt ist
         if (this.currentConfig !== null) {
