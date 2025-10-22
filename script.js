@@ -5645,6 +5645,20 @@
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
+			// Kabelbinder
+			if (document.getElementById('kabelbinder')?.checked) {
+				const packagesNeeded = 1; // 1x Kabelbinder - 100 Stück
+				const pricePerPackage = getPackPriceForQuantity('Kabelbinder', 1);
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
+			// Blech-Bohrschrauben (automatisch bei Erdungsband)
+			if (document.getElementById('erdungsband')?.checked) {
+				const packagesNeeded = 1; // 1x Blech-Bohrschrauben - 100 Stück
+				const pricePerPackage = getPackPriceForQuantity('BlechBohrschrauben', 1);
+				totalPrice += packagesNeeded * pricePerPackage;
+			}
+			
 			// Optimierer (Huawei/BRC)
 			const hCb = document.getElementById('huawei-opti');
 			const bCb = document.getElementById('brc-opti');
@@ -5745,6 +5759,48 @@
 						<div class="item-info">
 							<span class="item-name">Quetschkabelschuhe</span>
 							<span class="item-ve">${VE['Quetschkabelschuhe']} Stück</span>
+						</div>
+					</div>
+					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Kabelbinder
+			if (document.getElementById('kabelbinder')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPackPriceForQuantity('Kabelbinder', 1);
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item produkt-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1×</span>
+						<div class="item-info">
+							<span class="item-name">Kabelbinder</span>
+							<span class="item-ve">${VE['Kabelbinder']} Stück</span>
+						</div>
+					</div>
+					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+				`;
+				additionalProductsListEl.appendChild(item);
+			}
+			
+			// Blech-Bohrschrauben (automatisch bei Erdungsband)
+			if (document.getElementById('erdungsband')?.checked) {
+				const packagesNeeded = 1;
+				const pricePerPackage = getPackPriceForQuantity('BlechBohrschrauben', 1);
+				const totalPrice = packagesNeeded * pricePerPackage;
+				
+				const item = document.createElement('div');
+				item.className = 'additional-product-item produkt-item';
+				item.innerHTML = `
+					<div class="item-left">
+						<span class="item-quantity">1×</span>
+						<div class="item-info">
+							<span class="item-name">Blech-Bohrschrauben</span>
+							<span class="item-ve">${VE['BlechBohrschrauben']} Stück</span>
 						</div>
 					</div>
 					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
@@ -7081,22 +7137,17 @@
           delete parts.UlicaSolarBlackJadeFlow;
         }
         
-        // Kabelbinder hinzufügen wenn Checkbox aktiv
-        if (kabelbinder) {
-          parts.Kabelbinder = 1; // pauschal 1 VE
-        } else {
-          delete parts.Kabelbinder;
-        }
-        
         // Zusatzprodukte: Erdungsband wieder in die Produktliste aufnehmen wenn Checkbox aktiv
         if (this.erdungsband && this.erdungsband.checked) {
           parts.Erdungsband = this.calculateErdungsband();
-          // Blech-Bohrschrauben automatisch hinzufügen wenn Erdungsband aktiviert
-          parts.BlechBohrschrauben = 1;
         } else {
           delete parts.Erdungsband;
-          delete parts.BlechBohrschrauben;
         }
+        
+        // Kabelbinder und Blech-Bohrschrauben werden NICHT in der Produktliste angezeigt
+        // Sie werden nur in der Zusatzproduktliste angezeigt
+        delete parts.Kabelbinder;
+        delete parts.BlechBohrschrauben;
 
 
       // Palettenlogik für Produktliste (36er-Bündel je nach Modultyp)
@@ -9896,6 +9947,16 @@
         const optiQty = Math.max(1, parseInt(qEl && qEl.value || '1', 10));
         if (hCb && hCb.checked) add('HuaweiOpti', optiQty);
         if (bCb && bCb.checked) add('BRCOpti', optiQty);
+        
+        // Kabelbinder: 1x wenn Checkbox aktiv
+        if (document.getElementById('kabelbinder')?.checked) {
+          add('Kabelbinder', 1);
+        }
+        
+        // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv
+        if (document.getElementById('erdungsband')?.checked) {
+          add('BlechBohrschrauben', 1);
+        }
       } catch(_) {}
 
     // Tellerkopfschraube 2 × Dachhaken (falls nicht bereits global konsistent)
