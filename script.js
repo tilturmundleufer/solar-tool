@@ -5467,16 +5467,9 @@
 				// Berechne nur den Preis der aktuellen Konfiguration
 				let totalPrice = 0;
 				try {
-					// Verwende die aktuelle Konfiguration für die Berechnung
-					const parts = this.calculatePartsSync();
-					Object.entries(parts || {}).forEach(([key, quantity]) => {
-						const pricePerUnit = PRICE_MAP[key] || 0;
-						totalPrice += (Number(quantity) || 0) * pricePerUnit;
-					});
+					// Verwende die ursprüngliche calculateConfigPrice Logik für die aktuelle Konfiguration
+					totalPrice = this.calculateConfigPrice(currentConfig);
 				} catch (_) {}
-				
-				// Zusatzprodukte werden NICHT in den current-total-price einbezogen
-				// Sie werden nur im overview-total-price berücksichtigt
 				totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 				// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
 				const section = totalPriceEl.closest('.total-section');
