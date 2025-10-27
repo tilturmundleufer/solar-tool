@@ -134,7 +134,7 @@
     MC4_Stecker: 50,
     Solarkabel: 1,
     Holzunterleger: 50,
-    Ringkabelschuhe: 1,
+    Ringkabelschuhe: 100,
     BlechBohrschrauben: 100,
     Kabelbinder: 100,
     Erdungsband: 1,
