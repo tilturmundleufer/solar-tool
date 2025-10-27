@@ -5551,8 +5551,8 @@
 				});
 			} catch (_) {}
 			
-			// Zusatzprodukte (aus UI-Flags, falls aktiv)
-			try { totalPrice += this.calculateAdditionalProductsPrice(); } catch(_) {}
+			// HINWEIS: Zusatzprodukte sind bereits in computeAllTotalsSnapshot() enthalten
+			// calculateAdditionalProductsPrice() wird NICHT mehr addiert (verhindert Doppelberechnung)
 			
 			totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
 			// Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
