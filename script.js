@@ -9933,6 +9933,18 @@
           add('Ringkabelschuhe', 1);
         }
         
+        // Erdungsband: Berechne Menge basierend auf allen Konfigurationen
+        if (document.getElementById('erdungsband')?.checked) {
+          let totalErdungsband = 0;
+          for (let i = 0; i < (this.configs?.length || 0); i++) {
+            const cfg = this.configs[i];
+            if (!cfg) continue;
+            const moduleCount = (cfg.selection || []).flat().filter(Boolean).length;
+            totalErdungsband += Math.ceil(moduleCount / 10); // 1 Erdungsband pro 10 Module
+          }
+          if (totalErdungsband > 0) add('Erdungsband', totalErdungsband);
+        }
+        
         // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv
         if (document.getElementById('erdungsband')?.checked) {
           add('BlechBohrschrauben', 1);
