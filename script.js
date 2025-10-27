@@ -134,7 +134,7 @@
     MC4_Stecker: 50,
     Solarkabel: 1,
     Holzunterleger: 50,
-    Quetschkabelschuhe: 1,
+    Ringkabelschuhe: 1,
     BlechBohrschrauben: 100,
     Kabelbinder: 100,
     Erdungsband: 1,
@@ -161,7 +161,7 @@
     MC4_Stecker: 39.50,
     Solarkabel: 86.90,
     Holzunterleger: 17.50,
-    Quetschkabelschuhe: 21.40,
+    Ringkabelschuhe: 21.40,
     BlechBohrschrauben: 24.70,
     Kabelbinder: 3.41,
     Erdungsband: 8.70,
@@ -209,7 +209,7 @@
     Solarkabel: { productId:'687fd60dc599f5e95d783f99', variantId:'687fd60dd3a8ae1f00a6d6d1' },
     Holzunterleger: { productId:'688780821dbbf26153a85117', variantId:'688780ad795c82663cd6e69b' },
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
-    Quetschkabelschuhe: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
+    Ringkabelschuhe: { productId:'68876153200e1a5e28a1b709', variantId:'6887615388988b2ccda11067' },
     Erdungsband: { productId:'688760e01c9c7973ee287386', variantId:'688760e0835845affc493354' },
     Tellerkopfschraube: { productId:'688760a7124e867cf2b20051', variantId:'688760a7f246d23f70575fb1' },
     // Optimierer (Netto)
@@ -234,7 +234,7 @@
     'MC4_Stecker': 'MC4 Stecker - 50 Steckerpaare',
     'Schrauben': 'Schraube M10x25 - 50 Stück inkl. Muttern',
     'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück',
-    'Quetschkabelschuhe': 'Ringkabelschuhe - 100 Stück',
+    'Ringkabelschuhe': 'Ringkabelschuhe - 100 Stück',
     'BlechBohrschrauben': 'Blech-Bohrschrauben mit EPDM Dichtung - 100 Stück',
     'Kabelbinder': 'Kabelbinder - 100 Stück',
     'Erdungsband': 'Erdungsband - 6M',
@@ -262,7 +262,7 @@
     Solarkabel: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
     Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
     // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
-    Quetschkabelschuhe: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6887614c64676f0b0c8d5037_Kabelschuh%20Platzhalter.jpg',
+    Ringkabelschuhe: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6887614c64676f0b0c8d5037_Kabelschuh%20Platzhalter.jpg',
     BlechBohrschrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/68f81013b62d8044fc41024d_blechschraube.jpg',
     Kabelbinder: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/68f80b1a4a90df59dba640e9_1_9.png',
     Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
@@ -1006,7 +1006,7 @@
       } catch (e) {}
       let totalPrice = 0;
       const rows = [];
-      const ADDITIONAL_KEYS = new Set(['MC4_Stecker', 'Solarkabel', 'Holzunterleger', 'Quetschkabelschuhe', 'Kabelbinder', 'BlechBohrschrauben']);
+      const ADDITIONAL_KEYS = new Set(['MC4_Stecker', 'Solarkabel', 'Holzunterleger', 'Ringkabelschuhe', 'Kabelbinder', 'BlechBohrschrauben']);
       for (const [key, value] of Object.entries(parts || {})) {
         if (value <= 0) continue;
         if (options.excludeAdditionalProducts && ADDITIONAL_KEYS.has(key)) continue;
@@ -1075,7 +1075,7 @@
           result.Holzunterleger = 1;
         }
         if (anyQuetsch) {
-          result.Quetschkabelschuhe = 1;
+          result.Ringkabelschuhe = 1;
         }
         // Optimierer (Huawei/BRC) – Menge aus globaler UI lesen
         try {
@@ -1985,8 +1985,8 @@
           delete parts.Holzunterleger;
         }
         if (!config.quetschkabelschuhe) {
-          console.log('Deleting Quetschkabelschuhe - quetschkabelschuhe checkbox false');
-          delete parts.Quetschkabelschuhe;
+          console.log('Deleting Ringkabelschuhe - ringkabelschuhe checkbox false');
+          delete parts.Ringkabelschuhe;
         }
         if (!config.kabelbinder) {
           console.log('Deleting Kabelbinder - kabelbinder checkbox false');
@@ -2388,7 +2388,7 @@
           }
         }
         
-        // Prüfe auf Quetschkabelschuhe
+        // Prüfe auf Ringkabelschuhe
         if (/\b(?:quetschkabelschuhe|kabelschuhe)\b/.test(trimmedPart)) {
           if (/\bohne[\s-]+(?:quetschkabelschuhe|kabelschuhe)\b/.test(trimmedPart) || /\bohne[\s-]+(?:quetschkabelschuhe|kabelschuhe)\b/.test(input.toLowerCase())) {
             checkboxes.quetschkabelschuhe = false;
@@ -4432,7 +4432,7 @@
   class SolarGrid {
     // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
     readExtrasFromSummaryList() {
-      const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Quetschkabelschuhe','Kabelbinder','BlechBohrschrauben','Erdungsband'];
+      const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Ringkabelschuhe','Kabelbinder','BlechBohrschrauben','Erdungsband'];
       const extras = {};
       try {
         // Bevorzugt: interne letzte Berechnung, falls vorhanden
@@ -4461,7 +4461,7 @@
           // Fallback auf Checkboxen, falls Summary noch nicht gemountet oder Label abweichend ist
           if ((k === 'Solarkabel') && (!v) && this.solarkabel && this.solarkabel.checked) v = 1;
           if ((k === 'Holzunterleger') && (!v) && this.holz && this.holz.checked) v = 1;
-          if ((k === 'Quetschkabelschuhe') && (!v) && this.quetschkabelschuhe && this.quetschkabelschuhe.checked) v = 1;
+          if ((k === 'Ringkabelschuhe') && (!v) && this.quetschkabelschuhe && this.quetschkabelschuhe.checked) v = 1;
           if ((k === 'Kabelbinder') && (!v) && this.kabelbinder && this.kabelbinder.checked) v = 1;
           if ((k === 'BlechBohrschrauben') && (!v) && this.erdungsband && this.erdungsband.checked) v = 1;
           extras[k] = Number.isFinite(v) ? v : 0;
@@ -5607,10 +5607,10 @@
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
-			// Quetschkabelschuhe
+			// Ringkabelschuhe
 			if (document.getElementById('quetschkabelschuhe')?.checked) {
-				const packagesNeeded = 1; // 1x Quetschkabelschuhe - 100 Stück
-				const pricePerPackage = getPackPriceForQuantity('Quetschkabelschuhe', 1);
+				const packagesNeeded = 1; // 1x Ringkabelschuhe - 100 Stück
+				const pricePerPackage = getPackPriceForQuantity('Ringkabelschuhe', 1);
 				totalPrice += packagesNeeded * pricePerPackage;
 			}
 			
@@ -5703,10 +5703,10 @@
 				additionalProductsListEl.appendChild(item);
 			}
 			
-			// Quetschkabelschuhe
+			// Ringkabelschuhe
 			if (document.getElementById('quetschkabelschuhe')?.checked) {
 				const packagesNeeded = 1;
-				const pricePerPackage = getPackPriceForQuantity('Quetschkabelschuhe', 1);
+				const pricePerPackage = getPackPriceForQuantity('Ringkabelschuhe', 1);
 				const totalPrice = packagesNeeded * pricePerPackage;
 				
 				const item = document.createElement('div');
@@ -5715,8 +5715,8 @@
 					<div class="item-left">
 						<span class="item-quantity">1×</span>
 						<div class="item-info">
-							<span class="item-name">Quetschkabelschuhe</span>
-							<span class="item-ve">${VE['Quetschkabelschuhe']} Stück</span>
+							<span class="item-name">Ringkabelschuhe</span>
+							<span class="item-ve">${VE['Ringkabelschuhe']} Stück</span>
 						</div>
 					</div>
 					<span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
@@ -8856,7 +8856,7 @@
         delete p.MC4_Stecker;
         delete p.Solarkabel;
         delete p.Holzunterleger;
-        delete p.Quetschkabelschuhe;
+        delete p.Ringkabelschuhe;
         delete p.Kabelbinder;
         delete p.BlechBohrschrauben;
         delete p.Erdungsband;
@@ -8965,9 +8965,9 @@
           delete parts.Holzunterleger;
         }
         if (quetschkabelschuhe) {
-          parts.Quetschkabelschuhe = 1; // pauschal 1 VE
+          parts.Ringkabelschuhe = 1; // pauschal 1 VE
         } else {
-          delete parts.Quetschkabelschuhe;
+          delete parts.Ringkabelschuhe;
         }
         if (kabelbinder) {
           parts.Kabelbinder = 1; // pauschal 1 VE
