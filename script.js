@@ -8403,8 +8403,19 @@
     }
 
     addProductToCart(productKey, quantity) {
+      // Validiere productKey - überspringe leere oder ungültige Produkte
+      if (!productKey || productKey.trim() === '') {
+        console.warn('[SolarGrid] Leerer productKey übersprungen');
+        return;
+      }
+      
       // Foxy.io: Formular per Produktname finden und submitten
       const displayName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
+      if (!displayName || displayName.trim() === '') {
+        console.warn('[SolarGrid] Leerer displayName übersprungen für productKey:', productKey);
+        return;
+      }
+      
       const form = this.findFoxyFormByName ? this.findFoxyFormByName(displayName) : null;
       if (!form) {
         // Fallback: synthetisches Foxy-Form in verstecktem Iframe submitten
@@ -8536,7 +8547,12 @@
             // Achtung: qtyRaw ist bereits die Pack-Menge (qty/VE) aus dem Totals-Snapshot
             const packs = Math.max(0, Math.floor(Number(qtyRaw)));
             if (!packs || packs <= 0) { await sleep(120); continue; }
+            
+            // Validiere Key und displayName - überspringe leere oder ungültige Produkte
+            if (!key || key.trim() === '') { await sleep(120); continue; }
             const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
+            if (!displayName || displayName.trim() === '') { await sleep(120); continue; }
+            
             const d = getData(displayName) || {};
             const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, packs));
             
