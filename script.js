@@ -9912,6 +9912,11 @@
           add('Kabelbinder', 1);
         }
         
+        // Ringkabelschuhe: 1x wenn Checkbox aktiv
+        if (document.getElementById('quetschkabelschuhe')?.checked) {
+          add('Ringkabelschuhe', 1);
+        }
+        
         // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv
         if (document.getElementById('erdungsband')?.checked) {
           add('BlechBohrschrauben', 1);
