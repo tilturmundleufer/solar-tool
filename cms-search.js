@@ -222,6 +222,9 @@
       
       console.log('[CMS-SEARCH] init binding events');
       
+      // Flag um zu tracken ob gerade auf ein Item geklickt wird
+      var clickOnItemInProgress = false;
+      
       // Input-Events
       document.addEventListener('input', function(e){
         var t = e.target;
@@ -270,11 +273,25 @@
         }
       }, true);
       
+      // Click-Handler für Items - MUSS VOR focusout sein (Event-Bubbling)
+      document.addEventListener('mousedown', function(e){
+        var clickedItem = e.target.closest && e.target.closest('[data-search^="cms-item-"], [data-search^="cms_item_"], .search-cms-item-2, .search-cms-item');
+        if(clickedItem){
+          // Markiere dass ein Click auf ein Item stattfindet
+          clickOnItemInProgress = true;
+          // Reset nach kurzer Zeit
+          setTimeout(function(){ clickOnItemInProgress = false; }, 300);
+        }
+      }, true);
+      
       document.addEventListener('focusout', function(e){
         var t = e.target; 
         try{ 
           if(!t || !t.matches || !t.matches('[data-input^="search-"]')) return; 
         }catch(_){ return; }
+        
+        // Überspringe wenn gerade auf ein Item geklickt wird
+        if(clickOnItemInProgress) return;
         
         var attr = (t.getAttribute('data-input')||'').toString();
         var m = attr.match(/^search-(.+)$/);
@@ -283,7 +300,24 @@
         var key = m[1];
         var root = getListRootForInput(t) || document;
         var wrapper = root.querySelector('.search-cms-wrapper-2, .search-cms-wrapper, [role="list"]');
-        if(wrapper) wrapper.style.display = 'none';
+        
+        // Delay einbauen, damit Clicks auf Items verarbeitet werden können
+        // Prüfe ob das neue Fokus-Element innerhalb des Wrappers liegt
+        setTimeout(function(){
+          // Nochmal prüfen ob inzwischen ein Click auf ein Item stattgefunden hat
+          if(clickOnItemInProgress) return;
+          
+          var activeEl = document.activeElement;
+          var isClickInsideWrapper = wrapper && (
+            wrapper.contains(activeEl) || 
+            (activeEl && activeEl.closest && activeEl.closest('.search-cms-wrapper-2, .search-cms-wrapper, [role="list"]'))
+          );
+          
+          // Nur verstecken, wenn der Fokus nicht auf ein Element innerhalb des Wrappers geht
+          if(wrapper && !isClickInsideWrapper){
+            wrapper.style.display = 'none';
+          }
+        }, 150); // 150ms Delay für Click-Verarbeitung
       }, true);
       
       // Initialzustand + URL-Vorbelegung
