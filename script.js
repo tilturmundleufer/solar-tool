@@ -8544,8 +8544,18 @@
           // Link-basierte GET-Requests (keine iFrames)
           const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
           for (const [key, qtyRaw] of entries) {
-            // Achtung: qtyRaw ist bereits die Pack-Menge (qty/VE) aus dem Totals-Snapshot
-            const packs = Math.max(0, Math.floor(Number(qtyRaw)));
+            // qtyRaw sollte bereits die Pack-Menge sein (aus computeAllTotalsSnapshot),
+            // aber im Fallback-Fall (parts direkt) könnten es Stückzahlen sein.
+            // Prüfe: Wenn qtyRaw > VE, dann ist es wahrscheinlich eine Stückzahl und muss umgerechnet werden.
+            const ve = VE[key] || 1;
+            const numQty = Number(qtyRaw) || 0;
+            if (numQty <= 0) { await sleep(120); continue; }
+            
+            // Wenn qtyRaw größer als VE ist, dann ist es wahrscheinlich eine Stückzahl
+            // Ansonsten ist es bereits eine Pack-Menge (kann auch < 1 sein bei sehr kleinen Mengen)
+            const packs = numQty > ve 
+              ? Math.ceil(numQty / ve)  // Stückzahl → Pack-Menge umrechnen
+              : Math.max(1, Math.ceil(numQty)); // Bereits Pack-Menge, mindestens 1 Pack wenn > 0
             if (!packs || packs <= 0) { await sleep(120); continue; }
             
             // Validiere Key und displayName - überspringe leere oder ungültige Produkte
