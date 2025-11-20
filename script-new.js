@@ -7302,20 +7302,11 @@
             add('Ringkabelschuhe', 1);
           }
           
-          // Erdungsband: Berechne Menge basierend auf allen Konfigurationen (gecacht)
-          const erdungsbandEl = this.getCachedElement('erdungsband', 'erdungsband');
-          if (erdungsbandEl?.checked) {
-            let totalErdungsband = 0;
-            for (let i = 0; i < (this.configs?.length || 0); i++) {
-              const cfg = this.configs[i];
-              if (!cfg) continue;
-              const moduleCount = (cfg.selection || []).flat().filter(Boolean).length;
-              totalErdungsband += Math.ceil(moduleCount / 10); // 1 Erdungsband pro 10 Module
-            }
-            if (totalErdungsband > 0) add('Erdungsband', totalErdungsband);
-          }
+          // Erdungsband: Wird bereits in calculatePartsSync() pro Config berechnet (Zeile 5113-5115)
+          // KEINE zusätzliche Berechnung hier - vermeidet Dopplung!
           
           // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv (gecacht)
+          const erdungsbandEl = this.getCachedElement('erdungsband', 'erdungsband');
           if (erdungsbandEl?.checked) {
             add('BlechBohrschrauben', 1);
           }
