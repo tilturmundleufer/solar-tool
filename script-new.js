@@ -2769,7 +2769,12 @@
           kabelbinder: null,
           quetschkabelschuhe: null
         };
-  
+        
+        // Memory-Fix: Globale Event-Listener Referenzen für Cleanup
+        this.boundGlobalAddAllClick = null;
+        this.boundMobileDisableClick = null;
+        this.boundMobileDisableTouch = null;
+
         this.init();
       }
   
@@ -3209,16 +3214,18 @@
             if (el) el.style.display = 'none';
           });
           
-          // Verhindere Event Listener
-          document.addEventListener('click', (e) => {
+          // Verhindere Event Listener (Memory-Fix: Referenzen speichern)
+          this.boundMobileDisableClick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-          }, true);
+          };
+          document.addEventListener('click', this.boundMobileDisableClick, true);
           
-          document.addEventListener('touchstart', (e) => {
+          this.boundMobileDisableTouch = (e) => {
             e.preventDefault();
             e.stopPropagation();
-          }, true);
+          };
+          document.addEventListener('touchstart', this.boundMobileDisableTouch, true);
           
           console.log('[SolarGrid] Mobile functionality disabled - Desktop required');
         } catch (error) {
@@ -3487,7 +3494,8 @@
               }
               
               // Delegiertes Click-Handling: Unterstützt mehrere Add-All Buttons (Overview & Detail)
-              document.addEventListener('click', (ev) => {
+              // Memory-Fix: Referenz speichern für Cleanup
+              this.boundGlobalAddAllClick = (ev) => {
                   try{
                       var target = ev.target;
                       if (!target || !target.closest) return;
@@ -3496,7 +3504,8 @@
                       try{ ev.preventDefault(); }catch(_){ }
                       this.addAllConfigsToCart();
                   }catch(_){ }
-              }, true);
+              };
+              document.addEventListener('click', this.boundGlobalAddAllClick, true);
               
               // Alle Konfigurationen zurücksetzen
               const continueLaterBtn = document.getElementById('continue-later-btn');
@@ -3805,7 +3814,8 @@
               const additionalProductsListEl = document.getElementById('additional-products-list');
               if (!additionalProductsListEl) return;
               
-              additionalProductsListEl.innerHTML = '';
+              // Memory-Fix: replaceChildren() statt innerHTML
+              additionalProductsListEl.replaceChildren();
               
               // MC4 Stecker
               if (document.getElementById('mc4')?.checked) {
@@ -4784,28 +4794,35 @@
       buildGrid() {
             if (!Array.isArray(this.selection)) return;
             
+            // Memory-Fix: Entferne alte Grid-Cells und ihre Event-Listener
+            if (this.gridEl) {
+              // replaceChildren() ist moderner und schneller als innerHTML = ''
+              // und verhindert Memory-Leaks von Event-Listenern
+              this.gridEl.replaceChildren();
+            }
+            
             // Performance: Verwende DocumentFragment für bessere Performance
             const fragment = document.createDocumentFragment();
             
             // CSS-Variablen setzen
             document.documentElement.style.setProperty('--cols', this.cols);
             document.documentElement.style.setProperty('--rows', this.rows);
-  
+
             // Batch-Erstellung aller Zellen - optimiert für Orientation Changes
             for (let y = 0; y < this.rows; y++) {
               if (!Array.isArray(this.selection[y])) continue;
-  
+
               for (let x = 0; x < this.cols; x++) {
                 const cell = document.createElement('div');
                 cell.className = 'grid-cell';
                 if (this.selection[y]?.[x]) cell.classList.add('selected');
-  
+
                 // FEATURE 6: Screen Reader Support - ARIA-Labels
                 cell.setAttribute('role', 'button');
                 cell.setAttribute('tabindex', '0');
                 cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y]?.[x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
                 cell.setAttribute('aria-pressed', this.selection[y]?.[x] ? 'true' : 'false');
-  
+
                 // Event-Listener optimiert
                 cell.addEventListener('click', () => {
                   if (!this.selection[y]) this.selection[y] = [];
@@ -4854,8 +4871,7 @@
               }
             }
             
-            // Einmalige DOM-Manipulation
-            this.gridEl.innerHTML = '';
+            // Einmalige DOM-Manipulation (innerHTML bereits durch replaceChildren() oben ersetzt)
             this.gridEl.appendChild(fragment);
           }
       async buildList() {
@@ -4990,9 +5006,12 @@
             `;
             fragment.appendChild(div);
           });
-          this.prodList.innerHTML = '';
-          this.prodList.appendChild(fragment);
-        this.prodList.style.display = 'block';
+          // Memory-Fix: replaceChildren() statt innerHTML
+          if (this.prodList) {
+            this.prodList.replaceChildren();
+            this.prodList.appendChild(fragment);
+            this.prodList.style.display = 'block';
+          }
         }
         
         // Gesamtpreis sofort aktualisieren nach Produktliste-Update
@@ -5628,7 +5647,10 @@
   
       renderConfigList() {
         // Verwende das gleiche HTML-Design wie updateConfigList()
-            this.configListEl.innerHTML = '';
+        // Memory-Fix: replaceChildren() statt innerHTML für besseres Memory-Management
+        if (this.configListEl) {
+          this.configListEl.replaceChildren();
+        }
         
             this.configs.forEach((cfg, idx) => {
               const div = document.createElement('div');
@@ -5876,7 +5898,7 @@
           // Additional-Products visuell zurücksetzen
           try {
               const additionalProductsListEl = document.getElementById('additional-products-list');
-              if (additionalProductsListEl) additionalProductsListEl.innerHTML = '';
+              if (additionalProductsListEl) additionalProductsListEl.replaceChildren();
           } catch(_) {}
           
           // Preise aktualisieren
@@ -7067,6 +7089,22 @@
       // Memory: Event Listener Cleanup
       cleanupEventListeners() {
         try {
+          // Memory-Fix: Globale Document-Listener entfernen
+          if (this.boundGlobalAddAllClick) {
+            document.removeEventListener('click', this.boundGlobalAddAllClick, true);
+            this.boundGlobalAddAllClick = null;
+          }
+          
+          if (this.boundMobileDisableClick) {
+            document.removeEventListener('click', this.boundMobileDisableClick, true);
+            this.boundMobileDisableClick = null;
+          }
+          
+          if (this.boundMobileDisableTouch) {
+            document.removeEventListener('touchstart', this.boundMobileDisableTouch, true);
+            this.boundMobileDisableTouch = null;
+          }
+          
           // Input-Event-Listener cleanup
           const inputs = [this.wIn, this.hIn].filter(el => el);
           inputs.forEach(el => {
@@ -7253,9 +7291,9 @@
         
       // Pinch-to-Zoom Cleanup entfernt
         
-        // Event-Listener entfernen
+        // Event-Listener entfernen (replaceChildren wurde bereits in buildGrid() verwendet)
         if (this.gridEl) {
-          this.gridEl.innerHTML = '';
+          this.gridEl.replaceChildren();
         }
         
         // PDF Generator cleanup
