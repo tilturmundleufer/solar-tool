@@ -2758,12 +2758,31 @@
         // Loading Overlay Elemente
         this.loadingOverlay = null;
         this.loadingTextEl = null;
-  
+
+        // Performance: Cache häufig verwendete DOM-Elemente
+        this.cachedElements = {
+          huaweiOpti: null,
+          brcOpti: null,
+          optiQty: null,
+          ulicaModule: null,
+          erdungsband: null,
+          kabelbinder: null,
+          quetschkabelschuhe: null
+        };
+
         this.init();
       }
   
     // saveToUrl() entfernt - Dead Code (war No-op)
-  
+
+      // Performance: Lazy-Loading Cache für DOM-Elemente
+      getCachedElement(key, id) {
+        if (!this.cachedElements[key]) {
+          this.cachedElements[key] = document.getElementById(id);
+        }
+        return this.cachedElements[key];
+      }
+
       showLoading(message = 'Vorgang läuft… bitte warten') {
         try {
           if (!this.loadingOverlay) this.loadingOverlay = document.getElementById('loading-overlay');
@@ -3408,11 +3427,9 @@
           this.bulkSelector = new BulkSelector(this);
           this.bulkSelector.initializeBulkSelection();
           
-          // Loading Overlay referenzen
-              this.loadingOverlay = document.getElementById('loading-overlay');
-              this.loadingTextEl = document.getElementById('loading-text');
-              
-              // Initialisiere Auto-Save Indicator
+          // Loading Overlay bereits weiter oben zugewiesen (Zeile 3372-3373)
+          
+          // Initialisiere Auto-Save Indicator
               this.initAutoSaveIndicator();
               
               // Initialisiere Config-Liste
@@ -5984,11 +6001,11 @@
                   this.ulicaModule.checked = data.ulicaModule;
               }
               
-              // Opti-State laden (Checkboxen + Menge)
+              // Opti-State laden (Checkboxen + Menge, gecacht)
               try {
-                  const hCb = document.getElementById('huawei-opti');
-                  const bCb = document.getElementById('brc-opti');
-                  const qEl = document.getElementById('opti-qty');
+                  const hCb = this.getCachedElement('huaweiOpti', 'huawei-opti');
+                  const bCb = this.getCachedElement('brcOpti', 'brc-opti');
+                  const qEl = this.getCachedElement('optiQty', 'opti-qty');
                   if (hCb && typeof data.huaweiOpti === 'boolean') hCb.checked = data.huaweiOpti;
                   if (bCb && typeof data.brcOpti === 'boolean') bCb.checked = data.brcOpti;
                   if (qEl && typeof data.optiQty === 'number') qEl.value = String(Math.max(1, data.optiQty));
@@ -6552,9 +6569,9 @@
         
         // Opti-Zusatz (einmalig) hinzufügen
         try {
-          const hCb = document.getElementById('huawei-opti');
-          const bCb = document.getElementById('brc-opti');
-          const qEl = document.getElementById('opti-qty');
+          const hCb = this.getCachedElement('huaweiOpti', 'huawei-opti');
+          const bCb = this.getCachedElement('brcOpti', 'brc-opti');
+          const qEl = this.getCachedElement('optiQty', 'opti-qty');
           if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
             const qty = Math.max(1, parseInt(qEl.value || '1', 10));
             if (bCb.checked) parts.BRCOpti = (parts.BRCOpti || 0) + qty; else parts.HuaweiOpti = (parts.HuaweiOpti || 0) + qty;
@@ -6639,9 +6656,9 @@
         } catch(_) {}
         // Opti-Zusatz aus globaler UI berücksichtigen
         try {
-          const hCb = document.getElementById('huawei-opti');
-          const bCb = document.getElementById('brc-opti');
-          const qEl = document.getElementById('opti-qty');
+          const hCb = this.getCachedElement('huaweiOpti', 'huawei-opti');
+          const bCb = this.getCachedElement('brcOpti', 'brc-opti');
+          const qEl = this.getCachedElement('optiQty', 'opti-qty');
           if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
             const qty = Math.max(1, parseInt(qEl.value || '1', 10));
             if (bCb.checked) total.BRCOpti = (total.BRCOpti || 0) + qty; else total.HuaweiOpti = (total.HuaweiOpti || 0) + qty;
@@ -7265,26 +7282,29 @@
   
         // Zusatzprodukte global nachziehen (Huawei/BRC Optimierer, Erdungsband, Quetsch etc.)
         try {
-          // Optimierer: Menge aus UI
-          const hCb = document.getElementById('huawei-opti');
-          const bCb = document.getElementById('brc-opti');
-          const qEl = document.getElementById('opti-qty');
+          // Optimierer: Menge aus UI (gecacht)
+          const hCb = this.getCachedElement('huaweiOpti', 'huawei-opti');
+          const bCb = this.getCachedElement('brcOpti', 'brc-opti');
+          const qEl = this.getCachedElement('optiQty', 'opti-qty');
           const optiQty = Math.max(1, parseInt(qEl && qEl.value || '1', 10));
           if (hCb && hCb.checked) add('HuaweiOpti', optiQty);
           if (bCb && bCb.checked) add('BRCOpti', optiQty);
           
-          // Kabelbinder: 1x wenn Checkbox aktiv
-          if (document.getElementById('kabelbinder')?.checked) {
+          // Kabelbinder: 1x wenn Checkbox aktiv (gecacht)
+          const kabelbinderEl = this.getCachedElement('kabelbinder', 'kabelbinder');
+          if (kabelbinderEl?.checked) {
             add('Kabelbinder', 1);
           }
           
-          // Ringkabelschuhe: 1x wenn Checkbox aktiv
-          if (document.getElementById('quetschkabelschuhe')?.checked) {
+          // Ringkabelschuhe: 1x wenn Checkbox aktiv (gecacht)
+          const quetschEl = this.getCachedElement('quetschkabelschuhe', 'quetschkabelschuhe');
+          if (quetschEl?.checked) {
             add('Ringkabelschuhe', 1);
           }
           
-          // Erdungsband: Berechne Menge basierend auf allen Konfigurationen
-          if (document.getElementById('erdungsband')?.checked) {
+          // Erdungsband: Berechne Menge basierend auf allen Konfigurationen (gecacht)
+          const erdungsbandEl = this.getCachedElement('erdungsband', 'erdungsband');
+          if (erdungsbandEl?.checked) {
             let totalErdungsband = 0;
             for (let i = 0; i < (this.configs?.length || 0); i++) {
               const cfg = this.configs[i];
@@ -7295,8 +7315,8 @@
             if (totalErdungsband > 0) add('Erdungsband', totalErdungsband);
           }
           
-          // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv
-          if (document.getElementById('erdungsband')?.checked) {
+          // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv (gecacht)
+          if (erdungsbandEl?.checked) {
             add('BlechBohrschrauben', 1);
           }
         } catch(_) {}
