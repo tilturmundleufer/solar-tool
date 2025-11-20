@@ -3408,12 +3408,14 @@
               // Performance: Resize Observer für responsive Updates
               this.setupResizeObserver();
               
-              // FEATURE 8: Pinch-to-Zoom Setup
-            // setupPinchToZoom() entfernt - Desktop-Only App
-            
-            // SmartConfig Features entfernt
-            
-            // Loading Overlay referenzen
+            // FEATURE 8: Pinch-to-Zoom Setup
+          // setupPinchToZoom() entfernt - Desktop-Only App
+          
+          // Initialisiere BulkSelector (Drag-to-Select)
+          this.bulkSelector = new BulkSelector(this);
+          this.bulkSelector.initializeBulkSelection();
+          
+          // Loading Overlay referenzen
               this.loadingOverlay = document.getElementById('loading-overlay');
               this.loadingTextEl = document.getElementById('loading-text');
               
