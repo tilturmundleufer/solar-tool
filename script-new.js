@@ -7342,9 +7342,9 @@
           // Erdungsband: Wird bereits in calculatePartsSync() pro Config berechnet (Zeile 5113-5115)
           // KEINE zusätzliche Berechnung hier - vermeidet Dopplung!
           
-          // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv (gecacht)
-          const erdungsbandEl = this.getCachedElement('erdungsband', 'erdungsband');
-          if (erdungsbandEl?.checked) {
+          // Blech-Bohrschrauben: 1x wenn IRGENDEINE Config Erdungsband hat
+          // WICHTIG: Nicht aus UI-State lesen, sondern aus totals.Erdungsband!
+          if (totals.Erdungsband && totals.Erdungsband > 0) {
             add('BlechBohrschrauben', 1);
           }
         } catch(_) {}
