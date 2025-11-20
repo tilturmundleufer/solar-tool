@@ -2729,9 +2729,7 @@
         this.updateTimeout = null;
         this.updateDelay = 100; // ms
         
-        // Warenkorb-Queue & Observer
-        this.isAddingToCart = false;
-        this.webflowFormsObserver = null;
+        // Warenkorb-Queue & Observer (Webflow-spezifische Properties entfernt)
         this.cartAckObserver = null;
         this.cartAckResolve = null;
         
@@ -3374,14 +3372,9 @@
           this.loadingOverlay = document.getElementById('loading-overlay');
           this.loadingTextEl = document.getElementById('loading-text');
   
-            window.addEventListener('resize', () => {
-              this.updateSize();
-              this.buildGrid();
-              this.buildList();
-              this.updateSummaryOnChange();
-            });
+          // window.addEventListener('resize') entfernt - ResizeObserver mit Debouncing wird bereits verwendet (setupResizeObserver)
         
-              // Wenn keine Konfigurationen aus URL/CACHE geladen wurden, erstelle eine Standard-Konfiguration
+          // Wenn keine Konfigurationen aus URL/CACHE geladen wurden, erstelle eine Standard-Konfiguration
               if (this.configs.length === 0) {
                 this.cols = this.default.cols;
                 this.rows = this.default.rows;
@@ -6056,7 +6049,6 @@
       
           generateHiddenCartForms() {
         // Legacy Webflow Commerce Funktion - No-op, da Foxy.io keine Product IDs verwendet
-        // Wird noch von ensureWebflowFormsMapped() aufgerufen, aber tut nichts mehr
         this.hideWebflowForms();
       }
   
@@ -6442,17 +6434,9 @@
           }
         }
         
-        // Observer für Webflow-Formulare (für asynchrones Rendering)
-        if (!this.webflowFormsObserver) {
-          this.webflowFormsObserver = new MutationObserver(() => {
-            this.generateHiddenCartForms();
-          });
-          this.webflowFormsObserver.observe(document.body, { childList: true, subtree: true });
-        }
-        
-        await this.ensureWebflowFormsMapped();
+        // Webflow Observer entfernt - nicht mehr benötigt mit Foxy.io
       }
-  
+
       waitForCartAcknowledge(timeoutMs = 1500) {
         return new Promise((resolve) => {
           let settled = false;
@@ -6474,14 +6458,7 @@
         });
       }
   
-      async ensureWebflowFormsMapped() {
-        // Falls Mapping leer ist, nochmal scannen
-        if (!this.webflowFormMap || Object.keys(this.webflowFormMap).length === 0 || !this.webflowFormMapBrutto) {
-          this.generateHiddenCartForms();
-          // kurze Wartezeit, falls Webflow synchron nachrendert
-          await new Promise(r => setTimeout(r, 50));
-        }
-      }
+      // ensureWebflowFormsMapped() entfernt - Legacy Webflow-Code
   
       hideCartContainer() {
         const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
