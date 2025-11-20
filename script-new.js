@@ -7272,11 +7272,15 @@
           const originalOrV = this.orV && this.orV.checked;
           const originalErdungsband = this.erdungsband && this.erdungsband.checked;
           const originalUlica = this.ulicaModule && this.ulicaModule.checked;
+          const originalWIn = this.wIn && this.wIn.value;
+          const originalHIn = this.hIn && this.hIn.value;
           try {
             this.selection = (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r);
             this.rows = cfg.rows; this.cols = cfg.cols;
             if (this.orV) { this.orV.checked = (cfg.orientation === 'vertical'); }
-            // KRITISCH: Config-spezifische Checkboxen temporär setzen!
+            // KRITISCH: Config-spezifische Werte temporär setzen!
+            if (this.wIn) { this.wIn.value = cfg.cellWidth || 179; }
+            if (this.hIn) { this.hIn.value = cfg.cellHeight || 113; }
             if (this.erdungsband) { this.erdungsband.checked = cfg.erdungsband || false; }
             if (this.ulicaModule) { this.ulicaModule.checked = cfg.ulicaModule || false; }
             const p = this.calculatePartsSync();
@@ -7285,6 +7289,8 @@
           } finally {
             this.selection = originalSel; this.rows = originalRows; this.cols = originalCols;
             if (this.orV) { this.orV.checked = originalOrV; }
+            if (this.wIn) { this.wIn.value = originalWIn; }
+            if (this.hIn) { this.hIn.value = originalHIn; }
             if (this.erdungsband) { this.erdungsband.checked = originalErdungsband; }
             if (this.ulicaModule) { this.ulicaModule.checked = originalUlica; }
           }
