@@ -171,14 +171,14 @@
     };
   
   // convertToNettoPrice() entfernt - Identity-Funktion ohne Mehrwert (inline ersetzt)
-
-  // Kundentyp-System entfernt - vereinfachte Produktverwaltung
+  
+    // Kundentyp-System entfernt - vereinfachte Produktverwaltung
   // PRODUCT_MAP entfernt - Foxy.io nutzt Produktnamen, nicht IDs
-
-  // Liefert den wirksamen VE-Preis (Packpreis) - nur noch Shop-Preise ohne Mengenrabatte
-  function getPackPriceForQuantity(productKey, requiredPieces) {
-    const basePackPrice = getPriceFromCache(productKey) || 0;
-    // Immer Netto-Preise verwenden für Konfigurator-Anzeige
+  
+    // Liefert den wirksamen VE-Preis (Packpreis) - nur noch Shop-Preise ohne Mengenrabatte
+    function getPackPriceForQuantity(productKey, requiredPieces) {
+      const basePackPrice = getPriceFromCache(productKey) || 0;
+      // Immer Netto-Preise verwenden für Konfigurator-Anzeige
     return Number.isFinite(basePackPrice) ? basePackPrice : 0;
   }
     
@@ -482,14 +482,14 @@
     }
   
   // getPriceFromHTML() entfernt - Legacy Wrapper ohne Mehrwert
-  // ===== PDF GENERATOR =====
+    // ===== PDF GENERATOR =====
     class SolarPDFGenerator {
       constructor(solarGrid) {
-      this.solarGrid = solarGrid;
-      this.jsPDF = window.jspdf?.jsPDF;
-      this.html2canvas = window.html2canvas;
+        this.solarGrid = solarGrid;
+        this.jsPDF = window.jspdf?.jsPDF;
+        this.html2canvas = window.html2canvas;
       // html2pdf entfernt - wird nicht verwendet, nur jsPDF + html2canvas
-      // Weiße Footer-Logo-Variante (für dunklen Footer-Hintergrund)
+        // Weiße Footer-Logo-Variante (für dunklen Footer-Hintergrund)
         this.companyLogoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/688f3fff157b70cefcaa97df_Schneider%20logo.png';
         // Blaues Header-Logo
         this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6893249274128869974e58ec_schneider%20logo%20png.png';
@@ -2168,14 +2168,14 @@
         configName = configName.replace(/[<>:"/\\|?*]/g, '-');
         
         return `${configName}_${dateStr}_${timeStr}.pdf`;
+      }
     }
-  }
   // ===== SMART CONFIGURATION PARSER ===== (ENTFERNT)
   // SmartConfigParser-Klasse entfernt (~1787 Zeilen)
   // Grund: Komplexes NLP-Feature mit 50+ RegEx-Patterns, viele deprecated
   // Ersatz: Nutzer verwenden direkte Grid-Interaktion statt Textbefehle
   
-  // ===== BULK SELECTOR =====
+    // ===== BULK SELECTOR =====
     class BulkSelector {
       constructor(solarGrid) {
         this.solarGrid = solarGrid;
@@ -2735,13 +2735,13 @@
         
         // Performance: Resize Observer für responsive Updates
         this.resizeObserver = null;
-      this.resizeTimeout = null;
-      
+        this.resizeTimeout = null;
+        
       // Pinch-to-Zoom entfernt - widersprüchlich zu Desktop-Only Policy (Mobile-Redirect aktiv)
       
       // Performance-Monitoring entfernt - Debug-Feature ohne produktive Nutzung
-      
-      // Tracking für Session-Daten
+        
+        // Tracking für Session-Daten
         this.sessionId = this.generateSessionId();
         this.sessionStartTime = Date.now();
         this.firstInteractionTime = null;
@@ -2769,7 +2769,7 @@
           kabelbinder: null,
           quetschkabelschuhe: null
         };
-
+  
         this.init();
       }
   
@@ -2782,7 +2782,7 @@
         }
         return this.cachedElements[key];
       }
-
+  
       showLoading(message = 'Vorgang läuft… bitte warten') {
         try {
           if (!this.loadingOverlay) this.loadingOverlay = document.getElementById('loading-overlay');
@@ -2842,14 +2842,14 @@
         return {
           sessionDuration: this.formatDuration(sessionDurationMs),
           timeToFirstInteraction: this.formatDuration(timeToFirstInteractionMs),
-        timeSinceLastInteraction: this.formatDuration(timeSinceLastInteractionMs),
-        interactionCount: this.interactionCount,
-        sessionStartTime: this.sessionStartTime,
-        firstInteractionTime: this.firstInteractionTime,
+          timeSinceLastInteraction: this.formatDuration(timeSinceLastInteractionMs),
+          interactionCount: this.interactionCount,
+          sessionStartTime: this.sessionStartTime,
+          firstInteractionTime: this.firstInteractionTime,
         lastInteractionTime: this.lastInteractionTime
         // performanceMetrics entfernt
-      };
-    }
+        };
+      }
   
       getProductSummary() {
         const parts = this.calculateParts();
@@ -3393,7 +3393,7 @@
   
           // window.addEventListener('resize') entfernt - ResizeObserver mit Debouncing wird bereits verwendet (setupResizeObserver)
         
-          // Wenn keine Konfigurationen aus URL/CACHE geladen wurden, erstelle eine Standard-Konfiguration
+              // Wenn keine Konfigurationen aus URL/CACHE geladen wurden, erstelle eine Standard-Konfiguration
               if (this.configs.length === 0) {
                 this.cols = this.default.cols;
                 this.rows = this.default.rows;
@@ -3420,16 +3420,16 @@
               // Performance: Resize Observer für responsive Updates
               this.setupResizeObserver();
               
-            // FEATURE 8: Pinch-to-Zoom Setup
+              // FEATURE 8: Pinch-to-Zoom Setup
           // setupPinchToZoom() entfernt - Desktop-Only App
-          
+              
           // Initialisiere BulkSelector (Drag-to-Select)
           this.bulkSelector = new BulkSelector(this);
           this.bulkSelector.initializeBulkSelection();
-          
+  
           // Loading Overlay bereits weiter oben zugewiesen (Zeile 3372-3373)
-          
-          // Initialisiere Auto-Save Indicator
+              
+              // Initialisiere Auto-Save Indicator
               this.initAutoSaveIndicator();
               
               // Initialisiere Config-Liste
@@ -4154,14 +4154,14 @@
                   this.configs.splice(this.currentConfig, 1);
                   
                   // Aktive Konfiguration anpassen
-                if (this.currentConfig >= this.configs.length) {
-                    this.currentConfig = this.configs.length - 1;
-                }
-                
-                this.loadConfig(this.currentConfig);
-                
-                // Zurück zur Übersicht und Config-Liste updaten
-                this.showOverview();
+                  if (this.currentConfig >= this.configs.length) {
+                      this.currentConfig = this.configs.length - 1;
+                  }
+                  
+                  this.loadConfig(this.currentConfig);
+                  
+                  // Zurück zur Übersicht und Config-Liste updaten
+                  this.showOverview();
               }
           }
           
@@ -4180,12 +4180,12 @@
                   // Aktive Konfiguration anpassen
                   if (this.currentConfig >= this.configs.length) {
                       this.currentConfig = this.configs.length - 1;
-                } else if (this.currentConfig > configIndex) {
-                    this.currentConfig--;
-                }
-                
-                this.loadConfig(this.currentConfig);
-                this.updateConfigList();
+                  } else if (this.currentConfig > configIndex) {
+                      this.currentConfig--;
+                  }
+                  
+                  this.loadConfig(this.currentConfig);
+                  this.updateConfigList();
               }
               
               // Event propagation stoppen
@@ -6432,7 +6432,7 @@
         // Legacy Webflow Commerce Funktion - nicht mehr verwendet
         // Foxy.io nutzt addProductToCart() statt Webflow Forms
         console.warn('[Legacy] addSingleItemAndWait() aufgerufen - sollte nicht mehr verwendet werden');
-        return;
+          return;
       }
   
       async ensureCartObservers() {
@@ -6453,7 +6453,7 @@
         
         // Webflow Observer entfernt - nicht mehr benötigt mit Foxy.io
       }
-
+  
       waitForCartAcknowledge(timeoutMs = 1500) {
         return new Promise((resolve) => {
           let settled = false;
@@ -6784,37 +6784,34 @@
       // ISOLIERTE calculateParts ohne globale Zustandsänderungen
       async calculatePartsIsolated(isolatedGrid) {
         try {
-          // Verwende isolierte Daten statt globale this.selection
-          const selection = isolatedGrid.selection;
-          const rows = isolatedGrid.rows;
-          const cols = isolatedGrid.cols;
-          const cellWidth = isolatedGrid.cellWidth;
-          const cellHeight = isolatedGrid.cellHeight;
-          const orientation = isolatedGrid.orientation;
+          // Temporär Grid-Properties setzen für korrekte Berechnung
+          const originalSel = this.selection;
+          const originalRows = this.rows;
+          const originalCols = this.cols;
+          const originalOrV = this.orV && this.orV.checked;
           
-          // Berechne Parts mit isolierten Parametern
-          const parts = {};
-          
-          // Module zählen
-          const moduleCount = (selection || []).flat().filter(Boolean).length;
-          if (moduleCount > 0) {
-            parts.Solarmodul = moduleCount;
-          }
-          
-          // Dachhaken berechnen
-          const dachhakenCount = Math.ceil(moduleCount / 2);
-          if (dachhakenCount > 0) {
-            parts.Dachhaken = dachhakenCount;
-          }
-          
-          // Schienen berechnen
-          const schienenCount = Math.ceil(moduleCount / 2);
-          if (schienenCount > 0) {
-            parts.Schiene_240_cm = schienenCount;
-          }
-          
-          // Weitere Berechnungen...
+          try {
+            // Setze isolierte Werte temporär
+            this.selection = isolatedGrid.selection;
+            this.rows = isolatedGrid.rows;
+            this.cols = isolatedGrid.cols;
+            if (this.orV) {
+              this.orV.checked = (isolatedGrid.orientation === 'vertical');
+            }
+            
+            // Verwende die ECHTE optimierte Berechnung (nicht vereinfacht!)
+            const parts = this.calculatePartsSync();
+            
           return parts;
+          } finally {
+            // WICHTIG: Stelle original Werte wieder her
+            this.selection = originalSel;
+            this.rows = originalRows;
+            this.cols = originalCols;
+            if (this.orV) {
+              this.orV.checked = originalOrV;
+            }
+          }
         } catch (error) {
           console.warn('[SolarGrid] calculatePartsIsolated error:', error);
           return {};
@@ -6967,7 +6964,7 @@
       }
   
     // getAllConfigsData() entfernt - DEPRECATED, nutze createConfigSnapshot() stattdessen
-    
+      
       setupResizeObserver() {
         // Performance: Resize Observer für responsive Updates
         if (this.wrapper && window.ResizeObserver) {
@@ -6987,8 +6984,8 @@
         }
       }
     // setupPinchToZoom(), getTouchDistance(), setZoom() entfernt - Desktop-Only App
-    
-    cleanup() {
+      
+      cleanup() {
         // Memory-Leak Prävention: Alle Timeouts löschen
         if (this.updateTimeout) {
           clearTimeout(this.updateTimeout);
@@ -7049,11 +7046,11 @@
         // Memory: DOM Reference cleanup
         this.cleanupDOMReferences();
         
-      // Memory: Web Worker cleanup
-      this.cleanupWorkers();
-      
+        // Memory: Web Worker cleanup
+        this.cleanupWorkers();
+        
       // performanceMetrics Cleanup entfernt
-    }
+      }
       
       // Memory: Event Listener Cleanup
       cleanupEventListeners() {
@@ -7241,10 +7238,10 @@
         } catch (error) {
           console.warn('[SolarGrid] Array cleanup error:', error);
         }
-      
+        
       // Pinch-to-Zoom Cleanup entfernt
-      
-      // Event-Listener entfernen
+        
+        // Event-Listener entfernen
         if (this.gridEl) {
           this.gridEl.innerHTML = '';
         }
