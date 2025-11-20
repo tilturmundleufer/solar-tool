@@ -5315,7 +5315,7 @@
       loadConfig(idx) {
             const cfg = this.configs[idx];
             this.currentConfig = idx;
-  
+
             // Input-Werte setzen
               this.wIn.value = cfg.cellWidth;
               this.hIn.value = cfg.cellHeight;
@@ -5325,38 +5325,39 @@
               // Synchronisiere mit den Orientation Buttons
               this.syncOrientationButtons();
             this.incM.checked = cfg.incM;
-              this.mc4.checked = cfg.mc4;
-              this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
-            this.holz.checked = cfg.holz;
-              this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
-              if (this.kabelbinder) this.kabelbinder.checked = cfg.kabelbinder || false; // Fallback für alte Konfigurationen
-              if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false; // Fallback für alte Konfigurationen
-              if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false; // Fallback für alte Konfigurationen
-  
+              // WICHTIG: Zusatzprodukt-Checkboxen (mc4, solarkabel, holz, etc.) sind GLOBAL
+              // und werden NICHT pro Konfiguration geladen, da sie für ALLE Configs gelten!
+              // Nur die Modul-Inklusionslogik (incM) ist pro Config relevant.
+              // Fallback: Wenn alte Config noch diese Werte hatte, ignorieren wir sie für loadConfig
+              if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false; // Ulica ist config-spezifisch
+
               // STATE Werte setzen - WICHTIG: Vor setup() setzen
               this.cols = cfg.cols;
               this.rows = cfg.rows;
               this.selection = cfg.selection.map(r => [...r]);
-  
+
               // Setup aufrufen (baut Grid mit korrekter Auswahl auf)
               this.setup();
-  
+
               // Produktliste und Summary aktualisieren
               this.buildList();
               this.updateSummaryOnChange();
-  
+
               this.renderConfigList();
               this.updateSaveButtons();
               
               // Detail-Ansicht aktualisieren wenn aktiv
               this.updateDetailView();
+              
+              // WICHTIG: Gesamtpreis aktualisieren, damit er konsistent bleibt
+              this.updateOverviewTotalPrice();
           }
           
           // Spezielle Funktion für Cache-Load ohne Orientation-Überschreibung
           loadConfigFromCache(idx) {
               const cfg = this.configs[idx];
               this.currentConfig = idx;
-  
+
               // Input-Werte setzen (OHNE Orientation)
               this.wIn.value = cfg.cellWidth;
               this.hIn.value = cfg.cellHeight;
@@ -5368,31 +5369,30 @@
               }
               
               this.incM.checked = cfg.incM;
-              this.mc4.checked = cfg.mc4;
-              this.solarkabel.checked = cfg.solarkabel || false;
-              this.holz.checked = cfg.holz;
-              this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
-              if (this.kabelbinder) this.kabelbinder.checked = cfg.kabelbinder || false;
-              if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
+              // WICHTIG: Zusatzprodukt-Checkboxen sind GLOBAL, werden hier nicht geladen
+              // (außer beim ersten Cache-Load - siehe loadFirstConfigFromCache)
               if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
-  
+
             // STATE Werte setzen
             this.cols = cfg.cols;
             this.rows = cfg.rows;
             this.selection = cfg.selection.map(r => [...r]);
-  
+
               // Setup aufrufen
             this.setup();
-  
+
               // Produktliste und Summary aktualisieren
               this.buildList();
               this.updateSummaryOnChange();
-  
+
             this.renderConfigList();
             this.updateSaveButtons();
               
               // Detail-Ansicht aktualisieren wenn aktiv
               this.updateDetailView();
+              
+              // WICHTIG: Gesamtpreis aktualisieren
+              this.updateOverviewTotalPrice();
           }
           
           // Spezielle Funktion für Cache-Load der ersten Konfiguration mit korrekter Orientation
@@ -5401,7 +5401,7 @@
               
               const cfg = this.configs[0];
               this.currentConfig = 0;
-  
+
               // Input-Werte setzen
               this.wIn.value = cfg.cellWidth;
               this.hIn.value = cfg.cellHeight;
@@ -5413,30 +5413,35 @@
               }
               
               this.incM.checked = cfg.incM;
+              // Beim ersten Cache-Load: Lade Zusatzprodukt-Checkboxen aus Config[0]
+              // (für Rückwärtskompatibilität mit alten Caches)
               this.mc4.checked = cfg.mc4;
               this.solarkabel.checked = cfg.solarkabel || false;
               this.holz.checked = cfg.holz;
               this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
               if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
               if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
-  
+
               // STATE Werte setzen
               this.cols = cfg.cols;
               this.rows = cfg.rows;
               this.selection = cfg.selection.map(r => [...r]);
-  
+
               // Setup aufrufen
               this.setup();
-  
+
               // Produktliste und Summary aktualisieren
               this.buildList();
               this.updateSummaryOnChange();
-  
+
               this.renderConfigList();
               this.updateSaveButtons();
               
               // Detail-Ansicht aktualisieren wenn aktiv
               this.updateDetailView();
+              
+              // WICHTIG: Gesamtpreis aktualisieren
+              this.updateOverviewTotalPrice();
           }
           
           // Funktion um die erste Konfiguration mit der globalen Orientation zu aktualisieren
@@ -7279,6 +7284,33 @@
   
         // Zusatzprodukte global nachziehen (Huawei/BRC Optimierer, Erdungsband, Quetsch etc.)
         try {
+          // MC4 Stecker: Berechne basierend auf Gesamtzahl Module über ALLE Konfigurationen
+          const mc4El = this.getCachedElement('mc4', 'mc4');
+          if (mc4El?.checked) {
+            const totalModuleCount = this.configs.reduce((total, config) => {
+              return total + (config.selection || []).flat().filter(v => v).length;
+            }, 0);
+            // 1 Packung MC4 Stecker (50 Stück) pro 30 Module
+            const mc4Packs = Math.ceil(totalModuleCount / 30);
+            if (mc4Packs > 0) {
+              // Speichere in Stück-Basis (Pack × 50) für korrekte Mengenberechnung
+              const veMc4 = VE.MC4_Stecker || 50;
+              add('MC4_Stecker', mc4Packs * veMc4);
+            }
+          }
+          
+          // Solarkabel: 1x wenn Checkbox aktiv (gecacht)
+          const solarkabelEl = this.getCachedElement('solarkabel', 'solarkabel');
+          if (solarkabelEl?.checked) {
+            add('Solarkabel', 1);
+          }
+          
+          // Holzunterleger: 1x wenn Checkbox aktiv (gecacht)
+          const holzEl = this.getCachedElement('holz', 'holz');
+          if (holzEl?.checked) {
+            add('Holzunterleger', 1);
+          }
+          
           // Optimierer: Menge aus UI (gecacht)
           const hCb = this.getCachedElement('huaweiOpti', 'huawei-opti');
           const bCb = this.getCachedElement('brcOpti', 'brc-opti');
