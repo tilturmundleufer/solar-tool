@@ -5032,6 +5032,7 @@
           if (this.solarkabel) this.solarkabel.checked = false;
           if (this.holz) this.holz.checked = false;
           if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
+          if (this.kabelbinder) this.kabelbinder.checked = false;
           if (this.erdungsband) this.erdungsband.checked = false;
           if (this.ulicaModule) this.ulicaModule.checked = false;
           // Optimierer (Huawei/BRC) und Menge zurücksetzen
@@ -5315,7 +5316,7 @@
       loadConfig(idx) {
             const cfg = this.configs[idx];
             this.currentConfig = idx;
-
+  
             // Input-Werte setzen
               this.wIn.value = cfg.cellWidth;
               this.hIn.value = cfg.cellHeight;
@@ -5330,19 +5331,19 @@
               // ABER: Erdungsband und Ulica sind CONFIG-SPEZIFISCH!
               if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
               if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
-
+  
               // STATE Werte setzen - WICHTIG: Vor setup() setzen
               this.cols = cfg.cols;
               this.rows = cfg.rows;
               this.selection = cfg.selection.map(r => [...r]);
-
+  
               // Setup aufrufen (baut Grid mit korrekter Auswahl auf)
               this.setup();
-
+  
               // Produktliste und Summary aktualisieren
               this.buildList();
               this.updateSummaryOnChange();
-
+  
               this.renderConfigList();
               this.updateSaveButtons();
               
@@ -5357,7 +5358,7 @@
           loadConfigFromCache(idx) {
               const cfg = this.configs[idx];
               this.currentConfig = idx;
-
+  
               // Input-Werte setzen (OHNE Orientation)
               this.wIn.value = cfg.cellWidth;
               this.hIn.value = cfg.cellHeight;
@@ -5373,19 +5374,19 @@
               // ABER: Erdungsband und Ulica sind CONFIG-SPEZIFISCH!
               if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
               if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
-
+  
             // STATE Werte setzen
             this.cols = cfg.cols;
             this.rows = cfg.rows;
             this.selection = cfg.selection.map(r => [...r]);
-
+  
               // Setup aufrufen
             this.setup();
-
+  
               // Produktliste und Summary aktualisieren
               this.buildList();
               this.updateSummaryOnChange();
-
+  
             this.renderConfigList();
             this.updateSaveButtons();
               
@@ -5402,7 +5403,7 @@
               
               const cfg = this.configs[0];
               this.currentConfig = 0;
-
+  
               // Input-Werte setzen
               this.wIn.value = cfg.cellWidth;
               this.hIn.value = cfg.cellHeight;
@@ -5422,19 +5423,19 @@
               this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
               if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
               if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
-
+  
               // STATE Werte setzen
               this.cols = cfg.cols;
               this.rows = cfg.rows;
               this.selection = cfg.selection.map(r => [...r]);
-
+  
               // Setup aufrufen
               this.setup();
-
+  
               // Produktliste und Summary aktualisieren
               this.buildList();
               this.updateSummaryOnChange();
-
+  
               this.renderConfigList();
               this.updateSaveButtons();
               
@@ -5859,6 +5860,7 @@
           if (this.solarkabel) this.solarkabel.checked = false;
           if (this.holz) this.holz.checked = false;
           if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
+          if (this.kabelbinder) this.kabelbinder.checked = false;
           if (this.erdungsband) this.erdungsband.checked = false;
           if (this.ulicaModule) this.ulicaModule.checked = false;
           
@@ -5919,6 +5921,7 @@
               solarkabel: this.solarkabel ? this.solarkabel.checked : false,
               holz: this.holz ? this.holz.checked : false,
               quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+              kabelbinder: this.kabelbinder ? this.kabelbinder.checked : false,
               erdungsband: this.erdungsband ? this.erdungsband.checked : false,
               ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
               // Opti-State (global)
@@ -5999,6 +6002,9 @@
                   }
                   if (this.quetschkabelschuhe && typeof data.quetschkabelschuhe === 'boolean') {
                       this.quetschkabelschuhe.checked = data.quetschkabelschuhe;
+                  }
+                  if (this.kabelbinder && typeof data.kabelbinder === 'boolean') {
+                      this.kabelbinder.checked = data.kabelbinder;
                   }
                   if (this.erdungsband && typeof data.erdungsband === 'boolean') {
                       this.erdungsband.checked = data.erdungsband;
