@@ -1,0 +1,7495 @@
+(function() {
+    const ADD_TO_CART_DELAY = 400;
+    // Global debug toggle: disable noisy logs in production
+    const DEBUG_MODE = true;
+    if (!DEBUG_MODE) {
+      // In Produktion: laute Debug-Logs stummschalten, Warnungen/Fehler beibehalten
+      try {
+        const noop = function(){};
+        if (typeof console !== 'undefined') {
+          console.log = noop;
+          console.info = noop;
+          console.debug = noop;
+        }
+      } catch (e) {
+        // Ignorieren – falls Konsole nicht überschreibbar ist
+      }
+    }
+    
+    // Cache-Manager für 24h Persistierung
+    class CacheManager {
+      constructor() {
+        this.cacheKey = 'solarTool_continueCache';
+        this.cacheTimeout = 24 * 60 * 60 * 1000; // 24 Stunden
+        this.debounceTimeout = null;
+        this.debounceDelay = 500; // 500ms Delay für Performance
+      }
+      
+      // Prüfe ob localStorage verfügbar ist
+      isLocalStorageAvailable() {
+        try {
+          const test = '__localStorage_test__';
+          localStorage.setItem(test, test);
+          localStorage.removeItem(test);
+          return true;
+        } catch (e) {
+          console.warn('localStorage nicht verfügbar:', e);
+          return false;
+        }
+      }
+      
+      // Speichere Daten mit Debouncing
+      saveData(data) {
+        if (!this.isLocalStorageAvailable()) {
+          console.warn('localStorage nicht verfügbar - Cache wird nicht gespeichert');
+          return;
+        }
+        
+        // Debounce für Performance
+        if (this.debounceTimeout) {
+          clearTimeout(this.debounceTimeout);
+        }
+        
+        this.debounceTimeout = setTimeout(() => {
+          try {
+            const cacheData = {
+              ...data,
+              timestamp: Date.now(),
+              version: '1.0' // Für zukünftige Kompatibilität
+            };
+            
+            localStorage.setItem(this.cacheKey, JSON.stringify(cacheData));
+            console.log('Cache gespeichert:', new Date().toLocaleString());
+          } catch (error) {
+            console.error('Fehler beim Speichern des Caches:', error);
+          }
+        }, this.debounceDelay);
+      }
+      
+      // Lade Daten aus dem Cache
+      loadData() {
+        if (!this.isLocalStorageAvailable()) {
+          console.warn('localStorage nicht verfügbar - Cache wird nicht geladen');
+          return null;
+        }
+        
+        try {
+          const cachedData = localStorage.getItem(this.cacheKey);
+          if (!cachedData) {
+            console.log('Kein Cache gefunden');
+            return null;
+          }
+          
+          const data = JSON.parse(cachedData);
+          const cacheAge = Date.now() - data.timestamp;
+          
+          // Prüfe Cache-Alter
+          if (cacheAge > this.cacheTimeout) {
+            console.log('Cache ist abgelaufen (24h) - wird gelöscht');
+            this.clearCache();
+            return null;
+          }
+          
+          console.log('Cache geladen:', new Date().toLocaleString());
+          return data;
+        } catch (error) {
+          console.error('Fehler beim Laden des Caches:', error);
+          this.clearCache();
+          return null;
+        }
+      }
+      
+      // Lösche Cache
+      clearCache() {
+        try {
+          localStorage.removeItem(this.cacheKey);
+          console.log('Cache gelöscht');
+        } catch (error) {
+          console.error('Fehler beim Löschen des Caches:', error);
+        }
+      }
+      
+      // Prüfe Cache-Alter
+      isCacheValid() {
+        const data = this.loadData();
+        return data !== null;
+      }
+    }
+    
+    // Zentrale Produkt-Konfiguration (direkt eingebettet)
+    const VE = {
+      Endklemmen: 20,
+      Schrauben: 50,
+      Dachhaken: 20,
+      Mittelklemmen: 20,
+      Endkappen: 50,
+      Schienenverbinder: 10,
+      Schiene_240_cm: 1,
+      Schiene_360_cm: 1,
+      Solarmodul: 1,
+      UlicaSolarBlackJadeFlow: 1,
+      // Neue 36er-Paletten (VE = 36 Stück pro Palette)
+      SolarmodulPalette: 36,
+      UlicaSolarBlackJadeFlowPalette: 36,
+      MC4_Stecker: 50,
+      Solarkabel: 1,
+      Holzunterleger: 50,
+      Ringkabelschuhe: 100,
+      BlechBohrschrauben: 100,
+      Kabelbinder: 100,
+      Erdungsband: 1,
+      Tellerkopfschraube: 100,
+      HuaweiOpti: 1,
+      BRCOpti: 1
+    };
+    
+    const PRICE_MAP = {
+      // VK pro VE (Fallbackpreise)
+      Solarmodul: 59.70,
+      UlicaSolarBlackJadeFlow: 67.90,
+      // Paletten-Fallbackpreise (Netto) – falls Collection Price nicht gefunden wird
+      SolarmodulPalette: 2012.40, // 36x Ulica 450 W – Palette
+      UlicaSolarBlackJadeFlowPalette: 2264.40, // 36x Ulica 500 W – Palette
+      Endklemmen: 19.80,
+      Schrauben: 11.00,
+      Dachhaken: 69.00,
+      Mittelklemmen: 19.80,
+      Endkappen: 7.00,
+      Schienenverbinder: 13.00,
+      Schiene_240_cm: 11.99,
+      Schiene_360_cm: 17.49,
+      MC4_Stecker: 39.50,
+      Solarkabel: 86.90,
+      Holzunterleger: 17.50,
+      Ringkabelschuhe: 21.40,
+      BlechBohrschrauben: 24.70,
+      Kabelbinder: 3.41,
+      Erdungsband: 8.70,
+      Tellerkopfschraube: 26.00,
+      HuaweiOpti: 39.68,
+      BRCOpti: 38.53
+    };
+  
+  // convertToNettoPrice() entfernt - Identity-Funktion ohne Mehrwert (inline ersetzt)
+
+  // Kundentyp-System entfernt - vereinfachte Produktverwaltung
+  // PRODUCT_MAP entfernt - Foxy.io nutzt Produktnamen, nicht IDs
+
+  // Liefert den wirksamen VE-Preis (Packpreis) - nur noch Shop-Preise ohne Mengenrabatte
+  function getPackPriceForQuantity(productKey, requiredPieces) {
+    const basePackPrice = getPriceFromCache(productKey) || 0;
+    // Immer Netto-Preise verwenden für Konfigurator-Anzeige
+    return Number.isFinite(basePackPrice) ? basePackPrice : 0;
+  }
+    
+    const PRODUCT_NAME_MAP = {
+      // Module und Paletten
+      'Solarmodul': 'Ulica Solar Black Jade-Flow 450 W',
+      'UlicaSolarBlackJadeFlow': 'Ulica Solar Black Jade-Flow 500 W',
+      'SolarmodulPalette': '36x Ulica Solar Black Jade-Flow 450 W - Palette',
+      'UlicaSolarBlackJadeFlowPalette': '36x Ulica Solar Black Jade-Flow 500 W  - Palette',
+      // Standardteile (exakte Foxy-Bezeichnungen)
+      'Endklemmen': 'Endklemmen - 20 Stück',
+      'Mittelklemmen': 'Mittelklemmen - 20 Stück',
+      'Endkappen': 'Endkappen - 50 Stück',
+      'Dachhaken': 'Dachhaken 3-fach verstellbar - 20 Stück',
+      'Schienenverbinder': 'Schienenverbinder - 10 Stück',
+      'Schiene_360_cm': 'Schiene 360 cm',
+      'Schiene_240_cm': 'Schiene 240cm',
+      'MC4_Stecker': 'MC4 Stecker - 50 Steckerpaare',
+      'Schrauben': 'Schraube M10x25 - 50 Stück inkl. Muttern',
+      'Tellerkopfschraube': 'Tellerkopfschraube 8x100 - 100 Stück',
+      'Ringkabelschuhe': 'Ringkabelschuhe - 100 Stück',
+      'BlechBohrschrauben': 'Blech-Bohrschrauben mit EPDM Dichtung - 100 Stück',
+      'Kabelbinder': 'Kabelbinder - 100 Stück',
+      'Erdungsband': 'Erdungsband - 6M',
+      'Solarkabel': 'Solarkabel 100M',
+      'Holzunterleger': 'Unterlegholz für Dachhacken - 50 Stück',
+      // Optimierer (aus Liste)
+      'HuaweiOpti': 'Huawei Smart PV Optimierer 600W',
+      'BRCOpti': 'BRC M600M Optimierer'
+    };
+    
+    const PRODUCT_IMAGES = {
+      Solarmodul: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+      UlicaSolarBlackJadeFlow: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+      SolarmodulPalette: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+      UlicaSolarBlackJadeFlowPalette: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+      Endklemmen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c316b21cb7d04ba2ed22_DSC04815-min.jpg',
+      Schrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg',
+      Dachhaken: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c1c8a2835b7879f46811_DSC04760-min.jpg',
+      Mittelklemmen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c0d0c2d922d926976bd4_DSC04810-min.jpg',
+      Endkappen: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bdfbe7cffc653f6a4605_DSC04788-min.jpg',
+      Schienenverbinder: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c21f0c39e927fce0db3b_DSC04780-min.jpg',
+      Schiene_240_cm: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bce018164af4b4a187f1_DSC04825-min.jpg',
+      Schiene_360_cm: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853bcd5726d1d33d4b86ba4_DSC04824-min.jpg',
+      MC4_Stecker: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fcdab153f840ea15b5e7b_iStock-2186771695.jpg',
+      Solarkabel: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/687fd566bdbb6de2e5f362f0_DSC04851.jpg',
+      Holzunterleger: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+      // NEUE PRODUKTE (aus Berechnung raus, später hinzufügen)
+      Ringkabelschuhe: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6887614c64676f0b0c8d5037_Kabelschuh%20Platzhalter.jpg',
+      BlechBohrschrauben: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/68f81013b62d8044fc41024d_blechschraube.jpg',
+      Kabelbinder: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/68f80b1a4a90df59dba640e9_1_9.png',
+      Erdungsband: 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6859af7eeb0350c3aa298572_Solar%20Panel.png',
+      Tellerkopfschraube: 'https://cdn.prod.website-files.com/684989b78146a1d9194e7b47/6853c2704f5147533229ccde_DSC04796-min.jpg'
+    };
+    
+    // Zentrale Konfiguration ist jetzt direkt eingebettet
+    // ===== BACKGROUND CALCULATION MANAGER =====
+    class CalculationManager {
+      constructor() {
+        this.worker = null;
+        this.pendingCalculations = new Map();
+        this.calculationId = 0;
+        this.isWorkerReady = false;
+        
+        this.initWorker();
+      }
+  
+      initWorker() {
+        try {
+          this.worker = new Worker('./calculation-worker.js');
+          
+          this.worker.onmessage = (e) => {
+            const { type, id, data, error } = e.data;
+            
+            if (type === 'ready') {
+              this.isWorkerReady = true;
+              return;
+            }
+            
+            if (type === 'result' && this.pendingCalculations.has(id)) {
+              const { resolve } = this.pendingCalculations.get(id);
+              this.pendingCalculations.delete(id);
+              resolve(data);
+            }
+            
+            if (type === 'error' && this.pendingCalculations.has(id)) {
+              const { reject } = this.pendingCalculations.get(id);
+              this.pendingCalculations.delete(id);
+              reject(new Error(error.message));
+            }
+            
+            // Worker Debug-Logs an Haupt-Console weiterleiten
+            if (type === 'debug') {
+              console.log(...data);
+            }
+          };
+          
+          this.worker.onerror = (error) => {
+            this.isWorkerReady = false;
+          };
+          
+        } catch (error) {
+          this.isWorkerReady = false;
+        }
+      }
+      
+      // Memory: Worker Cleanup
+      cleanup() {
+        try {
+          if (this.worker) {
+            this.worker.terminate();
+            this.worker = null;
+          }
+          this.isWorkerReady = false;
+          this.pendingCalculations.clear();
+        } catch (error) {
+          console.warn('[CalculationManager] Cleanup error:', error);
+        }
+      }
+  
+      async calculate(type, data) {
+        if (!this.isWorkerReady || !this.worker) {
+          // Fallback: Synchrone Berechnung im Main Thread
+          return this.calculateSync(type, data);
+        }
+  
+        return new Promise((resolve, reject) => {
+          const id = ++this.calculationId;
+          this.pendingCalculations.set(id, { resolve, reject });
+          
+          // Timeout für Berechnungen
+          setTimeout(() => {
+            if (this.pendingCalculations.has(id)) {
+              this.pendingCalculations.delete(id);
+              reject(new Error('Calculation timeout'));
+            }
+          }, 10000); // 10 Sekunden Timeout
+          
+          this.worker.postMessage({ type, data, id });
+        });
+      }
+  
+      // Fallback-Berechnungen für den Fall, dass Web Worker nicht verfügbar ist
+      calculateSync(type, data) {
+        switch (type) {
+          case 'calculateParts':
+            return this.calculatePartsSync(data);
+          case 'calculateExtendedParts':
+            return this.calculateExtendedPartsSync(data);
+          default:
+            throw new Error(`Unsupported sync calculation: ${type}`);
+        }
+      }
+  
+      calculatePartsSync(data) {
+        // FALLBACK: Verwende Calculation Worker direkt
+        try {
+          // Simuliere Worker-Aufruf synchron
+          const { selection, rows, cols, cellWidth, cellHeight, orientation, options = {} } = data;
+          const parts = {
+            Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
+            Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+            Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
+          };
+  
+          // Verwende die korrekte Schienenlogik (wie im Worker)
+          for (let y = 0; y < rows; y++) {
+            if (!Array.isArray(selection[y])) continue;
+            let run = 0;
+  
+            for (let x = 0; x < cols; x++) {
+              if (selection[y]?.[x]) run++;
+              else if (run) { 
+                this.processGroupSync(run, parts, cellWidth, cellHeight, orientation, options); 
+                run = 0; 
+              }
+            }
+            if (run) this.processGroupSync(run, parts, cellWidth, cellHeight, orientation, options);
+          }
+  
+          return parts;
+        } catch (error) {
+          console.error('calculatePartsSync error:', error);
+          return {
+            Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+            Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+            Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
+          };
+        }
+      }
+  
+      processGroupSync(len, parts, cellWidth, cellHeight, orientation, options = {}) {
+        // FALLBACK: Kopie der Worker-Berechnung
+        const isVertical = orientation === 'vertical';
+        const actualCellWidth = isVertical ? cellHeight : cellWidth;
+        
+        const totalLen = len * actualCellWidth;
+        const floor360 = Math.floor(totalLen / 360);
+        const rem360 = totalLen - floor360 * 360;
+        const floor240 = Math.ceil(rem360 / 240);
+        const pure360 = Math.ceil(totalLen / 360);
+        const pure240 = Math.ceil(totalLen / 240);
+        
+        const variants = [
+          {cnt360: floor360, cnt240: floor240},
+          {cnt360: pure360,  cnt240: 0},
+          {cnt360: 0,        cnt240: pure240}
+        ].map(v => ({
+          ...v,
+          rails: v.cnt360 + v.cnt240,
+          waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+        }));
+        
+        const minRails = Math.min(...variants.map(v => v.rails));
+        const best = variants
+          .filter(v => v.rails === minRails)
+          .reduce((a, b) => a.waste <= b.waste ? a : b);
+        
+        const {cnt360, cnt240} = best;
+        parts.Schiene_360_cm     += cnt360 * 2;
+        parts.Schiene_240_cm     += cnt240 * 2;
+        parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+        parts.Endklemmen         += 4;
+        parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+        parts.Dachhaken          += len > 1 ? len * 3 : 4;
+        parts.Endkappen          += 4; // Gleich wie Endklemmen
+        parts.Solarmodul         += len;
+        // UlicaSolarBlackJadeFlow hinzufügen wenn ulica-module Checkbox aktiviert ist
+        if (options.ulicaModule === true) {
+          parts.UlicaSolarBlackJadeFlow += len;
+        }
+        parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
+        parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
+      }
+  
+      calculateExtendedPartsSync(data) {
+        let parts = this.calculatePartsSync(data);
+        const { options } = data;
+        
+        if (!options.includeModules) {
+          delete parts.Solarmodul;
+        }
+        
+        if (options.ulicaModule !== true) {
+          delete parts.UlicaSolarBlackJadeFlow;
+        }
+        
+        if (options.mc4Connectors) {
+          const panelCount = data.selection.flat().filter(v => v).length;
+          const veMc4 = VE.MC4_Stecker || 50;
+          const packs = Math.ceil(panelCount / 30);
+          parts.MC4_Stecker = packs * veMc4; // Stückbasis für korrekte Packanzahl im Warenkorb
+        }
+        
+        if (options.solarkabel) {
+          parts.Solarkabel = 1;
+        }
+        
+        if (options.woodUnderlay) {
+          parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
+        }
+        
+        if (options.erdungsband) {
+          // Erdungsband-Berechnung hier hinzufügen wenn nötig
+          // parts.Erdungsband = calculateErdungsband(...);
+        }
+        
+        return parts;
+      }
+  
+      destroy() {
+        if (this.worker) {
+          this.worker.terminate();
+          this.worker = null;
+        }
+        this.pendingCalculations.clear();
+        this.isWorkerReady = false;
+      }
+    }
+  
+    // Warte, bis alle Bilder in einem Container geladen sind (verhindert leere html2canvas Renders)
+    function waitForImages(container) {
+      const images = Array.from(container.querySelectorAll('img'));
+      if (images.length === 0) return Promise.resolve();
+      return Promise.all(images.map(img => new Promise(resolve => {
+        if (img.complete && img.naturalWidth > 0) return resolve();
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+      })));
+    }
+  
+    // (Fallback entfernt, wir setzen ausschließlich auf html2pdf.js)
+    // Globale Calculation Manager Instanz
+    const calculationManager = new CalculationManager();
+    // PriceCache-System entfernt - direkte PRICE_MAP-Verwendung
+  
+    // Funktion um Preise direkt aus PRICE_MAP zu lesen (ohne Cache)
+    function getPriceFromCache(productKey) {
+        return PRICE_MAP[productKey] || 0;
+    }
+  
+  // getPriceFromHTML() entfernt - Legacy Wrapper ohne Mehrwert
+  // ===== PDF GENERATOR =====
+    class SolarPDFGenerator {
+      constructor(solarGrid) {
+      this.solarGrid = solarGrid;
+      this.jsPDF = window.jspdf?.jsPDF;
+      this.html2canvas = window.html2canvas;
+      // html2pdf entfernt - wird nicht verwendet, nur jsPDF + html2canvas
+      // Weiße Footer-Logo-Variante (für dunklen Footer-Hintergrund)
+        this.companyLogoUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/688f3fff157b70cefcaa97df_Schneider%20logo.png';
+        // Blaues Header-Logo
+        this.headerLogoBlueUrl = 'https://cdn.prod.website-files.com/68498852db79a6c114f111ef/6893249274128869974e58ec_schneider%20logo%20png.png';
+      }
+  
+      // Öffnet PDFs auf Touch-Geräten in neuem Tab statt Download
+      isTouchDevice() {
+        try {
+          // iOS/iPadOS/Android + generisches Touch-Feature
+          const ua = navigator.userAgent || '';
+          const touchUA = /iPad|iPhone|iPod|Android|Mobile/i.test(ua);
+          const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+          return touchUA || hasTouch;
+        } catch (_) { return false; }
+      }
+  
+      // Prüfe ob PDF-Libraries verfügbar sind
+      isAvailable() {
+        return !!(this.jsPDF && this.html2canvas);
+      }
+  
+      // NEU: Stabile PDF-Generation per html2canvas + jsPDF (ohne html2pdf Kette)
+      async generatePDFFromSnapshot(snapshot) {
+        if (!this.jsPDF || !this.html2canvas) {
+          console.error('jsPDF/html2canvas nicht verfügbar');
+          this.solarGrid.showToast('PDF-Generierung nicht verfügbar', 3000);
+          return;
+        }
+        if (!snapshot?.configs?.length) {
+          this.solarGrid.showToast('Keine Konfiguration zum Exportieren', 3000);
+          return;
+        }
+        try {
+          // 1) Template rendern
+          await this.renderSnapshotIntoPdfTemplate(snapshot);
+          const rootEl = document.getElementById('pdf-root');
+          if (!rootEl) throw new Error('#pdf-root nicht gefunden');
+          const prevStyle = rootEl.getAttribute('style') || '';
+  
+          // 2) Sichtbar aber unsichtbar machen (für zuverlässiges Rendering)
+          rootEl.style.position = 'fixed';
+          rootEl.style.left = '0';
+          rootEl.style.top = '0';
+          rootEl.style.opacity = '0.01';
+          rootEl.style.pointerEvents = 'none';
+          rootEl.style.zIndex = '9999';
+          rootEl.style.background = '#ffffff';
+  
+          // 3) Sicherstellen, dass alle Bilder fertig sind
+          await waitForImages(rootEl);
+          await new Promise(r => requestAnimationFrame(r));
+          await new Promise(r => setTimeout(r, 30));
+  
+          const pages = Array.from(rootEl.querySelectorAll('.pdf-page'));
+          if (pages.length === 0) throw new Error('Keine .pdf-page Elemente');
+          console.log('[PDF] capturing pages:', pages.length);
+  
+          // 4) PDF initialisieren – Pixel-Format exakt zu unseren CSS-Werten
+          const pdf = new this.jsPDF({ unit: 'px', format: [794, 1123], orientation: 'portrait' });
+  
+          for (let i = 0; i < pages.length; i++) {
+            const pageEl = pages[i];
+            // Garantierte Maße pro Seite
+            pageEl.style.width = '794px';
+            pageEl.style.height = '1123px';
+            pageEl.style.boxSizing = 'border-box';
+  
+            // Canvas erzeugen
+            const canvas = await this.html2canvas(pageEl, {
+              scale: 2,
+              backgroundColor: '#ffffff',
+              useCORS: true,
+              allowTaint: true,
+              logging: true
+            });
+            console.log('[PDF] canvas created', { w: canvas.width, h: canvas.height });
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            if (i > 0) pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, 0, 794, 1123);
+          }
+  
+          // 5) Speichern/Öffnen: Auf Touch-Geräten in neuem Tab öffnen
+          const fileName = this.generateFileName(snapshot.configs);
+          if (this.isTouchDevice()) {
+            try {
+              const blob = pdf.output('blob');
+              const url = URL.createObjectURL(blob);
+              window.open(url, '_blank');
+              // Objekt-URL nach kurzer Zeit freigeben
+              setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 15000);
+            } catch (_) {
+              // Fallback: normal speichern
+              pdf.save(fileName);
+            }
+          } else {
+            pdf.save(fileName);
+          }
+          rootEl.setAttribute('style', prevStyle);
+        } catch (err) {
+          console.error('PDF-Erstellung fehlgeschlagen:', err);
+          this.solarGrid.showToast('PDF-Erstellung fehlgeschlagen', 3000);
+        }
+      }
+  
+      // Rendert den Snapshot in das versteckte A4-HTML-Template (#pdf-root)
+      async renderSnapshotIntoPdfTemplate(snapshot) {
+        const root = document.getElementById('pdf-root');
+        if (!root) return;
+        // Leeren
+        root.innerHTML = '';
+        const dateStr = new Date().toLocaleDateString('de-DE');
+  
+        for (let i = 0; i < snapshot.configs.length; i++) {
+          const config = snapshot.configs[i];
+          // Seite klonen
+          const page = document.createElement('div');
+          page.className = 'pdf-page';
+          page.style.width = '794px';
+          page.style.minHeight = '1123px';
+          page.style.padding = '48px 48px 64px 48px';
+          page.style.boxSizing = 'border-box';
+          page.style.position = 'relative';
+  
+          page.innerHTML = `
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
+              <div>
+                <div style="font-size:18pt; font-weight:700; color:#0e1e34;">${config.name || 'Konfiguration'}</div>
+                <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr}</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;"><img src="${this.headerLogoBlueUrl}" alt="Logo" style="height:12mm; width:auto;"/></div>
+            </header>
+            <section style="border:1px solid #e5e7eb; border-radius:8px; padding:6mm; margin-bottom:8mm;">
+              <div style="font-size:12pt; font-weight:700; color:#0e1e34;">Projekt</div>
+              <div style="font-size:10pt; color:#111; margin-top:2mm; display:flex; justify-content:space-between; gap:6mm;">
+                <div><span style="font-weight:700;">Projekttitel:</span> ${(config.name || 'Unbenannt')}</div>
+                <div><span style="font-weight:700;">Datum:</span> ${dateStr}</div>
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6mm; margin-top:4mm;">
+                <div>
+                  <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                    <div style="width:28mm; color:#0e1e34;">Name:</div>
+                    <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                  </div>
+                  <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                    <div style="width:28mm; color:#0e1e34;">Firma:</div>
+                    <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                  </div>
+                  <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                    <div style="width:28mm; color:#0e1e34;">Adresse:</div>
+                    <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                  </div>
+                  <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                    <div style="width:28mm; color:#0e1e34;">Telefon:</div>
+                    <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                  </div>
+                  <div style="display:flex; align-items:flex-end; gap:4mm;">
+                    <div style="width:28mm; color:#0e1e34;">E-Mail:</div>
+                    <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div style="display:flex; align-items:flex-end; gap:4mm; margin-bottom:3mm;">
+                    <div style="flex:0 0 auto; font-weight:700; color:#0e1e34;">Weitere Informationen:</div>
+                    <div style="flex:1; height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                  </div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb; margin-bottom:3mm;"></div>
+                  <div style="height:6mm; border-bottom:1px solid #e5e7eb;"></div>
+                </div>
+              </div>
+            </section>
+            <section style="margin-bottom:8mm;">
+              <div style="font-size:11pt; font-weight:700; color:#0e1e34; margin-bottom:4mm;">Grid-Übersicht</div>
+              <div style="font-size:10pt; color:#111; margin-bottom:4mm;">
+                Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt) · Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}
+              </div>
+              <img class="pdf-grid-image" alt="Grid" style="width:100%; max-width:100%; border-radius:6px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,0.06);" />
+            </section>
+          `;
+  
+          // Grid-Bild generieren
+          try {
+            const gridImg = await this.captureGridVisualizationFromSnapshot(config);
+            if (gridImg) page.querySelector('.pdf-grid-image').src = gridImg;
+          } catch {}
+  
+          // Produktliste als eigene Seite (ohne Zusatzprodukte)
+          const productsPage = document.createElement('div');
+          productsPage.className = 'pdf-page';
+          productsPage.style.width = '794px';
+          productsPage.style.minHeight = '1123px';
+          productsPage.style.padding = '48px 48px 64px 48px';
+          productsPage.style.boxSizing = 'border-box';
+          productsPage.style.position = 'relative';
+  
+          productsPage.innerHTML = `
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
+              <div>
+                <div style="font-size:18pt; font-weight:700; color:#0e1e34;">${config.name || 'Konfiguration'}</div>
+                <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr}</div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;"><img src="${this.headerLogoBlueUrl}" alt="Logo" style="height:12mm; width:auto;"/></div>
+            </header>
+            <div style="background:#FFB101; color:#000; border-radius:8px; padding:6mm; font-weight:700; margin-bottom:6mm;">PRODUKT-LISTE</div>
+            <table style="width:100%; border-collapse:collapse; font-size:10pt;">
+              <thead>
+                <tr style="background:#0e1e34; color:#fff;">
+                  <th style="text-align:left; padding:3mm 4mm; border-top-left-radius:6px; width:20mm;">Anzahl</th>
+                  <th style="text-align:left; padding:3mm 4mm;">Produkt</th>
+                  <th style="text-align:right; padding:3mm 4mm; width:35mm;">Benötigte Menge</th>
+                  <th style="text-align:right; padding:3mm 4mm; border-top-right-radius:6px; width:30mm;">Preis</th>
+                </tr>
+              </thead>
+              <tbody class="pdf-table-body"></tbody>
+            </table>
+            <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm;">
+              <div style="font-weight:700; line-height:1; margin:0;">GESAMTPREIS</div>
+              <div class="pdf-total-price" style="font-size:14pt; font-weight:700; line-height:1; margin:0;"></div>
+            </div>
+          `;
+  
+          // Produkte rendern (neues Tabellenlayout: Anzahl | Produkt+VE | benötigte Menge | Preis)
+          // Zusatzprodukte werden hier explizit ausgeschlossen – sie kommen gesammelt auf eine separate Seite
+          const pdfTotalPriceEl = productsPage.querySelector('.pdf-total-price');
+            if (pdfTotalPriceEl) {
+            // MwSt-Hinweis entfernt - vereinfachte UI
+          }
+  
+          await this.renderProductsIntoTable(config, productsPage.querySelector('.pdf-table-body'), pdfTotalPriceEl, {
+            htmlLayout: true,
+            excludeAdditionalProducts: true
+          });
+  
+          // Safety: falls Tabelle leer ist, füge Platzhalterzeile ein
+          const tbody = productsPage.querySelector('.pdf-table-body');
+          if (tbody && !tbody.innerHTML.trim()) {
+            tbody.innerHTML = '<tr><td style="padding:3mm 4mm;" colspan="4">Keine Produkte ausgewählt</td></tr>';
+          }
+  
+          // Paginierung: Wenn Tabelle zu lang ist, auf mehrere .pdf-page Elemente aufteilen
+          let productPages = null;
+          try {
+            const rootEl = document.getElementById('pdf-root');
+            if (rootEl && !productsPage.parentNode) {
+              rootEl.appendChild(productsPage);
+            }
+            const paginateProductsPage = (pageEl) => {
+              const createdPages = [];
+              const pageHeight = (pageEl && pageEl.getBoundingClientRect && pageEl.getBoundingClientRect().height) || 1123;
+              const footerReservePx = 120; // Platz für Footer + Abstand
+              // Reserviere zusätzlich Platz für die Gesamtpreis-Box, damit sie nie in den Footer läuft
+              const totalBlockTemplate = pageEl.querySelector('.pdf-total');
+              let totalReservePx = 0;
+              try {
+                if (totalBlockTemplate) {
+                  // Sichtbar messen (falls auf display:none)
+                  const prev = totalBlockTemplate.style.display;
+                  if (prev === 'none') totalBlockTemplate.style.display = '';
+                  const tbRect = totalBlockTemplate.getBoundingClientRect();
+                  totalReservePx = Math.ceil(tbRect.height) + 8; // kleiner Sicherheitsrand
+                  totalBlockTemplate.style.display = prev;
+                }
+              } catch (_) { totalReservePx = 80; }
+              const tableBody = pageEl.querySelector('.pdf-table-body');
+              const tableHead = pageEl.querySelector('thead');
+              const totalBlock = pageEl.querySelector('.pdf-total');
+              if (!tableBody || !tableHead) return [pageEl];
+  
+              const allRows = Array.from(tableBody.querySelectorAll('tr'));
+              if (allRows.length === 0) return [pageEl];
+  
+              // Hilfsfunktion: leeres Seiten-Skelett klonen
+              const makeSkeleton = () => {
+                const clone = pageEl.cloneNode(true);
+                const bd = clone.querySelector('.pdf-table-body');
+                if (bd) bd.innerHTML = '';
+                // Total-Block auf Zwischen-Seiten ausblenden, erst auf letzter Seite sichtbar
+                const tb = clone.querySelector('.pdf-total');
+                if (tb) tb.style.display = 'none';
+                return clone;
+              };
+  
+              // Erste Seite als Start verwenden (leeren und befüllen)
+              const first = makeSkeleton();
+              // Ersetze Original im DOM durch das neue Skelett, um Messungen korrekt zu machen
+              if (pageEl.parentNode) {
+                pageEl.parentNode.replaceChild(first, pageEl);
+              }
+              const pagesArr = [first];
+  
+              let idx = 0;
+              while (idx < allRows.length) {
+                const currentPage = pagesArr[pagesArr.length - 1];
+                const curBody = currentPage.querySelector('.pdf-table-body');
+                const currentRect = currentPage.getBoundingClientRect();
+                const bodyTop = curBody.getBoundingClientRect().top - currentRect.top;
+                const maxBottom = pageHeight - footerReservePx;
+                const contentLimitBottom = maxBottom - totalReservePx;
+  
+                // Füge Zeilen, bis die Unterkante überschreitet
+                while (idx < allRows.length) {
+                  const row = allRows[idx].cloneNode(true);
+                  curBody.appendChild(row);
+                  const rowBottom = row.getBoundingClientRect().bottom - currentRect.top;
+                  if (rowBottom > contentLimitBottom) {
+                    // Überschreitung → entferne und beginne neue Seite
+                    curBody.removeChild(row);
+                    break;
+                  }
+                  idx++;
+                }
+                if (idx < allRows.length) {
+                  const nextPage = makeSkeleton();
+                  if (first.parentNode) first.parentNode.appendChild(nextPage);
+                  pagesArr.push(nextPage);
+                }
+              }
+  
+              // Total nur auf letzter Seite anzeigen
+              pagesArr.forEach((p, i) => {
+                const tb = p.querySelector('.pdf-total');
+                if (tb) tb.style.display = (i === pagesArr.length - 1) ? '' : 'none';
+              });
+  
+              return pagesArr;
+            };
+  
+            productPages = paginateProductsPage(productsPage);
+            // Footer später für jede Seite hinzufügen (siehe unten)
+            // Falls mehrere Seiten entstanden, werden sie weiter unten verarbeitet
+            // productsPage wurde intern ersetzt; referenzieren wir die neue erste Seite
+            if (productPages && productPages.length) {
+              // Merke erste Seite für Footer-Handling
+              productsPage = productPages[0];
+            }
+          } catch (e) {
+            console.warn('PDF-Paginierung fehlgeschlagen (fallback auf Einzel-Seite):', e);
+          }
+  
+          // Footer für beide Seiten mit Logo
+          const makeFooter = () => {
+            const footer = document.createElement('div');
+            footer.style.position = 'absolute';
+            footer.style.left = '0';
+            footer.style.right = '0';
+            footer.style.bottom = '0';
+            footer.style.height = '18mm';
+            footer.style.background = '#0e1e34';
+            footer.style.color = '#fff';
+            footer.style.display = 'flex';
+            footer.style.alignItems = 'center';
+            footer.style.justifyContent = 'space-between';
+            footer.style.padding = '0 16mm';
+            footer.style.boxSizing = 'border-box';
+            footer.style.fontSize = '8pt';
+            const left = document.createElement('div');
+            left.textContent = 'Schneider Unterkonstruktion - Solar Konfigurator';
+            const right = document.createElement('img');
+            right.src = this.companyLogoUrl;
+            right.alt = 'Logo';
+            right.style.height = '12mm';
+            right.style.width = 'auto';
+            footer.appendChild(left);
+            footer.appendChild(right);
+            return footer;
+          };
+  
+          page.appendChild(makeFooter());
+          // Produktseiten nach der Übersichtsseite anhängen (korrekte Reihenfolge)
+          const pagesToAppend = (productPages && productPages.length) ? productPages : [productsPage];
+          pagesToAppend.forEach(p => {
+            const hasFooter = Array.from(p.children).some(ch => (ch.style && ch.style.position === 'absolute' && ch.style.bottom === '0px'));
+            if (!hasFooter) p.appendChild(makeFooter());
+            if (p.parentNode === root) root.removeChild(p);
+          });
+          root.appendChild(page);
+          pagesToAppend.forEach(p => root.appendChild(p));
+        }
+        // Nach allen Konfigurationen: optionale Zusatzprodukte-Seite (einmal pro PDF)
+        try {
+          const additionalParts = this.computeAdditionalProductsForSnapshot(snapshot);
+          const additionalKeys = Object.keys(additionalParts).filter(k => additionalParts[k] > 0);
+          if (additionalKeys.length > 0) {
+            const dateStr2 = new Date().toLocaleDateString('de-DE');
+            const additionalPage = document.createElement('div');
+            additionalPage.className = 'pdf-page';
+            additionalPage.style.width = '794px';
+            additionalPage.style.minHeight = '1123px';
+            additionalPage.style.padding = '48px 48px 64px 48px';
+            additionalPage.style.boxSizing = 'border-box';
+            additionalPage.style.position = 'relative';
+  
+            additionalPage.innerHTML = `
+              <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10mm;">
+                <div>
+                  <div style="font-size:18pt; font-weight:700; color:#0e1e34;">Für alle Konfigurationen</div>
+                  <div style="font-size:10pt; color:#677; margin-top:2mm;">${dateStr2}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; color:#0e1e34; font-size:10pt;"><img src="${this.headerLogoBlueUrl}" alt="Logo" style="height:12mm; width:auto;"/></div>
+              </header>
+              <div style="background:#FFB101; color:#000; border-radius:8px; padding:6mm; font-weight:700; margin-bottom:6mm;">ZUSATZPRODUKTE</div>
+              <table style="width:100%; border-collapse:collapse; font-size:10pt;">
+                <thead>
+                  <tr style="background:#0e1e34; color:#fff;">
+                    <th style="text-align:left; padding:3mm 4mm; border-top-left-radius:6px; width:20mm;">Anzahl</th>
+                    <th style="text-align:left; padding:3mm 4mm;">Produkt</th>
+                    <th style="text-align:right; padding:3mm 4mm; width:35mm;">Benötigte Menge</th>
+                    <th style="text-align:right; padding:3mm 4mm; border-top-right-radius:6px; width:30mm;">Preis</th>
+                  </tr>
+                </thead>
+                <tbody class="pdf-additional-table-body"></tbody>
+              </table>
+              <div class="pdf-total" style="margin-top:8mm; background:#0e1e34; color:#fff; border-radius:8px; padding:6mm; display:grid; grid-template-columns: 1fr auto; align-items:start; column-gap:6mm; position:relative;">
+                <div style="font-weight:700; line-height:1; margin:0;">GESAMTPREIS</div>
+                <div class="pdf-additional-total-price" style="font-size:14pt; font-weight:700; line-height:1; margin:0;"></div>
+              </div>
+            `;
+  
+            // Render Zusatzprodukte-Tabelle
+            const pdfAddTotalEl = additionalPage.querySelector('.pdf-additional-total-price');
+            if (pdfAddTotalEl) {
+              // MwSt-Hinweis entfernt - vereinfachte UI
+            }
+            await this.renderAdditionalProductsIntoTable(snapshot, additionalPage.querySelector('.pdf-additional-table-body'), pdfAddTotalEl);
+  
+            // Footer
+            const footer = document.createElement('div');
+            footer.style.position = 'absolute';
+            footer.style.left = '0';
+            footer.style.right = '0';
+            footer.style.bottom = '0';
+            footer.style.height = '18mm';
+            footer.style.background = '#0e1e34';
+            footer.style.color = '#fff';
+            footer.style.display = 'flex';
+            footer.style.alignItems = 'center';
+            footer.style.justifyContent = 'space-between';
+            footer.style.padding = '0 16mm';
+            footer.style.boxSizing = 'border-box';
+            footer.style.fontSize = '8pt';
+            const left = document.createElement('div');
+            left.textContent = 'Schneider Unterkonstruktion - Solar Konfigurator';
+            const right = document.createElement('img');
+            right.src = this.companyLogoUrl;
+            right.alt = 'Logo';
+            right.style.height = '12mm';
+            right.style.width = 'auto';
+            footer.appendChild(left);
+            footer.appendChild(right);
+            additionalPage.appendChild(footer);
+  
+            root.appendChild(additionalPage);
+          }
+        } catch (e) {
+          console.warn('Zusatzprodukte-Seite konnte nicht erzeugt werden:', e);
+        }
+      }
+  
+      async renderProductsIntoTable(config, tbodyEl, totalEl, options = {}) {
+        const rawParts = await this.calculatePartsFromSnapshot(config);
+        const parts = { ...rawParts };
+        try {
+          const ulicaSelected = config.ulicaModule === true;
+          const keyPiece = ulicaSelected ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+          const keyPallet = ulicaSelected ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+          const count = Number(parts[keyPiece] || 0);
+          if (count > 0) {
+            const pallets = Math.floor(count / 36);
+            const remainder = count % 36;
+            if (pallets > 0) {
+              parts[keyPallet] = (parts[keyPallet] || 0) + pallets * 36; // Stückbasis, VE=36
+            }
+            parts[keyPiece] = remainder;
+          }
+        } catch (e) {}
+        let totalPrice = 0;
+        const rows = [];
+        const ADDITIONAL_KEYS = new Set(['MC4_Stecker', 'Solarkabel', 'Holzunterleger', 'Ringkabelschuhe', 'Kabelbinder', 'BlechBohrschrauben']);
+        for (const [key, value] of Object.entries(parts || {})) {
+          if (value <= 0) continue;
+          if (options.excludeAdditionalProducts && ADDITIONAL_KEYS.has(key)) continue;
+          const ve = VE[key] || 1;
+          const packs = Math.ceil(value / ve);
+          const pricePerPack = getPackPriceForQuantity(key, value);
+          const rowPrice = packs * pricePerPack;
+          totalPrice += rowPrice;
+          rows.push({ key, value, ve, packs, rowPrice });
+        }
+        // Sortiere nach Produktname
+        rows.sort((a, b) => a.key.localeCompare(b.key));
+        if (options.htmlLayout) {
+          tbodyEl.innerHTML = rows.map(r => {
+            const productName = PRODUCT_NAME_MAP[r.key] || r.key.replace(/_/g, ' ');
+            return `
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:3mm 4mm; width:20mm; font-weight:700;">${r.packs}x</td>
+                <td style="padding:3mm 4mm;">
+                  <div style="font-weight:700; font-size:11pt;">${productName}</div>
+                  <div style="color:#888; font-size:9pt;">${r.ve} Stück</div>
+                </td>
+                <td style="padding:3mm 4mm; text-align:right; width:35mm;">${r.value}</td>
+                <td style="padding:3mm 4mm; text-align:right; width:30mm;">${r.rowPrice.toFixed(2)} €</td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          tbodyEl.innerHTML = rows.map(r => `
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:3mm 4mm;">${r.key}</td>
+              <td style="padding:3mm 4mm; text-align:right;">${r.value}</td>
+              <td style="padding:3mm 4mm; text-align:right;">${r.ve}</td>
+              <td style="padding:3mm 4mm; text-align:right;">${r.rowPrice.toFixed(2)} €</td>
+            </tr>
+          `).join('');
+        }
+        if (totalEl) totalEl.textContent = `${totalPrice.toFixed(2)} €`;
+      }
+  
+      // Aggregiert Zusatzprodukte einmalig über alle Konfigurationen im Snapshot
+      computeAdditionalProductsForSnapshot(snapshot) {
+        try {
+          const configs = Array.isArray(snapshot?.configs) ? snapshot.configs : [];
+          const anyMc4 = configs.some(c => c.mc4 === true);
+          const anyCable = configs.some(c => c.cable === true || c.solarkabel === true);
+          const anyWood = configs.some(c => c.wood === true || c.holz === true);
+          const anyQuetsch = configs.some(c => c.quetschkabelschuhe === true);
+  
+          const totalSelectedCells = configs.reduce((sum, c) => {
+            if (typeof c.selectedCells === 'number') return sum + c.selectedCells;
+            if (Array.isArray(c.selection)) {
+              return sum + c.selection.flat().filter(Boolean).length;
+            }
+            return sum;
+          }, 0);
+  
+          const result = {};
+          if (anyMc4) {
+            result.MC4_Stecker = Math.max(1, Math.ceil((totalSelectedCells || 0) / 30));
+          }
+          if (anyCable) {
+            result.Solarkabel = 1;
+          }
+          if (anyWood) {
+            result.Holzunterleger = 1;
+          }
+          if (anyQuetsch) {
+            result.Ringkabelschuhe = 1;
+          }
+          // Optimierer (Huawei/BRC) – Menge aus globaler UI lesen
+          try {
+            const hCb = document.getElementById('huawei-opti');
+            const bCb = document.getElementById('brc-opti');
+            const qEl = document.getElementById('opti-qty');
+            if (qEl) {
+              const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+              if (hCb && hCb.checked) {
+                result.HuaweiOpti = (result.HuaweiOpti || 0) + qty;
+              }
+              if (bCb && bCb.checked) {
+                result.BRCOpti = (result.BRCOpti || 0) + qty;
+              }
+            }
+          } catch (_) {}
+          return result;
+        } catch (err) {
+          console.warn('computeAdditionalProductsForSnapshot failed:', err);
+          return {};
+        }
+      }
+      // Rendert Zusatzprodukte in eine Tabelle (HTML-Modus) und zeigt Gesamtpreis
+      async renderAdditionalProductsIntoTable(snapshot, tbodyEl, totalEl) {
+        const parts = this.computeAdditionalProductsForSnapshot(snapshot);
+        let totalPrice = 0;
+        const rows = Object.entries(parts).map(([key, value]) => {
+          const ve = VE[key] || 1;
+          const packs = Math.ceil(value / ve);
+          const pricePerPack = getPackPriceForQuantity(key, value);
+          const rowPrice = packs * pricePerPack;
+          totalPrice += rowPrice;
+          return { key, value, ve, packs, rowPrice };
+        });
+        // Reihenfolge stabil nach Name
+        rows.sort((a, b) => a.key.localeCompare(b.key));
+        tbodyEl.innerHTML = rows.map(r => {
+          const productName = PRODUCT_NAME_MAP[r.key] || r.key.replace(/_/g, ' ');
+          return `
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:3mm 4mm; width:20mm; font-weight:700;">${r.packs}x</td>
+              <td style="padding:3mm 4mm;">
+                <div style="font-weight:700; font-size:11pt;">${productName}</div>
+                <div style="color:#888; font-size:9pt;">${r.ve} Stück</div>
+              </td>
+              <td style="padding:3mm 4mm; text-align:right; width:35mm;">${r.value}</td>
+              <td style="padding:3mm 4mm; text-align:right; width:30mm;">${r.rowPrice.toFixed(2)} €</td>
+            </tr>
+          `;
+        }).join('');
+        if (totalEl) totalEl.textContent = `${totalPrice.toFixed(2)} €`;
+      }
+  
+      // Abwärtskompatibler Wrapper: ermöglicht this.pdfGenerator.generatePDF('current'|'all')
+      async generatePDF(mode = 'current') {
+        if (!this.isAvailable()) {
+          console.warn('PDF Libraries nicht verfügbar');
+          this.solarGrid?.showToast?.('PDF-Generierung nicht verfügbar', 3000);
+          return;
+        }
+        try {
+          // Erzeuge Snapshot über SolarGrid
+          const fullSnapshot = this.solarGrid?.createConfigSnapshot
+            ? this.solarGrid.createConfigSnapshot()
+            : null;
+          if (!fullSnapshot || !Array.isArray(fullSnapshot.configs) || fullSnapshot.configs.length === 0) {
+            this.solarGrid?.showToast?.('Keine Konfiguration zum Exportieren', 3000);
+            return;
+          }
+          let snapshotToExport = fullSnapshot;
+          if (mode === 'current') {
+            const idx = typeof fullSnapshot.currentConfigIndex === 'number' ? fullSnapshot.currentConfigIndex : 0;
+            const only = fullSnapshot.configs[idx] || fullSnapshot.configs[0];
+            snapshotToExport = {
+              timestamp: fullSnapshot.timestamp,
+              totalConfigs: 1,
+              currentConfigIndex: 0,
+              configs: [only]
+            };
+          }
+          await this.generatePDFFromSnapshot(snapshotToExport);
+        } catch (err) {
+          console.error('generatePDF wrapper failed:', err);
+          this.solarGrid?.showToast?.('PDF-Erstellung fehlgeschlagen', 3000);
+        }
+      }
+  
+      // Entfernt alte generatePDF-Umleitung: direkte Nutzung von generatePDFFromSnapshot()
+  
+      // Entfernt ungenutzte calculateTotalPrice (wir nutzen calculateConfigPrice zentral)
+  
+      // Header auf jeder Seite (neues Design)
+      addHeader(pdf, pageWidth, config) {
+        // NEUES DESIGN: Header minimal, weißer Hintergrund mit Titel in dunkelblau
+        pdf.setTextColor(14, 30, 52);
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Ihre Konfiguration', 20, 20);
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(new Date().toLocaleDateString('de-DE'), pageWidth - 40, 20);
+        pdf.setTextColor(0, 0, 0);
+        return 28; // Y-Start nach Header
+      }
+  
+      // Interne Hilfsfunktion: invertiert ein Base64 PNG und cached das Ergebnis
+      async getInvertedLogoBase64(originalBase64) {
+        if (this._invertedLogoBase64Promise) return this._invertedLogoBase64Promise;
+        this._invertedLogoBase64Promise = new Promise((resolve, reject) => {
+          try {
+            const img = new Image();
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                  data[i] = 255 - data[i];       // R
+                  data[i + 1] = 255 - data[i + 1]; // G
+                  data[i + 2] = 255 - data[i + 2]; // B
+                  // Alpha bleibt
+                }
+                ctx.putImageData(imageData, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+              } catch (err) {
+                reject(err);
+              }
+            };
+            img.onerror = reject;
+            img.src = originalBase64;
+          } catch (e) {
+            reject(e);
+          }
+        });
+        return this._invertedLogoBase64Promise;
+      }
+      // Footer mit Logo (invertiert) – neues Design
+      async addFooter(pdf, pageWidth, pageHeight) {
+        const footerY = pageHeight - 25;
+        
+        // Footer Hintergrund
+        pdf.setFillColor(14, 30, 52);
+        pdf.rect(0, footerY, pageWidth, 25, 'F');
+        
+        // Footer Text
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Schneider Unterkonstruktion - Solar Konfigurator', 20, footerY + 8);
+        pdf.text('unterkonstruktion.de', 20, footerY + 15);
+        
+        // Logo rechts - neues PNG Logo
+        try {
+          // Logo von bereitgestellter URL laden und invertieren
+          const logoBase64 = await this.loadImageAsBase64(this.companyLogoUrl);
+          const invertedLogoBase64 = await this.getInvertedLogoBase64(logoBase64);
+          const logoHeight = 15; // Feste Höhe
+          const logoWidth = logoHeight * 3.1338028169; // Exaktes Verhältnis 3.1338028169:1
+          const logoX = pageWidth - logoWidth - 20; // 20px Abstand vom rechten Rand
+          const logoY = footerY + 5; // 5px Abstand vom oberen Footer-Rand
+  
+          // Base64 Logo als Bild einbetten (invertiert)
+          pdf.addImage(invertedLogoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
+        } catch (error) {
+          console.warn('Logo konnte nicht geladen werden:', error);
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Schneider Unterkonstruktion', pageWidth - 120, footerY + 12);
+        }
+      }
+  
+      // Lädt ein Bild (CORS-fähig) von URL und gibt ein Base64 PNG zurück
+      async loadImageAsBase64(url) {
+        return new Promise((resolve, reject) => {
+          try {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+              } catch (e) {
+                reject(e);
+              }
+            };
+            img.onerror = reject;
+            img.src = url;
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+  
+      // Hilfsmethode für Gesamtpreis-Berechnung aus Snapshot
+      async calculateTotalPriceFromSnapshot(config) {
+        const parts = await this.calculatePartsFromSnapshot(config);
+        
+        let totalPrice = 0;
+        Object.entries(parts).forEach(([key, value]) => {
+          if (value > 0) {
+            const packs = Math.ceil(value / (VE[key] || 1));
+            const pricePerPack = getPackPriceForQuantity(key, value);
+            totalPrice += packs * pricePerPack;
+          }
+        });
+  
+        return totalPrice;
+      }
+      // NEUE ISOLIERTE Konfiguration zu PDF hinzufügen (aus Snapshot)
+      async addConfigurationToPDFFromSnapshot(pdf, config, isFirstPage) {
+        const pageWidth = 210; // A4 Breite in mm
+        const pageHeight = 297; // A4 Höhe in mm
+        const bottomMargin = 30; // Erhöhter Rand für Footer
+        
+        // Verwende Objekt für yPosition damit es von checkPageBreak geändert werden kann
+        const positionRef = { y: 25 };
+  
+        // Hilfsfunktion für Seitenumbruch-Prüfung mit mehr Platz
+        const checkPageBreak = async (neededSpace = 20) => {
+          if (positionRef.y + neededSpace > pageHeight - bottomMargin) {
+            // Footer auf aktueller Seite hinzufügen
+            await this.addFooter(pdf, pageWidth, pageHeight);
+            // Neue Seite hinzufügen
+            pdf.addPage();
+            // Header auf neuer Seite
+            this.addHeader(pdf, pageWidth, config);
+            positionRef.y = 28;
+            return true;
+          }
+          return false;
+        };
+  
+        /* pdf debug removed */
+  
+        // Header zeichnen (auf jeder Seite identisch)
+        positionRef.y = this.addHeader(pdf, pageWidth, config);
+  
+        // Projekt-Info Sektion: dezenter Container
+        await checkPageBreak(20);
+        pdf.setDrawColor(229, 231, 235); // #e5e7eb
+        pdf.setLineWidth(0.5);
+        pdf.rect(15, positionRef.y - 4, pageWidth - 30, 14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.setTextColor(14, 30, 52);
+        pdf.text(`Projekt: ${config.name || 'Unbenannt'}`, 20, positionRef.y + 6);
+        pdf.setTextColor(0, 0, 0);
+        positionRef.y += 22;
+  
+        // Grid-Informationen
+        await checkPageBreak(20);
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Grid: ${config.cols} × ${config.rows} Module (${config.selectedCells} ausgewählt)`, 20, positionRef.y);
+        pdf.text(`Orientierung: ${config.orientation === 'vertical' ? 'Vertikal' : 'Horizontal'}`, 20, positionRef.y + 8);
+        positionRef.y += 20;
+  
+        // Grid-Screenshot hinzufügen (ISOLIERT mit Snapshot-Daten)
+        try {
+          const gridImage = await this.captureGridVisualizationFromSnapshot(config);
+          if (gridImage) {
+            // Maximal 70% der A4-Höhe für das Grid-Bild
+            const maxHeight = Math.floor(pageHeight * 0.5); // 50% der Seite
+            const targetWidth = 170; // mm
+            // Berechne proportional die Bildhöhe anhand Zielbreite (Grid-Images werden im Verhältnis ~4:3 erzeugt)
+            let computedHeight = Math.round((targetWidth * 3) / 4);
+            if (computedHeight > maxHeight) {
+              // Skaliere runter, wenn höher als 70% der Seite
+              const scale = maxHeight / computedHeight;
+              computedHeight = Math.round(computedHeight * scale);
+            }
+  
+            await checkPageBreak(computedHeight + 15);
+  
+            // Zentriert platzieren
+            const centerX = (pageWidth - targetWidth) / 2;
+            const centerY = positionRef.y;
+            pdf.addImage(gridImage, 'PNG', centerX, centerY, targetWidth, computedHeight);
+            positionRef.y += computedHeight + 10;
+          }
+        } catch (error) {
+          console.warn('Grid-Screenshot fehlgeschlagen:', error);
+          positionRef.y += 10;
+        }
+  
+        // Produkttabelle auf NEUE SEITE schieben, damit nichts abgeschnitten wird
+        await this.addFooter(pdf, pageWidth, pageHeight);
+        pdf.addPage();
+        this.addHeader(pdf, pageWidth, config);
+        positionRef.y = 28;
+        // Produkttabelle (ISOLIERT mit Snapshot-Daten)
+        await checkPageBreak(60);
+        positionRef.y = await this.addProductTableFromSnapshot(pdf, config, positionRef.y, checkPageBreak);
+  
+        // Gesamtpreis hervorgehoben
+        await checkPageBreak(25);
+        const totalPrice = await this.calculateTotalPriceFromSnapshot(config);
+        pdf.setFillColor(14, 30, 52);
+        pdf.rect(15, positionRef.y - 5, pageWidth - 30, 20, 'F');
+        
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('GESAMTPREIS:', 20, positionRef.y + 8);
+        const totalText = `${totalPrice.toFixed(2)} € (exkl. MwSt)`;
+        pdf.text(totalText, 170, positionRef.y + 8);
+        
+        pdf.setTextColor(0, 0, 0);
+        positionRef.y += 30;
+  
+        // Produkte pro Modul Informationen entfernt - nicht mehr notwendig
+  
+        // Footer mit Logo auf der letzten Seite
+        await this.addFooter(pdf, pageWidth, pageHeight);
+      }
+  
+      // Erfasse Grid-Visualisierung als Bild
+      async captureGridVisualization(config) {
+        // Alternative Methode: Erstelle temporäres Grid-Element für Screenshot
+        try {
+          const selection = config.selection || [];
+          const cols = config.cols || 5;
+          const rows = config.rows || 5;
+          
+          // Erstelle temporäres Container Element
+          const tempContainer = document.createElement('div');
+          tempContainer.style.position = 'absolute';
+          tempContainer.style.left = '-10000px';
+          tempContainer.style.top = '-10000px';
+          tempContainer.style.padding = '20px';
+          tempContainer.style.backgroundColor = '#ffffff';
+          document.body.appendChild(tempContainer);
+  
+          // Erstelle Grid HTML mit kompaktem Design
+          const cellSize = 50; // Zellgröße beibehalten
+          const cellGap = 2; // Maximal 2px Abstand
+          
+          const gridEl = document.createElement('div');
+          gridEl.style.display = 'grid';
+          gridEl.style.gap = `${cellGap}px`;
+          gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+          gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+          gridEl.style.padding = '2px'; // Kompakter äußerer Abstand
+          gridEl.style.backgroundColor = '#ffffff';
+          gridEl.style.border = '1px solid #000000'; // 1px schwarze Border
+          gridEl.style.borderRadius = '1rem'; // 1rem border-radius
+  
+          // Normalisiere Selection-Array für die gewünschten Dimensionen
+          const normalizedSelection = Array.from({ length: rows }, (_, y) =>
+            Array.from({ length: cols }, (_, x) => {
+              // Prüfe ob die gespeicherte Selection diese Position abdeckt
+              if (selection[y] && Array.isArray(selection[y]) && x < selection[y].length) {
+                return selection[y][x] === true;
+              }
+              // Falls außerhalb der gespeicherten Dimensionen: false (nicht ausgewählt)
+              return false;
+            })
+          );
+  
+          /* preview debug removed */
+  
+          // Erstelle alle Grid-Zellen
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const cell = document.createElement('div');
+              
+              // Verwende die normalisierte Selection
+              const isSelected = normalizedSelection[y][x];
+              
+              /* preview debug removed */
+              
+              // Basis-Styles für alle Zellen
+              cell.style.width = `${cellSize}px`;
+              cell.style.height = `${cellSize}px`;
+              cell.style.borderRadius = '1rem'; // 1rem border-radius
+              cell.style.border = '1px solid #000000'; // 1px schwarze Border
+              
+              if (isSelected) {
+                // Ausgewählte Zelle - Dunkelblaue Farbe
+                cell.style.backgroundColor = '#072544';
+              } else {
+                // Nicht-ausgewählte Zelle - hell-grau
+                cell.style.backgroundColor = '#f3f4f6';
+              }
+              
+              gridEl.appendChild(cell);
+            }
+          }
+          
+          tempContainer.appendChild(gridEl);
+  
+          // Warte auf Rendering
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => setTimeout(resolve, 100)); // Kurze Wartezeit, kein Bild-Download nötig
+  
+          // Screenshot von temporärem Element
+          const canvas = await this.html2canvas(tempContainer, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            width: tempContainer.offsetWidth,
+            height: tempContainer.offsetHeight
+          });
+  
+          // Aufräumen
+          document.body.removeChild(tempContainer);
+          
+          return canvas.toDataURL('image/png');
+  
+        } catch (error) {
+          console.warn('Grid-Screenshot fehlgeschlagen:', error);
+          return null;
+        }
+      }
+      // NEUE METHODE: Grid-Bild für Webhook generieren
+      async captureGridImageForWebhook(configData) {
+        try {
+          const selection = configData.selection || [];
+          const cols = configData.cols || 5;
+          const rows = configData.rows || 5;
+          
+          // Erstelle temporäres Container Element
+          const tempContainer = document.createElement('div');
+          tempContainer.style.position = 'absolute';
+          tempContainer.style.left = '-10000px';
+          tempContainer.style.top = '-10000px';
+          tempContainer.style.padding = '20px';
+          tempContainer.style.backgroundColor = '#ffffff';
+          document.body.appendChild(tempContainer);
+  
+          // Grid-Eigenschaften für Webhook-optimierte Darstellung
+          const isVertical = configData.orientation === 'vertical';
+          const baseCellSize = 58; // Kompakter und moderner
+          const cellWidth = isVertical ? Math.round(baseCellSize * 0.62) : baseCellSize;
+          const cellHeight = isVertical ? baseCellSize : Math.round(baseCellSize * 0.62);
+          const cellGap = 2; // wie im UI
+          
+          const gridEl = document.createElement('div');
+          gridEl.style.display = 'grid';
+          gridEl.style.gap = `${cellGap}px`;
+          gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellWidth}px)`;
+          gridEl.style.gridTemplateRows = `repeat(${rows}, ${cellHeight}px)`;
+          gridEl.style.padding = '16px';
+          gridEl.style.backgroundColor = '#f5f7fa';
+          gridEl.style.border = '1px solid #e5e7eb';
+          gridEl.style.borderRadius = '12px';
+          gridEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+  
+          // Grid-Zellen erstellen
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const cell = document.createElement('div');
+              const isSelected = selection[y] && selection[y][x] === true;
+              
+              cell.style.width = `${cellWidth}px`;
+              cell.style.height = `${cellHeight}px`;
+              cell.style.borderRadius = '6px';
+              cell.style.border = '1px solid #d1d5db';
+              cell.style.transition = 'all 0.2s ease';
+              
+              if (isSelected) {
+                // Ausgewählte Zelle - modernes Solar-Panel-Design (nah am UI)
+                cell.style.backgroundColor = '#0b0b0b';
+                cell.style.border = '2px solid #cccccc';
+                cell.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.25)';
+                
+                // Solar-Panel-Pattern hinzufügen
+                const pattern = document.createElement('div');
+                pattern.style.width = '100%';
+                pattern.style.height = '100%';
+                pattern.style.background = `linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 40%),
+                  linear-gradient(135deg, #0b0b0b 0%, #111111 50%, #0b0b0b 100%)`;
+                pattern.style.borderRadius = '4px';
+                pattern.style.position = 'relative';
+                
+                // Grid-Linien für Solarpanel-Look
+                const gridLines = document.createElement('div');
+                gridLines.style.position = 'absolute';
+                gridLines.style.top = '2px';
+                gridLines.style.left = '2px';
+                gridLines.style.right = '2px';
+                gridLines.style.bottom = '2px';
+                gridLines.style.backgroundImage = `
+                  linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px)
+                `;
+                gridLines.style.backgroundSize = '33% 50%';
+                
+                pattern.appendChild(gridLines);
+                cell.appendChild(pattern);
+              } else {
+                // Unausgewählte Zelle - neutral (wie UI)
+                cell.style.backgroundColor = '#f3f4f6';
+                cell.style.border = '1px solid #e5e7eb';
+              }
+              
+              gridEl.appendChild(cell);
+            }
+          }
+          
+          tempContainer.appendChild(gridEl);
+          
+          // Warte auf Rendering
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => setTimeout(resolve, 150));
+  
+          // Canvas für Screenshot erstellen
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Canvas-Größe berechnen
+          const totalWidth = cols * cellWidth + (cols - 1) * cellGap + 40; // +40 für padding
+          const totalHeight = rows * cellHeight + (rows - 1) * cellGap + 40;
+          
+          canvas.width = totalWidth;
+          canvas.height = totalHeight;
+          
+          // Weißer Hintergrund
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Grid manuell auf Canvas zeichnen
+          const startX = 20; // Padding
+          const startY = 20; // Padding
+          
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const cellX = startX + x * (cellWidth + cellGap);
+              const cellY = startY + y * (cellHeight + cellGap);
+              const isSelected = selection[y] && selection[y][x] === true;
+              
+              if (isSelected) {
+                // Ausgewählte Zelle - Dunkelblau
+                ctx.fillStyle = '#072544';
+                ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
+                
+                // Border
+                ctx.strokeStyle = '#0a4d75';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(cellX, cellY, cellWidth, cellHeight);
+                
+                // Solar-Panel-Grid
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1;
+                
+                // Vertikale Linien
+                for (let i = 1; i < 3; i++) {
+                  const lineX = cellX + (cellWidth / 3) * i;
+                  ctx.beginPath();
+                  ctx.moveTo(lineX, cellY + 2);
+                  ctx.lineTo(lineX, cellY + cellHeight - 2);
+                  ctx.stroke();
+                }
+                
+                // Horizontale Mittellinie
+                const lineY = cellY + cellHeight / 2;
+                ctx.beginPath();
+                ctx.moveTo(cellX + 2, lineY);
+                ctx.lineTo(cellX + cellWidth - 2, lineY);
+                ctx.stroke();
+              } else {
+                // Unausgewählte Zelle - Hell grau
+                ctx.fillStyle = '#f8f9fa';
+                ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
+                
+                // Border
+                ctx.strokeStyle = '#e9ecef';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cellX, cellY, cellWidth, cellHeight);
+              }
+            }
+          }
+          
+          // Grid-Rahmen dezent zeichnen (moderner Look)
+          ctx.strokeStyle = '#e5e7eb';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(10, 10, totalWidth - 20, totalHeight - 20);
+          
+          // Canvas zu Base64 konvertieren
+          const base64Image = canvas.toDataURL('image/png');
+          
+          console.log('Canvas generated:', {
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
+            dataURLLength: base64Image.length,
+            dataURLStart: base64Image.substring(0, 50) + '...'
+          });
+          
+          // Cleanup
+          document.body.removeChild(tempContainer);
+          
+          return base64Image;
+          
+        } catch (error) {
+          console.error('Grid-Bild-Generierung fehlgeschlagen:', error);
+          return null;
+        }
+      }
+  
+      // NEUE ISOLIERTE Grid-Capture im UI-Design (gleiches Layout/Design wie Hauptgrid)
+      async captureGridVisualizationFromSnapshot(config) {
+        try {
+          const selection = config.selection || [];
+          const cols = config.cols || 5;
+          const rows = config.rows || 5;
+  
+          // Zielgröße im PDF
+          const maxWidthPx = 698;
+          const maxHeightPx = Math.floor(1123 * 0.5);
+  
+          // Modulverhältnis aus echten Maßen und Orientierung
+          const modW = Number(config.cellWidth || 179);
+          const modH = Number(config.cellHeight || 113);
+          const orientVertical = config.orientation === 'vertical';
+          const unitW = orientVertical ? modH : modW;
+          const unitH = orientVertical ? modW : modH;
+          const baseGap = 2;
+          const wrapperPadding = 16; // wie .canvas
+  
+          // Skaliere, um in die Zielbox zu passen (inkl. Padding)
+          const rawW = unitW * cols + baseGap * (cols - 1) + wrapperPadding * 2;
+          const rawH = unitH * rows + baseGap * (rows - 1) + wrapperPadding * 2;
+          const scale = Math.min(maxWidthPx / rawW, maxHeightPx / rawH, 1);
+          const cellW = Math.max(1, unitW * scale);
+          const cellH = Math.max(1, unitH * scale);
+          const gap = Math.max(1, Math.round(baseGap * scale));
+  
+          // Offscreen-Container im UI-Stil aufbauen
+          const tempRoot = document.createElement('div');
+          tempRoot.style.position = 'absolute';
+          tempRoot.style.left = '-10000px';
+          tempRoot.style.top = '-10000px';
+          tempRoot.style.width = `${Math.ceil(cols * cellW + (cols - 1) * gap + wrapperPadding * 2)}px`;
+          tempRoot.style.height = `${Math.ceil(rows * cellH + (rows - 1) * gap + wrapperPadding * 2)}px`;
+  
+          const canvasLike = document.createElement('div');
+          canvasLike.className = 'canvas';
+          canvasLike.style.width = '100%';
+          canvasLike.style.height = '100%';
+          canvasLike.style.padding = `${wrapperPadding}px`;
+          canvasLike.style.background = '#d0d0d0';
+          canvasLike.style.borderRadius = '6px';
+          canvasLike.style.display = 'flex';
+          canvasLike.style.alignItems = 'center';
+          canvasLike.style.justifyContent = 'center';
+          canvasLike.style.boxSizing = 'border-box';
+  
+          const overflow = document.createElement('div');
+          overflow.style.overflow = 'hidden';
+          overflow.style.display = 'flex';
+          overflow.style.alignItems = 'center';
+          overflow.style.justifyContent = 'center';
+  
+          const grid = document.createElement('div');
+          grid.style.display = 'grid';
+          grid.style.gap = `${gap}px`;
+          grid.style.gridTemplateColumns = `repeat(${cols}, ${Math.round(cellW)}px)`;
+          grid.style.gridTemplateRows = `repeat(${rows}, ${Math.round(cellH)}px)`;
+  
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              const cell = document.createElement('div');
+              cell.style.width = `${Math.round(cellW)}px`;
+              cell.style.height = `${Math.round(cellH)}px`;
+              cell.style.borderRadius = '6px';
+              cell.style.boxSizing = 'border-box';
+              const isSelected = !!(selection[y] && selection[y][x]);
+              if (isSelected) {
+                cell.style.background = '#0b0b0b';
+                cell.style.border = '2px solid #cccccc';
+              } else {
+                cell.style.background = '#f3f4f6';
+                cell.style.border = '1px solid #e5e7eb';
+              }
+              grid.appendChild(cell);
+            }
+          }
+  
+          overflow.appendChild(grid);
+          canvasLike.appendChild(overflow);
+          tempRoot.appendChild(canvasLike);
+          document.body.appendChild(tempRoot);
+  
+          // Rendern lassen und Screenshot erstellen
+          await new Promise(r => requestAnimationFrame(r));
+          await new Promise(r => setTimeout(r, 50));
+          const canvas = await this.html2canvas(tempRoot, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            logging: false
+          });
+          document.body.removeChild(tempRoot);
+          return canvas.toDataURL('image/png');
+        } catch (error) {
+          console.error('Grid-Screenshot fehlgeschlagen:', error);
+          return null;
+        }
+      }
+  
+      // NEUE ISOLIERTE Produkttabelle aus Snapshot
+      async addProductTableFromSnapshot(pdf, config, yPosition, checkPageBreak) {
+        try {
+          console.log('addProductTableFromSnapshot called for:', config.name);
+          
+          // Berechne Produkte aus Snapshot-Daten (isoliert)
+          const parts = await this.calculatePartsFromSnapshot(config);
+          
+          console.log('Received parts:', parts, 'Keys count:', Object.keys(parts || {}).length);
+          console.log('Parts entries:', Object.entries(parts || {}));
+          console.log('UlicaSolarBlackJadeFlow in parts:', parts?.UlicaSolarBlackJadeFlow);
+          
+          if (!parts || Object.keys(parts).length === 0) {
+            console.log('No parts calculated, returning early');
+            return yPosition;
+          }
+  
+          // NEUES DESIGN: Produkttabelle mit Header
+          await checkPageBreak(30);
+          
+          // Header im Stil der Sidebar (Orange, abgerundet)
+          pdf.setFillColor(255, 177, 1); // #FFB101
+          if (pdf.roundedRect) {
+            pdf.roundedRect(15, yPosition - 5, 180, 15, 3, 3, 'F');
+          } else {
+            pdf.rect(15, yPosition - 5, 180, 15, 'F');
+          }
+          
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('PRODUKT-LISTE', 20, yPosition + 5);
+          
+          pdf.setTextColor(0, 0, 0);
+          yPosition += 20;
+  
+          // Tabellen-Header im Stil der Sidebar-Elemente (Dunkelblau, abgerundet oben)
+          await checkPageBreak(15);
+          pdf.setFillColor(14, 30, 52); // #0e1e34
+          if (pdf.roundedRect) {
+            pdf.roundedRect(15, yPosition - 3, 180, 12, 3, 3, 'F');
+          } else {
+            pdf.rect(15, yPosition - 3, 180, 12, 'F');
+          }
+          
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'bold');
+          // Neue Spalten: Anzahl | Produkt (+VE klein) | Benötigte Menge | Preis
+          pdf.text('Anzahl', 20, yPosition + 3);
+          pdf.text('Produkt', 45, yPosition + 3);
+          pdf.text('Benötigte Menge', 120, yPosition + 3);
+          pdf.text('Preis', 170, yPosition + 3);
+          
+          pdf.setTextColor(0, 0, 0);
+          yPosition += 15;
+  
+          // Tabellen-Inhalt mit alternierenden Zeilen
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(8);
+          let totalPrice = 0;
+          let rowCount = 0;
+  
+          for (const [productKey, quantity] of Object.entries(parts)) {
+            console.log('Processing product:', productKey, 'quantity:', quantity);
+            if (quantity > 0) {
+              console.log('Adding to PDF:', productKey, 'quantity:', quantity);
+              await checkPageBreak(12);
+  
+              // Alternierende Zeilen-Hintergründe
+              if (rowCount % 2 === 1) {
+                pdf.setFillColor(245, 245, 245); // #f5f5f5 wie Sidebar-Panels
+                pdf.rect(15, yPosition - 2, 180, 10, 'F');
+              }
+  
+              const productName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
+              const ve = VE[productKey] || 1;
+              const packsNeeded = Math.ceil(quantity / ve);
+              const pricePerPack = getPackPriceForQuantity(productKey, quantity);
+              const totalForProduct = packsNeeded * pricePerPack;
+              totalPrice += totalForProduct;
+  
+              // Spalte 1: Anzahl (z.B. 1x, 2x)
+              pdf.setFont('helvetica', 'bold');
+              pdf.text(`${packsNeeded}x`, 22, yPosition + 2, { align: 'left' });
+  
+              // Spalte 2: Produktname + kleine VE darunter (grau)
+              pdf.setFont('helvetica', 'bold');
+              pdf.setFontSize(10);
+              pdf.text(productName, 45, yPosition + 1);
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(8);
+              pdf.setTextColor(128, 128, 128);
+              pdf.text(`${ve} Stück`, 45, yPosition + 6);
+              pdf.setTextColor(0, 0, 0);
+  
+              // Spalte 3: benötigte Menge (wie bisher Menge)
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(9);
+              pdf.text(`${quantity}`, 140, yPosition + 2, { align: 'right' });
+  
+              // Spalte 4: Preis (Gesamtpreis für diese Position)
+              pdf.setFont('helvetica', 'bold');
+              pdf.text(`${totalForProduct.toFixed(2)} €`, 190, yPosition + 2, { align: 'right' });
+  
+              yPosition += 12;
+              rowCount++;
+            }
+          }
+  
+          // Gesamt-Linie
+          await checkPageBreak(15);
+          pdf.setDrawColor(233, 236, 239); // #e9ecef Trennlinie wie UI
+          pdf.setLineWidth(1);
+          pdf.line(15, yPosition, 195, yPosition);
+          yPosition += 5;
+  
+          return yPosition;
+  
+        } catch (error) {
+          console.error('Produkttabelle fehlgeschlagen:', error);
+          return yPosition;
+        }
+      }
+      // Isolierte Produktberechnung aus Snapshot
+      async calculatePartsFromSnapshot(config) {
+        try {
+          console.log('Calculating parts for config:', config.name, {
+            selectedCells: config.selectedCells,
+            rows: config.rows,
+            cols: config.cols,
+            includeModules: config.includeModules
+          });
+  
+          // Erstelle isolierte Calculation-Data aus Snapshot (optimiert)
+          const calculationData = {
+            selection: config.selection, // Direkte Referenz - Worker arbeitet isoliert
+            rows: config.rows,
+            cols: config.cols,
+            cellWidth: config.cellWidth || 179,
+            cellHeight: config.cellHeight || 113,
+            orientation: config.orientation || 'horizontal',
+            options: {
+              erdungsband: config.erdungsband || false,
+              ulicaModule: config.ulicaModule === true,
+              includeModules: config.includeModules === true || config.incM === true
+            }
+          };
+          
+  
+  
+          let parts;
+          try {
+            // Versuche Web Worker calculation
+            parts = await calculationManager.calculate('calculateParts', calculationData);
+          } catch (error) {
+            console.warn('calculationManager failed, using fallback:', error);
+            // Fallback zu direkter Berechnung
+            parts = this.calculatePartsDirectly(calculationData);
+          }
+  
+          console.log('Parts calculated:', parts);
+          console.log('Config checkbox states:', {
+            includeModules: config.includeModules,
+            incM: config.incM,
+            ulicaModule: config.ulicaModule
+          });
+          console.log('Config object keys:', Object.keys(config));
+          console.log('Config ulicaModule value:', config.ulicaModule, 'type:', typeof config.ulicaModule);
+          console.log('CalculationData options:', calculationData.options);
+  
+          // Module nur hinzufügen wenn Checkbox aktiviert ist
+          if (!config.includeModules && !config.incM) {
+            console.log('Deleting Solarmodul - both checkboxes false');
+            delete parts.Solarmodul;
+          }
+          
+          if (config.ulicaModule !== true) {
+            console.log('Deleting UlicaSolarBlackJadeFlow - ulicaModule is not true');
+            delete parts.UlicaSolarBlackJadeFlow;
+          } else {
+            console.log('Keeping UlicaSolarBlackJadeFlow - ulicaModule is true');
+          }
+  
+          // Zusatzprodukte basierend auf Checkboxen
+          if (!config.mc4) {
+            console.log('Deleting MC4 - mc4 checkbox false');
+            delete parts.MC4;
+          }
+          if (!config.cable) {
+            console.log('Deleting Solarkabel - cable checkbox false');
+            delete parts.Solarkabel;
+          }
+          if (!config.wood) {
+            console.log('Deleting Holzunterleger - wood checkbox false');
+            delete parts.Holzunterleger;
+          }
+          if (!config.quetschkabelschuhe) {
+            console.log('Deleting Ringkabelschuhe - ringkabelschuhe checkbox false');
+            delete parts.Ringkabelschuhe;
+          }
+          if (!config.kabelbinder) {
+            console.log('Deleting Kabelbinder - kabelbinder checkbox false');
+            delete parts.Kabelbinder;
+          }
+  
+          // Erdungsband hinzufügen wenn aktiviert
+          if (config.erdungsband) {
+            // Verwende die SolarGrid-Instanz für Erdungsband-Berechnung
+            parts.Erdungsband = this.solarGrid.calculateErdungsband();
+          } else {
+            delete parts.Erdungsband;
+          }
+  
+          // Palettenlogik nachträglich anwenden, damit nachgelagerte Renderer/Preise profitieren
+          try {
+            const ulicaSelected = config.ulicaModule === true;
+            const pieceKey = ulicaSelected ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+            const palletKey = ulicaSelected ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+            const count = Number(parts[pieceKey] || 0);
+            if (count > 0) {
+              const pallets = Math.floor(count / 36);
+              const remainder = count % 36;
+              if (pallets > 0) {
+                parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+              }
+              parts[pieceKey] = remainder;
+            }
+          } catch (e) {}
+  
+          console.log('Final parts after processing:', parts);
+          return parts;
+  
+        } catch (error) {
+          console.error('Part calculation from snapshot failed:', error);
+          return {};
+        }
+      }
+      // Füge Produkttabelle zum PDF hinzu
+      async addProductTable(pdf, config, yPosition, checkPageBreak) {
+        // NEUES DESIGN: Produkttabelle mit Header – Stil der Sidebar
+        await checkPageBreak(30);
+        pdf.setFillColor(255, 177, 1); // #FFB101
+        if (pdf.roundedRect) {
+          pdf.roundedRect(15, yPosition - 5, 180, 15, 3, 3, 'F');
+        } else {
+          pdf.rect(15, yPosition - 5, 180, 15, 'F');
+        }
+        
+        pdf.setTextColor(14, 30, 52); // Dark Text passend zur Sidebar
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('PRODUKT-LISTE', 20, yPosition + 5);
+        
+        pdf.setTextColor(0, 0, 0);
+        yPosition += 20;
+  
+        // Berechne Teile für diese Konfiguration
+        const parts = await this.calculateConfigParts(config);
+        
+        if (!parts || Object.keys(parts).length === 0) {
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'italic');
+          pdf.text('Keine Produkte berechnet.', 20, yPosition);
+          return yPosition + 10;
+        }
+  
+        // Tabellen-Header im Stil der Sidebar (Dunkelblau, abgerundet)
+        await checkPageBreak(15);
+        pdf.setFillColor(14, 30, 52); // #0e1e34
+        if (pdf.roundedRect) {
+          pdf.roundedRect(15, yPosition - 3, 180, 12, 3, 3, 'F');
+        } else {
+          pdf.rect(15, yPosition - 3, 180, 12, 'F');
+        }
+        
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Produkt', 20, yPosition + 3);
+        pdf.text('Menge', 70, yPosition + 3);
+        pdf.text('Pack', 100, yPosition + 3);
+        pdf.text('Preis/Pack', 130, yPosition + 3);
+        pdf.text('Gesamt', 170, yPosition + 3);
+        
+        pdf.setTextColor(0, 0, 0);
+        yPosition += 15;
+  
+        // Tabellen-Inhalt mit alternierenden Zeilen
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        let totalPrice = 0;
+        let rowCount = 0;
+  
+        for (const [productKey, needed] of Object.entries(parts)) {
+          if (needed > 0) {
+            await checkPageBreak(12);
+  
+            // Alternierende Zeilen-Hintergründe – Sidebar-Panel-Farbe
+            if (rowCount % 2 === 1) {
+              pdf.setFillColor(245, 245, 245); // #f5f5f5
+              pdf.rect(15, yPosition - 2, 180, 10, 'F');
+            }
+  
+            const ve = VE[productKey] || 1;
+            const packs = Math.ceil(needed / ve);
+            const pricePerPack = getPackPriceForQuantity(productKey, needed);
+            const totalProductPrice = packs * pricePerPack;
+            totalPrice += totalProductPrice;
+  
+            const productName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
+  
+            pdf.text(productName, 20, yPosition + 2);
+            pdf.text(needed.toString(), 70, yPosition + 2);
+            pdf.text(`${packs}×`, 100, yPosition + 2);
+            pdf.text(`${pricePerPack.toFixed(2)} €`, 130, yPosition + 2);
+            pdf.text(`${totalProductPrice.toFixed(2)} €`, 170, yPosition + 2);
+  
+            yPosition += 10;
+            rowCount++;
+          }
+        }
+  
+        // Gesamt-Linie – dezente UI-Trennlinie
+        await checkPageBreak(15);
+        pdf.setDrawColor(233, 236, 239); // #e9ecef
+        pdf.setLineWidth(1);
+        pdf.line(15, yPosition, 195, yPosition);
+        yPosition += 5;
+  
+        return yPosition;
+      }
+  
+      // Füge "Produkte pro Modul" Informationen hinzu
+      // Berechne Teile für eine spezifische Konfiguration - VOLLSTÄNDIG ISOLIERT
+      async calculateConfigParts(config) {
+        if (!config.selection || !config.cols || !config.rows) {
+          return {};
+        }
+  
+        // ISOLIERTE Berechnung ohne Grid-Eigenschaften zu berühren! (optimiert)
+        const calculationData = {
+          selection: config.selection, // Direkte Referenz - Worker arbeitet isoliert
+          rows: config.rows,
+          cols: config.cols,
+          cellWidth: config.cellWidth || 179,
+          cellHeight: config.cellHeight || 113,
+          orientation: config.orientation,
+          options: {
+            erdungsband: config.erdungsband || false,
+            ulicaModule: config.ulicaModule === true,
+            includeModules: config.includeModules === true || config.incM === true
+          }
+        };
+  
+        let parts;
+        try {
+          // Direkte Berechnung mit calculationManager - KEINE Grid-Modification!
+          parts = await calculationManager.calculate('calculateParts', calculationData);
+        } catch (error) {
+          console.warn('calculationManager failed, using fallback:', error);
+          // Fallback zu isolierter Berechnung
+          parts = this.calculatePartsDirectly(calculationData);
+        }
+        
+        // Entferne Module wenn nicht ausgewählt
+        if (!config.includeModules && !config.incM) {
+          console.log('Deleting Solarmodul - both includeModules and incM false');
+          delete parts.Solarmodul;
+        }
+        
+        // Entferne Ulica-Module wenn nicht ausgewählt
+        if (config.ulicaModule !== true) {
+          console.log('Deleting UlicaSolarBlackJadeFlow - ulicaModule is not true');
+          delete parts.UlicaSolarBlackJadeFlow;
+        } else {
+          console.log('Keeping UlicaSolarBlackJadeFlow - ulicaModule is true');
+        }
+        
+        // Füge optionale Komponenten nur hinzu wenn ausgewählt
+        if (config.mc4) {
+          const moduleCount = config.selection.flat().filter(v => v).length;
+          const veMc4 = VE.MC4_Stecker || 50;
+          const packs = Math.ceil(moduleCount / 30);
+          parts.MC4_Stecker = packs * veMc4; // Stückbasis
+          console.log('Added MC4_Stecker packs:', packs, '=> pieces', parts.MC4_Stecker, 'for', moduleCount, 'modules');
+        }
+        
+        if (config.cable) {
+          parts.Solarkabel = 1;
+          console.log('Added Solarkabel: 1');
+        }
+        
+        if (config.wood) {
+          parts.Holzunterleger = 1; // Pauschal 1x zur Gesamtbestellung
+          console.log('Added Holzunterleger: 1');
+        }
+  
+        return parts;
+      }
+  
+      // Generiere Dateinamen basierend auf Konfiguration(en)
+      generateFileName(configs) {
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+        const timeStr = now.toTimeString().slice(0, 5).replace(':', '-'); // HH-MM
+        
+        let configName = 'Solar-Konfiguration';
+        
+        if (configs.length === 1) {
+          configName = configs[0].name || 'Konfiguration';
+        } else if (configs.length > 1) {
+          configName = `${configs.length}-Konfigurationen`;
+        }
+        
+        // Bereinige Dateinamen von ungültigen Zeichen
+        configName = configName.replace(/[<>:"/\\|?*]/g, '-');
+        
+        return `${configName}_${dateStr}_${timeStr}.pdf`;
+    }
+  }
+  // ===== SMART CONFIGURATION PARSER ===== (ENTFERNT)
+  // SmartConfigParser-Klasse entfernt (~1787 Zeilen)
+  // Grund: Komplexes NLP-Feature mit 50+ RegEx-Patterns, viele deprecated
+  // Ersatz: Nutzer verwenden direkte Grid-Interaktion statt Textbefehle
+  
+  // ===== BULK SELECTOR =====
+    class BulkSelector {
+      constructor(solarGrid) {
+        this.solarGrid = solarGrid;
+        this.firstClick = null;
+        this.isSelecting = false;
+        this.bulkMode = false; // Neuer Toggle-Modus für Shift
+        
+        // NEUE: Drag-to-Select Properties
+        this.isDragging = false;
+        this.dragStart = null;
+        this.mousePressed = false;
+        
+        this.setupKeyListener();
+        this.setupGlobalMouseEvents();
+      }
+  
+      setupKeyListener() {
+        // FEATURE 2: Shift+Klick entfernt - nur noch Drag-and-Drop
+        // Keine Keyboard-Listener mehr für Shift-Toggle
+        // Bulk-Modus wird nur noch über Drag-and-Drop aktiviert
+      }
+  
+      toggleBulkMode() {
+        this.bulkMode = !this.bulkMode;
+        
+        if (this.bulkMode) {
+          this.showBulkModeIndicator(true);
+          this.firstClick = null; // Reset bei Aktivierung
+        } else {
+          this.showBulkModeIndicator(false);
+          this.firstClick = null;
+          this.clearHighlight();
+        }
+      }
+  
+      showBulkModeIndicator(active) {
+        // Entferne bestehende Indikatoren
+        document.querySelectorAll('.bulk-mode-indicator').forEach(el => el.remove());
+        
+        if (active) {
+          const indicator = document.createElement('div');
+          indicator.className = 'bulk-mode-indicator';
+          indicator.innerHTML = '🔄 Bulk-Modus aktiv - Klicke auf zwei Zellen um einen Bereich auszuwählen';
+          indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #f5a623;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(245, 166, 35, 0.3);
+            animation: slideIn 0.3s ease;
+          `;
+          
+          // Animation hinzufügen
+          const style = document.createElement('style');
+          style.textContent = `
+            @keyframes slideIn {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+          `;
+          if (document.head) {
+            document.head.appendChild(style);
+          }
+          if (document.body) {
+            document.body.appendChild(indicator);
+          }
+        }
+      }
+  
+      initializeBulkSelection() {
+        // Erweitere die bestehende Grid-Erstellung
+        const originalBuildGrid = this.solarGrid.buildGrid.bind(this.solarGrid);
+        
+        this.solarGrid.buildGrid = () => {
+          originalBuildGrid();
+          // Warte kurz bis DOM aktualisiert ist, dann füge Bulk Selection hinzu
+          setTimeout(() => {
+            this.addBulkSelectionToGrid();
+          }, 10);
+        };
+        
+        // Initialisiere Bulk Selection auch für das bestehende Grid
+        setTimeout(() => {
+          this.addBulkSelectionToGrid();
+        }, 100);
+      }
+  
+      addBulkSelectionToGrid() {
+        const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+        
+        cells.forEach((cell, index) => {
+          const x = index % this.solarGrid.cols;
+          const y = Math.floor(index / this.solarGrid.cols);
+          
+          // Entferne alte Event Listener
+          const newCell = cell.cloneNode(true);
+          cell.parentNode.replaceChild(newCell, cell);
+          
+          // FEATURE 1: Snap-to-Grid + Touch-Optimierung
+          // NEUE: Drag-to-Select Event Listeners mit Touch-Support
+          newCell.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Verhindert Textauswahl während Drag
+            this.handleDragStart(e, x, y, newCell);
+          });
+          
+          // Touch-Events für Mobile-Optimierung
+          newCell.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleDragStart(e, x, y, newCell);
+          });
+          
+          newCell.addEventListener('mouseenter', (e) => {
+            if (this.mousePressed && this.dragStart) {
+              // FEATURE 1: Snap-to-Grid - Live-Preview mit Grid-Snap
+              this.isDragging = true;
+              this.highlightRange(this.dragStart, { x, y });
+            }
+          });
+          
+          // Touch-Move für Mobile
+          newCell.addEventListener('touchmove', (e) => {
+            if (this.mousePressed && this.dragStart) {
+              e.preventDefault();
+              this.isDragging = true;
+              this.highlightRange(this.dragStart, { x, y });
+            }
+          });
+          
+          newCell.addEventListener('mouseup', (e) => {
+            if (this.mousePressed && this.dragStart) {
+              e.preventDefault();
+              this.handleDragEnd(e, x, y);
+            }
+          });
+          
+          // Touch-End für Mobile
+          newCell.addEventListener('touchend', (e) => {
+            if (this.mousePressed && this.dragStart) {
+              e.preventDefault();
+              this.handleDragEnd(e, x, y);
+            }
+          });
+  
+          // FEATURE 2: Shift+Klick entfernt - nur noch Drag-and-Drop
+          // Füge neue Event Listener hinzu
+          newCell.addEventListener('click', (e) => {
+            // Verhindere Click-Verarbeitung wenn gerade ein Drag beendet wurde
+            if (this.isDragging || (this.mousePressed && this.dragStart)) {
+              return;
+            }
+            
+            // Normaler Click-Modus (Bulk-Modus entfernt)
+            if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+            
+            if (e.ctrlKey || e.metaKey) {
+              // Ctrl+Click: Toggle ohne firstClick zu ändern
+              this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
+            } else {
+              // Normaler Click: Toggle
+              this.solarGrid.selection[y][x] = !this.solarGrid.selection[y][x];
+            }
+            
+            newCell.classList.toggle('selected');
+            this.solarGrid.trackInteraction();
+            this.solarGrid.buildList();
+            this.solarGrid.updateSummaryOnChange();
+            
+            // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+            if (this.solarGrid.currentConfig !== null) {
+              // Speichere die Konfiguration automatisch
+              this.solarGrid.updateConfig();
+              this.solarGrid.updateConfigList();
+            }
+          });
+  
+          newCell.addEventListener('mouseleave', () => {
+            // Nur Highlight löschen wenn nicht gerade gedraggt wird
+            if (!this.mousePressed) {
+              this.clearHighlight();
+            }
+          });
+        });
+      }
+  
+      selectRange(start, end) {
+        const minX = Math.min(start.x, end.x);
+        const maxX = Math.max(start.x, end.x);
+        const minY = Math.min(start.y, end.y);
+        const maxY = Math.max(start.y, end.y);
+  
+        // Wenn die erste Zelle ausgewählt war, deselektiere den gesamten Bereich
+        // Wenn die erste Zelle leer war, wähle den gesamten Bereich aus
+        const shouldSelect = !start.wasSelected;
+        
+  
+        for (let y = minY; y <= maxY; y++) {
+          if (!this.solarGrid.selection[y]) this.solarGrid.selection[y] = [];
+          for (let x = minX; x <= maxX; x++) {
+            this.solarGrid.selection[y][x] = shouldSelect;
+          }
+        }
+  
+        this.solarGrid.buildGrid();
+        this.solarGrid.buildList();
+        this.solarGrid.updateSummaryOnChange();
+      }
+  
+      highlightRange(start, end) {
+        this.clearHighlight();
+        
+        const minX = Math.min(start.x, end.x);
+        const maxX = Math.max(start.x, end.x);
+        const minY = Math.min(start.y, end.y);
+        const maxY = Math.max(start.y, end.y);
+  
+        const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+        
+        // Ermittle ob wir im Auswahl- oder Abwahl-Modus sind
+        const isSelectMode = start.wasSelected !== undefined ? !start.wasSelected : true;
+        
+        for (let y = minY; y <= maxY; y++) {
+          for (let x = minX; x <= maxX; x++) {
+            const index = y * this.solarGrid.cols + x;
+            if (cells[index]) {
+              // Basis-Highlight (gelber Rahmen)
+              cells[index].classList.add('bulk-highlight');
+              
+              // Intelligente Preview je nach Modus
+              if (isSelectMode) {
+                // Auswahl-Modus: Zeige Solarpanel-Preview mit 30% Opacity
+                cells[index].classList.add('drag-preview-select');
+              } else {
+                // Abwahl-Modus: Zeige Unselected-Preview mit 30% Opacity
+                cells[index].classList.add('drag-preview-deselect');
+              }
+            }
+          }
+        }
+      }
+      clearHighlight() {
+        // Entferne alle Highlight- und Preview-Klassen
+        const highlighted = this.solarGrid.gridEl.querySelectorAll('.bulk-highlight, .drag-preview-select, .drag-preview-deselect');
+        highlighted.forEach(cell => {
+          cell.classList.remove('bulk-highlight', 'drag-preview-select', 'drag-preview-deselect');
+        });
+        
+        // Entferne auch alle Drag-Marker
+        const dragMarkers = this.solarGrid.gridEl.querySelectorAll('.drag-start-marker, .drag-select-mode, .drag-deselect-mode');
+        dragMarkers.forEach(cell => {
+          cell.classList.remove('drag-start-marker', 'drag-select-mode', 'drag-deselect-mode');
+        });
+      }
+      
+      // NEUE METHODEN für Drag-to-Select
+      resetDragState() {
+        this.mousePressed = false;
+        this.isDragging = false;
+        this.dragStart = null;
+        this.clearHighlight();
+      }
+      
+      calculateRangeSize(start, end) {
+        const minX = Math.min(start.x, end.x);
+        const maxX = Math.max(start.x, end.x);
+        const minY = Math.min(start.y, end.y);  
+        const maxY = Math.max(start.y, end.y);
+        
+        return (maxX - minX + 1) * (maxY - minY + 1);
+      }
+  
+      clearFirstClickMarker() {
+        const cells = this.solarGrid.gridEl.querySelectorAll('.grid-cell');
+        cells.forEach(cell => cell.classList.remove('first-click-marker'));
+      }
+      
+      // Ermittelt die dem Zeiger nächstgelegene Zelle; klemmt außerhalb auf Grid-Rand
+      getClampedCellFromPointer(event) {
+        const gridRect = this.solarGrid.gridEl.getBoundingClientRect();
+        // Unterstützt Maus und Touch
+        const point = (event && (event.touches && event.touches[0])) || (event && (event.changedTouches && event.changedTouches[0])) || event;
+        const clientX = point ? point.clientX : 0;
+        const clientY = point ? point.clientY : 0;
+  
+        const relativeX = Math.min(Math.max(clientX - gridRect.left, 0), gridRect.width);
+        const relativeY = Math.min(Math.max(clientY - gridRect.top, 0), gridRect.height);
+  
+        const colWidth = gridRect.width / this.solarGrid.cols;
+        const rowHeight = gridRect.height / this.solarGrid.rows;
+  
+        // Verhindere Division durch 0
+        const x = Math.min(
+          this.solarGrid.cols - 1,
+          Math.max(0, colWidth > 0 ? Math.floor(relativeX / colWidth) : 0)
+        );
+        const y = Math.min(
+          this.solarGrid.rows - 1,
+          Math.max(0, rowHeight > 0 ? Math.floor(relativeY / rowHeight) : 0)
+        );
+  
+        return { x, y };
+      }
+  
+      // FEATURE 1: Snap-to-Grid + Touch-Optimierung - Neue Methoden
+      handleDragStart(e, x, y, cell) {
+        // Erfasse aktuellen Status der Start-Zelle für intelligentes Toggle
+        const isCurrentlySelected = this.solarGrid.selection[y]?.[x] || false;
+        
+        // Starte Drag-to-Select Modus
+        this.mousePressed = true;
+        this.isDragging = false; // Wird erst bei mousemove aktiviert
+        this.dragStart = { x, y, wasSelected: isCurrentlySelected };
+        
+        // Visuelle Markierung der Start-Zelle
+        this.clearHighlight();
+        cell.classList.add('drag-start-marker');
+        
+        // Visueller Hinweis auf Toggle-Modus
+        if (isCurrentlySelected) {
+          cell.classList.add('drag-deselect-mode');
+        } else {
+          cell.classList.add('drag-select-mode');
+        }
+      }
+      
+      handleDragEnd(e, x, y) {
+        if (this.isDragging || (this.dragStart.x === x && this.dragStart.y === y)) {
+          // Drag beendet ODER Single-Click (gleiche Zelle)
+          this.selectRange(this.dragStart, { x, y });
+          
+          // KEINE Toast-Nachrichten mehr bei Drag-Operationen
+          // Alle Toast-Nachrichten für Drag-Operationen wurden entfernt
+        }
+        
+        // Reset Drag-Zustand
+        this.resetDragState();
+      }
+      
+      // FEATURE 1: Snap-to-Grid + Touch-Optimierung - Globale Events
+      setupGlobalMouseEvents() {
+        // Globaler Mouse-Move: Während Drag immer Range-Preview updaten, auch außerhalb
+        document.addEventListener('mousemove', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            this.isDragging = true;
+            const endCell = this.getClampedCellFromPointer(e);
+            this.highlightRange(this.dragStart, endCell);
+          }
+        });
+  
+        // Globaler Mouse-Up: Auswahl auch außerhalb committen
+        document.addEventListener('mouseup', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            const endCell = this.getClampedCellFromPointer(e);
+            this.handleDragEnd(e, endCell.x, endCell.y);
+          }
+        });
+        
+        // Touch-End für Mobile
+        document.addEventListener('touchmove', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            e.preventDefault();
+            this.isDragging = true;
+            const endCell = this.getClampedCellFromPointer(e);
+            this.highlightRange(this.dragStart, endCell);
+          }
+        }, { passive: false });
+  
+        document.addEventListener('touchend', (e) => {
+          if (this.mousePressed && this.dragStart) {
+            const endCell = this.getClampedCellFromPointer(e);
+            this.handleDragEnd(e, endCell.x, endCell.y);
+          }
+        });
+        
+        // Grid-Leave: Kein Reset mehr – globale Events übernehmen die Vorschau außerhalb
+        this.solarGrid.gridEl.addEventListener('mouseleave', () => {
+          // bewusst leer: Drag bleibt aktiv, Vorschau wird global aktualisiert
+        });
+        
+        // Touch-Leave für Mobile: ebenfalls kein Reset
+        this.solarGrid.gridEl.addEventListener('touchcancel', () => {
+          // bewusst leer
+        });
+        
+        // Verhindere Kontext-Menu während Drag-Operationen
+        this.solarGrid.gridEl.addEventListener('contextmenu', (e) => {
+          if (this.isDragging || this.mousePressed) {
+            e.preventDefault();
+          }
+        });
+        
+        // Verhindere Zoom-Gesten während Drag-Operationen
+        this.solarGrid.gridEl.addEventListener('touchmove', (e) => {
+          if (this.isDragging || this.mousePressed) {
+            e.preventDefault();
+          }
+        });
+      }
+    }
+  
+    // CartCompatibility-Modul entfernt - nicht mehr benötigt mit Foxy.io
+  
+    // CMS-Suche entfernt - jetzt in cms-search.js
+    
+    // Einfaches Queue-System nur für addAllToCart
+    class SimpleCartQueue {
+      constructor() {
+        this.isProcessing = false;
+      }
+      
+      async execute(operation, operationName) {
+        // Warte bis vorherige Operation fertig ist
+        while (this.isProcessing) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        this.isProcessing = true;
+        try {
+          console.log(`[SimpleCartQueue] Processing: ${operationName}`);
+          const result = await operation();
+          return result;
+        } finally {
+          this.isProcessing = false;
+        }
+      }
+    }
+  
+    class SolarGrid {
+      // Liest Zusatzprodukte einmalig aus der angezeigten Zusatzproduktliste (Summary)
+      readExtrasFromSummaryList() {
+        const keys = ['MC4_Stecker','Solarkabel','Holzunterleger','Ringkabelschuhe','Kabelbinder','BlechBohrschrauben','Erdungsband'];
+        const extras = {};
+        try {
+          // Bevorzugt: interne letzte Berechnung, falls vorhanden
+          if (this.lastExtras && typeof this.lastExtras === 'object') return this.lastExtras;
+          // Fallback: aus DOM (Summary) parsen
+          const root = document.getElementById('summary-list') || document;
+          const items = Array.from(root.querySelectorAll('.produkt-item'));
+          const findQtyForLabel = (label) => {
+            // Durchsuche alle Items und finde das, dessen Text den Label enthält
+            const item = items.find(it => (it.textContent || '').toLowerCase().includes(String(label).toLowerCase()));
+            if (!item) return 0;
+            // Die erste <span> enthält in der Regel "N×"
+            const firstSpan = item.querySelector('span');
+            if (!firstSpan || !firstSpan.textContent) return 0;
+            const m = firstSpan.textContent.trim().match(/^(\d+)\s*×/);
+            return m ? parseInt(m[1], 10) : 0;
+          };
+          keys.forEach(k => {
+            // MC4: Sonderfall – nur 1x wenn Checkbox aktiviert, keine Berechnung
+            if (k === 'MC4_Stecker') {
+              extras[k] = (this.mc4 && this.mc4.checked) ? 1 : 0;
+              return;
+            }
+            const label = (PRODUCT_NAME_MAP[k] || k).split(' - ')[0];
+            let v = findQtyForLabel(label);
+            // Fallback auf Checkboxen, falls Summary noch nicht gemountet oder Label abweichend ist
+            if ((k === 'Solarkabel') && (!v) && this.solarkabel && this.solarkabel.checked) v = 1;
+            if ((k === 'Holzunterleger') && (!v) && this.holz && this.holz.checked) v = 1;
+            if ((k === 'Ringkabelschuhe') && (!v) && this.quetschkabelschuhe && this.quetschkabelschuhe.checked) v = 1;
+            if ((k === 'Kabelbinder') && (!v) && this.kabelbinder && this.kabelbinder.checked) v = 1;
+            if ((k === 'BlechBohrschrauben') && (!v) && this.erdungsband && this.erdungsband.checked) v = 1;
+            extras[k] = Number.isFinite(v) ? v : 0;
+          });
+          this.lastExtras = extras;
+        } catch(_) {
+          keys.forEach(k => extras[k] = 0);
+        }
+        return extras;
+      }
+      // Bündelt Gesamtmodule aus allen Konfigurationen in Paletten (36er) bevor in den Warenkorb gepostet wird
+      bundleTotalModulesIntoPallets(total) {
+        try {
+          const single450Key = 'Solarmodul';
+          const single500Key = 'UlicaSolarBlackJadeFlow';
+          const pallet450Key = 'SolarmodulPalette';
+          const pallet500Key = 'UlicaSolarBlackJadeFlowPalette';
+          const count450 = Number(total[single450Key] || 0);
+          const count500 = Number(total[single500Key] || 0);
+          const makeBundle = (singleCount) => {
+            if (!singleCount || singleCount < 36) return { single: singleCount, pallets: 0 };
+            const pallets = Math.floor(singleCount / 36);
+            const rest = singleCount - pallets * 36;
+            return { single: rest, pallets };
+          };
+          const res450 = makeBundle(count450);
+          const res500 = makeBundle(count500);
+          if (res450.pallets > 0) total[pallet450Key] = (total[pallet450Key] || 0) + res450.pallets * 36;
+          if (res500.pallets > 0) total[pallet500Key] = (total[pallet500Key] || 0) + res500.pallets * 36;
+          total[single450Key] = res450.single;
+          total[single500Key] = res500.single;
+        } catch (_) {}
+      }
+      constructor() {
+        this.gridEl        = document.getElementById('grid');
+        this.wrapper       = document.querySelector('.grid-wrapper');
+        this.wIn           = document.getElementById('width-input');
+        this.hIn           = document.getElementById('height-input');
+        this.orH           = document.getElementById('orient-h');
+        this.orV           = document.getElementById('orient-v');
+        this.incM          = document.getElementById('include-modules');
+        this.mc4           = document.getElementById('mc4');
+        this.solarkabel    = document.getElementById('solarkabel');
+        this.holz          = document.getElementById('holz');
+        this.quetschkabelschuhe = document.getElementById('quetschkabelschuhe');
+        this.kabelbinder = document.getElementById('kabelbinder');
+        this.erdungsband   = document.getElementById('erdungsband');
+        this.ulicaModule   = document.getElementById('ulica-module');
+  
+        // Vorab berechnete Gesamtmengen (persistiert)
+        this.totalPartsCache = null;
+        
+  
+                this.listHolder    = document.querySelector('.product-section');
+        this.prodList      = document.querySelector('.product-section #produktliste');
+  
+        this.saveBtn       = document.getElementById('save-config-btn');
+        this.addBtn        = document.getElementById('add-to-cart-btn');
+        this.summaryBtn    = document.getElementById('summary-add-cart-btn');
+        this.configListEl  = document.getElementById('config-list');
+        this.resetBtn      = document.getElementById('reset-btn');
+        this.continueLaterBtn = document.getElementById('continue-later-btn');
+        this.moduleSelect = document.getElementById('module-select');
+        // Entfernt: Reset-Button soll NUR aktuelle Konfiguration zurücksetzen (resetGridToDefault)
+        
+        // Modul-Daten
+        this.moduleData = {
+          'ulica-500': { name: 'Ulica Black Jade-Flow 500W', width: 195.2, height: 113.4 },
+          'ulica-450': { name: 'Ulica Black Jade-Flow 450W', width: 176.2, height: 113.4 },
+          'trina-vertex-s-plus': { name: 'Trina Vertex S+', width: 176.2, height: 113.4 },
+          'aiko-neostar-3s-plus': { name: 'Aiko Neostar 3S+', width: 176.2, height: 113.4 }
+        };
+        
+        // Modul-Checkbox-Mapping
+        this.moduleCheckboxMapping = {
+          'include-modules': 'ulica-450',
+          'ulica-module': 'ulica-500'
+        };
+  
+        this.selection     = [];
+        this.configs       = [];
+        this.currentConfig = null;
+        this.default       = { cols:5, rows:5, width:176, height:113 };
+        
+        // Performance: Debouncing für häufige Updates
+        this.updateTimeout = null;
+        this.updateDelay = 100; // ms
+        
+        // Warenkorb-Queue & Observer
+        this.isAddingToCart = false;
+        this.webflowFormsObserver = null;
+        this.cartAckObserver = null;
+        this.cartAckResolve = null;
+        
+        // Performance: Resize Observer für responsive Updates
+        this.resizeObserver = null;
+      this.resizeTimeout = null;
+      
+      // Pinch-to-Zoom entfernt - widersprüchlich zu Desktop-Only Policy (Mobile-Redirect aktiv)
+      
+      // Performance-Monitoring entfernt - Debug-Feature ohne produktive Nutzung
+      
+      // Tracking für Session-Daten
+        this.sessionId = this.generateSessionId();
+        this.sessionStartTime = Date.now();
+        this.firstInteractionTime = null;
+        this.lastInteractionTime = Date.now();
+        this.interactionCount = 0;
+        this.webhookUrl = 'https://hook.eu2.make.com/c7lkudk1v2a2xsr291xbvfs2cb25b84k';
+  
+        // PDF Generator initialisieren
+        this.pdfGenerator = new SolarPDFGenerator(this);
+        
+        // Cache Manager für 24h Persistierung
+        this.cacheManager = new CacheManager();
+  
+        // Loading Overlay Elemente
+        this.loadingOverlay = null;
+        this.loadingTextEl = null;
+  
+        this.init();
+      }
+  
+    // saveToUrl() entfernt - Dead Code (war No-op)
+  
+      showLoading(message = 'Vorgang läuft… bitte warten') {
+        try {
+          if (!this.loadingOverlay) this.loadingOverlay = document.getElementById('loading-overlay');
+          if (!this.loadingTextEl) this.loadingTextEl = document.getElementById('loading-text');
+          if (this.loadingTextEl && typeof message === 'string') {
+            this.loadingTextEl.textContent = message;
+          }
+          if (this.loadingOverlay) {
+            this.loadingOverlay.style.display = 'flex';
+          }
+        } catch (_) {}
+      }
+  
+      hideLoading() {
+        try {
+          if (!this.loadingOverlay) this.loadingOverlay = document.getElementById('loading-overlay');
+          if (this.loadingOverlay) {
+            this.loadingOverlay.style.display = 'none';
+          }
+        } catch (_) {}
+      }
+  
+      // ===== WEBHOOK FUNKTIONEN =====
+      
+      generateSessionId() {
+        // Generiere eine einzigartige Session-ID basierend auf Timestamp und Zufallszahl
+        const timestamp = Date.now().toString(36);
+        const randomPart = Math.random().toString(36).substr(2, 9);
+        return `session_${timestamp}_${randomPart}`;
+      }
+      
+      trackInteraction() {
+        if (!this.firstInteractionTime) {
+          this.firstInteractionTime = Date.now();
+        }
+        this.lastInteractionTime = Date.now();
+        this.interactionCount++;
+      }
+  
+      formatDuration(milliseconds) {
+        if (!milliseconds || milliseconds < 0) return "00:00:00";
+        
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+  
+      getSessionData() {
+        const now = Date.now();
+        const sessionDurationMs = now - this.sessionStartTime;
+        const timeToFirstInteractionMs = this.firstInteractionTime ? this.firstInteractionTime - this.sessionStartTime : 0;
+        const timeSinceLastInteractionMs = now - this.lastInteractionTime;
+        
+        return {
+          sessionDuration: this.formatDuration(sessionDurationMs),
+          timeToFirstInteraction: this.formatDuration(timeToFirstInteractionMs),
+        timeSinceLastInteraction: this.formatDuration(timeSinceLastInteractionMs),
+        interactionCount: this.interactionCount,
+        sessionStartTime: this.sessionStartTime,
+        firstInteractionTime: this.firstInteractionTime,
+        lastInteractionTime: this.lastInteractionTime
+        // performanceMetrics entfernt
+      };
+    }
+  
+      getProductSummary() {
+        const parts = this.calculateParts();
+        if (!this.incM.checked) delete parts.Solarmodul;
+        // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        // Sie werden nur noch in der Overview berechnet
+  
+        // Palettenlogik für Anzeige anwenden: 36er bündeln je nach Modultyp
+        try {
+          const ulicaSelected = currentConfig.ulicaModule === true;
+          const pieceKey = ulicaSelected ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+          const palletKey = ulicaSelected ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+          const count = Number(parts[pieceKey] || 0);
+          if (count > 0) {
+            const pallets = Math.floor(count / 36);
+            const remainder = count % 36;
+            if (pallets > 0) {
+              parts[palletKey] = (parts[palletKey] || 0) + pallets * 36;
+            }
+            parts[pieceKey] = remainder;
+          }
+        } catch (e) {}
+  
+        const entries = Object.entries(parts).filter(([,v]) => v > 0);
+        let totalPrice = 0;
+        const productQuantities = {};
+        
+        // Berechne Preise und sammle Quantities
+        entries.forEach(([k,v]) => {
+          const packs = Math.ceil(v / VE[k]);
+          const price = getPackPriceForQuantity(k, v);
+          const itemTotal = packs * price;
+          totalPrice += itemTotal;
+          
+          // Verwende den Produktnamen ohne Unterstriche als Key
+          const productKey = k.replace(/_/g, '');
+          productQuantities[productKey] = v;
+        });
+          
+          return {
+          totalPrice 
+        };
+      }
+  
+      generateGridVisualization(selection, cols, rows, cellWidth, cellHeight) {
+        // Generate HTML for the grid
+        let html = `<div class="grid" style="--cols: ${cols}; --rows: ${rows}; --cell-size: ${cellWidth}px; --cell-height: ${cellHeight}px; --cell-gap: 2px;">`;
+        
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const isSelected = selection[y] && selection[y][x];
+            const cellClass = isSelected ? 'cell selected' : 'cell';
+            html += `<div class="${cellClass}"></div>`;
+          }
+        }
+        
+        html += '</div>';
+        
+        // Generate CSS for the grid
+        const css = `.grid { 
+          display: grid; 
+          gap: var(--cell-gap); 
+          grid-template-columns: repeat(var(--cols), var(--cell-size)); 
+          grid-template-rows: repeat(var(--rows), var(--cell-height)); 
+          margin: auto; 
+          background: transparent; 
+        } 
+        .cell { 
+          background: #000000; 
+          border-radius: 6px; 
+          width: var(--cell-size); 
+          height: var(--cell-height); 
+          transition: all 0.15s ease; 
+        } 
+        .cell.selected { 
+          background: #7f7f7f; 
+        }`;
+        
+        return { html, css };
+      }
+      getConfigData(config = null) {
+        const targetConfig = config || {
+          cols: this.cols,
+          rows: this.rows,
+          cellWidth: parseFloat(this.wIn.value),
+          cellHeight: parseFloat(this.hIn.value),
+          orientation: this.orV.checked ? 'vertical' : 'horizontal',
+          selection: this.selection,
+          incM: this.incM.checked
+          // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        };
+  
+        const summary = this.getProductSummary();
+        const gridVisualization = this.generateGridVisualization(
+          targetConfig.selection, 
+          targetConfig.cols, 
+          targetConfig.rows, 
+          targetConfig.cellWidth, 
+          targetConfig.cellHeight
+        );
+        
+        // Berechne Produkt-Quantitäten für Webhook - ALLE Produkte, auch mit 0
+        const parts = this.calculatePartsDirectly({
+          selection: targetConfig.selection,
+          cols: targetConfig.cols,
+          rows: targetConfig.rows,
+          cellWidth: targetConfig.cellWidth,
+          cellHeight: targetConfig.cellHeight,
+          orientation: targetConfig.orientation,
+          incM: targetConfig.incM
+          // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        });
+        
+        const allProductQuantities = {
+          Solarmodul: parts.Solarmodul || 0,
+          Endklemmen: parts.Endklemmen || 0,
+          Schrauben: parts.Schrauben || 0,
+          Dachhaken: parts.Dachhaken || 0,
+          Mittelklemmen: parts.Mittelklemmen || 0,
+          Endkappen: parts.Endkappen || 0,
+          Schienenverbinder: parts.Schienenverbinder || 0,
+          Schiene240cm: parts.Schiene_240_cm || 0,
+          Schiene360cm: parts.Schiene_360_cm || 0
+          // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+        };
+  
+        // Kompakte Produktliste: nur Einträge > 0
+        const productQuantitiesCompact = Object.fromEntries(
+          Object.entries(allProductQuantities).filter(([, v]) => v > 0)
+        );
+  
+        // Auswahl-Metadaten: gezielte Koordinaten + Anzahl
+        const selectedCoords = [];
+        for (let y = 0; y < targetConfig.rows; y++) {
+          const row = targetConfig.selection[y] || [];
+          for (let x = 0; x < targetConfig.cols; x++) {
+            if (row[x]) selectedCoords.push([x, y]);
+          }
+        }
+        const selectionMeta = {
+          selectedCount: selectedCoords.length,
+          selectedCoords
+        };
+        
+        // totalPrice robust aus kompakten Mengen berechnen (VE * Preis je Pack)
+        const totalPriceFromCompact = Object.entries(productQuantitiesCompact).reduce((sum, [key, qty]) => {
+          const veKey = key === 'Schiene240cm' ? 'Schiene_240_cm' : key === 'Schiene360cm' ? 'Schiene_360_cm' : key;
+          const ve = VE[veKey] || 1;
+          const packs = Math.ceil(qty / ve);
+          const pricePerPack = getPackPriceForQuantity(veKey, qty);
+          return sum + packs * pricePerPack;
+        }, 0);
+        
+        return {
+          timestamp: new Date().toISOString(),
+          sessionId: this.sessionId,
+          sessionData: this.getSessionData(),
+          config: {
+            cols: targetConfig.cols,
+            rows: targetConfig.rows,
+            cellWidth: targetConfig.cellWidth,
+            cellHeight: targetConfig.cellHeight,
+            orientation: targetConfig.orientation,
+            gridVisualization: gridVisualization,
+            options: {
+              includeModules: targetConfig.incM
+              // Zusatzprodukte werden nicht mehr zu einzelnen Konfigurationen hinzugefügt
+            }
+          },
+          summary: summary,
+          productQuantities: allProductQuantities,
+          productQuantitiesCompact: productQuantitiesCompact,
+          selectionMeta: selectionMeta,
+          totalPrice: Number.isFinite(totalPriceFromCompact) ? totalPriceFromCompact : summary.totalPrice,
+          analytics: {
+            totalCells: targetConfig.cols * targetConfig.rows,
+            selectedCells: targetConfig.selection.flat().filter(v => v).length,
+            selectionPercentage: ((targetConfig.selection.flat().filter(v => v).length / (targetConfig.cols * targetConfig.rows)) * 100).toFixed(2),
+            gridArea: targetConfig.cols * targetConfig.rows,
+            averageCellSize: ((targetConfig.cellWidth + targetConfig.cellHeight) / 2).toFixed(2)
+          }
+        };
+      }
+  
+      async sendConfigToWebhook(configData) {
+        try {
+          // Kompakte Payload: nur essentielle Felder senden
+          const minimalPayload = {
+            sessionId: configData.sessionId,
+            timestamp: configData.timestamp,
+            config: {
+              cols: configData?.config?.cols,
+              rows: configData?.config?.rows,
+              cellWidth: configData?.config?.cellWidth,
+              cellHeight: configData?.config?.cellHeight,
+              orientation: configData?.config?.orientation
+            },
+            // Auswahl-Metadaten sind optional und klein
+            selection: configData.selectionMeta || undefined,
+            // Nur Produkte mit Menge > 0 übermitteln
+            productQuantities: configData.productQuantitiesCompact || configData.productQuantities,
+            totalPrice: configData.totalPrice,
+            // Sessiondaten nur einmalig (kompakt)
+            session: {
+              duration: configData.sessionData?.sessionDuration,
+              interactions: configData.sessionData?.interactionCount
+            }
+          };
+  
+          // Falls Metadaten von sendAllConfigsToWebhook vorhanden sind, beilegen
+          if (typeof configData.configIndex === 'number' || configData.configName || typeof configData.totalConfigsInSession === 'number') {
+            minimalPayload.meta = {
+              configIndex: configData.configIndex,
+              configName: configData.configName,
+              totalConfigsInSession: configData.totalConfigsInSession
+            };
+          }
+  
+          const response = await fetch(this.webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(minimalPayload)
+          });
+  
+          return response.ok;
+        } catch (error) {
+          console.error('Webhook send error:', error);
+          return false;
+        }
+      }
+  
+      async sendCurrentConfigToWebhook() {
+        const configData = this.getConfigData();
+        return await this.sendConfigToWebhook(configData);
+      }
+  
+      async sendAllConfigsToWebhook() {
+        const results = [];
+        let successCount = 0;
+  
+        // Sende jede Konfiguration einzeln
+        for (let idx = 0; idx < this.configs.length; idx++) {
+          const cfg = this.configs[idx];
+          
+          // Für die aktuell bearbeitete Konfiguration: Verwende aktuelle Werte
+          let currentConfig;
+          if (idx === this.currentConfig) {
+            currentConfig = {
+              cols: this.cols,
+              rows: this.rows,
+              cellWidth: parseFloat(this.wIn.value),
+              cellHeight: parseFloat(this.hIn.value),
+              orientation: this.orV.checked ? 'vertical' : 'horizontal',
+              selection: this.selection,
+              incM: this.incM.checked,
+              mc4: this.mc4.checked,
+              solarkabel: this.solarkabel.checked,
+              holz: this.holz.checked
+            };
+          } else {
+            currentConfig = {
+              cols: cfg.cols,
+              rows: cfg.rows,
+              cellWidth: parseFloat(cfg.cellWidth),
+              cellHeight: parseFloat(cfg.cellHeight),
+              orientation: cfg.orientation,
+              selection: cfg.selection,
+              incM: cfg.incM,
+              mc4: cfg.mc4,
+              solarkabel: cfg.solarkabel,
+              holz: cfg.holz
+            };
+          }
+  
+          // Temporär setzen für Berechnung
+          const originalSelection = this.selection;
+          const originalOrientation = this.orV ? this.orV.checked : false;
+          const originalSolarkabel = this.solarkabel ? this.solarkabel.checked : false;
+          const originalIncM = this.incM ? this.incM.checked : false;
+          const originalMc4 = this.mc4 ? this.mc4.checked : false;
+          const originalHolz = this.holz ? this.holz.checked : false;
+          
+          this.selection = currentConfig.selection;
+          if (this.orV) this.orV.checked = currentConfig.orientation === 'vertical';
+          if (this.orH) this.orH.checked = !(currentConfig.orientation === 'vertical');
+          if (this.solarkabel) this.solarkabel.checked = currentConfig.solarkabel;
+          if (this.incM) this.incM.checked = currentConfig.incM;
+          if (this.mc4) this.mc4.checked = currentConfig.mc4;
+          if (this.holz) this.holz.checked = currentConfig.holz;
+  
+          // Erstelle individuelle Konfigurationsdaten mit getConfigData
+          const configData = this.getConfigData(currentConfig);
+          
+          // Füge zusätzliche Metadaten hinzu
+          configData.configIndex = idx;
+          configData.configName = cfg.name;
+          configData.totalConfigsInSession = this.configs.length;
+  
+          // Ursprüngliche Werte wiederherstellen
+          this.selection = originalSelection;
+          if (this.orV) this.orV.checked = originalOrientation;
+          if (this.orH) this.orH.checked = !originalOrientation;
+          if (this.solarkabel) this.solarkabel.checked = originalSolarkabel;
+          if (this.incM) this.incM.checked = originalIncM;
+          if (this.mc4) this.mc4.checked = originalMc4;
+          if (this.holz) this.holz.checked = originalHolz;
+  
+          // Sende einzelne Konfiguration
+          try {
+            const success = await this.sendConfigToWebhook(configData);
+            if (success) {
+              successCount++;
+            } else {
+            }
+            results.push(success);
+            
+            // Kurze Pause zwischen Requests um Server nicht zu überlasten
+            if (idx < this.configs.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          } catch (error) {
+            results.push(false);
+          }
+        }
+  
+        return successCount === this.configs.length;
+      }
+  
+      checkMobileDevice() {
+        // Mobile Device Detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                         window.innerWidth <= 768 ||
+                         ('ontouchstart' in window && window.innerWidth <= 1024);
+        
+        if (isMobile) {
+          // Auf mobilen Geräten: Direkt zur unterkonstruktion.de weiterleiten
+          this.redirectToDesktopSite();
+        }
+      }
+  
+      // showMobileWarning() - Entfernt, da direkte Weiterleitung implementiert
+      
+      // Deaktiviere alle Konfigurator-Funktionen auf mobilen Geräten
+      disableMobileFunctionality() {
+        try {
+          // Verstecke den Hauptkonfigurator
+          const mainContainer = document.querySelector('.main-container, #solar-configurator, .configurator-wrapper');
+          if (mainContainer) {
+            mainContainer.style.display = 'none';
+          }
+          
+          // Verstecke alle Konfigurator-spezifischen Elemente
+          const configElements = document.querySelectorAll('.grid-container, .config-sidebar, .button-bar, .checkbox-bar');
+          configElements.forEach(el => {
+            if (el) el.style.display = 'none';
+          });
+          
+          // Verhindere Event Listener
+          document.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }, true);
+          
+          document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }, true);
+          
+          console.log('[SolarGrid] Mobile functionality disabled - Desktop required');
+        } catch (error) {
+          console.warn('[SolarGrid] Error disabling mobile functionality:', error);
+        }
+      }
+      
+      // Weiterleitung zur Desktop-Website
+      redirectToDesktopSite() {
+        try {
+          // Verstecke alle Konfigurator-Elemente
+          this.disableMobileFunctionality();
+          
+          // Zeige eine kurze Nachricht bevor der Redirect
+          const redirectMessage = document.createElement('div');
+          redirectMessage.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0e1e34;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            width: 95vw;
+            max-width: 400px;
+            box-sizing: border-box;
+          `;
+          redirectMessage.innerHTML = `
+            <h3>Weiterleitung zur Homepage</h3>
+            <p>Der Konfigurator ist nur auf Desktop-Geräten verfügbar.</p>
+            <p>Sie werden automatisch weitergeleitet...</p>
+          `;
+          document.body.appendChild(redirectMessage);
+          
+          // Redirect nach 2 Sekunden
+          setTimeout(() => {
+            window.location.href = 'https://unterkonstruktion.de/';
+          }, 2000);
+          
+          console.log('[SolarGrid] Redirecting mobile users to unterkonstruktion.de');
+        } catch (error) {
+          console.warn('[SolarGrid] Error redirecting to desktop site:', error);
+          // Fallback: Direkter Redirect
+          window.location.href = 'https://unterkonstruktion.de/';
+        }
+      }
+      // Desktop Intro Overlay (Desktop only; zeigt bei leerem Cache/ohne URL jedes Mal)
+      maybeShowIntroOverlay(cacheLoaded, hasUrlConfig) {
+        try {
+          const overlay = document.getElementById('intro-overlay');
+          if (!overlay) return;
+          // Desktop-Erkennung: echte Mobile-UserAgents oder Touch+kleine Breite gelten als mobil
+          // Auf allen Geräten anzeigen; Layout ist nun responsiv (horizontal/vertikal)
+          // Nur anzeigen, wenn KEIN Cache geladen wurde und KEINE URL-Konfiguration vorhanden ist
+          if (cacheLoaded || hasUrlConfig) return;
+          const closeBtn = document.getElementById('intro-close');
+          const okBtn = document.getElementById('intro-ok');
+          const close = () => {
+            overlay.classList.add('hidden');
+            overlay.setAttribute('aria-hidden', 'true');
+          };
+          overlay.classList.remove('hidden');
+          overlay.setAttribute('aria-hidden', 'false');
+          closeBtn?.addEventListener('click', close);
+          okBtn?.addEventListener('click', close);
+          // Outside-Click schließt Overlay
+          overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+          // Delegation: Klick auf "Verstanden – Start" (auch bei verschachtelten Elementen)
+          overlay.addEventListener('click', (e) => {
+            const t = e.target;
+            if (t && (t.id === 'intro-ok' || (t.closest && t.closest('#intro-ok')))) {
+              e.preventDefault();
+              e.stopPropagation();
+              close();
+            }
+          });
+          // Tastaturbedienung: ESC zum Schließen, Enter auf Primär-Button
+          overlay.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); close(); }
+            if (e.key === 'Enter' && document.activeElement && (document.activeElement.id === 'intro-ok')) {
+              e.preventDefault();
+              close();
+            }
+          });
+        } catch (err) {
+          console.warn('Intro Overlay konnte nicht initialisiert werden:', err);
+        }
+      }
+  
+      init() {
+        // Mobile Detection und Warning
+        this.checkMobileDevice();
+        
+        // Prüfe zuerst den Cache (höchste Priorität)
+        const cacheLoaded = this.loadFromCache();
+        
+        // Prüfe URL-Parameter als Fallback (nur wenn Cache nicht geladen wurde)
+        if (!cacheLoaded) {
+          const params = new URLSearchParams(window.location.search);
+              const rawData = params.get('configData');
+              if (rawData) {
+                try {
+                  const json = decodeURIComponent(atob(rawData));
+                  const configs = JSON.parse(json);
+                  // Lade alle Konfigurationen aus der URL
+                  if (Array.isArray(configs)) {
+                      this.configs = configs;
+                      this.loadConfig(0); // Lade die erste Konfiguration
+                  } else {
+                      // Einzelne Konfiguration (alte URL-Format)
+                      this.configs.push(configs);
+                      this.loadConfig(0);
+                  }
+                } catch (e) {
+                }
+              }
+              }
+  
+        // Desktop Intro nur anzeigen, wenn kein Cache/URL
+        try {
+          const hasUrlConfig = new URLSearchParams(window.location.search).has('configData');
+          this.maybeShowIntroOverlay(cacheLoaded, hasUrlConfig);
+        } catch (_) {}
+   
+         // Event-Listener für alle UI-Elemente setzen
+           this.setupAllEventListeners();
+  
+            // Prüfe ob Buttons existieren bevor Event-Listener hinzugefügt werden
+            if (this.saveBtn) {
+                this.saveBtn.addEventListener('click', () => {
+                    this.trackInteraction();
+                    this.saveNewConfig();
+                });
+            }
+            if (this.addBtn) {
+                this.addBtn.addEventListener('click', () => {
+                    this.trackInteraction();
+                    this.addCurrentToCart();
+                });
+            }
+            if (this.summaryBtn) {
+                this.summaryBtn.addEventListener('click', () => {
+                    this.trackInteraction();
+                    this.addAllToCart();
+                });
+            }
+                    if (this.resetBtn) {
+              this.resetBtn.addEventListener('click', () => {
+                  this.trackInteraction();
+                  this.resetGridToDefault();
+              });
+          }
+            if (this.continueLaterBtn) {
+                this.continueLaterBtn.addEventListener('click', () => {
+                  this.trackInteraction();
+                  this.generateContinueLink();
+              });
+          }
+  
+          // Sidebar Toggle Funktionalität
+          const sidebarToggle = document.getElementById('sidebar-toggle');
+          // Neue Sidebar Navigation
+          this.initSidebarNavigation();
+  
+          // Loading Overlay referenzen
+          this.loadingOverlay = document.getElementById('loading-overlay');
+          this.loadingTextEl = document.getElementById('loading-text');
+  
+            window.addEventListener('resize', () => {
+              this.updateSize();
+              this.buildGrid();
+              this.buildList();
+              this.updateSummaryOnChange();
+            });
+        
+              // Wenn keine Konfigurationen aus URL/CACHE geladen wurden, erstelle eine Standard-Konfiguration
+              if (this.configs.length === 0) {
+                this.cols = this.default.cols;
+                this.rows = this.default.rows;
+                this.setup();
+  
+                const defaultConfig = this._makeConfigObject();
+                this.configs.push(defaultConfig);
+                this.loadConfig(0);
+  
+                  // Standard-Orientation nur für echte Default-Erstellung setzen
+                  if (this.orH && this.orV) {
+                      this.orH.checked = false;
+                      this.orV.checked = true;
+                      // Synchronisiere mit den Orientation Buttons
+                      const orientHBtn = document.getElementById('orient-h');
+                      const orientVBtn = document.getElementById('orient-v');
+                      if (orientHBtn && orientVBtn) {
+                          orientHBtn.classList.remove('active');
+                          orientVBtn.classList.add('active');
+                      }
+                  }
+              }
+              
+              // Performance: Resize Observer für responsive Updates
+              this.setupResizeObserver();
+              
+              // FEATURE 8: Pinch-to-Zoom Setup
+            // setupPinchToZoom() entfernt - Desktop-Only App
+            
+            // SmartConfig Features entfernt
+            
+            // Loading Overlay referenzen
+              this.loadingOverlay = document.getElementById('loading-overlay');
+              this.loadingTextEl = document.getElementById('loading-text');
+              
+              // Initialisiere Auto-Save Indicator
+              this.initAutoSaveIndicator();
+              
+              // Initialisiere Config-Liste
+              this.initConfigList();
+              
+              // Hinweis: Keine erzwungene Standard-Orientation hier setzen, um Cache/URL-Werte nicht zu überschreiben
+          }
+          initSidebarNavigation() {
+              // Navigation zwischen Detail-Ansicht und Übersicht
+              const backToOverviewBtn = document.getElementById('back-to-overview');
+              const detailView = document.getElementById('config-detail-view');
+              const overviewView = document.getElementById('config-overview');
+              
+              if (backToOverviewBtn) {
+                  backToOverviewBtn.addEventListener('click', () => {
+                      this.showOverview();
+                  });
+              }
+              
+              // Edit Config Name
+              const editConfigBtn = document.getElementById('edit-config-name');
+              if (editConfigBtn) {
+                  editConfigBtn.addEventListener('click', () => {
+                      this.editConfigName();
+                  });
+              }
+              
+              // Delete Current Config
+              const deleteConfigBtn = document.getElementById('delete-current-config');
+              if (deleteConfigBtn) {
+                  deleteConfigBtn.addEventListener('click', () => {
+                      this.deleteCurrentConfig();
+                  });
+                  // Sichtbarkeit abhängig von Anzahl Konfigurationen
+                  deleteConfigBtn.style.display = this.configs.length >= 2 ? '' : 'none';
+              }
+              
+              // Ersetzt: Express Checkout → Gesamte Auswahl in den Warenkorb
+              const expressCheckoutBtn = document.getElementById('express-checkout-btn');
+              if (expressCheckoutBtn) {
+                  // Funktion umstellen, Icon/Markup unverändert lassen
+                  try{ expressCheckoutBtn.setAttribute('aria-label','Gesamte Auswahl in den Warenkorb'); }catch(_){ }
+                  try{ expressCheckoutBtn.setAttribute('title','Gesamte Auswahl in den Warenkorb'); }catch(_){ }
+                  expressCheckoutBtn.addEventListener('click', () => {
+                      this.addAllConfigsToCart();
+                  });
+              }
+              
+              // Nächste Konfiguration (alter "Konfiguration speichern" Button)
+              const nextConfigBtn = document.getElementById('next-config-btn');
+              if (nextConfigBtn) {
+                  nextConfigBtn.addEventListener('click', () => {
+                      this.saveNewConfig();
+                  });
+              }
+              
+              // Delegiertes Click-Handling: Unterstützt mehrere Add-All Buttons (Overview & Detail)
+              document.addEventListener('click', (ev) => {
+                  try{
+                      var target = ev.target;
+                      if (!target || !target.closest) return;
+                      var btn = target.closest('#add-all-to-cart-btn, .add-all-to-cart-btn, [data-action="add-all-to-cart"], [data-add-all-to-cart="true"]');
+                      if (!btn) return;
+                      try{ ev.preventDefault(); }catch(_){ }
+                      this.addAllConfigsToCart();
+                  }catch(_){ }
+              }, true);
+              
+              // Alle Konfigurationen zurücksetzen
+              const continueLaterBtn = document.getElementById('continue-later-btn');
+              if (continueLaterBtn) {
+                  continueLaterBtn.addEventListener('click', () => {
+                      this.resetAllConfigurations();
+                  });
+              }
+              
+              // Add Config Button
+              const addConfigBtn = document.getElementById('add-config-btn');
+              if (addConfigBtn) {
+                  addConfigBtn.addEventListener('click', () => {
+                      this.saveNewConfig();
+                  });
+              }
+          }
+          showOverview() {
+              // Aktuelle Konfiguration speichern um Progress nicht zu verlieren
+              if (this.currentConfig !== null) {
+                  this.updateConfig();
+              }
+              
+              const detailView = document.getElementById('config-detail-view');
+              const overviewView = document.getElementById('config-overview');
+              
+              if (detailView && overviewView) {
+                  detailView.classList.remove('active');
+                  overviewView.classList.add('active');
+                  
+                  // Alle Input-Felder entfernen
+                  this.clearAllInputFields();
+                  
+                  // Config-Liste aktualisieren
+                  this.updateConfigList();
+              }
+          }
+          
+          clearAllInputFields() {
+              // Entferne alle Input-Felder aus der Detail-Ansicht
+              const titleEl = document.getElementById('current-config-title');
+              if (titleEl) {
+                  const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
+                  existingInputs.forEach(input => input.remove());
+                  titleEl.style.display = 'block';
+              }
+              
+              // Entferne alle Input-Felder aus der Config-Liste
+              const configItems = document.querySelectorAll('.config-item');
+              configItems.forEach(item => {
+                  const nameEl = item.querySelector('.config-item-name');
+                  if (nameEl) {
+                      const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
+                      existingInputs.forEach(input => input.remove());
+                      nameEl.style.display = 'block';
+                  }
+              });
+          }
+          
+          // Initialisiere Config-Liste beim Start
+          initConfigList() {
+              if (document.getElementById('config-overview')?.classList.contains('active')) {
+                  this.updateConfigList();
+              }
+              
+              // Event-Listener für Zusatzprodukte-Checkboxen
+              this.initAdditionalProductsListeners();
+          }
+          
+          showDetailView(configIndex = null) {
+              const detailView = document.getElementById('config-detail-view');
+              const overviewView = document.getElementById('config-overview');
+              
+              if (detailView && overviewView) {
+                  overviewView.classList.remove('active');
+                  detailView.classList.add('active');
+                  
+                  if (configIndex !== null) {
+                      this.loadConfig(configIndex);
+                  }
+                  
+                  // Detail-Ansicht aktualisieren
+                  this.updateDetailView();
+                  // Sichtbarkeit des Delete-Buttons nach dem Rendern aktualisieren
+                  const deleteConfigBtn = document.getElementById('delete-current-config');
+                  if (deleteConfigBtn) {
+                      deleteConfigBtn.style.display = this.configs.length >= 2 ? '' : 'none';
+                  }
+              }
+          }
+          
+                  updateDetailView() {
+              const currentConfig = this.configs[this.currentConfig];
+              if (!currentConfig) return;
+              
+              // Titel aktualisieren
+              const titleEl = document.getElementById('current-config-title');
+              if (titleEl) {
+                  titleEl.textContent = currentConfig.name || `Konfiguration #${this.currentConfig + 1}`;
+              }
+              
+              // Gesamtpreis aktualisieren
+              this.updateCurrentTotalPrice();
+                  // Sichtbarkeit des Delete-Buttons sicherstellen
+                  const deleteConfigBtn = document.getElementById('delete-current-config');
+                  if (deleteConfigBtn) {
+                      deleteConfigBtn.style.display = this.configs.length >= 2 ? '' : 'none';
+                  }
+          }
+          
+          updateCurrentTotalPrice() {
+              const totalPriceEl = document.getElementById('current-total-price');
+              if (totalPriceEl) {
+                  // Verwende bevorzugt die gespeicherten Daten der aktiven Konfiguration,
+                  // damit UI-Abweichungen (Inputs/DOM) den Preis nicht verfälschen
+                  const cfg = (this.currentConfig !== null && this.configs[this.currentConfig]) ? this.configs[this.currentConfig] : null;
+                  // Memory: Optimierte Config-Erstellung ohne unnötige Deep Copies
+                  const currentConfig = cfg ? {
+                      selection: Array.isArray(cfg.selection) ? cfg.selection : [], // Direkte Referenz - Worker arbeitet isoliert
+                      cols: Number(cfg.cols || this.cols),
+                      rows: Number(cfg.rows || this.rows),
+                      cellWidth: Number(cfg.cellWidth || parseInt(this.wIn?.value || '179')),
+                      cellHeight: Number(cfg.cellHeight || parseInt(this.hIn?.value || '113')),
+                      orientation: (cfg.orientation || (this.orV?.checked ? 'vertical' : 'horizontal')),
+                      incM: (cfg.incM === false) ? false : true,
+                      ulicaModule: !!cfg.ulicaModule
+                  } : {
+                      selection: this.selection, // Direkte Referenz - Worker arbeitet isoliert
+                      cols: this.cols,
+                      rows: this.rows,
+                      cellWidth: parseInt(this.wIn?.value || '179'),
+                      cellHeight: parseInt(this.hIn?.value || '113'),
+                      orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+                      incM: (this.incM && this.incM.checked) !== false,
+                      ulicaModule: document.getElementById('ulica-module')?.checked || false
+                  };
+                  
+                  // Berechne nur den Preis der aktuellen Konfiguration
+                  let totalPrice = 0;
+                  try {
+                      // Verwende die ursprüngliche calculateConfigPrice Logik für die aktuelle Konfiguration
+                      totalPrice = this.calculateConfigPrice(currentConfig);
+                  } catch (_) {}
+                  totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+                  // Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
+                  const section = totalPriceEl.closest('.total-section');
+                  const subtitle = section ? section.querySelector('.total-subtitle') : null;
+                  if (subtitle) {
+                      subtitle.style.display = 'none'; // Kundentyp entfernt
+                      subtitle.textContent = 'exkl. MwSt';
+                  }
+                  
+                  // Disclaimer-Text: immer sichtbar unter dem Subtitle
+                  let disclaimer = section ? section.querySelector('.total-disclaimer') : null;
+                  if (!disclaimer && section) {
+                      disclaimer = document.createElement('div');
+                      disclaimer.className = 'total-disclaimer';
+                      disclaimer.style.fontSize = '12px';
+                      disclaimer.style.color = '#666';
+                      disclaimer.style.marginTop = '4px';
+                      disclaimer.style.lineHeight = '1.3';
+                      disclaimer.style.textAlign = 'right';
+                      section.appendChild(disclaimer);
+                  }
+                  if (disclaimer) {
+                      disclaimer.textContent = 'Der sichtbare Preis ist eine Vorberechnung, minimale Mengenanpassungen und Optimierungen werden im Warenkorb potentiell einen anderen Preis ergeben.';
+                  }
+              }
+          }
+          
+      updateConfigList() {
+        // Delegiere auf zentrale Render-Methode, um Doppelungen zu vermeiden
+        this.renderConfigList();
+        this.updateOverviewTotalPrice();
+        this.renderAdditionalProducts();
+        // Gesamtpreis sofort aktualisieren nach Config-List-Update
+        this.updateCurrentTotalPrice();
+      }
+          
+          initAutoSaveIndicator() {
+              // Auto-Save Indicator Setup
+              this.autoSaveTimeout = null;
+          }
+  
+          showAutoSaveIndicator() {
+              const indicator = document.getElementById('auto-save-indicator');
+              if (!indicator) return;
+              
+              // Zeige Indicator
+              indicator.classList.remove('hidden');
+              
+              // Animation neu starten
+              const saveIcon = indicator.querySelector('.save-icon');
+              if (saveIcon) {
+                  // Animation zurücksetzen und neu starten
+                  saveIcon.style.animation = 'none';
+                  saveIcon.offsetHeight; // Trigger reflow
+                  saveIcon.style.animation = 'rotate360 0.8s ease-in-out';
+              }
+              
+              // Verstecke nach 1 Sekunde
+              if (this.autoSaveTimeout) {
+                  clearTimeout(this.autoSaveTimeout);
+              }
+              
+              this.autoSaveTimeout = setTimeout(() => {
+                  indicator.classList.add('hidden');
+              }, 1000);
+          }
+          
+          updateOverviewTotalPrice() {
+              const totalPriceEl = document.getElementById('overview-total-price');
+              if (!totalPriceEl) return;
+              
+              // Gesamtpreis: Immer frische Totals berechnen (nicht aus Cache)
+              let totalPrice = 0;
+              try {
+                  const totals = this.computeAllTotalsSnapshot();
+                  Object.entries(totals || {}).forEach(([key, quantity]) => {
+                      const pricePerUnit = PRICE_MAP[key] || 0;
+                      totalPrice += (Number(quantity) || 0) * pricePerUnit;
+                  });
+              } catch (_) {}
+              
+              // HINWEIS: Zusatzprodukte sind bereits in computeAllTotalsSnapshot() enthalten
+              // calculateAdditionalProductsPrice() wird NICHT mehr addiert (verhindert Doppelberechnung)
+              
+              totalPriceEl.textContent = `${totalPrice.toFixed(2).replace('.', ',')} €`;
+              // Subtitle: nur für Firmenkunden anzeigen, Text "exkl. MwSt"
+              const section = totalPriceEl.closest('.total-section');
+              const subtitle = section ? section.querySelector('.total-subtitle') : null;
+              if (subtitle) {
+                  subtitle.style.display = 'none'; // Kundentyp entfernt
+                  subtitle.textContent = 'exkl. MwSt';
+              }
+              
+              // Disclaimer-Text: immer sichtbar unter dem Subtitle
+              let disclaimer = section ? section.querySelector('.total-disclaimer') : null;
+              if (!disclaimer && section) {
+                  disclaimer = document.createElement('div');
+                  disclaimer.className = 'total-disclaimer';
+                  disclaimer.style.fontSize = '12px';
+                  disclaimer.style.color = '#666';
+                  disclaimer.style.marginTop = '4px';
+                  disclaimer.style.lineHeight = '1.3';
+                  disclaimer.style.textAlign = 'right';
+                  section.appendChild(disclaimer);
+              }
+              if (disclaimer) {
+                  disclaimer.textContent = 'Der sichtbare Preis ist eine Vorberechnung, minimale Mengenanpassungen und Optimierungen werden im Warenkorb potentiell einen anderen Preis ergeben.';
+              }
+          }
+          
+          calculateAdditionalProductsPrice() {
+              let totalPrice = 0;
+              
+              // MC4 Stecker
+              if (document.getElementById('mc4')?.checked) {
+                  const moduleCount = this.configs.reduce((total, config) => {
+                      return total + config.selection.flat().filter(v => v).length;
+                  }, 0);
+                  const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
+                  const pricePerPackage = getPackPriceForQuantity('MC4_Stecker', moduleCount);
+                  totalPrice += packagesNeeded * pricePerPackage;
+              }
+              
+              // Solarkabel
+              if (document.getElementById('solarkabel')?.checked) {
+                  const packagesNeeded = 1; // 1x Solarkabel 100M
+                  const pricePerPackage = getPackPriceForQuantity('Solarkabel', 1);
+                  totalPrice += packagesNeeded * pricePerPackage;
+              }
+              
+              // Holzunterleger
+              if (document.getElementById('holz')?.checked) {
+                  const packagesNeeded = 1; // 1x Unterlegholz für Dachhaken - 50 Stück
+                  const pricePerPackage = getPackPriceForQuantity('Holzunterleger', VE['Holzunterleger']);
+                  totalPrice += packagesNeeded * pricePerPackage;
+              }
+              
+              // Ringkabelschuhe
+              if (document.getElementById('quetschkabelschuhe')?.checked) {
+                  const packagesNeeded = 1; // 1x Ringkabelschuhe - 100 Stück
+                  const pricePerPackage = getPackPriceForQuantity('Ringkabelschuhe', 1);
+                  totalPrice += packagesNeeded * pricePerPackage;
+              }
+              
+              // Kabelbinder und Blech-Bohrschrauben werden NICHT hier berechnet
+              // Sie werden in computeAllTotalsSnapshot() berechnet und in den gecachten Totals gespeichert
+              
+              // Optimierer (Huawei/BRC)
+              const hCb = document.getElementById('huawei-opti');
+              const bCb = document.getElementById('brc-opti');
+              const qEl = document.getElementById('opti-qty');
+              if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
+                  const key = bCb.checked ? 'BRCOpti' : 'HuaweiOpti';
+                  const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+                  const pricePer = getPackPriceForQuantity(key, 1);
+                  totalPrice += qty * pricePer;
+              }
+              
+              return totalPrice;
+          }
+          
+          renderAdditionalProducts() {
+              const additionalProductsListEl = document.getElementById('additional-products-list');
+              if (!additionalProductsListEl) return;
+              
+              additionalProductsListEl.innerHTML = '';
+              
+              // MC4 Stecker
+              if (document.getElementById('mc4')?.checked) {
+                  const moduleCount = this.configs.reduce((total, config) => {
+                      return total + config.selection.flat().filter(v => v).length;
+                  }, 0);
+                  const packagesNeeded = Math.ceil(moduleCount / 30); // 1 Packung pro 30 Module
+                  const pricePerPackage = getPackPriceForQuantity('MC4_Stecker', moduleCount);
+                  const totalPrice = packagesNeeded * pricePerPackage;
+                  
+                  const item = document.createElement('div');
+                  item.className = 'additional-product-item produkt-item';
+                  item.innerHTML = `
+                      <div class="item-left">
+                          <span class="item-quantity">${packagesNeeded}×</span>
+                          <div class="item-info">
+                              <span class="item-name">MC4 Stecker</span>
+                              <span class="item-ve">${VE['MC4_Stecker']} Stück</span>
+                          </div>
+                      </div>
+                      <span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+                  `;
+                  additionalProductsListEl.appendChild(item);
+              }
+              
+              // Solarkabel
+              if (document.getElementById('solarkabel')?.checked) {
+                  const packagesNeeded = 1;
+                  const pricePerPackage = getPackPriceForQuantity('Solarkabel', 1);
+                  const totalPrice = packagesNeeded * pricePerPackage;
+                  
+                  const item = document.createElement('div');
+                  item.className = 'additional-product-item produkt-item';
+                  item.innerHTML = `
+                      <div class="item-left">
+                          <span class="item-quantity">1×</span>
+                          <div class="item-info">
+                              <span class="item-name">Solarkabel</span>
+                              <span class="item-ve">100 m</span>
+                          </div>
+                      </div>
+                      <span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+                  `;
+                  additionalProductsListEl.appendChild(item);
+              }
+              
+              // Holzunterleger
+              if (document.getElementById('holz')?.checked) {
+                  const packagesNeeded = 1;
+                  const pricePerPackage = getPackPriceForQuantity('Holzunterleger', VE['Holzunterleger']);
+                  const totalPrice = packagesNeeded * pricePerPackage;
+                  
+                  const item = document.createElement('div');
+                  item.className = 'additional-product-item produkt-item';
+                  item.innerHTML = `
+                      <div class="item-left">
+                          <span class="item-quantity">1×</span>
+                          <div class="item-info">
+                              <span class="item-name">Unterlegholz für Dachhaken</span>
+                              <span class="item-ve">${VE['Holzunterleger']} Stück</span>
+                          </div>
+                      </div>
+                      <span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+                  `;
+                  additionalProductsListEl.appendChild(item);
+              }
+              
+              // Ringkabelschuhe
+              if (document.getElementById('quetschkabelschuhe')?.checked) {
+                  const packagesNeeded = 1;
+                  const pricePerPackage = getPackPriceForQuantity('Ringkabelschuhe', 1);
+                  const totalPrice = packagesNeeded * pricePerPackage;
+                  
+                  const item = document.createElement('div');
+                  item.className = 'additional-product-item produkt-item';
+                  item.innerHTML = `
+                      <div class="item-left">
+                          <span class="item-quantity">1×</span>
+                          <div class="item-info">
+                              <span class="item-name">Ringkabelschuhe</span>
+                              <span class="item-ve">${VE['Ringkabelschuhe']} Stück</span>
+                          </div>
+                      </div>
+                      <span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+                  `;
+                  additionalProductsListEl.appendChild(item);
+              }
+              
+              // Kabelbinder
+              if (document.getElementById('kabelbinder')?.checked) {
+                  const packagesNeeded = 1;
+                  const pricePerPackage = getPackPriceForQuantity('Kabelbinder', 1);
+                  const totalPrice = packagesNeeded * pricePerPackage;
+                  
+                  const item = document.createElement('div');
+                  item.className = 'additional-product-item produkt-item';
+                  item.innerHTML = `
+                      <div class="item-left">
+                          <span class="item-quantity">1×</span>
+                          <div class="item-info">
+                              <span class="item-name">Kabelbinder</span>
+                              <span class="item-ve">${VE['Kabelbinder']} Stück</span>
+                          </div>
+                      </div>
+                      <span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+                  `;
+                  additionalProductsListEl.appendChild(item);
+              }
+              
+              // Blech-Bohrschrauben (automatisch bei Erdungsband)
+              if (document.getElementById('erdungsband')?.checked) {
+                  const packagesNeeded = 1;
+                  const pricePerPackage = getPackPriceForQuantity('BlechBohrschrauben', 1);
+                  const totalPrice = packagesNeeded * pricePerPackage;
+                  
+                  const item = document.createElement('div');
+                  item.className = 'additional-product-item produkt-item';
+                  item.innerHTML = `
+                      <div class="item-left">
+                          <span class="item-quantity">1×</span>
+                          <div class="item-info">
+                              <span class="item-name">Blech-Bohrschrauben</span>
+                              <span class="item-ve">${VE['BlechBohrschrauben']} Stück</span>
+                          </div>
+                      </div>
+                      <span class="item-price">${totalPrice.toFixed(2).replace('.', ',')} €</span>
+                  `;
+                  additionalProductsListEl.appendChild(item);
+              }
+              
+              // Optimierer (Huawei/BRC) – exklusiv, Menge aus Input
+              const hCb = document.getElementById('huawei-opti');
+              const bCb = document.getElementById('brc-opti');
+              const qEl = document.getElementById('opti-qty');
+              if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
+                  const key = bCb.checked ? 'BRCOpti' : 'HuaweiOpti';
+                  const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+                  const pricePer = getPackPriceForQuantity(key, 1);
+                  const total = qty * pricePer;
+                  const item = document.createElement('div');
+                  item.className = 'additional-product-item produkt-item';
+                  item.innerHTML = `
+                      <div class="item-left">
+                          <span class="item-quantity">${qty}×</span>
+                          <div class="item-info">
+                              <span class="item-name">${PRODUCT_NAME_MAP[key] || key}</span>
+                              <span class="item-ve">1 Stück</span>
+                          </div>
+                      </div>
+                      <span class="item-price">${total.toFixed(2).replace('.', ',')} €</span>
+                  `;
+                  additionalProductsListEl.appendChild(item);
+              }
+          }
+          
+          initAdditionalProductsListeners() {
+              // Event-Listener für Zusatzprodukte-Checkboxen
+              const additionalProductCheckboxes = ['mc4', 'solarkabel', 'holz', 'quetschkabelschuhe', 'kabelbinder', 'erdungsband', 'huawei-opti', 'brc-opti', 'opti-qty'];
+              
+              additionalProductCheckboxes.forEach(checkboxId => {
+                  const checkbox = document.getElementById(checkboxId);
+                  if (checkbox) {
+                      checkbox.addEventListener('change', () => {
+                          // Update Gesamtpreis und Zusatzprodukte-Liste
+                          this.updateOverviewTotalPrice();
+                          this.renderAdditionalProducts();
+                          // Neu: Änderungen unmittelbar persistieren
+                          this.saveToCache?.();
+                      });
+                  }
+              });
+              // Exklusivität der Optis + Mengeingabe Handling (robust, sofortiges UI-Update)
+              const hCb = document.getElementById('huawei-opti');
+              const bCb = document.getElementById('brc-opti');
+              const qEl = document.getElementById('opti-qty');
+              const syncDisplayAndUpdate = () => {
+                  if (!hCb || !bCb || !qEl) return;
+                  qEl.style.display = (hCb.checked || bCb.checked) ? '' : 'none';
+                  this.renderAdditionalProducts();
+                  this.updateOverviewTotalPrice();
+                  // Neu: State sichern
+                  this.saveToCache?.();
+              };
+              if (hCb) {
+                  hCb.addEventListener('click', () => {
+                      if (hCb.checked && bCb) bCb.checked = false;
+                      syncDisplayAndUpdate();
+                  });
+                  hCb.addEventListener('change', syncDisplayAndUpdate);
+              }
+              if (bCb) {
+                  bCb.addEventListener('click', () => {
+                      if (bCb.checked && hCb) hCb.checked = false;
+                      syncDisplayAndUpdate();
+                  });
+                  bCb.addEventListener('change', syncDisplayAndUpdate);
+              }
+              if (qEl) {
+                  qEl.addEventListener('input', () => {
+                      syncDisplayAndUpdate();
+                  });
+              }
+              syncDisplayAndUpdate();
+          }
+          editConfigName() {
+              const titleEl = document.getElementById('current-config-title');
+              if (!titleEl) return;
+              
+              // Entferne alle existierenden Input-Felder
+              const existingInputs = titleEl.parentNode.querySelectorAll('.config-title-input');
+              existingInputs.forEach(input => input.remove());
+              
+              // Stelle sicher, dass der Titel sichtbar ist
+              titleEl.style.display = 'block';
+              
+              // Erstelle Input-Feld
+              const input = document.createElement('input');
+              input.type = 'text';
+              input.value = titleEl.textContent;
+              input.className = 'config-title-input';
+              input.style.cssText = `
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  font-size: 24px;
+                  font-weight: bold;
+                  color: #000000;
+                  background: white;
+                  border: 2px solid #FFB101;
+                  border-radius: 8px;
+                  padding: 4px 8px;
+                  width: 200px;
+                  outline: none;
+                  z-index: 1000;
+              `;
+              
+              // Füge Input hinzu ohne Titel zu ersetzen
+              titleEl.parentNode.appendChild(input);
+              input.focus();
+              input.select();
+              
+              // Event-Listener für Enter und Blur
+              const saveEdit = function() {
+                  const newName = input.value.trim();
+                  if (newName && this.currentConfig !== null) {
+                      this.configs[this.currentConfig].name = newName;
+                      titleEl.textContent = newName;
+                      this.updateConfigList();
+                      this.updateConfig();
+                      this.saveToCache();
+                      this.showAutoSaveIndicator();
+                  }
+                  input.remove();
+              }.bind(this);
+              
+              const cancelEdit = function() {
+                  input.remove();
+              }.bind(this);
+              
+              input.addEventListener('blur', saveEdit);
+              input.addEventListener('keydown', function(e) {
+                  if (e.key === 'Enter') {
+                      e.preventDefault();
+                      saveEdit();
+                  } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEdit();
+                  }
+              });
+          }
+          editConfigNameInList(configIndex) {
+              const config = this.configs[configIndex];
+              if (!config) return;
+              
+              // Finde das config-item Element
+              const configItems = document.querySelectorAll('.config-item');
+              const configItem = configItems[configIndex];
+              if (!configItem) return;
+              
+              // Finde das name Element
+              const nameEl = configItem.querySelector('.config-item-name');
+              if (!nameEl) return;
+              
+              // Entferne alle existierenden Input-Felder in diesem Item
+              const existingInputs = nameEl.parentNode.querySelectorAll('input[type="text"]');
+              existingInputs.forEach(input => input.remove());
+              
+              // Stelle sicher, dass der Name sichtbar ist
+              nameEl.style.display = 'block';
+              
+              // Erstelle Input-Feld
+              const input = document.createElement('input');
+              input.type = 'text';
+              input.value = nameEl.textContent;
+              input.className = 'inline-edit-input';
+              
+              // Input absolut über dem Namen platzieren, ohne Layout zu verschieben
+              nameEl.appendChild(input);
+              // Interaktionen im Input sollen die Item-Navigation nicht auslösen
+              ['click','mousedown','pointerdown'].forEach(evt => {
+                  input.addEventListener(evt, (e) => e.stopPropagation());
+              });
+              input.focus();
+              input.select();
+              
+              // Event-Listener für Enter und Blur
+              const saveEdit = function() {
+                  const newName = input.value.trim();
+                  if (newName) {
+                      config.name = newName;
+                      nameEl.textContent = newName;
+                      this.updateConfig();
+                      this.saveToCache();
+                      this.showAutoSaveIndicator();
+                  }
+                  if (input.parentNode) input.remove();
+                  this.updateConfigList();
+              }.bind(this);
+              
+              const cancelEdit = function() {
+                  if (input.parentNode) input.remove();
+              }.bind(this);
+              
+              input.addEventListener('blur', saveEdit);
+              input.addEventListener('keydown', function(e) {
+                  if (e.key === 'Enter') {
+                      e.preventDefault();
+                      saveEdit();
+                  } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEdit();
+                  }
+              });
+          }
+          
+          deleteCurrentConfig() {
+              if (this.configs.length <= 1) {
+                  alert('Die letzte Konfiguration kann nicht gelöscht werden.');
+                  return;
+              }
+              
+              const currentConfig = this.configs[this.currentConfig];
+              const configName = currentConfig?.name || `Konfiguration #${this.currentConfig + 1}`;
+              
+              if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
+                  this.configs.splice(this.currentConfig, 1);
+                  
+                  // Aktive Konfiguration anpassen
+                if (this.currentConfig >= this.configs.length) {
+                    this.currentConfig = this.configs.length - 1;
+                }
+                
+                this.loadConfig(this.currentConfig);
+                
+                // Zurück zur Übersicht und Config-Liste updaten
+                this.showOverview();
+              }
+          }
+          
+          deleteConfigFromList(configIndex) {
+              if (this.configs.length <= 1) {
+                  alert('Die letzte Konfiguration kann nicht gelöscht werden.');
+                  return;
+              }
+              
+              const config = this.configs[configIndex];
+              const configName = config?.name || `Konfiguration #${configIndex + 1}`;
+              
+              if (confirm(`Möchten Sie "${configName}" wirklich löschen?`)) {
+                  this.configs.splice(configIndex, 1);
+                  
+                  // Aktive Konfiguration anpassen
+                  if (this.currentConfig >= this.configs.length) {
+                      this.currentConfig = this.configs.length - 1;
+                } else if (this.currentConfig > configIndex) {
+                    this.currentConfig--;
+                }
+                
+                this.loadConfig(this.currentConfig);
+                this.updateConfigList();
+              }
+              
+              // Event propagation stoppen
+              event.stopPropagation();
+          }
+          
+          calculateConfigPrice(config) {
+              // Verwende die ursprüngliche Berechnungslogik
+              const parts = {
+                  Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+                  Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+                  Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
+                  UlicaSolarBlackJadeFlow: 0,
+                  // Palettenzählung wird als Stückbasis 36× gespeichert
+                  SolarmodulPalette: 0,
+                  UlicaSolarBlackJadeFlowPalette: 0
+              };
+  
+              // Berechne Teile für jede Zeile
+              for (let y = 0; y < config.rows; y++) {
+                  if (!Array.isArray(config.selection[y])) continue;
+                  let run = 0;
+  
+                  for (let x = 0; x < config.cols; x++) {
+                      if (config.selection[y]?.[x]) {
+                          run++;
+                      }
+                      else if (run) { 
+                          this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical', config.ulicaModule || false); 
+                          run = 0; 
+                      }
+                  }
+                  if (run) {
+                      this.processGroupDirectly(run, parts, config.cellWidth || 179, config.cellHeight || 113, config.orientation || 'vertical', config.ulicaModule || false);
+                  }
+              }
+              
+              // Module nur hinzufügen wenn Konfig-Flags es erlauben (DOM-unabhängig)
+              // Default: Module sind enthalten, außer incM ist explizit false
+              const includeModules = (config && config.incM === false) ? false : true;
+              // Ulica-Module nur wenn explizit true
+              const ulicaModule = (config && config.ulicaModule === true);
+              
+              if (includeModules === false) {
+                  delete parts.Solarmodul;
+              }
+              
+              if (ulicaModule !== true) {
+                  delete parts.UlicaSolarBlackJadeFlow;
+              }
+              
+              // Palettenlogik: 36er bündeln je nach Modultyp
+              try {
+                  const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+                  const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+                  const count = Number(parts[pieceKey] || 0);
+                  if (count > 0) {
+                      const pallets = Math.floor(count / 36);
+                      const remainder = count % 36;
+                      if (pallets > 0) {
+                          parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+                      }
+                      parts[pieceKey] = remainder;
+                  }
+              } catch (e) {}
+              
+              let totalPrice = 0;
+              Object.entries(parts).forEach(([partName, quantity]) => {
+                  if (quantity > 0) {
+                      const packagesNeeded = Math.ceil(quantity / (VE[partName] || 1));
+                      const pricePerPackage = getPackPriceForQuantity(partName, quantity);
+                      totalPrice += packagesNeeded * pricePerPackage;
+                  }
+              });
+              
+              return totalPrice;
+          }
+          
+  
+          
+          addAllConfigsToCart() {
+              // Verwende die gleiche Logik wie addAllToCart()
+              this.addAllToCart();
+          }
+          
+      setup() {
+            // Verwende Standard-Werte falls nicht bereits gesetzt
+            if (!this.cols || !this.rows) {
+                this.cols = this.default.cols;
+                this.rows = this.default.rows;
+            }
+            if (!this.cols || !this.rows) {
+              alert('Spalten und Zeilen müssen > 0 sein');
+              return;
+            }
+  
+            // Nur dann eine neue leere Auswahl erstellen, wenn noch keine existiert oder die Dimensionen nicht stimmen
+          if (
+              !Array.isArray(this.selection) ||
+              this.selection.length !== this.rows ||
+              this.selection[0]?.length !== this.cols
+            ) {
+            const oldSel = this.selection;
+            this.selection = Array.from({ length: this.rows }, (_, y) =>
+              Array.from({ length: this.cols }, (_, x) => oldSel?.[y]?.[x] || false)
+            );
+            }
+  
+            if (this.listHolder) {
+            this.listHolder.style.display = 'block';
+            }
+            this.updateSize();
+            this.buildGrid();
+            this.buildList();
+            this.updateSaveButtons();
+          }
+  
+          // Neue Funktion für Grid-Event-Listener
+          // Neue Funktion für alle Event-Listener
+          setupAllEventListeners() {
+              // Input-Event-Listener
+              const inputs = [this.wIn, this.hIn].filter(el => el);
+              inputs.forEach(el => {
+                  el.removeEventListener('change', this.handleInputChange);
+                  el.addEventListener('change', this.handleInputChange.bind(this));
+              });
+              
+              // Modul-Auswahl-Event-Listener
+              if (this.moduleSelect) {
+                  this.moduleSelect.removeEventListener('change', this.handleModuleSelectChange);
+                  this.moduleSelect.addEventListener('change', this.handleModuleSelectChange.bind(this));
+              }
+              
+              // Orientation-Event-Listener
+              if (this.orH && this.orV) {
+                  [this.orH, this.orV].forEach(el => {
+                      el.removeEventListener('change', this.handleOrientationChange);
+                      el.addEventListener('change', this.handleOrientationChange.bind(this));
+                  });
+                  // Synchronisiere Buttons nach Radio-Button Setup
+                  setTimeout(() => {
+                      this.syncOrientationButtons();
+                  }, 10);
+              }
+              
+                      // Checkbox-Event-Listener
+          [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.erdungsband, this.ulicaModule].filter(el => el).forEach(el => {
+              el.removeEventListener('change', this.handleCheckboxChange);
+              el.addEventListener('change', this.handleCheckboxChange.bind(this));
+          });
+          
+          // Zusätzliche Event-Listener für Modul-Checkboxen im Dropdown
+          document.querySelectorAll('#include-modules, #ulica-module').forEach(el => {
+              el.removeEventListener('change', this.handleCheckboxChange);
+              el.addEventListener('change', this.handleCheckboxChange.bind(this));
+          });
+              
+              // Expansion-Button-Event-Listener mit stabiler Referenz
+              if (!this.boundExpansionClick) {
+                  this.boundExpansionClick = this.handleExpansionClick.bind(this);
+              }
+              document.querySelectorAll('[data-dir="right"]').forEach(btn => {
+                  btn.removeEventListener('click', this.boundExpansionClick);
+                  btn.addEventListener('click', this.boundExpansionClick);
+              });
+              document.querySelectorAll('[data-dir="left"]').forEach(btn => {
+                  btn.removeEventListener('click', this.boundExpansionClick);
+                  btn.addEventListener('click', this.boundExpansionClick);
+              });
+              document.querySelectorAll('[data-dir="top"]').forEach(btn => {
+                  btn.removeEventListener('click', this.boundExpansionClick);
+                  btn.addEventListener('click', this.boundExpansionClick);
+              });
+              document.querySelectorAll('[data-dir="bottom"]').forEach(btn => {
+                  btn.removeEventListener('click', this.boundExpansionClick);
+                  btn.addEventListener('click', this.boundExpansionClick);
+              });
+              
+              // Orientation-Button-Event-Listener
+              const orientHBtn = document.getElementById('orient-h');
+              const orientVBtn = document.getElementById('orient-v');
+              if (orientHBtn && orientVBtn) {
+                  // Verwende eine gebundene Referenz, damit removeEventListener korrekt funktioniert
+                  if (!this.boundOrientationClick) {
+                      this.boundOrientationClick = this.handleOrientationButtonClick.bind(this);
+                  }
+                  [orientHBtn, orientVBtn].forEach(btn => {
+                      btn.removeEventListener('click', this.boundOrientationClick);
+                      btn.addEventListener('click', this.boundOrientationClick);
+                  });
+                  // Sofortige Synchronisation
+                  this.syncOrientationButtons();
+            } else {
+                  // Fallback: Versuche es später nochmal
+                  setTimeout(() => {
+                      const orientHBtn = document.getElementById('orient-h');
+                      const orientVBtn = document.getElementById('orient-v');
+                      if (orientHBtn && orientVBtn) {
+                          if (!this.boundOrientationClick) {
+                              this.boundOrientationClick = this.handleOrientationButtonClick.bind(this);
+                          }
+                          [orientHBtn, orientVBtn].forEach(btn => {
+                              btn.removeEventListener('click', this.boundOrientationClick);
+                              btn.addEventListener('click', this.boundOrientationClick);
+                          });
+                          // Synchronisiere Orientation Buttons nach dem Setup
+                          this.syncOrientationButtons();
+                      }
+                  }, 50); // Reduzierte Verzögerung
+              }
+          }
+          
+          // Event-Handler-Funktionen
+          
+          // Hilfsfunktion für robuste Orientation-Button-Synchronisation
+          ensureOrientationButtonsSync() {
+              const orientHBtn = document.getElementById('orient-h');
+              const orientVBtn = document.getElementById('orient-v');
+              
+              if (!orientHBtn || !orientVBtn || !this.orH || !this.orV) return;
+              
+              // Prüfe ob Buttons korrekt synchronisiert sind
+              const isVerticalActive = orientVBtn.classList.contains('active');
+              const isHorizontalActive = orientHBtn.classList.contains('active');
+              const radioVerticalChecked = this.orV.checked;
+              const radioHorizontalChecked = this.orH.checked;
+              
+              // Wenn Inkonsistenz festgestellt wird, korrigiere sie
+              if ((isVerticalActive !== radioVerticalChecked) || (isHorizontalActive !== radioHorizontalChecked)) {
+                  this.syncOrientationButtons();
+              }
+          }
+          
+          handleModuleSelectChange() {
+              this.trackInteraction();
+              const selectedValue = this.moduleSelect.value;
+              
+              if (selectedValue === '' || selectedValue === 'custom') {
+                  // Kein Modul ausgewählt oder Benutzerdefiniert - Inputs freigeben
+                  this.enableInputs();
+                  this.updateSize();
+                  this.buildList();
+              this.updateSummaryOnChange();
+                  // Alle Modul-Checkboxen abwählen
+                  this.clearModuleCheckboxes();
+              } else if (this.moduleData[selectedValue]) {
+                  // Modul ausgewählt - Werte setzen und Inputs sperren
+                  const module = this.moduleData[selectedValue];
+                  this.wIn.value = module.width;
+                  this.hIn.value = module.height;
+                  // Aktualisiere auch die aktuelle Konfiguration mit den neuen Zellgrößen
+                  if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+                      this.configs[this.currentConfig].cellWidth = module.width;
+                      this.configs[this.currentConfig].cellHeight = module.height;
+                  }
+                  this.disableInputs();
+                  this.updateSize();
+                  this.buildList();
+                  this.updateSummaryOnChange();
+                  
+                  // Keine Checkbox-Interaktion mehr - nur Dropdown-Werte setzen
+                  this.clearModuleCheckboxes();
+              }
+          }
+          
+          // Neue Funktionen für Modul-Checkbox-Synchronisation
+          handleModuleCheckboxChange(checkboxId) {
+              this.trackInteraction();
+              
+              // Nur eine Modul-Checkbox darf ausgewählt sein
+              if (checkboxId === 'include-modules' && this.incM.checked) {
+                  // include-modules wurde ausgewählt - ulica-module abwählen
+                  if (this.ulicaModule) {
+                      this.ulicaModule.checked = false;
+                  }
+                  // Dropdown auf ulica-450 setzen und Input-Werte anpassen
+                  if (this.moduleSelect) {
+                      this.moduleSelect.value = 'ulica-450';
+                      // Input-Werte für ulica-450 setzen
+                      if (this.wIn) this.wIn.value = '176.2';
+                      if (this.hIn) this.hIn.value = '113.4';
+                      if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+                          this.configs[this.currentConfig].cellWidth = 176.2;
+                          this.configs[this.currentConfig].cellHeight = 113.4;
+                      }
+                      this.disableInputs();
+                  }
+              } else if (checkboxId === 'ulica-module' && this.ulicaModule.checked) {
+                  // ulica-module wurde ausgewählt - include-modules abwählen
+                  if (this.incM) {
+                      this.incM.checked = false;
+                  }
+                  // Dropdown auf ulica-500 setzen und Input-Werte anpassen
+                  if (this.moduleSelect) {
+                      this.moduleSelect.value = 'ulica-500';
+                      // Input-Werte für ulica-500 setzen
+                      if (this.wIn) this.wIn.value = '195.2';
+                      if (this.hIn) this.hIn.value = '113.4';
+                      if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+                          this.configs[this.currentConfig].cellWidth = 195.2;
+                          this.configs[this.currentConfig].cellHeight = 113.4;
+                      }
+                      this.disableInputs();
+                  }
+              }
+              
+              // Grid und Berechnungen aktualisieren
+              this.updateSize();
+              this.buildGrid();
+              this.buildList();
+              this.updateSummaryOnChange();
+              this.updateConfig();
+              // Neu: Modul-Checkboxen gelten global -> auf alle Konfigurationen anwenden
+              this.updateAllConfigurationsForCheckboxes();
+          }
+          
+          clearModuleCheckboxes() {
+              if (this.incM) this.incM.checked = false;
+              if (this.ulicaModule) this.ulicaModule.checked = false;
+          }
+          
+          handleInputChange() {
+              this.trackInteraction();
+              this.updateSize();
+              this.buildList();
+              this.updateSummaryOnChange();
+          }
+          
+          handleOrientationChange() {
+              this.trackInteraction();
+              this.updateSize();
+              this.buildGrid();
+              this.buildList();
+              this.updateSummaryOnChange();
+          }
+          
+          handleCheckboxChange() {
+              this.trackInteraction();
+              
+              // Prüfe ob es sich um eine Modul-Checkbox handelt
+              const checkboxId = event.target.id;
+              if (checkboxId === 'include-modules' || checkboxId === 'ulica-module') {
+                  this.handleModuleCheckboxChange(checkboxId);
+              } else {
+                  // Ursprüngliche Funktion: Update aller Konfigurationen für Checkboxen
+                  this.updateAllConfigurationsForCheckboxes();
+              }
+          }
+          
+          handleExpansionClick(e) {
+              this.trackInteraction();
+              const dir = e.target.dataset.dir;
+              const isPlus = e.target.classList.contains('plus-btn');
+              
+              if (dir === 'right') {
+                  isPlus ? this.addColumnRight() : this.removeColumnRight();
+              } else if (dir === 'left') {
+                  isPlus ? this.addColumnLeft() : this.removeColumnLeft();
+              } else if (dir === 'top') {
+                  isPlus ? this.addRowTop() : this.removeRowTop();
+              } else if (dir === 'bottom') {
+                  isPlus ? this.addRowBottom() : this.removeRowBottom();
+              }
+          }
+          
+          handleOrientationButtonClick(e) {
+              const orientHBtn = document.getElementById('orient-h');
+              const orientVBtn = document.getElementById('orient-v');
+              
+              if (!orientHBtn || !orientVBtn) return;
+              
+              // Verhindere mehrfache Klicks während der Verarbeitung
+              if (this.orientationProcessing) return;
+              this.orientationProcessing = true;
+              
+              // Bestimme die neue Orientierung basierend auf dem Button, der den Handler ausgelöst hat
+              const clickedBtn = e.currentTarget || e.target;
+              const isVertical = clickedBtn === orientVBtn;
+              const newOrientation = isVertical ? 'vertical' : 'horizontal';
+              
+              // Sofortige visuelle Rückmeldung
+              orientHBtn.classList.remove('active');
+              orientVBtn.classList.remove('active');
+              if (clickedBtn && clickedBtn.classList) clickedBtn.classList.add('active');
+              
+              // Radio-Buttons synchronisieren
+              if (this.orV) this.orV.checked = isVertical;
+              if (this.orH) this.orH.checked = !isVertical;
+              
+              this.trackInteraction();
+              
+              // Sofortige Grid-Updates ohne Verzögerung
+              this.updateSize();
+              this.buildGrid();
+              
+              // Verzögerte Updates für Performance
+              setTimeout(() => {
+                  this.buildList();
+                  this.updateSummaryOnChange();
+                  this.orientationProcessing = false;
+                  // Zusätzliche Synchronisation für Robustheit
+                  this.ensureOrientationButtonsSync();
+              }, 10); // Reduzierte Verzögerung für bessere Reaktionszeit
+          }
+          
+          // NEUE FUNKTION: Synchronisiere Orientation Buttons
+          syncOrientationButtons() {
+              const orientHBtn = document.getElementById('orient-h');
+              const orientVBtn = document.getElementById('orient-v');
+              
+              if (!orientHBtn || !orientVBtn || !this.orH || !this.orV) return;
+              
+              // Entferne active Klasse von beiden Buttons
+              orientHBtn.classList.remove('active');
+              orientVBtn.classList.remove('active');
+              
+              // Setze active Klasse basierend auf Radio-Button Status
+              // Priorisiere orV.checked für konsistente Logik
+              if (this.orV.checked) {
+                  orientVBtn.classList.add('active');
+              } else if (this.orH.checked) {
+                  orientHBtn.classList.add('active');
+              } else {
+                  // Fallback: Standard auf vertikal setzen
+                  this.orV.checked = true;
+                  this.orH.checked = false;
+                  orientVBtn.classList.add('active');
+              }
+          }
+          
+          // Input-Sperr-Funktionen
+          disableInputs() {
+              if (this.wIn) {
+                  this.wIn.disabled = true;
+                  this.wIn.style.backgroundColor = '#f0f0f0';
+                  this.wIn.style.cursor = 'not-allowed';
+              }
+              if (this.hIn) {
+                  this.hIn.disabled = true;
+                  this.hIn.style.backgroundColor = '#f0f0f0';
+                  this.hIn.style.cursor = 'not-allowed';
+              }
+          }
+          
+          enableInputs() {
+              if (this.wIn) {
+                  this.wIn.disabled = false;
+                  this.wIn.style.backgroundColor = '';
+                  this.wIn.style.cursor = '';
+              }
+              if (this.hIn) {
+                  this.hIn.disabled = false;
+                  this.hIn.style.backgroundColor = '';
+                  this.hIn.style.cursor = '';
+              }
+          }
+  
+      updateSaveButtons() {
+            // Immer den "Neue Konfiguration speichern" Button anzeigen
+            if (this.saveBtn) {
+                this.saveBtn.style.display = 'inline-block';
+            }
+          }
+      
+  
+      
+      // Spalten-Methoden - Rechts (am Ende)
+      addColumnRight() {
+            this.cols += 1;
+            for (let row of this.selection) {
+              row.push(false);
+            }
+            this.updateGridAfterStructureChange();
+          }
+  
+          removeColumnRight() {
+            if (this.cols <= 1) return;
+            this.cols -= 1;
+            for (let row of this.selection) {
+              row.pop();
+            }
+            this.updateGridAfterStructureChange();
+          }
+  
+          // Spalten-Methoden - Links (am Anfang)
+          addColumnLeft() {
+            this.cols += 1;
+            for (let row of this.selection) {
+              row.unshift(false);
+            }
+            this.updateGridAfterStructureChange();
+          }
+  
+          removeColumnLeft() {
+            if (this.cols <= 1) return;
+            this.cols -= 1;
+            for (let row of this.selection) {
+              row.shift();
+            }
+            this.updateGridAfterStructureChange();
+          }
+  
+          // Zeilen-Methoden - Unten (am Ende)
+          addRowBottom() {
+            this.rows += 1;
+            this.selection.push(Array(this.cols).fill(false));
+            this.updateGridAfterStructureChange();
+          }
+  
+          removeRowBottom() {
+            if (this.rows <= 1) return;
+            this.rows -= 1;
+            this.selection.pop();
+            this.updateGridAfterStructureChange();
+          }
+  
+          // Zeilen-Methoden - Oben (am Anfang)
+          addRowTop() {
+            this.rows += 1;
+            this.selection.unshift(Array(this.cols).fill(false));
+            this.updateGridAfterStructureChange();
+          }
+  
+          removeRowTop() {
+            if (this.rows <= 1) return;
+            this.rows -= 1;
+            this.selection.shift();
+            this.updateGridAfterStructureChange();
+          }
+  
+          updateGridAfterStructureChange() {
+            this.updateSize();
+            this.buildGrid();
+            this.buildList();
+            this.updateSummaryOnChange();
+          }
+      
+  
+      
+  
+      updateSize() {
+            const RAIL_GAP = 2; // Immer 2cm für Schienen-Berechnungen
+            const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  
+                    // Original Zellengrößen aus Input - bei Orientierung entsprechend anwenden
+          const inputW = parseFloat(this.wIn ? this.wIn.value : '179') || 179;
+          const inputH = parseFloat(this.hIn ? this.hIn.value : '113') || 113;
+            
+                    // Bei vertikaler Orientierung: Breite und Höhe der Zellen tauschen
+          const isVertical = this.orV ? this.orV.checked : false;
+            const originalCellW = isVertical ? inputH : inputW;
+            const originalCellH = isVertical ? inputW : inputH;
+            
+                    // Maximale verfügbare Größe
+          // 80px Abstand auf allen Seiten: links, rechts, oben, unten
+          // Insgesamt 160px für Breite (80px links + 80px rechts) und 160px für Höhe (80px oben + 80px unten)
+          const maxWidth = this.wrapper ? this.wrapper.clientWidth - 160 : 800; // grid-wrapper Breite - 160px (80px links + 80px rechts)
+          const maxHeight = this.wrapper ? this.wrapper.clientHeight - 160 : 600; // grid-wrapper Höhe - 160px (80px oben + 80px unten)
+            
+            // Berechne benötigte Gesamtgröße mit Original-Zellgrößen (inklusive Gaps für Schienen)
+            const totalWidthWithRailGaps = this.cols * originalCellW + (this.cols - 1) * RAIL_GAP;
+            const totalHeightWithRailGaps = this.rows * originalCellH + (this.rows - 1) * RAIL_GAP;
+            
+            // Berechne Skalierungsfaktoren für beide Dimensionen
+            const scaleX = maxWidth / totalWidthWithRailGaps;
+            const scaleY = maxHeight / totalHeightWithRailGaps;
+            
+            // Verwende den kleineren Skalierungsfaktor, um Proportionen zu erhalten
+            // und sicherzustellen, dass das Grid nie die Grenzen überschreitet
+            const scale = Math.min(scaleX, scaleY, 1);
+            
+            // Berechne finale Zellgrößen
+            const w = originalCellW * scale;
+            const h = originalCellH * scale;
+  
+            // Bestimme visuelle Gap: 0 wenn viele Spalten/Zeilen, sonst RAIL_GAP * scale
+            // Gap verschwindet horizontal ab 15 Spalten, vertikal ab 10 Zeilen
+            const shouldHideGap = this.cols >= 15 || this.rows >= 10;
+            const visualGap = shouldHideGap ? 0 : RAIL_GAP * scale;
+  
+            // CSS Variablen setzen
+            document.documentElement.style.setProperty('--cell-size', w + 'px');
+            document.documentElement.style.setProperty('--cell-width',  w + 'px');
+            document.documentElement.style.setProperty('--cell-height', h + 'px');
+            document.documentElement.style.setProperty('--cell-gap', visualGap + 'px');
+  
+            // Grid-Größe direkt setzen - niemals größer als die maximalen Grenzen
+            const finalWidth = Math.min(this.cols * w + (this.cols - 1) * visualGap, maxWidth);
+            const finalHeight = Math.min(this.rows * h + (this.rows - 1) * visualGap, maxHeight);
+            
+                    if (this.gridEl) {
+              this.gridEl.style.width = finalWidth + 'px';
+              this.gridEl.style.height = finalHeight + 'px';
+          }
+          }
+      buildGrid() {
+            if (!Array.isArray(this.selection)) return;
+            
+            // Performance: Verwende DocumentFragment für bessere Performance
+            const fragment = document.createDocumentFragment();
+            
+            // CSS-Variablen setzen
+            document.documentElement.style.setProperty('--cols', this.cols);
+            document.documentElement.style.setProperty('--rows', this.rows);
+  
+            // Batch-Erstellung aller Zellen - optimiert für Orientation Changes
+            for (let y = 0; y < this.rows; y++) {
+              if (!Array.isArray(this.selection[y])) continue;
+  
+              for (let x = 0; x < this.cols; x++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                if (this.selection[y]?.[x]) cell.classList.add('selected');
+  
+                // FEATURE 6: Screen Reader Support - ARIA-Labels
+                cell.setAttribute('role', 'button');
+                cell.setAttribute('tabindex', '0');
+                cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y]?.[x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
+                cell.setAttribute('aria-pressed', this.selection[y]?.[x] ? 'true' : 'false');
+  
+                // Event-Listener optimiert
+                cell.addEventListener('click', () => {
+                  if (!this.selection[y]) this.selection[y] = [];
+                  this.selection[y][x] = !this.selection[y][x];
+                  cell.classList.toggle('selected');
+                  
+                  // FEATURE 6: Screen Reader Support - Update ARIA
+                  cell.setAttribute('aria-pressed', this.selection[y][x] ? 'true' : 'false');
+                  cell.setAttribute('aria-label', `Modul ${x + 1}, ${y + 1} - ${this.selection[y][x] ? 'ausgewählt' : 'nicht ausgewählt'}`);
+                  
+                  // Performance: Update aktuelle Konfiguration ohne Deep Copy
+                  if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+                      // Direkte Referenz statt JSON.parse/stringify
+                      this.configs[this.currentConfig].selection = this.selection;
+                      // Speichere die Konfiguration automatisch
+                      this.updateConfig();
+                  }
+                  
+                  this.trackInteraction();
+                  // Performance: Sofortige Produktliste Update + Debounced Summary
+                  this.buildList();
+                  this.updateSummaryOnChange();
+                  
+                  // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+                  if (this.currentConfig !== null) {
+                      this.updateConfigList();
+                  }
+                });
+         
+                // FEATURE 6: Screen Reader Support - Keyboard Navigation
+                cell.addEventListener('keydown', (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      cell.click();
+                  }
+                });
+  
+                // Animation entfernt für bessere Performance
+                // const dx = x - centerX;
+                // const dy = y - centerY;
+                // const distance = Math.sqrt(dx * dx + dy * dy);
+                // const delay = distance * delayPerUnit;
+                // cell.style.animationDelay = `${delay}ms`;
+                // setTimeout(() => cell.classList.remove('animate-in'), 400);
+                fragment.appendChild(cell);
+              }
+            }
+            
+            // Einmalige DOM-Manipulation
+            this.gridEl.innerHTML = '';
+            this.gridEl.appendChild(fragment);
+          }
+      async buildList() {
+        try {
+          // Performance: Cached panel count calculation
+          const panelCount = this.selection.flat().filter(v => v).length;
+          
+          // Verwende die gleiche Berechnungslogik wie calculateConfigPrice für Konsistenz
+          const currentConfig = {
+            selection: this.selection,
+            cols: this.cols,
+            rows: this.rows,
+            cellWidth: parseInt(this.wIn?.value || '179'),
+            cellHeight: parseInt(this.hIn?.value || '113'),
+            orientation: this.orV?.checked ? 'vertical' : 'horizontal',
+            ulicaModule: document.getElementById('ulica-module')?.checked || false
+          };
+          
+          // Verwende calculateConfigPrice Logik für die Teile-Berechnung
+          const parts = {
+            Solarmodul: 0, Endklemmen: 0, Mittelklemmen: 0,
+            Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+            Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
+            UlicaSolarBlackJadeFlow: 0
+          };
+  
+          // Berechne Teile für jede Zeile (gleiche Logik wie calculateConfigPrice)
+          for (let y = 0; y < currentConfig.rows; y++) {
+            if (!Array.isArray(currentConfig.selection[y])) continue;
+            let run = 0;
+  
+            for (let x = 0; x < currentConfig.cols; x++) {
+              if (currentConfig.selection[y]?.[x]) {
+                run++;
+              }
+              else if (run) { 
+                this.processGroupDirectly(run, parts, currentConfig.cellWidth || 179, currentConfig.cellHeight || 113, currentConfig.orientation || 'vertical', currentConfig.ulicaModule || false); 
+                run = 0; 
+              }
+            }
+            if (run) {
+              this.processGroupDirectly(run, parts, currentConfig.cellWidth || 179, currentConfig.cellHeight || 113, currentConfig.orientation || 'vertical', currentConfig.ulicaModule || false);
+            }
+          }
+          
+          // Module nur hinzufügen wenn Checkbox aktiviert ist (gleiche Logik wie calculateConfigPrice)
+          const includeModules = document.getElementById('include-modules')?.checked || false;
+          const ulicaModule = document.getElementById('ulica-module')?.checked || false;
+          const kabelbinder = this.kabelbinder?.checked || false;
+          
+          if (!includeModules) {
+            delete parts.Solarmodul;
+          }
+          
+          if (!ulicaModule) {
+            delete parts.UlicaSolarBlackJadeFlow;
+          }
+          
+          // Zusatzprodukte: Erdungsband wieder in die Produktliste aufnehmen wenn Checkbox aktiv
+          if (this.erdungsband && this.erdungsband.checked) {
+            parts.Erdungsband = this.calculateErdungsband();
+          } else {
+            delete parts.Erdungsband;
+          }
+          
+          // Kabelbinder und Blech-Bohrschrauben werden NICHT in der Produktliste angezeigt
+          // Sie werden nur in der Zusatzproduktliste angezeigt
+          delete parts.Kabelbinder;
+          delete parts.BlechBohrschrauben;
+  
+  
+        // Palettenlogik für Produktliste (36er-Bündel je nach Modultyp)
+        try {
+          const pieceKey = ulicaModule ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+          const palletKey = ulicaModule ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+          const count = Number(parts[pieceKey] || 0);
+          if (count > 0) {
+            const pallets = Math.floor(count / 36);
+            const remainder = count % 36;
+            if (pallets > 0) {
+              parts[palletKey] = (parts[palletKey] || 0) + pallets * 36; // Stückbasis
+            }
+            parts[pieceKey] = remainder;
+          }
+        } catch (e) {}
+  
+        const entries = Object.entries(parts).filter(([,v]) => v > 0);
+        if (!entries.length) {
+          if (this.listHolder) {
+          this.listHolder.style.display = 'none';
+          }
+          return;
+        }
+        if (this.listHolder) {
+        this.listHolder.style.display = 'block';
+        }
+        if (this.prodList) {
+          // Performance: Reduziere DOM-Manipulation
+          const fragment = document.createDocumentFragment();
+          entries.forEach(([k,v]) => {
+          const packs = Math.ceil(v / VE[k]);
+            const price = getPackPriceForQuantity(k, v);
+            const itemTotal = packs * price;
+            const div = document.createElement('div');
+            div.className = 'produkt-item';
+            
+            // Spezielle Behandlung für Erdungsband: Zeige Länge statt Anzahl
+            let itemDetails = `(${v})`;
+            let itemVE = `${VE[k]} Stück`;
+            if (k === 'Erdungsband' && this.erdungsbandtotal) {
+              itemDetails = `(${Number(this.erdungsbandtotal).toFixed(2)} cm)`;
+              itemVE = `600 cm`;
+            }
+            // Zusätzliche Formatierungen für bestimmte Zusatzprodukte
+            if (k === 'Solarkabel') {
+              itemVE = '100 m';
+            }
+            if (k === 'MC4_Stecker') {
+              itemVE = `${VE[k]} Stück`;
+            }
+            
+            div.innerHTML = `
+              <div class="item-left">
+                <span class="item-quantity">${packs}×</span>
+                <div class="item-info">
+                  <span class="item-name">${PRODUCT_NAME_MAP[k] || k.replace(/_/g,' ')}</span>
+                  <span class="item-ve">${itemVE}</span>
+                </div>
+                <span class="item-details">${itemDetails}</span>
+              </div>
+              <span class="item-price">${itemTotal.toFixed(2).replace('.', ',')} €</span>
+            `;
+            fragment.appendChild(div);
+          });
+          this.prodList.innerHTML = '';
+          this.prodList.appendChild(fragment);
+        this.prodList.style.display = 'block';
+        }
+        
+        // Gesamtpreis sofort aktualisieren nach Produktliste-Update
+        this.updateCurrentTotalPrice();
+        
+        } catch (error) {
+          // Fallback: Verstecke Liste bei Fehler
+          if (this.listHolder) {
+            this.listHolder.style.display = 'none';
+          }
+        }
+      }
+      
+      resetGridToDefault() {
+            const { cols, rows, width, height } = this.default;
+  
+            // Setze Inputs und interne Werte
+            this.wIn.value = width;
+            this.hIn.value = height;
+            
+            // Setze Orientierung auf Standard (vertikal als Standard)
+          const defaultVertical = true; // Vertikal als Standard
+          if (this.orH) this.orH.checked = !defaultVertical;
+          if (this.orV) this.orV.checked = defaultVertical;
+          
+          // Synchronisiere Setup-Container Radio-Buttons
+          const orientHSetup = document.getElementById('orient-h-setup');
+          const orientVSetup = document.getElementById('orient-v-setup');
+          if (orientHSetup && orientVSetup) {
+              orientHSetup.checked = !defaultVertical;
+              orientVSetup.checked = defaultVertical;
+          }
+  
+          // Setze alle Checkboxen zurück für neue Konfiguration
+          if (this.incM) this.incM.checked = false;
+          if (this.mc4) this.mc4.checked = false;
+          if (this.solarkabel) this.solarkabel.checked = false;
+          if (this.holz) this.holz.checked = false;
+          if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
+          if (this.erdungsband) this.erdungsband.checked = false;
+          if (this.ulicaModule) this.ulicaModule.checked = false;
+          // Optimierer (Huawei/BRC) und Menge zurücksetzen
+          try {
+              const hCb = document.getElementById('huawei-opti');
+              const bCb = document.getElementById('brc-opti');
+              const qEl = document.getElementById('opti-qty');
+              if (hCb) { hCb.checked = false; hCb.dispatchEvent(new Event('change')); }
+              if (bCb) { bCb.checked = false; bCb.dispatchEvent(new Event('change')); }
+              if (qEl) qEl.value = '1';
+          } catch (_) {}
+          
+          // Module Dropdown auf Default zurücksetzen
+          if (this.moduleSelect) {
+              this.moduleSelect.value = '';
+              this.enableInputs();
+          }
+  
+            this.cols = cols;
+            this.rows = rows;
+  
+            // Leere Auswahl - alle Module abwählen
+            this.selection = Array.from({ length: this.rows }, () =>
+              Array.from({ length: this.cols }, () => false)
+            );
+  
+            // Aktualisiere alles
+            this.setup();
+            this.buildGrid();
+            this.buildList();
+            this.updateSummaryOnChange();
+          }
+      
+      resetToDefaultGrid() {
+          if (this.colsIn) this.colsIn.value = this.default.cols;
+          if (this.rowsIn) this.rowsIn.value = this.default.rows;
+          if (this.wIn) this.wIn.value = this.default.width;
+          if (this.hIn) this.hIn.value = this.default.height;
+          if (this.orH) this.orH.checked = false;
+          if (this.orV) this.orV.checked = true;
+  
+            // Setze cols/rows synchron
+            this.cols = this.default.cols;
+            this.rows = this.default.rows;
+  
+            // Leere Auswahl
+            this.selection = Array.from({ length: this.rows }, () =>
+              Array.from({ length: this.cols }, () => false)
+            );
+  
+            this.setup(); // jetzt stimmt alles beim Rebuild
+          }
+      async calculateParts() {
+        // Verwende immer den Fallback für Tellerkopfschraube-Berechnung
+        return this.calculatePartsSync();
+      }
+  
+      // Fallback synchrone Berechnung (ursprüngliche Methode)
+      calculatePartsSync() {
+            const p = {
+              Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
+              Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+              Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0,
+              Erdungsband: 0
+            };
+  
+            for (let y = 0; y < this.rows; y++) {
+              if (!Array.isArray(this.selection[y])) continue;
+              let run = 0;
+  
+              for (let x = 0; x < this.cols; x++) {
+                if (this.selection[y]?.[x]) run++;
+                else if (run) { this.processGroup(run, p); run = 0; }
+              }
+              if (run) this.processGroup(run, p);
+            }
+  
+          // Erdungsband-Berechnung nur wenn gewünscht
+          if (this.erdungsband && this.erdungsband.checked) {
+              p.Erdungsband = this.calculateErdungsband();
+          }
+  
+          // Tellerkopfschrauben global berechnen: 2 × Dachhaken (entspricht früherer Gruppenformel)
+          p.Tellerkopfschraube = (p.Dachhaken || 0) * 2;
+  
+          return p;
+          }
+      processGroup(len, p) {
+        // Verwende die korrekte Schienenlogik (wie im Worker)
+        const isVertical = this.orV?.checked;
+        const actualCellWidth = isVertical ? parseFloat(this.hIn?.value || '113') : parseFloat(this.wIn?.value || '179');
+        
+        const totalLen = len * actualCellWidth;
+        const floor360 = Math.floor(totalLen / 360);
+        const rem360 = totalLen - floor360 * 360;
+        const floor240 = Math.ceil(rem360 / 240);
+        const pure360 = Math.ceil(totalLen / 360);
+        const pure240 = Math.ceil(totalLen / 240);
+        
+        const variants = [
+          {cnt360: floor360, cnt240: floor240},
+          {cnt360: pure360,  cnt240: 0},
+          {cnt360: 0,        cnt240: pure240}
+        ].map(v => ({
+          ...v,
+          rails: v.cnt360 + v.cnt240,
+          waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+        }));
+        
+        const minRails = Math.min(...variants.map(v => v.rails));
+        const best = variants
+          .filter(v => v.rails === minRails)
+          .reduce((a, b) => a.waste <= b.waste ? a : b);
+        
+        const {cnt360, cnt240} = best;
+        
+        p.Schiene_360_cm     += cnt360 * 2;
+        p.Schiene_240_cm     += cnt240 * 2;
+        p.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+        p.Endklemmen         += 4;
+        p.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+        p.Dachhaken          += len > 1 ? len * 3 : 4;
+        p.Endkappen          += 4; // Gleich wie Endklemmen
+        p.Solarmodul         += len;
+        if (this.ulicaModule && this.ulicaModule.checked) {
+          p.UlicaSolarBlackJadeFlow += len;
+        }
+        p.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
+        // Tellerkopfschrauben nur einmal global berechnen, nicht pro Reihe additiv – hier kein Zuwachs
+        p.Tellerkopfschraube += 0;
+      }
+  
+      mapImage(key) {
+        // Verwende zentrale Produkt-Konfiguration oder Fallback
+        return PRODUCT_IMAGES[key] || '';
+      }
+  
+      // Erdungsband-Berechnung
+      calculateErdungsband() {
+        const isVertical = this.orV?.checked;
+        const moduleHeight = isVertical ? parseFloat(this.wIn?.value || '179') : parseFloat(this.hIn?.value || '113');
+        const gap = 2; // 2cm Lücke zwischen Modulen
+        
+        // Kopiere selection Matrix für Erdungsbandlength-Tracking
+        const erdungsbandMatrix = this.selection.map(row => [...row]);
+        
+        let erdungsbandtotal = 0;
+        
+        // Analysiere Grid von oben nach unten, links nach rechts
+        for (let y = 0; y < this.rows; y++) {
+          for (let x = 0; x < this.cols; x++) {
+            const result = this.analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
+            erdungsbandtotal += result;
+          }
+        }
+        
+        // Speichere Erdungsbandtotal für Display
+        this.erdungsbandtotal = erdungsbandtotal;
+        
+        // Berechne Anzahl benötigter Erdungsbänder
+        return Math.ceil(erdungsbandtotal / 600);
+      }
+  
+      // Analysiere ein Feld für Erdungsband
+      analyzeFieldForErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
+        // Schritt 1: Hat das Feld ein Modul?
+        if (!erdungsbandMatrix[y]?.[x]) {
+          return 0; // Kein Modul, nächstes Feld
+        }
+        
+        // Schritt 2: Hat das Modul ein weiteres Modul direkt darunter?
+        if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[x]) {
+          return 0; // Kein Modul darunter, nächstes Feld
+        }
+        
+        // Schritt 3: Ist links vom aktuellen Feld ein weiteres Feld mit Modul?
+        if (x === 0 || !erdungsbandMatrix[y]?.[x - 1]) {
+          // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
+          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+        }
+        
+        // Schritt 4: Hat das linke Feld ein Modul darunter?
+        if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[x - 1]) {
+          // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
+          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+        }
+        
+        // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
+        return this.checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap);
+      }
+  
+      // Prüfe linke Felder auf Erdungsbandlength
+      checkLeftFieldsErdungsband(x, y, erdungsbandMatrix, moduleHeight, gap) {
+        const leftUpper = erdungsbandMatrix[y]?.[x - 1];
+        const leftLower = erdungsbandMatrix[y + 1]?.[x - 1];
+        
+        if (leftUpper && leftLower) {
+          // Beide haben Module → Prüfe ob sie bereits Erdungsbandlength haben
+          if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
+            // Beide haben Erdungsbandlength → Nichts tun
+            return 0;
+          } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
+            // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
+            return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+          } else {
+            // Keine Erdungsbandlength links → Rekursiv weiter links prüfen
+            return this.checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap);
+          }
+        } else if (leftUpper && !leftLower) {
+          // Nur oberes Feld hat Modul → Erdungsbandlength für aktuelles Feld + Feld darunter
+          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+        } else {
+          // Keine Module links → Erdungsbandlength für aktuelles Feld + Feld darunter
+          return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+        }
+      }
+  
+      // Rekursiv weiter links prüfen
+      checkLeftFieldsRecursive(x, y, erdungsbandMatrix, moduleHeight, gap) {
+        let checkX = x - 2; // Ein Feld weiter links
+        
+        while (checkX >= 0) {
+          // Schritt 3: Hat das Feld links ein Modul?
+          if (!erdungsbandMatrix[y]?.[checkX]) {
+            // Kein Modul links → Erdungsbandlength für aktuelles Feld + Feld darunter
+            return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+          }
+          
+          // Schritt 4: Hat das linke Feld ein Modul darunter?
+          if (y + 1 >= this.rows || !erdungsbandMatrix[y + 1]?.[checkX]) {
+            // Kein Modul unter dem linken Feld → Erdungsbandlength für aktuelles Feld + Feld darunter
+            return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+          }
+          
+          // Schritt 5: Haben die beiden linken Felder bereits Erdungsbandlength?
+          const leftUpper = erdungsbandMatrix[y]?.[checkX];
+          const leftLower = erdungsbandMatrix[y + 1]?.[checkX];
+          
+          if (leftUpper === 'erdungsband' && leftLower === 'erdungsband') {
+            // Beide haben Erdungsbandlength → Nichts tun
+            return 0;
+          } else if (leftUpper === 'erdungsband' && leftLower !== 'erdungsband') {
+            // Nur das obere hat Erdungsbandlength → Erdungsbandlength für aktuelles Feld + Feld darunter
+            return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+          } else {
+            // Keine Erdungsbandlength → Weiter nach links
+            checkX--;
+            continue;
+          }
+        }
+        
+        // Keine Module mehr links → Erdungsbandlength für aktuelles Feld + Feld darunter
+        return this.assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap);
+      }
+  
+      // Weise Erdungsbandlength zu
+      assignErdungsbandLength(x, y, erdungsbandMatrix, moduleHeight, gap) {
+        // Prüfe ob aktuelles Feld bereits Erdungsbandlength hat
+        const currentFieldHasErdungsband = erdungsbandMatrix[y][x] === 'erdungsband';
+        
+        if (currentFieldHasErdungsband) {
+          // Nur das Feld darunter markieren
+          erdungsbandMatrix[y + 1][x] = 'erdungsband';
+          // Berechne Erdungsbandlength: 1 × Modul-Höhe + Gap
+          return moduleHeight + gap;
+        } else {
+          // Beide Felder markieren
+          erdungsbandMatrix[y][x] = 'erdungsband';
+          erdungsbandMatrix[y + 1][x] = 'erdungsband';
+          // Berechne Erdungsbandlength: 2 × Modul-Höhe + Gap
+          return 2 * moduleHeight + gap;
+        }
+      }
+  
+  
+  
+  
+  
+  
+      
+      loadConfig(idx) {
+            const cfg = this.configs[idx];
+            this.currentConfig = idx;
+  
+            // Input-Werte setzen
+              this.wIn.value = cfg.cellWidth;
+              this.hIn.value = cfg.cellHeight;
+              this.orV.checked = cfg.orientation === 'vertical';
+              this.orH.checked = !this.orV.checked;
+              
+              // Synchronisiere mit den Orientation Buttons
+              this.syncOrientationButtons();
+            this.incM.checked = cfg.incM;
+              this.mc4.checked = cfg.mc4;
+              this.solarkabel.checked = cfg.solarkabel || false; // Fallback für alte Konfigurationen
+            this.holz.checked = cfg.holz;
+              this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false; // Fallback für alte Konfigurationen
+              if (this.kabelbinder) this.kabelbinder.checked = cfg.kabelbinder || false; // Fallback für alte Konfigurationen
+              if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false; // Fallback für alte Konfigurationen
+              if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false; // Fallback für alte Konfigurationen
+  
+              // STATE Werte setzen - WICHTIG: Vor setup() setzen
+              this.cols = cfg.cols;
+              this.rows = cfg.rows;
+              this.selection = cfg.selection.map(r => [...r]);
+  
+              // Setup aufrufen (baut Grid mit korrekter Auswahl auf)
+              this.setup();
+  
+              // Produktliste und Summary aktualisieren
+              this.buildList();
+              this.updateSummaryOnChange();
+  
+              this.renderConfigList();
+              this.updateSaveButtons();
+              
+              // Detail-Ansicht aktualisieren wenn aktiv
+              this.updateDetailView();
+          }
+          
+          // Spezielle Funktion für Cache-Load ohne Orientation-Überschreibung
+          loadConfigFromCache(idx) {
+              const cfg = this.configs[idx];
+              this.currentConfig = idx;
+  
+              // Input-Werte setzen (OHNE Orientation)
+              this.wIn.value = cfg.cellWidth;
+              this.hIn.value = cfg.cellHeight;
+              // Wichtig: UI-Orientation strikt aus der Konfiguration setzen (damit buildGrid korrekt rendert)
+              if (this.orV && this.orH && typeof cfg.orientation === 'string') {
+                  this.orV.checked = cfg.orientation === 'vertical';
+                  this.orH.checked = !this.orV.checked;
+                  this.syncOrientationButtons?.();
+              }
+              
+              this.incM.checked = cfg.incM;
+              this.mc4.checked = cfg.mc4;
+              this.solarkabel.checked = cfg.solarkabel || false;
+              this.holz.checked = cfg.holz;
+              this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
+              if (this.kabelbinder) this.kabelbinder.checked = cfg.kabelbinder || false;
+              if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
+              if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
+  
+            // STATE Werte setzen
+            this.cols = cfg.cols;
+            this.rows = cfg.rows;
+            this.selection = cfg.selection.map(r => [...r]);
+  
+              // Setup aufrufen
+            this.setup();
+  
+              // Produktliste und Summary aktualisieren
+              this.buildList();
+              this.updateSummaryOnChange();
+  
+            this.renderConfigList();
+            this.updateSaveButtons();
+              
+              // Detail-Ansicht aktualisieren wenn aktiv
+              this.updateDetailView();
+          }
+          
+          // Spezielle Funktion für Cache-Load der ersten Konfiguration mit korrekter Orientation
+          loadFirstConfigFromCache() {
+              if (this.configs.length === 0) return;
+              
+              const cfg = this.configs[0];
+              this.currentConfig = 0;
+  
+              // Input-Werte setzen
+              this.wIn.value = cfg.cellWidth;
+              this.hIn.value = cfg.cellHeight;
+              // Wichtig: UI-Orientation strikt aus der Konfiguration setzen (damit buildGrid korrekt rendert)
+              if (this.orV && this.orH && typeof cfg.orientation === 'string') {
+                  this.orV.checked = cfg.orientation === 'vertical';
+                  this.orH.checked = !this.orV.checked;
+                  this.syncOrientationButtons?.();
+              }
+              
+              this.incM.checked = cfg.incM;
+              this.mc4.checked = cfg.mc4;
+              this.solarkabel.checked = cfg.solarkabel || false;
+              this.holz.checked = cfg.holz;
+              this.quetschkabelschuhe.checked = cfg.quetschkabelschuhe || false;
+              if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
+              if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
+  
+              // STATE Werte setzen
+              this.cols = cfg.cols;
+              this.rows = cfg.rows;
+              this.selection = cfg.selection.map(r => [...r]);
+  
+              // Setup aufrufen
+              this.setup();
+  
+              // Produktliste und Summary aktualisieren
+              this.buildList();
+              this.updateSummaryOnChange();
+  
+              this.renderConfigList();
+              this.updateSaveButtons();
+              
+              // Detail-Ansicht aktualisieren wenn aktiv
+              this.updateDetailView();
+          }
+          
+          // Funktion um die erste Konfiguration mit der globalen Orientation zu aktualisieren
+          updateFirstConfigOrientation(globalOrientation) {
+              if (this.configs.length > 0) {
+                  this.configs[0].orientation = globalOrientation;
+              }
+          }
+      
+              showToast(message = 'Gespeichert', duration = 1500) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+  
+            clearTimeout(this.toastTimeout);
+            this.toastTimeout = setTimeout(() => {
+              toast.classList.add('hidden');
+            }, duration);
+          }
+  
+      saveNewConfig(customName = null) {
+            // 1. Aktuelle Auswahl in der vorherigen Konfiguration speichern
+            if (this.currentConfig !== null) {
+                this.updateConfig(); // Speichere aktuelle Änderungen in vorheriger Config
+            }
+            
+            // 2. Temporär currentConfig auf null setzen für neue Konfiguration
+            this.currentConfig = null;
+  
+        // 2a. Behalte aktuelle Maße der Module (wIn/hIn) und Grid-Dimensionen bei
+        //     – keine Rücksetzung auf Default-Werte
+        //     Grid-Orientierung setzen wir weiterhin auf vertikal als Start, falls gewünscht
+              if (this.orH && this.orV) {
+                  this.orH.checked = false;
+                  this.orV.checked = true;
+                  this.syncOrientationButtons?.();
+              }
+            
+            // 3. Neue Konfiguration mit leerem Grid erstellen
+              const emptySelection = Array.from({ length: this.rows }, () =>
+                Array.from({ length: this.cols }, () => false)
+            );
+            
+            // 4. Aktuelle Auswahl temporär speichern und durch leere ersetzen
+            const originalSelection = this.selection;
+            this.selection = emptySelection;
+            
+            const cfg = this._makeConfigObject(customName);
+            this.configs.push(cfg);
+            
+              // 5. Neue Konfiguration auswählen und Grid neu aufbauen
+              this.currentConfig = this.configs.length - 1;
+              this.setup(); // Baut Grid mit leerer Auswahl neu auf
+  
+              // Direkt zur Detail-Ansicht der neuen Konfiguration wechseln
+              this.showDetailView(this.currentConfig);
+            
+            this.renderConfigList();
+          this.updateConfigList(); // Config-Liste in Overview updaten
+            this.updateSaveButtons();
+          // 6. Detail-Ansicht aktualisieren wenn aktiv
+          this.updateDetailView();
+          
+          this.showToast(`Neue Konfiguration "${cfg.name}" erstellt`);
+          }
+  
+      renameCurrentConfig(newName) {
+        if (this.currentConfig !== null && this.currentConfig >= 0 && this.currentConfig < this.configs.length) {
+          // Aktuelle Konfiguration umbenennen
+          this.configs[this.currentConfig].name = newName;
+          // Sofort DOM aktualisieren
+          const titleEl = document.getElementById('current-config-title');
+          if (titleEl) titleEl.textContent = newName;
+          if (this.configListEl) {
+            const items = this.configListEl.querySelectorAll('.config-item');
+            if (items && items[this.currentConfig]) {
+              const nameEl = items[this.currentConfig].querySelector('.config-item-name');
+              if (nameEl) nameEl.textContent = newName;
+            }
+          }
+          this.renderConfigList();
+          this.updateSaveButtons();
+          // Neu: Direkt in Cache sichern, damit der Name nach Reload erhalten bleibt
+          this.updateConfig();
+          this.saveToCache();
+          this.showAutoSaveIndicator();
+        }
+          }
+  
+      updateConfig() {
+        const idx = this.currentConfig;
+        this.configs[idx] = this._makeConfigObject();
+        this.renderConfigList();
+        this.updateSaveButtons();
+        // Gesamtpreis sofort aktualisieren nach Config-Update
+        this.updateCurrentTotalPrice();
+      }
+      
+      deleteConfig(configIndex) {
+            const configName = this.configs[configIndex].name;
+            if (!confirm(`Willst du "${configName}" wirklich löschen?`)) return;
+  
+            this.configs.splice(configIndex, 1);
+            
+            // Nach dem Löschen: Wähle die nächste Konfiguration oder erstelle eine neue
+            if (this.configs.length > 0) {
+                // Wenn die gelöschte Konfiguration die aktuelle war
+                if (configIndex === this.currentConfig) {
+                    // Wähle die nächste Konfiguration (oder die vorherige wenn es die letzte war)
+                    const newIndex = Math.min(configIndex, this.configs.length - 1);
+                    this.loadConfig(newIndex);
+                } else if (configIndex < this.currentConfig) {
+                    // Eine Konfiguration vor der aktuellen wurde gelöscht, Index anpassen
+                    this.currentConfig--;
+                    this.renderConfigList();
+                } else {
+                    // Eine Konfiguration nach der aktuellen wurde gelöscht, nur Liste neu rendern
+                    this.renderConfigList();
+                }
+            } else {
+                // Keine Konfigurationen mehr - erstelle eine neue
+                this.createNewConfig();
+            }
+  
+            this.updateSaveButtons();
+          }
+  
+      createNewConfig() {
+        // Erstelle eine neue Konfiguration mit aktuellen Maßen und leerer Auswahl
+        this.currentConfig = null;
+        const keepCols = this.cols;
+        const keepRows = this.rows;
+        const emptySel = Array.from({ length: keepRows }, () => Array.from({ length: keepCols }, () => false));
+        const prevSel = this.selection;
+        this.selection = emptySel;
+        const newConfig = this._makeConfigObject();
+        this.configs.push(newConfig);
+        this.currentConfig = this.configs.length - 1;
+        this.setup(); // Grid mit leerer Auswahl neu aufbauen (Maße wIn/hIn bleiben unverändert)
+  
+        this.renderConfigList();
+        this.updateSaveButtons();
+          }
+      _makeConfigObject(customName = null) {
+        // Für neue Konfigurationen: Finde die nächste verfügbare Nummer
+        let configName;
+        if (customName) {
+          // Benutzerdefinierter Name
+          configName = customName;
+        } else if (this.currentConfig !== null) {
+          // Bestehende Konfiguration: Behalte den Namen
+          configName = this.configs[this.currentConfig].name;
+        } else {
+          // Neue Konfiguration: Finde nächste Nummer
+          let nextNumber = 1;
+          while (this.configs.some(cfg => cfg.name === `Konfiguration ${nextNumber}`)) {
+            nextNumber++;
+          }
+          configName = `Konfiguration ${nextNumber}`;
+        }
+        
+        return {
+          name:        configName,
+          selection:   this.selection.map(r => [...r]),
+          // Für neue Konfigurationen immer vertikal als Startzustand speichern
+          orientation: (this.orV && this.orV.checked) ? 'vertical' : 'horizontal',
+          incM:        this.incM && this.incM.checked,
+          mc4:         this.mc4 && this.mc4.checked,
+          solarkabel:  this.solarkabel && this.solarkabel.checked,
+          holz:        this.holz && this.holz.checked,
+          quetschkabelschuhe: this.quetschkabelschuhe && this.quetschkabelschuhe.checked,
+          kabelbinder: this.kabelbinder && this.kabelbinder.checked,
+          erdungsband: this.erdungsband ? this.erdungsband.checked : false,
+          ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
+          cols:        this.cols,
+          rows:        this.rows,
+          cellWidth:   parseFloat(this.wIn ? this.wIn.value : '179'),
+          cellHeight:  parseFloat(this.hIn ? this.hIn.value : '113')
+        };
+      }
+  
+      renderConfigList() {
+        // Verwende das gleiche HTML-Design wie updateConfigList()
+            this.configListEl.innerHTML = '';
+        
+            this.configs.forEach((cfg, idx) => {
+              const div = document.createElement('div');
+              div.className = 'config-item' + (idx === this.currentConfig ? ' active' : '');
+          
+          const totalPrice = this.calculateConfigPrice(cfg);
+          const canDelete = this.configs.length >= 2;
+          
+          div.innerHTML = `
+            <div class="config-item-info">
+              <div class="config-item-name">${cfg.name || `Konfiguration #${idx + 1}`}</div>
+              <div class="config-item-price">${totalPrice.toFixed(2).replace('.', ',')} €</div>
+            </div>
+            <div class="config-item-actions">
+              <button class="icon-btn" onclick="solarGrid.editConfigNameInList(${idx})" title="Bearbeiten">
+                <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/689369877a18221f25a4b743_Pen.png" alt="Bearbeiten" style="width: 16px; height: 16px;">
+              </button>
+              ${canDelete ? `
+              <button class="icon-btn delete" onclick="solarGrid.deleteConfigFromList(${idx})" title="Löschen">
+                <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936c5481f2a4db850a01f5_Trashbin.png" alt="Löschen" style="width: 16px; height: 16px;">
+              </button>` : ''}
+              <div class="config-item-arrow">
+                <img src="https://cdn.prod.website-files.com/68498852db79a6c114f111ef/68936986bd441749c46190e8_ChevronRight.png" alt="Pfeil" style="width: 10px; height: 16px;">
+              </div>
+            </div>
+          `;
+          
+          div.addEventListener('click', (e) => {
+            // Verhindere Klick wenn auf Action-Button geklickt wurde
+            if (e.target.closest('.config-item-actions')) return;
+            
+            // Auto-Save der aktuellen Konfiguration vor dem Wechsel
+            if (this.currentConfig !== null && this.currentConfig !== idx) {
+                      this.updateConfig();
+                    }
+            
+            // Wechsle immer in die Detail-Ansicht der gewählten Konfiguration
+            this.showDetailView(idx);
+            this.showToast('Konfiguration geladen', 1000);
+          });
+          
+              this.configListEl.appendChild(div);
+            });
+          }
+  
+      // Performance: Schnellerer Array-Vergleich
+      arraysEqual(a, b) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+          if (a[i].length !== b[i].length) return false;
+          for (let j = 0; j < a[i].length; j++) {
+            if (a[i][j] !== b[i][j]) return false;
+          }
+        }
+        return true;
+      }
+  
+      updateSummaryOnChange() {
+        // Performance: Debounced Updates
+        if (this.updateTimeout) {
+          clearTimeout(this.updateTimeout);
+        }
+        
+        this.updateTimeout = setTimeout(async () => {
+          // Performance-Monitoring entfernt
+          
+          // Auto-Save Indicator anzeigen
+          this.showAutoSaveIndicator();
+          
+          // Detail-Ansicht aktualisieren falls aktiv
+          if (document.getElementById('config-detail-view')?.classList.contains('active')) {
+            this.updateDetailView();
+          }
+          
+          // Maße aus Inputs stets in aktuelle Config spiegeln
+          try {
+            if (this.currentConfig !== null && this.configs[this.currentConfig]) {
+              this.configs[this.currentConfig].cellWidth = parseFloat(this.wIn ? this.wIn.value : '179');
+              this.configs[this.currentConfig].cellHeight = parseFloat(this.hIn ? this.hIn.value : '113');
+              this.configs[this.currentConfig].cols = this.cols;
+              this.configs[this.currentConfig].rows = this.rows;
+            }
+          } catch(_) {}
+  
+          // Totals neu berechnen und persistieren (debounced Kontext)
+          try { this.recomputeTotalsDebounced && this.recomputeTotalsDebounced(); } catch(_) {}
+          // Zusätzlich: aktuellen State sofort in den Cache schreiben (kein alter Merge)
+          try {
+            const snap = this.totalPartsCache || this.computeAllTotalsSnapshot();
+            this.saveTotalsToCache(snap);
+          } catch(_) {}
+          
+          // Gesamtpreis aktualisieren (NACH Cache-Update)
+          this.updateCurrentTotalPrice();
+          this.updateOverviewTotalPrice();
+          
+          // Update config-list und overview wenn eine Konfiguration ausgewählt ist
+          if (this.currentConfig !== null) {
+            // Speichere die Konfiguration automatisch
+            this.updateConfig();
+            this.updateConfigList();
+          }
+          
+          // Automatisches Cache-Speichern bei jeder Änderung
+          this.saveToCache();
+          
+          // performanceMetrics entfernt
+          this.updateTimeout = null;
+        }, this.updateDelay);
+      }
+  
+  
+  
+          // ISOLIERTE synchrone Berechnung für Fallback
+          calculatePartsDirectly(data) {
+              const { selection, rows, cols, cellWidth, cellHeight, orientation, options } = data;
+              const ulicaModule = options?.ulicaModule === true;
+              const parts = {
+                  Solarmodul: 0, UlicaSolarBlackJadeFlow: 0, Endklemmen: 0, Mittelklemmen: 0,
+                  Dachhaken: 0, Schrauben: 0, Endkappen: 0,
+                  Schienenverbinder: 0, Schiene_240_cm: 0, Schiene_360_cm: 0, Tellerkopfschraube: 0
+              };
+  
+              for (let y = 0; y < rows; y++) {
+                  if (!Array.isArray(selection[y])) continue;
+                  let run = 0;
+  
+                  for (let x = 0; x < cols; x++) {
+                      if (selection[y]?.[x]) {
+                          run++;
+                      }
+                      else if (run) { 
+                          this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation, ulicaModule); 
+                          run = 0; 
+                      }
+                  }
+                  if (run) {
+                      this.processGroupDirectly(run, parts, cellWidth, cellHeight, orientation, ulicaModule);
+                  }
+              }
+  
+              return parts;
+          }
+  
+          // FALLBACK: Kopie der Worker-Berechnung
+          processGroupDirectly(len, parts, cellWidth, cellHeight, orientation, ulicaModule = false) {
+              const isVertical = orientation === 'vertical';
+              const actualCellWidth = isVertical ? cellHeight : cellWidth;
+              
+              const totalLen = len * actualCellWidth;
+              const floor360 = Math.floor(totalLen / 360);
+              const rem360 = totalLen - floor360 * 360;
+              const floor240 = Math.ceil(rem360 / 240);
+              const pure360 = Math.ceil(totalLen / 360);
+              const pure240 = Math.ceil(totalLen / 240);
+              
+              const variants = [
+                  {cnt360: floor360, cnt240: floor240},
+                  {cnt360: pure360,  cnt240: 0},
+                  {cnt360: 0,        cnt240: pure240}
+              ].map(v => ({
+                  ...v,
+                  rails: v.cnt360 + v.cnt240,
+                  waste: v.cnt360 * 360 + v.cnt240 * 240 - totalLen
+              }));
+              
+              const minRails = Math.min(...variants.map(v => v.rails));
+              const best = variants
+                  .filter(v => v.rails === minRails)
+                  .reduce((a, b) => a.waste <= b.waste ? a : b);
+              
+              const {cnt360, cnt240} = best;
+              
+              parts.Schiene_360_cm     += cnt360 * 2;
+              parts.Schiene_240_cm     += cnt240 * 2;
+              parts.Schienenverbinder  += (cnt360 + cnt240 - 1) * 4;
+              parts.Endklemmen         += 4;
+              parts.Mittelklemmen      += len > 1 ? (len - 1) * 2 : 0;
+              parts.Dachhaken          += len > 1 ? len * 3 : 4;
+              parts.Endkappen          += 4;  // Gleich wie Endklemmen
+              parts.Solarmodul         += len;
+              // UlicaSolarBlackJadeFlow hinzufügen wenn ulica-module Checkbox aktiviert ist
+              if (ulicaModule) {
+                  parts.UlicaSolarBlackJadeFlow += len;
+              }
+              // Schrauben basierend auf Dachhaken berechnen
+              parts.Schrauben          += len > 1 ? len * 3 : 4; // Basierend auf Dachhaken
+              parts.Tellerkopfschraube += len > 1 ? (len * 3) * 2 : 8; // Basierend auf Dachhaken * 2
+          }
+      resetAllConfigurations() {
+          // Bestätigungsabfrage
+          if (!confirm('Möchten Sie wirklich alle Konfigurationen löschen und von vorne anfangen?')) {
+          return;
+        }
+        
+          // Cache löschen
+          this.cacheManager.clearCache();
+          
+          // Alle Konfigurationen löschen
+          this.configs = [];
+          this.currentConfig = null;
+          
+          // Grid auf Default zurücksetzen
+          this.cols = this.default.cols;
+          this.rows = this.default.rows;
+          this.selection = Array.from({ length: this.rows }, () =>
+              Array.from({ length: this.cols }, () => false)
+          );
+          
+          // Grid visuell aktualisieren - alle Module abwählen
+          this.buildGrid();
+          
+          // Input-Felder auf Default zurücksetzen
+          if (this.wIn) this.wIn.value = this.default.width;
+          if (this.hIn) this.hIn.value = this.default.height;
+          
+          // Checkboxen auf Default zurücksetzen (ALLE abwählen)
+          if (this.incM) this.incM.checked = false;
+          if (this.mc4) this.mc4.checked = false;
+          // Optimierer zurücksetzen
+          try {
+              const hCb = document.getElementById('huawei-opti');
+              const bCb = document.getElementById('brc-opti');
+              const qEl = document.getElementById('opti-qty');
+              if (hCb) hCb.checked = false;
+              if (bCb) bCb.checked = false;
+              if (qEl) qEl.value = '1';
+          } catch (_) {}
+          if (this.solarkabel) this.solarkabel.checked = false;
+          if (this.holz) this.holz.checked = false;
+          if (this.quetschkabelschuhe) this.quetschkabelschuhe.checked = false;
+          if (this.erdungsband) this.erdungsband.checked = false;
+          if (this.ulicaModule) this.ulicaModule.checked = false;
+          
+          // Module Dropdown auf Default zurücksetzen
+          if (this.moduleSelect) {
+              this.moduleSelect.value = '';
+              this.enableInputs();
+          }
+          
+          // Neue erste Konfiguration anlegen (Standard-Setup übernimmt Orientation)
+          this.createNewConfig();
+  
+          // Additional-Products visuell zurücksetzen
+          try {
+              const additionalProductsListEl = document.getElementById('additional-products-list');
+              if (additionalProductsListEl) additionalProductsListEl.innerHTML = '';
+          } catch(_) {}
+          
+          // Preise aktualisieren
+          this.updateCurrentTotalPrice();
+          this.updateOverviewTotalPrice && this.updateOverviewTotalPrice();
+          
+          this.showToast('Alle Konfigurationen wurden zurückgesetzt', 2000);
+      }
+      
+      // NEUE FUNKTION: Speichere alle Konfigurationen und Einstellungen im Cache
+      saveToCache() {
+          try {
+          // Memory: Cache Size Management - Begrenze Cache-Größe
+          this.manageCacheSize();
+          // Memory: Optimierte Clones - nur bei Bedarf deep-clonen
+          const deepCloneSelection = (sel) => {
+            if (!Array.isArray(sel)) return sel;
+            // Nur bei großen Arrays (>100 Zellen) deep-clonen, sonst shallow copy
+            const totalCells = sel.reduce((sum, row) => sum + (Array.isArray(row) ? row.length : 0), 0);
+            if (totalCells <= 100) return sel.slice(); // Shallow copy für kleine Arrays
+            
+            // Deep copy nur für große Arrays - aber optimiert
+            return sel.map(r => Array.isArray(r) ? r.slice() : r);
+          };
+          const deepCloneConfig = (cfg) => ({
+            ...cfg,
+            selection: deepCloneSelection(cfg.selection)
+          });
+          const cacheData = {
+            configs: Array.isArray(this.configs) ? this.configs.map(deepCloneConfig) : [],
+            currentConfig: this.currentConfig,
+            selection: deepCloneSelection(this.selection), // Aktuelle Grid-Auswahl
+                  // Aktuelle Grid-Einstellungen
+                  cols: this.cols,
+                  rows: this.rows,
+                  cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+                  cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10),
+                  orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+                              // Checkbox-Einstellungen
+              includeModules: this.incM ? this.incM.checked : false,
+              mc4: this.mc4 ? this.mc4.checked : false,
+              solarkabel: this.solarkabel ? this.solarkabel.checked : false,
+              holz: this.holz ? this.holz.checked : false,
+              quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+              erdungsband: this.erdungsband ? this.erdungsband.checked : false,
+              ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
+              // Opti-State (global)
+              huaweiOpti: (document.getElementById('huawei-opti')?.checked) || false,
+              brcOpti: (document.getElementById('brc-opti')?.checked) || false,
+              optiQty: parseInt(document.getElementById('opti-qty')?.value || '1', 10),
+              // Module Dropdown Auswahl
+              moduleSelectValue: this.moduleSelect ? this.moduleSelect.value : '',
+                  // Grid-Struktur
+                  gridStructure: {
+                      cols: this.cols,
+                      rows: this.rows,
+                      cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+                      cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10)
+                  }
+              };
+              
+              // Verwende CacheManager für bessere Performance und Error Handling
+          this.cacheManager.saveData(cacheData);
+              
+              // Zeige Auto-Save Indicator
+              this.showAutoSaveIndicator();
+          } catch (error) {
+              console.error('Fehler beim Speichern des Caches:', error);
+          }
+      }
+      
+      // NEUE FUNKTION: Lade Konfigurationen aus dem Cache
+      loadFromCache() {
+          try {
+              // Verwende CacheManager für bessere Error Handling
+              const data = this.cacheManager.loadData();
+              if (!data) {
+                  console.log('Kein Cache gefunden oder Cache abgelaufen');
+        return false;
+      }
+  
+              // Prüfe localStorage Verfügbarkeit
+              if (!this.cacheManager.isLocalStorageAvailable()) {
+                  this.showToast('Es wurde nichts im Speicher gefunden', 3000);
+          return false;
+        }
+              
+              // Lade Konfigurationen
+          if (data.configs && Array.isArray(data.configs)) {
+            // Deep-Kopie beim Laden
+            const deepCloneSelection = (sel) => Array.isArray(sel) ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel;
+            const deepCloneConfig = (cfg) => ({
+              ...cfg,
+              selection: deepCloneSelection(cfg.selection)
+            });
+            this.configs = data.configs.map(deepCloneConfig);
+                  this.currentConfig = data.currentConfig;
+                  
+                  // Lade Grid-Auswahl
+          if (data.selection && Array.isArray(data.selection)) {
+            this.selection = data.selection.map(r => Array.isArray(r) ? r.slice() : r);
+              }
+                  
+                  // Lade Grid-Einstellungen
+                  if (data.cols && data.rows) {
+                      this.cols = data.cols;
+                      this.rows = data.rows;
+                  }
+                  
+                  // Lade Checkbox-Einstellungen
+                  if (this.incM && typeof data.includeModules === 'boolean') {
+                      this.incM.checked = data.includeModules;
+                  }
+                  if (this.mc4 && typeof data.mc4 === 'boolean') {
+                      this.mc4.checked = data.mc4;
+                  }
+                  if (this.solarkabel && typeof data.solarkabel === 'boolean') {
+                      this.solarkabel.checked = data.solarkabel;
+                  }
+                  if (this.holz && typeof data.holz === 'boolean') {
+                      this.holz.checked = data.holz;
+                  }
+                  if (this.quetschkabelschuhe && typeof data.quetschkabelschuhe === 'boolean') {
+                      this.quetschkabelschuhe.checked = data.quetschkabelschuhe;
+                  }
+                  if (this.erdungsband && typeof data.erdungsband === 'boolean') {
+                      this.erdungsband.checked = data.erdungsband;
+                  }
+                              if (this.ulicaModule && typeof data.ulicaModule === 'boolean') {
+                  this.ulicaModule.checked = data.ulicaModule;
+              }
+              
+              // Opti-State laden (Checkboxen + Menge)
+              try {
+                  const hCb = document.getElementById('huawei-opti');
+                  const bCb = document.getElementById('brc-opti');
+                  const qEl = document.getElementById('opti-qty');
+                  if (hCb && typeof data.huaweiOpti === 'boolean') hCb.checked = data.huaweiOpti;
+                  if (bCb && typeof data.brcOpti === 'boolean') bCb.checked = data.brcOpti;
+                  if (qEl && typeof data.optiQty === 'number') qEl.value = String(Math.max(1, data.optiQty));
+                  if (qEl) qEl.style.display = ((hCb && hCb.checked) || (bCb && bCb.checked)) ? '' : 'none';
+              } catch (_) {}
+              
+              // Lade Module Dropdown Auswahl
+              if (this.moduleSelect && typeof data.moduleSelectValue === 'string') {
+                  this.moduleSelect.value = data.moduleSelectValue;
+                  // Wenn ein Modul ausgewählt ist, Inputs entsprechend sperren/freigeben
+                  if (data.moduleSelectValue && data.moduleSelectValue !== 'custom') {
+                      this.disableInputs();
+                  } else {
+                      this.enableInputs();
+                  }
+              }
+              
+              // Lade Grid-Dimensionen
+              if (this.wIn && data.cellWidth) {
+                  this.wIn.value = data.cellWidth;
+              }
+              if (this.hIn && data.cellHeight) {
+                  this.hIn.value = data.cellHeight;
+              }
+                  
+              // Lade die gewünschte Konfiguration aus dem Cache, ohne Orientation zu überschreiben
+              // Lade die zuletzt aktive Konfiguration (Index aus Cache), aber orientiere UI strikt an dieser Config
+              const safeIndex = (Number.isInteger(data.currentConfig) && data.currentConfig >= 0 && data.currentConfig < this.configs.length)
+                  ? data.currentConfig
+                  : 0;
+              if (this.configs.length > 0) {
+                  this.loadConfigFromCache(safeIndex);
+              }
+                  // Grid und UI nach dem Laden wiederherstellen
+                  this.setup(); // Grid-Event-Listener wiederherstellen
+                  this.buildGrid(); // Grid visuell wiederherstellen
+                  this.buildList(); // Produktliste wiederherstellen
+                  
+                  // Event-Listener für alle UI-Elemente wiederherstellen
+                  this.setupAllEventListeners();
+                  
+                  // Aktualisiere UI nach dem Laden
+                  this.updateConfigList();
+                  this.updateCurrentTotalPrice();
+                  this.updateOverviewTotalPrice();
+                  
+                  this.showToast('Konfiguration aus Cache geladen', 2000);
+                  return true;
+              }
+          } catch (error) {
+              console.error('Fehler beim Laden des Caches:', error);
+              this.cacheManager.clearCache();
+              this.showToast('Datei im Speicher ist beschädigt und konnte nicht geladen werden!', 3000);
+          }
+          
+          return false;
+      }
+      
+          generateHiddenCartForms() {
+        // Legacy Webflow Commerce Funktion - No-op, da Foxy.io keine Product IDs verwendet
+        // Wird noch von ensureWebflowFormsMapped() aufgerufen, aber tut nichts mehr
+        this.hideWebflowForms();
+      }
+  
+      hideWebflowForms() {
+        // Immer ALLE Webflow Add-to-Cart Forms verstecken – auch wenn sie nicht im Konfigurator genutzt werden
+        const allForms = document.querySelectorAll('form[data-node-type="commerce-add-to-cart-form"]');
+        allForms.forEach(form => {
+          if (form && form.style) {
+            form.style.cssText = `
+              position: absolute !important;
+              left: -9999px !important;
+              top: -9999px !important;
+              width: 1px !important;
+              height: 1px !important;
+              overflow: hidden !important;
+              clip: rect(0, 0, 0, 0) !important;
+              white-space: nowrap !important;
+              border: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              visibility: hidden !important;
+            `;
+            form.setAttribute('aria-hidden', 'true');
+            form.setAttribute('tabindex', '-1');
+          }
+        });
+      }
+  
+      // Foxy.io Formular-Mapping (CMS-Listen sind dynamisch)
+      initFoxyFormMap() {
+        this.foxyFormsByName = new Map();
+        let attemptsLeft = 15; // ~4,5s bei 300ms Intervall
+        const tryScan = () => {
+          this.refreshFoxyFormMap();
+          if (this.foxyFormsByName.size === 0 && attemptsLeft-- > 0) {
+            setTimeout(tryScan, 300);
+          }
+        };
+        tryScan();
+  
+        try { this._foxyObserver && this._foxyObserver.disconnect(); } catch(_) {}
+        if (this.debounceTimer) {
+          clearTimeout(this.debounceTimer);
+          this.debounceTimer = null;
+        }
+        let lastMutationTime = 0;
+        const THROTTLE_MS = 100; // Throttling: max 1x pro 100ms
+        
+        const debounced = () => { 
+          clearTimeout(this.debounceTimer); 
+          this.debounceTimer = setTimeout(() => this.refreshFoxyFormMap(), 60); 
+        };
+        
+        this._foxyObserver = new MutationObserver((mutations) => {
+          const now = Date.now();
+          if (now - lastMutationTime < THROTTLE_MS) {
+            return; // Throttling: zu früh, ignoriere
+          }
+          lastMutationTime = now;
+          
+          for (const m of mutations) {
+            if (m.addedNodes && m.addedNodes.length) { 
+              debounced(); 
+              break; 
+            }
+          }
+        });
+        this._foxyObserver.observe(document.body, { childList: true, subtree: true });
+      }
+  
+      refreshFoxyFormMap() {
+        const map = new Map();
+        const data = new Map();
+        const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+        forms.forEach((form) => {
+          const getVal = (sel) => {
+            const el = form.querySelector(sel);
+            return el && typeof el.value === 'string' ? el.value.trim() : '';
+          };
+          const nameInput = form.querySelector('input[name="name"]');
+          const val = nameInput && typeof nameInput.value === 'string' ? nameInput.value.trim() : '';
+          if (val) {
+            map.set(val, form);
+            data.set(val, {
+              name: val,
+              price: getVal('input[name="price"]'),
+              code: getVal('input[name="code"]'),
+              image: getVal('input[name="image"]'),
+              url: getVal('input[name="url"]'),
+              description: getVal('input[name="description"]'),
+              weight: getVal('input[name="weight"]'),
+              width: getVal('input[name="width"]'),
+              height: getVal('input[name="height"]'),
+              length: getVal('input[name="length"]')
+            });
+          }
+        });
+        this.foxyFormsByName = map;
+        this.foxyDataByName = data;
+      }
+  
+      findFoxyFormByName(name) {
+        const wanted = String(name || '').trim();
+        if (!wanted) return null;
+        const normalize = (s) => s.replace(/[\u2013\u2014]/g, '-').replace(/\s+/g, ' ').trim().toLowerCase();
+  
+        if (this.foxyFormsByName && this.foxyFormsByName.has(wanted)) return this.foxyFormsByName.get(wanted);
+        try {
+          const sel = `form[action*=\"foxycart.com/cart\"] input[name=\"name\"][value=\"${CSS.escape(wanted)}\"]`;
+          const input = document.querySelector(sel);
+          if (input) return input.closest('form');
+        } catch(_) {}
+        const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+        const nWanted = normalize(wanted);
+        let best = null;
+        forms.forEach((form) => {
+          const val = form.querySelector('input[name="name"]')?.value;
+          if (!val) return;
+          if (normalize(val) === nWanted && !best) best = form;
+        });
+        if (best) return best;
+        forms.forEach((form) => {
+          if (best) return;
+          const val = form.querySelector('input[name="name"]')?.value;
+          if (val && normalize(val).includes(nWanted)) best = form;
+        });
+        return best;
+      }
+  
+      addProductToCart(productKey, quantity) {
+        // Validiere productKey - überspringe leere oder ungültige Produkte
+        if (!productKey || productKey.trim() === '') {
+          console.warn('[SolarGrid] Leerer productKey übersprungen');
+          return;
+        }
+        
+        // Foxy.io: Formular per Produktname finden und submitten
+        const displayName = PRODUCT_NAME_MAP[productKey] || productKey.replace(/_/g, ' ');
+        if (!displayName || displayName.trim() === '') {
+          console.warn('[SolarGrid] Leerer displayName übersprungen für productKey:', productKey);
+          return;
+        }
+        
+        const form = this.findFoxyFormByName ? this.findFoxyFormByName(displayName) : null;
+        if (!form) {
+          // Fallback: synthetisches Foxy-Form in verstecktem Iframe submitten
+          try {
+            this._ensureFoxySilentTarget();
+            const tempForm = document.createElement('form');
+            tempForm.action = 'https://unterkonstruktion.foxycart.com/cart';
+            tempForm.method = 'POST';
+            tempForm.target = 'foxy_silent';
+            tempForm.style.position = 'absolute';
+            tempForm.style.left = '-9999px';
+            tempForm.style.top = '-9999px';
+            // Pflichtfelder
+            const pricePerPack = getPackPriceForQuantity(productKey, VE[productKey] || 1);
+            tempForm.innerHTML = `
+              <input type="hidden" name="name" value="${displayName}">
+              <input type="hidden" name="price" value="${Number(pricePerPack).toFixed(2)}">
+              <input type="hidden" name="code" value="">
+              <input type="hidden" name="quantity" value="${Math.max(1, parseInt(quantity, 10) || 1)}">
+            `;
+            document.body.appendChild(tempForm);
+            tempForm.submit();
+            setTimeout(() => { try { tempForm.remove(); } catch(_) {} }, 2000);
+            return; // Fallback erfolgreich ausgelöst
+          } catch (e) {
+            console.warn(`[SolarGrid] Foxy-Fallback fehlgeschlagen für '${displayName}':`, e);
+            return;
+          }
+        }
+        try {
+          const qtyInput = form.querySelector('input[name="quantity"]');
+          if (qtyInput) qtyInput.value = Math.max(1, parseInt(quantity, 10) || 1);
+          const customerInput = form.querySelector('input[name="customer_type"]');
+          try {
+            const raw = localStorage.getItem('solarTool_customerType');
+            if (customerInput && raw) {
+              const parsed = JSON.parse(raw);
+              const type = parsed && parsed.type ? String(parsed.type) : '';
+              if (type) customerInput.value = type;
+            }
+          } catch(_) {}
+          const submitBtn = form.querySelector('button[data-fc-add-to-cart]') || form.querySelector('button[type="submit"]');
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit(submitBtn || undefined);
+          } else {
+            (submitBtn && submitBtn.click()) || form.submit();
+          }
+        } catch (e) {
+          console.warn('[SolarGrid] Foxy-Submit Fehler:', e);
+        }
+      }
+  
+      _ensureFoxySilentTarget() {
+        try {
+          let iframe = document.getElementById('foxy_silent');
+          if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.name = 'foxy_silent';
+            iframe.id = 'foxy_silent';
+            iframe.width = '1';
+            iframe.height = '1';
+            iframe.style.position = 'absolute';
+            iframe.style.left = '-9999px';
+            iframe.style.top = '-9999px';
+            iframe.setAttribute('aria-hidden', 'true');
+            iframe.setAttribute('tabindex', '-1');
+            document.body.appendChild(iframe);
+          }
+        } catch (_) {}
+      }
+  
+      // Warte auf Navigations-/Load-Ack des versteckten iFrames nach einem POST
+      async _waitForFoxyIframeAck(timeoutMs = 2500) {
+        return new Promise(resolve => {
+          try {
+            const iframe = document.getElementById('foxy_silent');
+            if (!iframe) return resolve(false);
+            let settled = false;
+            const onLoad = () => { if (!settled) { settled = true; resolve(true); } };
+            iframe.addEventListener('load', onLoad, { once: true });
+            setTimeout(() => { if (!settled) { settled = true; resolve(false); } }, timeoutMs);
+          } catch(_) { resolve(false); }
+        });
+      }
+  
+      clickWebflowButtonSafely(form, button, productKey, quantity, isLastItem) {
+        const qtyInput = form.querySelector('input[name="commerce-add-to-cart-quantity-input"]');
+        if (qtyInput) qtyInput.value = quantity;
+        // Siehe oben: required selects füllen
+        try {
+          form.querySelectorAll('select[required]').forEach(sel => {
+            if (!sel.value) {
+              const first = sel.querySelector('option[value]:not([value=""])');
+              if (first) sel.value = first.value;
+            }
+          });
+        } catch (e) {}
+        
+        // Iframe-Workaround entfernt: wir klicken direkt und warten sequenziell über DOM-Änderungen/Timeouts
+        button.click();
+      }
+  
+      addPartsListToCart(parts) {
+        // 1) Totals aus Cache verwenden (falls vorhanden), sonst live berechnen
+        let totals = this.loadTotalsFromCache() || null;
+        if (!totals) {
+          try { totals = this.computeAllTotalsSnapshot(); this.saveTotalsToCache(totals); } catch(_) { totals = parts || {}; }
+        }
+        // deterministisch sortieren (stabil für Debugging)
+        const entries = Object.entries(totals)
+          .filter(([_, qty]) => qty > 0)
+          .sort(([aKey],[bKey]) => aKey.localeCompare(bKey));
+        if (!entries.length) return;
+        
+        // Immer: Sequenzielle GET-Requests via versteckte Links (robust, keine iFrames)
+        {
+          // Stabil: Sequenzielle GET-Requests via versteckte Links, keine iframe-Probleme
+          try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
+          const sanitizePrice = (v) => {
+            const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
+            const num = parseFloat(n);
+            return Number.isFinite(num) ? num.toFixed(2) : '0.00';
+          };
+          const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+          (async () => {
+            // Link-basierte GET-Requests (keine iFrames)
+            const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
+            for (const [key, qtyRaw] of entries) {
+              // qtyRaw sollte bereits die Pack-Menge sein (aus computeAllTotalsSnapshot),
+              // aber im Fallback-Fall (parts direkt) könnten es Stückzahlen sein.
+              // Prüfe: Wenn qtyRaw > VE, dann ist es wahrscheinlich eine Stückzahl und muss umgerechnet werden.
+              const ve = VE[key] || 1;
+              const numQty = Number(qtyRaw) || 0;
+              if (numQty <= 0) { await sleep(120); continue; }
+              
+              // Wenn qtyRaw größer als VE ist, dann ist es wahrscheinlich eine Stückzahl
+              // Ansonsten ist es bereits eine Pack-Menge (kann auch < 1 sein bei sehr kleinen Mengen)
+              const packs = numQty > ve 
+                ? Math.ceil(numQty / ve)  // Stückzahl → Pack-Menge umrechnen
+                : Math.max(1, Math.ceil(numQty)); // Bereits Pack-Menge, mindestens 1 Pack wenn > 0
+              if (!packs || packs <= 0) { await sleep(120); continue; }
+              
+              // Validiere Key und displayName - überspringe leere oder ungültige Produkte
+              if (!key || key.trim() === '') { await sleep(120); continue; }
+              const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
+              if (!displayName || displayName.trim() === '') { await sleep(120); continue; }
+              
+              const d = getData(displayName) || {};
+              const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, packs));
+              
+              // Debug: Logge alle Produktdaten
+              console.log(`[Foxy Debug] Link-Produkt ${key}:`, {
+                displayName,
+                price,
+                packs,
+                meta: d
+              });
+              
+              // Baue URL mit Query-Parametern (wie im Link Example)
+              const params = new URLSearchParams();
+              params.append('name', displayName);
+              params.append('price', price);
+              params.append('quantity', String(packs));
+              if (d.code) params.append('code', d.code);
+              if (d.image) params.append('image', d.image);
+              if (d.url) params.append('url', d.url);
+              if (d.description) params.append('description', d.description);
+              if (d.weight) params.append('weight', d.weight);
+              if (d.width) params.append('width', d.width);
+              if (d.height) params.append('height', d.height);
+              if (d.length) params.append('length', d.length);
+              if (d.coupon) params.append('coupon', d.coupon);
+              
+              const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
+              console.log(`[Foxy Debug] GET-URL: ${foxyUrl}`);
+              
+              // WICHTIG: Logge die gesendete Menge für Vergleich
+              console.log(`[Foxy Debug] SENDEN: ${displayName} - Pack-Menge: ${packs}`);
+              
+              // Erstelle versteckten Link und klicke ihn (GET wie in der Doku)
+              const link = document.createElement('a');
+              link.href = foxyUrl;
+              link.style.position = 'absolute';
+              link.style.left = '-9999px';
+              link.style.top = '-9999px';
+              link.style.visibility = 'hidden';
+              document.body.appendChild(link);
+              try {
+                link.click();
+                console.log(`[Foxy Debug] LINK GESENDET: ${displayName} – Menge ${packs}`);
+              } catch (e) {
+                console.error(`[Foxy Debug] Link-Klick Fehler für ${displayName}:`, e);
+              }
+              try { link.remove(); } catch(_) {}
+              await sleep(250); // kurze Pause zwischen Links
+            }
+            try { this.hideLoading(); } catch(_) {}
+            
+            // Zusammenfassung der gesendeten Mengen
+            console.log(`[Foxy Debug] ZUSAMMENFASSUNG - Gesendete Produkte:`);
+            for (const [key, qtyRaw] of entries) {
+              const qty = Math.max(0, Math.floor(Number(qtyRaw)));
+              const ve = VE[key] || 1;
+              const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
+              const isSingleModule = (key === 'Solarmodul' || key === 'UlicaSolarBlackJadeFlow');
+              const packs = isPallet ? Math.floor(qty / ve) : (isSingleModule ? qty : Math.ceil(qty / ve));
+              if (packs > 0) {
+                const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
+                console.log(`[Foxy Debug] - ${displayName}: ${packs} Stück (Konfigurator: ${qty}, VE: ${ve})`);
+              }
+            }
+            console.log(`[Foxy Debug] Bitte vergleiche diese Mengen mit dem Warenkorb!`);
+            
+            // Keine Weiterleitung gewünscht
+          })();
+          return;
+        }
+      }
+  
+      async addSingleItemAndWait(productKey, quantity, isLast) {
+        // Legacy Webflow Commerce Funktion - nicht mehr verwendet
+        // Foxy.io nutzt addProductToCart() statt Webflow Forms
+        console.warn('[Legacy] addSingleItemAndWait() aufgerufen - sollte nicht mehr verwendet werden');
+        return;
+      }
+  
+      async ensureCartObservers() {
+        // Observer für Cart-Änderungen
+        if (!this.cartAckObserver) {
+          const list = document.querySelector('.w-commerce-commercecartlist') || document.querySelector('.w-commerce-commercecartcontainerwrapper');
+          if (list) {
+            this.cartAckObserver = new MutationObserver(() => {
+              if (this.cartAckResolve) {
+                const r = this.cartAckResolve;
+                this.cartAckResolve = null;
+                r();
+              }
+            });
+            this.cartAckObserver.observe(list, { childList: true, subtree: true });
+          }
+        }
+        
+        // Observer für Webflow-Formulare (für asynchrones Rendering)
+        if (!this.webflowFormsObserver) {
+          this.webflowFormsObserver = new MutationObserver(() => {
+            this.generateHiddenCartForms();
+          });
+          this.webflowFormsObserver.observe(document.body, { childList: true, subtree: true });
+        }
+        
+        await this.ensureWebflowFormsMapped();
+      }
+  
+      waitForCartAcknowledge(timeoutMs = 1500) {
+        return new Promise((resolve) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              if (this.cartAckResolve === resolve) this.cartAckResolve = null;
+              resolve();
+            }
+          }, timeoutMs);
+          
+          this.cartAckResolve = () => {
+            if (!settled) {
+              settled = true;
+              clearTimeout(timer);
+              resolve();
+            }
+          };
+        });
+      }
+  
+      async ensureWebflowFormsMapped() {
+        // Falls Mapping leer ist, nochmal scannen
+        if (!this.webflowFormMap || Object.keys(this.webflowFormMap).length === 0 || !this.webflowFormMapBrutto) {
+          this.generateHiddenCartForms();
+          // kurze Wartezeit, falls Webflow synchron nachrendert
+          await new Promise(r => setTimeout(r, 50));
+        }
+      }
+  
+      hideCartContainer() {
+        const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+        if (cartContainer) {
+          cartContainer.style.display = 'none';
+          // Sicherstellen, dass Cart am Ende wieder geöffnet werden kann
+          cartContainer.classList.add('st-cart-hidden');
+        }
+      }
+      showCartContainer() {
+        const cartContainer = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+        if (cartContainer) {
+          cartContainer.style.display = '';
+          cartContainer.classList.remove('st-cart-hidden');
+          // Cart zuverlässig öffnen: versuche mehrfach, da Webflow DOM evtl. leicht verzögert ist
+          try {
+            const isCartActuallyOpen = () => {
+              try{
+                // Heuristiken: Wrapper sichtbar und hat offene Klasse/Attribute
+                const wrapper = document.querySelector('.w-commerce-commercecartcontainerwrapper');
+                if (!wrapper) return false;
+                const cs = window.getComputedStyle(wrapper);
+                if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+                // Manche Webflow-Themes setzen Klasse auf <body> beim offenen Cart
+                if (document.body && document.body.classList && (document.body.classList.contains('w-commerce-commercecartopen') || document.body.classList.contains('wf-commerce-cart-open'))) return true;
+                // Prüfe auf Dialogrolle
+                const dialog = wrapper.querySelector('[role="dialog"], .w-commerce-commercecartcontainer');
+                if (dialog){
+                  const dcs = window.getComputedStyle(dialog);
+                  if (dcs.display !== 'none' && dcs.visibility !== 'hidden') return true;
+                }
+                return false;
+              }catch(_){ return false; }
+            };
+            const isVisible = (el) => {
+              if (!el) return false;
+              const cs = window.getComputedStyle(el);
+              if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+              if (el.disabled) return false;
+              // Auch übergeordnete Hiding-Container berücksichtigen
+              let p = el;
+              while (p) {
+                const ps = window.getComputedStyle(p);
+                if (ps.display === 'none' || ps.visibility === 'hidden') return false;
+                p = p.parentElement;
+              }
+              return el.offsetParent !== null || el.getClientRects().length > 0;
+            };
+            const tryOpen = (attempt = 0) => {
+              if (isCartActuallyOpen()) return; // schon offen → nicht togglen
+              const selectorUnion = [
+                '[data-node-type="commerce-cart-open-link"]',
+                '.w-commerce-commercecartopenlink',
+                '[data-node-type*="cart-open"], [data-node-type*="commerce-cart-open"]',
+                'a[href="#cart"]'
+              ].join(',');
+              const candidates = Array.from(document.querySelectorAll(selectorUnion));
+              const openBtn = candidates.find(isVisible) || candidates[0] || null;
+              if (openBtn && typeof openBtn.click === 'function') {
+                openBtn.click();
+                // Nach dem Klick kurz prüfen; wenn offen, keine weiteren Retries
+                setTimeout(() => { /* noop: early check */ }, 0);
+                return;
+              }
+              if (attempt < 8) setTimeout(() => tryOpen(attempt + 1), 160);
+            };
+            // kleiner Delay, damit Webflow den letzten Add-Event verarbeiten kann
+            setTimeout(() => tryOpen(0), 80);
+          } catch (e) {}
+        }
+      }
+  
+      async addCurrentToCart() {
+        try {
+          this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
+          const parts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.kabelbinder ? this.kabelbinder.checked : false, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
+        const itemCount = Object.values(parts).reduce((sum, qty) => sum + qty, 0);
+        
+        if (itemCount === 0) {
+          this.showToast('Keine Produkte ausgewählt ⚠️', 2000);
+          this.hideLoading();
+          return;
+        }
+        
+        // Sende Daten an Webhook
+        this.sendCurrentConfigToWebhook().then(success => {
+          if (success) {
+          } else {
+          }
+        });
+        
+        // Opti-Zusatz (einmalig) hinzufügen
+        try {
+          const hCb = document.getElementById('huawei-opti');
+          const bCb = document.getElementById('brc-opti');
+          const qEl = document.getElementById('opti-qty');
+          if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
+            const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+            if (bCb.checked) parts.BRCOpti = (parts.BRCOpti || 0) + qty; else parts.HuaweiOpti = (parts.HuaweiOpti || 0) + qty;
+          }
+        } catch (_) {}
+        this.addPartsListToCart(parts);
+        this.showToast(`${itemCount} Produkte werden zum Warenkorb hinzugefügt...`, 3000);
+          
+          // PDF für aktuelle Konfiguration generieren
+          if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
+            setTimeout(() => {
+              this.pdfGenerator.generatePDF('current');
+            }, 500); // Kurze Verzögerung damit Warenkorb-Toast zuerst angezeigt wird
+          }
+        } catch (error) {
+          this.showToast('Fehler beim Berechnen der Produkte ❌', 2000);
+          this.hideLoading();
+        }
+      }
+  
+      async addAllToCart() {
+        // QUEUE: Verwende SimpleCartQueue nur für addAllToCart
+        if (!this.simpleCartQueue) {
+          this.simpleCartQueue = new SimpleCartQueue();
+        }
+        
+        return await this.simpleCartQueue.execute(async () => {
+        try {
+        // Kein Auto-Save beim Warenkorb-Button-Klick - Config-Items sollen nicht neu gebaut werden
+        this.showLoading('PDF wird erstellt und Warenkorb wird befüllt…');
+        
+          // SCHRITT 1: Erstelle vollständigen ISOLIERTEN Snapshot aller Konfigurationen
+          const configSnapshot = this.createConfigSnapshot();
+          
+          // SCHRITT 2: PDF ZUERST mit isolierten Daten erstellen
+          if (this.pdfGenerator && this.pdfGenerator.isAvailable()) {
+            this.showToast('PDF wird erstellt...', 2000);
+            await this.pdfGenerator.generatePDFFromSnapshot(configSnapshot);
+                        this.showToast('PDF erfolgreich erstellt', 1500);
+          }
+          
+        // SCHRITT 3: Berechne Produkte für Warenkorb (mit Live-Data für aktuellen Zustand)
+        // Zusatzprodukte dürfen NICHT pro Konfiguration summiert werden, sondern nur aus der globalen Zusatzproduktliste stammen.
+        const allBundles = await Promise.all(this.configs.map(async (cfg, idx) => {
+          const p = (idx === this.currentConfig)
+            ? await this._buildPartsFor(this.selection, (this.incM && this.incM.checked) !== false, this.mc4 && this.mc4.checked, this.solarkabel && this.solarkabel.checked, this.holz && this.holz.checked, this.quetschkabelschuhe && this.quetschkabelschuhe.checked, this.kabelbinder ? this.kabelbinder.checked : false, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false)
+            : await this._buildPartsFor(cfg.selection, (cfg.incM === false) ? false : true, !!cfg.mc4, !!cfg.solarkabel, !!cfg.holz, !!cfg.quetschkabelschuhe, !!cfg.kabelbinder, !!cfg.erdungsband, !!cfg.ulicaModule);
+          // Zusatzprodukte aus Einzel-Bundles entfernen – sie werden später einmalig aus der UI-Liste gelesen
+          delete p.MC4_Stecker;
+          delete p.Solarkabel;
+          delete p.Holzunterleger;
+          delete p.Ringkabelschuhe;
+          delete p.Kabelbinder;
+          delete p.BlechBohrschrauben;
+          delete p.Erdungsband;
+          return p;
+        }));
+        
+        // Wenn keine Konfiguration ausgewählt ist (sollte nicht passieren), füge aktuelle Auswahl hinzu
+        if (this.currentConfig === null && this.configs.length === 0) {
+              const currentParts = await this._buildPartsFor(this.selection, this.incM.checked, this.mc4.checked, this.solarkabel.checked, this.holz.checked, this.quetschkabelschuhe.checked, this.kabelbinder ? this.kabelbinder.checked : false, this.erdungsband ? this.erdungsband.checked : false, this.ulicaModule ? this.ulicaModule.checked : false);
+              allBundles.push(currentParts);
+        }
+        
+        const total = {};
+        allBundles.forEach(parts => {
+          Object.entries(parts).forEach(([k, v]) => {
+            total[k] = (total[k] || 0) + v;
+          });
+        });
+        // Bündelung über ALLE Konfigurationen: bilde Paletten aus Gesamtmodul-Zahlen
+        this.bundleTotalModulesIntoPallets(total);
+  
+        // SCHRITT 3b: Zusatzprodukte einmalig aus der globalen Zusatzproduktliste übernehmen
+        try {
+          const extras = this.readExtrasFromSummaryList();
+          Object.entries(extras).forEach(([k, v]) => {
+            if (v > 0) total[k] = v;
+            // MC4 als 1 Paket, nicht mengenabhängig
+            if (k === 'MC4_Stecker' && v > 0) total[k] = 1;
+          });
+        } catch(_) {}
+        // Opti-Zusatz aus globaler UI berücksichtigen
+        try {
+          const hCb = document.getElementById('huawei-opti');
+          const bCb = document.getElementById('brc-opti');
+          const qEl = document.getElementById('opti-qty');
+          if (hCb && bCb && qEl && (hCb.checked || bCb.checked)) {
+            const qty = Math.max(1, parseInt(qEl.value || '1', 10));
+            if (bCb.checked) total.BRCOpti = (total.BRCOpti || 0) + qty; else total.HuaweiOpti = (total.HuaweiOpti || 0) + qty;
+          }
+        } catch (_) {}
+        
+        const totalItemCount = Object.values(total).reduce((sum, qty) => sum + qty, 0);
+        
+        if (totalItemCount === 0) {
+          this.showToast('Keine Konfigurationen vorhanden ⚠️', 2000);
+          return;
+        }
+        
+          // SCHRITT 4: Sende alle Konfigurationen an Webhook (NACH PDF)
+          const webhookSuccess = await this.sendAllConfigsToWebhook();
+          if (webhookSuccess) {
+            // Success handling if needed
+          } else {
+            // Error handling if needed  
+          }
+        
+          // SCHRITT 5: Füge zum Warenkorb hinzu
+        this.addPartsListToCart(total);
+        this.showToast(`${totalItemCount} Produkte aus allen Konfigurationen werden hinzugefügt...`, 3000);
+          
+        } catch (error) {
+          console.error('Fehler in addAllToCart:', error);
+          this.showToast('Fehler beim Berechnen der Konfigurationen ❌', 2000);
+          this.hideLoading();
+        }
+        }, 'addAllToCart');
+      }
+  
+      async _buildPartsFor(sel, incM, mc4, solarkabel, holz, quetschkabelschuhe, kabelbinder, erdungsband, ulicaModule) {
+        // ISOLATION: Erstelle isolierte Berechnung ohne globale Zustandsänderungen
+        try {
+          // Erstelle isolierte Grid-Instanz für Berechnung
+          const isolatedGrid = {
+            selection: sel,
+            rows: this.rows,
+            cols: this.cols,
+            cellWidth: this.cellWidth || 179,
+            cellHeight: this.cellHeight || 113,
+            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal'
+          };
+          
+          // Berechne Parts mit isolierten Daten
+          let parts = await this.calculatePartsIsolated(isolatedGrid);
+          
+              // Module nur entfernen, wenn Flags explizit false sind
+              if (incM === false) delete parts.Solarmodul;
+              if (ulicaModule === false) delete parts.UlicaSolarBlackJadeFlow;
+          
+              // Zusatzprodukte basierend auf Checkboxen (korrekte Keys setzen/löschen)
+          const moduleCount = (sel || []).flat().filter(Boolean).length;
+          if (mc4 && moduleCount > 0) {
+            const veMc4 = VE.MC4_Stecker || 20;
+            const packs = Math.ceil(moduleCount / 30);
+            parts.MC4_Stecker = packs * veMc4;
+          } else {
+            delete parts.MC4_Stecker;
+          }
+          if (solarkabel) {
+            parts.Solarkabel = 1;
+          } else {
+            delete parts.Solarkabel;
+          }
+          if (holz) {
+            parts.Holzunterleger = 1; // pauschal 1 VE
+          } else {
+            delete parts.Holzunterleger;
+          }
+          if (quetschkabelschuhe) {
+            parts.Ringkabelschuhe = 1; // pauschal 1 VE
+          } else {
+            delete parts.Ringkabelschuhe;
+          }
+          if (kabelbinder) {
+            parts.Kabelbinder = 1; // pauschal 1 VE
+          } else {
+            delete parts.Kabelbinder;
+          }
+          
+          // Erdungsband hinzufügen wenn aktiviert
+          if (erdungsband) {
+            parts.Erdungsband = this.calculateErdungsbandIsolated(sel);
+            // Blech-Bohrschrauben automatisch hinzufügen wenn Erdungsband aktiviert
+            parts.BlechBohrschrauben = 1;
+          } else {
+            delete parts.Erdungsband;
+            delete parts.BlechBohrschrauben;
+          }
+          
+          // Palettenlogik anwenden (36er Bündel je Modultyp)
+          try {
+            const ulicaSelected = ulicaModule === true;
+            const pieceKey = ulicaSelected ? 'UlicaSolarBlackJadeFlow' : 'Solarmodul';
+            const palletKey = ulicaSelected ? 'UlicaSolarBlackJadeFlowPalette' : 'SolarmodulPalette';
+            const count = Number(parts[pieceKey] || 0);
+            
+            if (count > 0) {
+              const palletCount = Math.floor(count / 36);
+              const remainingPieces = count % 36;
+              
+              if (palletCount > 0) {
+                parts[palletKey] = palletCount;
+              }
+              if (remainingPieces > 0) {
+                parts[pieceKey] = remainingPieces;
+              } else {
+                delete parts[pieceKey];
+              }
+            }
+          } catch (_) {}
+          
+        return parts;
+        } catch (error) {
+          console.warn('[SolarGrid] _buildPartsFor isolation error:', error);
+          return {};
+        }
+      }
+      
+      // ISOLIERTE calculateParts ohne globale Zustandsänderungen
+      async calculatePartsIsolated(isolatedGrid) {
+        try {
+          // Verwende isolierte Daten statt globale this.selection
+          const selection = isolatedGrid.selection;
+          const rows = isolatedGrid.rows;
+          const cols = isolatedGrid.cols;
+          const cellWidth = isolatedGrid.cellWidth;
+          const cellHeight = isolatedGrid.cellHeight;
+          const orientation = isolatedGrid.orientation;
+          
+          // Berechne Parts mit isolierten Parametern
+          const parts = {};
+          
+          // Module zählen
+          const moduleCount = (selection || []).flat().filter(Boolean).length;
+          if (moduleCount > 0) {
+            parts.Solarmodul = moduleCount;
+          }
+          
+          // Dachhaken berechnen
+          const dachhakenCount = Math.ceil(moduleCount / 2);
+          if (dachhakenCount > 0) {
+            parts.Dachhaken = dachhakenCount;
+          }
+          
+          // Schienen berechnen
+          const schienenCount = Math.ceil(moduleCount / 2);
+          if (schienenCount > 0) {
+            parts.Schiene_240_cm = schienenCount;
+          }
+          
+          // Weitere Berechnungen...
+          return parts;
+        } catch (error) {
+          console.warn('[SolarGrid] calculatePartsIsolated error:', error);
+          return {};
+        }
+      }
+      
+      // ISOLIERTE Erdungsband-Berechnung
+      calculateErdungsbandIsolated(selection) {
+        try {
+          const moduleCount = (selection || []).flat().filter(Boolean).length;
+          return Math.ceil(moduleCount / 10); // 1 Erdungsband pro 10 Module
+        } catch (error) {
+          return 0;
+        }
+      }
+  
+    // _buildCartItems() entfernt - Legacy Webflow-Funktion, Foxy.io nutzt Namen statt IDs
+      // ===== PDF HELPER METHODS =====
+      
+      // Hole aktuelle Konfigurationsdaten für PDF
+      getCurrentConfigData() {
+        return {
+          name: this.currentConfig !== null && this.configs[this.currentConfig] ? 
+                this.configs[this.currentConfig].name : 'Aktuelle Konfiguration',
+          cols: this.cols,
+          rows: this.rows,
+          selection: this.selection.map(row => [...row]), // Deep copy
+          orientation: this.orV.checked ? 'vertical' : 'horizontal',
+          includeModules: this.incM.checked,
+          mc4: this.mc4.checked,
+          cable: this.solarkabel.checked,
+          wood: this.holz.checked,
+          quetschkabelschuhe: this.quetschkabelschuhe.checked,
+          erdungsband: this.erdungsband ? this.erdungsband.checked : false,
+          ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false
+        };
+      }
+  
+      // NEUE METHODE: Globale Checkbox-Logik - aktualisiert alle Konfigurationen
+      updateAllConfigurationsForCheckboxes() {
+        // Aktualisiere alle gespeicherten Konfigurationen mit aktuellen Checkbox-Werten
+        this.configs.forEach((config, index) => {
+          config.incM = this.incM.checked;
+          config.mc4 = this.mc4.checked;
+          config.solarkabel = this.solarkabel.checked;
+          config.holz = this.holz.checked;
+          config.quetschkabelschuhe = this.quetschkabelschuhe.checked;
+          if (this.erdungsband) config.erdungsband = this.erdungsband.checked;
+          if (this.ulicaModule) config.ulicaModule = this.ulicaModule.checked;
+        });
+        
+        // Aktualisiere Summary und Produktliste
+        this.updateSummaryOnChange();
+        
+        // Aktualisiere auch die Produktliste in der detailed-overview
+        this.buildList();
+      }
+      // NEUE METHODE: Erstelle vollständigen isolierten Config-Snapshot für PDF
+      createConfigSnapshot() {
+        // Auto-Save der aktuellen Konfiguration falls nötig
+        if (this.currentConfig !== null) {
+          this.updateConfig();
+        }
+        
+        // Erstelle KOMPLETT ISOLIERTE Kopie aller Konfigurationsdaten
+        const snapshot = {
+          timestamp: new Date().toISOString(),
+          totalConfigs: this.configs.length,
+          currentConfigIndex: this.currentConfig,
+          configs: []
+        };
+        
+        // Durchlaufe alle Konfigurationen und erstelle Deep Copies
+        for (let index = 0; index < this.configs.length; index++) {
+          const config = this.configs[index];
+          
+          // Hole Daten - für aktuelle Config verwende Live-Daten
+          let targetSelection, targetCols, targetRows, targetOrientation;
+          let targetIncM, targetMc4, targetCable, targetWood, targetQuetschkabelschuhe, targetErdungsband, targetUlicaModule, targetCellWidth, targetCellHeight;
+          
+          if (index === this.currentConfig) {
+            // Aktuelle Konfiguration: MOMENTAUFNAHME der Live-Daten
+            targetSelection = this.selection ? this.selection.map(row => [...row]) : [];
+            targetCols = this.cols;
+            targetRows = this.rows;
+            targetOrientation = this.orV.checked ? 'vertical' : 'horizontal';
+            targetIncM = this.incM.checked;
+            targetMc4 = this.mc4.checked;
+            targetCable = this.solarkabel.checked;
+            targetWood = this.holz.checked;
+            targetQuetschkabelschuhe = this.quetschkabelschuhe.checked;
+            targetErdungsband = this.erdungsband ? this.erdungsband.checked : false;
+            targetUlicaModule = this.ulicaModule ? this.ulicaModule.checked : false;
+            console.log('Current ulicaModule checkbox state:', targetUlicaModule);
+            targetCellWidth = parseInt(this.wIn.value, 10);
+            targetCellHeight = parseInt(this.hIn.value, 10);
+          } else {
+            // Andere Konfigurationen: Deep Copy der gespeicherten Daten
+            targetSelection = config.selection ? config.selection.map(row => [...row]) : [];
+            targetCols = config.cols;
+            targetRows = config.rows;
+            targetOrientation = config.orientation;
+            targetIncM = config.incM;
+            targetMc4 = config.mc4;
+            targetCable = config.solarkabel;
+            targetWood = config.holz;
+            targetQuetschkabelschuhe = config.quetschkabelschuhe;
+            targetErdungsband = config.erdungsband;
+            targetUlicaModule = config.ulicaModule;
+            targetCellWidth = config.cellWidth;
+            targetCellHeight = config.cellHeight;
+          }
+          
+          // Normalisiere Selection für die Zieldimensionen
+          const normalizedSelection = Array.from({ length: targetRows || 5 }, (_, y) =>
+            Array.from({ length: targetCols || 5 }, (_, x) => {
+              if (targetSelection[y] && Array.isArray(targetSelection[y]) && x < targetSelection[y].length) {
+                return targetSelection[y][x] === true;
+              }
+              return false;
+            })
+          );
+          
+          // Erstelle isolierte Config-Kopie
+          const isolatedConfig = {
+            name: config.name || `Konfiguration ${index + 1}`,
+            index: index,
+            cols: targetCols || 5,
+            rows: targetRows || 5,
+            selection: normalizedSelection,
+            cellWidth: targetCellWidth || 179,
+            cellHeight: targetCellHeight || 113,
+            orientation: targetOrientation || 'horizontal',
+            includeModules: targetIncM === true,
+            mc4: targetMc4 || false,
+            cable: targetCable || false,
+            wood: targetWood || false,
+            quetschkabelschuhe: targetQuetschkabelschuhe || false,
+            erdungsband: targetErdungsband || false,
+            ulicaModule: targetUlicaModule === true,
+            // Zusätzliche Metadaten für Debugging
+            selectedCells: normalizedSelection.flat().filter(v => v).length,
+            totalCells: (targetCols || 5) * (targetRows || 5)
+          };
+          
+          snapshot.configs.push(isolatedConfig);
+        }
+        
+        return snapshot;
+      }
+  
+    // getAllConfigsData() entfernt - DEPRECATED, nutze createConfigSnapshot() stattdessen
+    
+      setupResizeObserver() {
+        // Performance: Resize Observer für responsive Updates
+        if (this.wrapper && window.ResizeObserver) {
+          this.resizeObserver = new ResizeObserver((entries) => {
+            // Debounced resize updates
+            if (this.resizeTimeout) {
+              clearTimeout(this.resizeTimeout);
+            }
+            
+            this.resizeTimeout = setTimeout(() => {
+              this.updateSize();
+              this.resizeTimeout = null;
+            }, 150); // 150ms debounce
+          });
+          
+          this.resizeObserver.observe(this.wrapper);
+        }
+      }
+    // setupPinchToZoom(), getTouchDistance(), setZoom() entfernt - Desktop-Only App
+    
+    cleanup() {
+        // Memory-Leak Prävention: Alle Timeouts löschen
+        if (this.updateTimeout) {
+          clearTimeout(this.updateTimeout);
+          this.updateTimeout = null;
+        }
+        
+        if (this.previewTimeout) {
+          clearTimeout(this.previewTimeout);
+          this.previewTimeout = null;
+        }
+        
+        if (this.resizeTimeout) {
+          clearTimeout(this.resizeTimeout);
+          this.resizeTimeout = null;
+        }
+        
+        if (this.debounceTimer) {
+          clearTimeout(this.debounceTimer);
+          this.debounceTimer = null;
+        }
+        
+        if (this.toastTimeout) {
+          clearTimeout(this.toastTimeout);
+          this.toastTimeout = null;
+        }
+        
+        if (this.autoSaveTimeout) {
+          clearTimeout(this.autoSaveTimeout);
+          this.autoSaveTimeout = null;
+        }
+        
+        if (this._recomputeTotalsTimer) {
+          clearTimeout(this._recomputeTotalsTimer);
+          this._recomputeTotalsTimer = null;
+        }
+        
+        // Resize Observer cleanup
+        if (this.resizeObserver) {
+          this.resizeObserver.disconnect();
+          this.resizeObserver = null;
+        }
+        
+        // Foxy Observer cleanup
+        if (this._foxyObserver) {
+          this._foxyObserver.disconnect();
+          this._foxyObserver = null;
+        }
+        
+        // Memory: Debounce Timer cleanup
+        if (this.debounceTimer) {
+          clearTimeout(this.debounceTimer);
+          this.debounceTimer = null;
+        }
+        
+        // Memory: Event Listener cleanup
+        this.cleanupEventListeners();
+        
+        // Memory: DOM Reference cleanup
+        this.cleanupDOMReferences();
+        
+      // Memory: Web Worker cleanup
+      this.cleanupWorkers();
+      
+      // performanceMetrics Cleanup entfernt
+    }
+      
+      // Memory: Event Listener Cleanup
+      cleanupEventListeners() {
+        try {
+          // Input-Event-Listener cleanup
+          const inputs = [this.wIn, this.hIn].filter(el => el);
+          inputs.forEach(el => {
+            el.removeEventListener('change', this.handleInputChange);
+          });
+          
+          // Modul-Auswahl-Event-Listener cleanup
+          if (this.moduleSelect) {
+            this.moduleSelect.removeEventListener('change', this.handleModuleSelectChange);
+          }
+          
+          // Orientation-Event-Listener cleanup
+          if (this.orH && this.orV) {
+            [this.orH, this.orV].forEach(el => {
+              el.removeEventListener('change', this.handleOrientationChange);
+            });
+          }
+          
+          // Checkbox-Event-Listener cleanup
+          [this.incM, this.mc4, this.solarkabel, this.holz, this.quetschkabelschuhe, this.kabelbinder, this.erdungsband, this.ulicaModule]
+            .filter(el => el).forEach(el => {
+              el.removeEventListener('change', this.handleCheckboxChange);
+            });
+          
+          // Expansion-Button-Event-Listener cleanup
+          if (this.boundExpansionClick) {
+            document.querySelectorAll('[data-dir="right"], [data-dir="left"]').forEach(btn => {
+              btn.removeEventListener('click', this.boundExpansionClick);
+            });
+            this.boundExpansionClick = null;
+          }
+          
+          // Grid-Event-Listener cleanup
+          if (this.gridEl) {
+            this.gridEl.removeEventListener('click', this.handleGridClick);
+          }
+          
+        } catch (error) {
+          console.warn('[SolarGrid] Event listener cleanup error:', error);
+        }
+      }
+      
+      // Memory: DOM Reference Cleanup
+      cleanupDOMReferences() {
+        try {
+          // DOM Element References nullen
+          this.gridEl = null;
+          this.wrapper = null;
+          this.prodList = null;
+          this.listHolder = null;
+          this.wIn = null;
+          this.hIn = null;
+          this.moduleSelect = null;
+          this.orH = null;
+          this.orV = null;
+          this.incM = null;
+          this.mc4 = null;
+          this.solarkabel = null;
+          this.holz = null;
+          this.quetschkabelschuhe = null;
+          this.kabelbinder = null;
+          this.erdungsband = null;
+          this.ulicaModule = null;
+          
+          // Cache References nullen
+          this.configListEl = null;
+          this.foxyFormsByName = null;
+          
+          // Array References nullen und Garbage Collection triggern
+          this.cleanupArrays();
+          
+        } catch (error) {
+          console.warn('[SolarGrid] DOM reference cleanup error:', error);
+        }
+      }
+      
+      // Memory: Web Worker Cleanup
+      cleanupWorkers() {
+        try {
+          // CalculationManager Worker cleanup
+          if (this.calculationManager && typeof this.calculationManager.cleanup === 'function') {
+            this.calculationManager.cleanup();
+            this.calculationManager = null;
+          }
+          
+          // Weitere Worker-Instanzen falls vorhanden
+          if (this.worker) {
+            this.worker.terminate();
+            this.worker = null;
+          }
+          
+        } catch (error) {
+          console.warn('[SolarGrid] Worker cleanup error:', error);
+        }
+      }
+      
+      // Memory: Cache Size Management
+      manageCacheSize() {
+        try {
+          const MAX_CACHE_SIZE = 20; // Reduziert: Maximale Anzahl Konfigurationen
+          const MAX_CACHE_AGE = 24 * 60 * 60 * 1000; // Reduziert: 1 Tag in ms
+          
+          // Begrenze Anzahl der Konfigurationen
+          if (this.configs && this.configs.length > MAX_CACHE_SIZE) {
+            // Behalte die neuesten Konfigurationen
+            this.configs = this.configs.slice(-MAX_CACHE_SIZE);
+            console.log(`[SolarGrid] Cache size limited to ${MAX_CACHE_SIZE} configurations`);
+          }
+          
+          // Entferne alte Konfigurationen basierend auf Timestamp
+          if (this.configs && this.configs.length > 0) {
+            const now = Date.now();
+            this.configs = this.configs.filter(config => {
+              if (!config.timestamp) return true; // Behalte Konfigurationen ohne Timestamp
+              const age = now - new Date(config.timestamp).getTime();
+              return age < MAX_CACHE_AGE;
+            });
+          }
+          
+          // Memory: Bereinige große Arrays in Konfigurationen
+          if (this.configs) {
+            this.configs.forEach(config => {
+              if (config.selection && Array.isArray(config.selection)) {
+                const totalCells = config.selection.reduce((sum, row) => 
+                  sum + (Array.isArray(row) ? row.length : 0), 0);
+                if (totalCells > 500) { // Reduziert: Frühere Komprimierung
+                  // Komprimiere große Selection-Arrays aggressiver
+                  config.selection = config.selection.map(row => 
+                    Array.isArray(row) ? row.slice(0, 25) : row); // Reduziert: 25 statt 50
+                }
+              }
+            });
+          }
+          
+        } catch (error) {
+          console.warn('[SolarGrid] Cache size management error:', error);
+        }
+      }
+      
+      // Memory: Array Garbage Collection
+      cleanupArrays() {
+        try {
+          // Explizite Array-Bereinigung
+          if (this.selection) {
+            this.selection.forEach(row => {
+              if (Array.isArray(row)) {
+                row.length = 0; // Leere Array-Inhalte
+              }
+            });
+            this.selection.length = 0; // Leere das Array
+            this.selection = null;
+          }
+          
+          if (this.configs) {
+            this.configs.forEach(config => {
+              if (config.selection && Array.isArray(config.selection)) {
+                config.selection.forEach(row => {
+                  if (Array.isArray(row)) {
+                    row.length = 0;
+                  }
+                });
+                config.selection.length = 0;
+              }
+            });
+            this.configs.length = 0;
+            this.configs = null;
+          }
+          
+          if (this.moduleData) {
+            Object.keys(this.moduleData).forEach(key => {
+              delete this.moduleData[key];
+            });
+            this.moduleData = null;
+          }
+          
+          // Memory: Explizite Garbage Collection triggern (falls verfügbar)
+          if (typeof gc === 'function') {
+            gc();
+          }
+          
+        } catch (error) {
+          console.warn('[SolarGrid] Array cleanup error:', error);
+        }
+      
+      // Pinch-to-Zoom Cleanup entfernt
+      
+      // Event-Listener entfernen
+        if (this.gridEl) {
+          this.gridEl.innerHTML = '';
+        }
+        
+        // PDF Generator cleanup
+        if (this.pdfGenerator) {
+          this.pdfGenerator = null;
+        }
+      }
+  
+      // --- Vorab-Berechnung aller Produkt-Gesamtmengen ---
+      computeAllTotalsSnapshot() {
+        // Aggregiert alle Konfigurationen + Zusatzprodukte gemäß aktuellem UI-State
+        const totals = {};
+        const add = (key, qty) => { if (!qty || qty <= 0) return; totals[key] = (totals[key] || 0) + qty; };
+  
+        // Durch alle Konfigurationen iterieren (Deep-Inputs aus gespeicherten Configs)
+        for (let i = 0; i < (this.configs?.length || 0); i++) {
+          const cfg = this.configs[i]; if (!cfg) continue;
+          // Temporär mit isolierten Daten rechnen
+          const originalSel = this.selection; const originalRows = this.rows; const originalCols = this.cols;
+          const originalOrV = this.orV && this.orV.checked;
+          try {
+            this.selection = (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r);
+            this.rows = cfg.rows; this.cols = cfg.cols;
+            if (this.orV) { this.orV.checked = (cfg.orientation === 'vertical'); }
+            const p = this.calculatePartsSync();
+            Object.entries(p).forEach(([k,v]) => add(k, v));
+          } catch(_) {
+          } finally {
+            this.selection = originalSel; this.rows = originalRows; this.cols = originalCols;
+            if (this.orV) { this.orV.checked = originalOrV; }
+          }
+        }
+  
+        // Zusatzprodukte global nachziehen (Huawei/BRC Optimierer, Erdungsband, Quetsch etc.)
+        try {
+          // Optimierer: Menge aus UI
+          const hCb = document.getElementById('huawei-opti');
+          const bCb = document.getElementById('brc-opti');
+          const qEl = document.getElementById('opti-qty');
+          const optiQty = Math.max(1, parseInt(qEl && qEl.value || '1', 10));
+          if (hCb && hCb.checked) add('HuaweiOpti', optiQty);
+          if (bCb && bCb.checked) add('BRCOpti', optiQty);
+          
+          // Kabelbinder: 1x wenn Checkbox aktiv
+          if (document.getElementById('kabelbinder')?.checked) {
+            add('Kabelbinder', 1);
+          }
+          
+          // Ringkabelschuhe: 1x wenn Checkbox aktiv
+          if (document.getElementById('quetschkabelschuhe')?.checked) {
+            add('Ringkabelschuhe', 1);
+          }
+          
+          // Erdungsband: Berechne Menge basierend auf allen Konfigurationen
+          if (document.getElementById('erdungsband')?.checked) {
+            let totalErdungsband = 0;
+            for (let i = 0; i < (this.configs?.length || 0); i++) {
+              const cfg = this.configs[i];
+              if (!cfg) continue;
+              const moduleCount = (cfg.selection || []).flat().filter(Boolean).length;
+              totalErdungsband += Math.ceil(moduleCount / 10); // 1 Erdungsband pro 10 Module
+            }
+            if (totalErdungsband > 0) add('Erdungsband', totalErdungsband);
+          }
+          
+          // Blech-Bohrschrauben: 1x wenn Erdungsband aktiv
+          if (document.getElementById('erdungsband')?.checked) {
+            add('BlechBohrschrauben', 1);
+          }
+        } catch(_) {}
+  
+      // Tellerkopfschraube 2 × Dachhaken (falls nicht bereits global konsistent)
+      if (totals.Dachhaken && !totals.Tellerkopfschraube) add('Tellerkopfschraube', totals.Dachhaken * 2);
+  
+      // Modul-Inklusionsregeln gemäß UI-Checkboxen anwenden
+      try {
+        const includeModules = this.incM ? this.incM.checked !== false : true; // default true
+        const ulicaEnabled = this.ulicaModule ? this.ulicaModule.checked === true : false;
+        if (!includeModules) delete totals.Solarmodul;
+        if (!ulicaEnabled) delete totals.UlicaSolarBlackJadeFlow;
+      } catch(_) {}
+  
+      // Globale Palettenbündelung über alle Konfigurationen anwenden (36er)
+      try { this.bundleTotalModulesIntoPallets(totals); } catch(_) {}
+  
+      // In Pack-Mengen (Stückzahl der zu sendenden Produkte) umwandeln
+      const sendTotals = {};
+      try {
+        Object.entries(totals).forEach(([k, v]) => {
+          const ve = VE[k] || 1;
+          const packs = Math.ceil((Number(v) || 0) / ve);
+          if (packs > 0) sendTotals[k] = packs;
+        });
+      } catch(_) {}
+  
+      // Konsolen-Ausgabe (Pack-Mengen)
+      try {
+        const rows = Object.entries(sendTotals)
+          .sort(([a],[b]) => a.localeCompare(b))
+          .map(([k,v]) => ({ key: k, name: PRODUCT_NAME_MAP[k] || k, qty: v }));
+        console.groupCollapsed('[Totals] Aktualisiert (Packs)');
+        console.table(rows);
+        console.groupEnd();
+      } catch(_) {}
+  
+      return sendTotals;
+      }
+  
+      saveTotalsToCache(snapshot) {
+        try {
+          // WICHTIG: Nicht alten Cache-Stand zurückschreiben. Stattdessen aktuellen In-Memory-State verwenden
+          const deepCloneSelection = (sel) => Array.isArray(sel) ? sel.map(r => Array.isArray(r) ? r.slice() : r) : sel;
+          const deepCloneConfig = (cfg) => ({
+            ...cfg,
+            selection: deepCloneSelection(cfg.selection)
+          });
+          const cacheData = {
+            configs: Array.isArray(this.configs) ? this.configs.map(deepCloneConfig) : [],
+            currentConfig: this.currentConfig,
+            selection: deepCloneSelection(this.selection),
+            cols: this.cols,
+            rows: this.rows,
+            cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+            cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10),
+            orientation: this.orV && this.orV.checked ? 'vertical' : 'horizontal',
+            includeModules: this.incM ? this.incM.checked : false,
+            mc4: this.mc4 ? this.mc4.checked : false,
+            solarkabel: this.solarkabel ? this.solarkabel.checked : false,
+            holz: this.holz ? this.holz.checked : false,
+            quetschkabelschuhe: this.quetschkabelschuhe ? this.quetschkabelschuhe.checked : false,
+            erdungsband: this.erdungsband ? this.erdungsband.checked : false,
+            ulicaModule: this.ulicaModule ? this.ulicaModule.checked : false,
+            huaweiOpti: (document.getElementById('huawei-opti')?.checked) || false,
+            brcOpti: (document.getElementById('brc-opti')?.checked) || false,
+            optiQty: parseInt(document.getElementById('opti-qty')?.value || '1', 10),
+            moduleSelectValue: this.moduleSelect ? this.moduleSelect.value : '',
+            gridStructure: {
+              cols: this.cols,
+              rows: this.rows,
+              cellWidth: parseInt(this.wIn ? this.wIn.value : '179', 10),
+              cellHeight: parseInt(this.hIn ? this.hIn.value : '113', 10)
+            },
+            totals: snapshot
+          };
+          this.cacheManager.saveData(cacheData);
+          this.totalPartsCache = snapshot;
+        } catch(_) {}
+      }
+  
+      loadTotalsFromCache() {
+        try {
+          const data = this.cacheManager.loadData();
+          const totals = data && data.totals ? data.totals : null;
+          if (totals) { this.totalPartsCache = totals; }
+          return totals;
+        } catch(_) { return null; }
+      }
+  
+      recomputeTotalsDebounced() {
+        if (this._recomputeTotalsTimer) clearTimeout(this._recomputeTotalsTimer);
+        this._recomputeTotalsTimer = setTimeout(() => {
+          const snap = this.computeAllTotalsSnapshot();
+          this.saveTotalsToCache(snap);
+        }, 150);
+      }
+    }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+      // Kundentyp-UI (Listen/Buttons) wird global im customer-type-popup.js verwaltet
+      const grid = new SolarGrid();
+      // Foxy: kein Webflow-Mapping mehr – stattdessen Foxy-Form-Mapping initialisieren, falls vorhanden
+      if (typeof grid.initFoxyFormMap === 'function') {
+        grid.initFoxyFormMap();
+      }
+      
+      // CMS-Suche wird in cms-search.js initialisiert
+      // Verstecke Collection-List/Wrapper der Foxy-Forms (bleiben im DOM für Submit nutzbar)
+      try {
+        const wrappers = document.querySelectorAll('.w-dyn-list, .w-dyn-items, .w-dyn-item, .rt-component-section');
+        wrappers.forEach(el => {
+          if (!el || !el.style) return;
+          el.style.position = 'absolute';
+          el.style.left = '-9999px';
+          el.style.top = '-9999px';
+          el.style.width = '1px';
+          el.style.height = '1px';
+          el.style.overflow = 'hidden';
+          el.style.clip = 'rect(0, 0, 0, 0)';
+          el.style.whiteSpace = 'nowrap';
+        });
+      } catch(_) {}
+      window.solarGrid = grid;
+    });
+  
+    // Memory: Einheitlicher Cleanup beim Verlassen der Seite
+    window.addEventListener('beforeunload', () => {
+      try {
+        // CalculationManager cleanup
+      if (calculationManager) {
+        calculationManager.destroy();
+      }
+      
+        // SolarGrid cleanup
+        if (window.solarGrid && typeof window.solarGrid.cleanup === 'function') {
+        window.solarGrid.cleanup();
+        }
+        
+        // Alle Timeouts löschen
+        const highestTimeoutId = setTimeout(() => {}, 0);
+        for (let i = 0; i < highestTimeoutId; i++) {
+          clearTimeout(i);
+        }
+        
+        // Alle Intervals löschen
+        const highestIntervalId = setInterval(() => {}, 0);
+        for (let i = 0; i < highestIntervalId; i++) {
+          clearInterval(i);
+        }
+        
+      } catch (error) {
+        console.warn('[SolarGrid] Cleanup on unload error:', error);
+      }
+    });
+  
+    window.debugFoxy = {
+      list: () => {
+        const out = [];
+        try {
+          if (!window.solarGrid || !window.solarGrid.foxyDataByName) return out;
+          window.solarGrid.foxyDataByName.forEach((v, k) => out.push({ key: k, ...v }));
+        } catch(_) {}
+        console.table(out);
+        return out;
+      },
+      get: (name) => {
+        try {
+          if (window.solarGrid && window.solarGrid.foxyDataByName) return window.solarGrid.foxyDataByName.get(name) || null;
+        } catch(_) {}
+        return null;
+      }
+    };
+  })();
