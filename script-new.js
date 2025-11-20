@@ -5327,9 +5327,9 @@
             this.incM.checked = cfg.incM;
               // WICHTIG: Zusatzprodukt-Checkboxen (mc4, solarkabel, holz, etc.) sind GLOBAL
               // und werden NICHT pro Konfiguration geladen, da sie für ALLE Configs gelten!
-              // Nur die Modul-Inklusionslogik (incM) ist pro Config relevant.
-              // Fallback: Wenn alte Config noch diese Werte hatte, ignorieren wir sie für loadConfig
-              if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false; // Ulica ist config-spezifisch
+              // ABER: Erdungsband und Ulica sind CONFIG-SPEZIFISCH!
+              if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
+              if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
 
               // STATE Werte setzen - WICHTIG: Vor setup() setzen
               this.cols = cfg.cols;
@@ -5369,8 +5369,9 @@
               }
               
               this.incM.checked = cfg.incM;
-              // WICHTIG: Zusatzprodukt-Checkboxen sind GLOBAL, werden hier nicht geladen
-              // (außer beim ersten Cache-Load - siehe loadFirstConfigFromCache)
+              // WICHTIG: Zusatzprodukt-Checkboxen (mc4, solarkabel, holz) sind GLOBAL
+              // ABER: Erdungsband und Ulica sind CONFIG-SPEZIFISCH!
+              if (this.erdungsband) this.erdungsband.checked = cfg.erdungsband || false;
               if (this.ulicaModule) this.ulicaModule.checked = cfg.ulicaModule || false;
 
             // STATE Werte setzen
@@ -7269,16 +7270,23 @@
           // Temporär mit isolierten Daten rechnen
           const originalSel = this.selection; const originalRows = this.rows; const originalCols = this.cols;
           const originalOrV = this.orV && this.orV.checked;
+          const originalErdungsband = this.erdungsband && this.erdungsband.checked;
+          const originalUlica = this.ulicaModule && this.ulicaModule.checked;
           try {
             this.selection = (cfg.selection || []).map(r => Array.isArray(r) ? r.slice() : r);
             this.rows = cfg.rows; this.cols = cfg.cols;
             if (this.orV) { this.orV.checked = (cfg.orientation === 'vertical'); }
+            // KRITISCH: Config-spezifische Checkboxen temporär setzen!
+            if (this.erdungsband) { this.erdungsband.checked = cfg.erdungsband || false; }
+            if (this.ulicaModule) { this.ulicaModule.checked = cfg.ulicaModule || false; }
             const p = this.calculatePartsSync();
             Object.entries(p).forEach(([k,v]) => add(k, v));
           } catch(_) {
           } finally {
             this.selection = originalSel; this.rows = originalRows; this.cols = originalCols;
             if (this.orV) { this.orV.checked = originalOrV; }
+            if (this.erdungsband) { this.erdungsband.checked = originalErdungsband; }
+            if (this.ulicaModule) { this.ulicaModule.checked = originalUlica; }
           }
         }
   
