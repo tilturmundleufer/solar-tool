@@ -152,91 +152,6 @@
         <button id="continue-later-btn">Alle Konfigurationen löschen</button>
       </div>
       
-      <!-- Smart Config Interface -->
-      <div class="smart-config-container">
-        <div class="smart-config-left">
-          <div class="quick-input-section">
-            <label for="quick-config-input">🧠 Smart Konfiguration</label>
-            <input 
-              type="text" 
-              id="quick-config-input" 
-              placeholder="Eingabe + Enter oder Tab zum Anwenden: 5x4 mit module, ohne mc4 • 20 module ohne kabel • 3 reihen mit 6 modulen"
-            />
-            <div id="config-preview" style="display: none;"></div>
-          </div>
-          
-          <div class="bulk-selection-help">
-            <div class="help-header">
-              <strong>💡 Smart Config Beispiele:</strong>
-              <button id="smart-help-trigger" class="help-toggle">?</button>
-            </div>
-            <div id="smart-help-dropdown" class="help-dropdown">
-              <div class="help-section">
-                <strong>Grid & Module:</strong>
-                <div class="section-description">Lege entweder eine feste Grid-Größe fest oder gib die gewünschte Modulanzahl bzw. Reihen direkt an.</div>
-                <div class="example" data-example="5x4">"5x4"</div>
-                <div class="example" data-example="20 module">"20 module"</div>
-                <div class="example" data-example="3 reihen mit 6 modulen">"3 reihen mit 6 modulen"</div>
-                <div class="example-visual">
-                  <span>▣ ▣ ▣ ▣ ▣</span>
-                  <span>▣ ▣ ▣ ▣ ▣</span>
-                  <span>▣ ▣ ▣ ▣ ▣</span>
-                  <span>▣ ▣ ▣ ▣ ▣</span>
-                </div>
-              </div>
-              <div class="help-section">
-                <strong>Intelligente Verteilung:</strong>
-                <div class="section-description">Verteile Module automatisch: gleichmäßig, in Reihen oder zufällig – passend zur gewählten Menge.</div>
-                <div class="example" data-example="20 module gleichmäßig">"20 module gleichmäßig"</div>
-                <div class="example" data-example="20 module in reihen">"20 module in reihen"</div>
-                <div class="example" data-example="20 module zufällig">"20 module zufällig"</div>
-                <div class="example-visual">
-                  <span>gleichmäßig ▣▣▣▣▣</span>
-                  <span>reihen ▣▣▣ ▣▣▣</span>
-                  <span>zufällig ▣ ▣▣ ▣ ▣</span>
-                </div>
-              </div>
-              <div class="help-section">
-                <strong>Abstand & Layout:</strong>
-                <div class="section-description">Steuere die Dichte: kompakt, mit Lücken oder zusätzlichen Leerreihen als Abstand.</div>
-                <div class="example" data-example="5x4 kompakt">"5x4 kompakt"</div>
-                <div class="example" data-example="5x4 mit lücken">"5x4 mit lücken"</div>
-                <div class="example" data-example="mit doppeltem abstand">"mit doppeltem abstand"</div>
-                <div class="example-visual">
-                  <span>Reihe 1 ▣▣▣▣</span>
-                  <span>Abstand ————</span>
-                  <span>Reihe 2 ▣▣▣▣</span>
-                </div>
-              </div>
-              <div class="help-section">
-                <strong>Checkbox-Kombinationen:</strong>
-                <div class="section-description">Aktiviere oder deaktiviere Komponenten für den Einkauf. Kombinationen sind möglich.</div>
-                <div class="example" data-example="alles außer holz">"alles außer holz"</div>
-                <div class="example" data-example="nur module und mc4">"nur module und mc4"</div>
-                <div class="example" data-example="ohne zubehör">"ohne zubehör"</div>
-                <div class="example-visual">
-                  <span>Module ✅</span>
-                  <span>MC4 ✅</span>
-                  <span>Kabel ❌</span>
-                  <span>Holz ❌</span>
-                </div>
-              </div>
-              <div class="help-section">
-                <strong>Aktionen:</strong>
-                <div class="section-description">Konfigurationen benennen, speichern oder zurücksetzen.</div>
-                <div class="example" data-example="speichern als 'meine config'">"speichern als 'meine config'"</div>
-                <div class="example" data-example="löschen">"löschen"</div>
-                <div class="example" data-example="grid zurücksetzen">"grid zurücksetzen"</div>
-                <div class="example-visual">
-                  <span>💾 Speichern</span>
-                  <span>🗑️ Löschen</span>
-                  <span>↺ Reset</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
         <div class="setup-container">
           <div class="setup-row">
             <label>Modultyp:<select id="module-select">
@@ -259,7 +174,6 @@
             <button id="reset-btn" class="btn">Zurücksetzen</button>
           </div>
         </div>
-      </div>
 
       <!-- Benutzeranleitung für neue Features -->
       <div class="usage-tips">
