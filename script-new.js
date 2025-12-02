@@ -6193,12 +6193,14 @@
               weight: getVal('input[name="weight"]'),
               width: getVal('input[name="width"]'),
               height: getVal('input[name="height"]'),
-              length: getVal('input[name="length"]')
+              length: getVal('input[name="length"]'),
+              discount_price_amount: getVal('input[name="discount_price_amount"]')
             });
           }
         });
         this.foxyFormsByName = map;
         this.foxyDataByName = data;
+        console.log(`[Foxy Debug] Formular-Map aktualisiert: ${map.size} Formulare gefunden`);
       }
   
       findFoxyFormByName(name) {
@@ -6370,27 +6372,42 @@
           (async () => {
             // Link-basierte GET-Requests (keine iFrames)
             const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
+            
+            // Debug: Zeige verfügbare Formulare
+            if (this.foxyDataByName && this.foxyDataByName.size > 0) {
+              console.log(`[Foxy Debug] Verfügbare Produkte in Formular-Map (${this.foxyDataByName.size}):`);
+              this.foxyDataByName.forEach((data, name) => {
+                console.log(`  - ${name}${data.discount_price_amount ? ' (mit Mengenrabatt)' : ''}`);
+              });
+            } else {
+              console.warn('[Foxy Debug] WARNUNG: Keine Formulare in foxyDataByName gefunden!');
+            }
+            
+            console.log(`[Foxy Debug] Starte Hinzufügen von ${entries.length} Produkten...`);
             for (const [key, qtyRaw] of entries) {
               // qtyRaw sollte bereits die Pack-Menge sein (aus computeAllTotalsSnapshot),
               // aber im Fallback-Fall (parts direkt) könnten es Stückzahlen sein.
               // Prüfe: Wenn qtyRaw > VE, dann ist es wahrscheinlich eine Stückzahl und muss umgerechnet werden.
               const ve = VE[key] || 1;
               const numQty = Number(qtyRaw) || 0;
-              if (numQty <= 0) { await sleep(120); continue; }
+              if (numQty <= 0) { await sleep(200); continue; }
               
               // Wenn qtyRaw größer als VE ist, dann ist es wahrscheinlich eine Stückzahl
               // Ansonsten ist es bereits eine Pack-Menge (kann auch < 1 sein bei sehr kleinen Mengen)
               const packs = numQty > ve 
                 ? Math.ceil(numQty / ve)  // Stückzahl → Pack-Menge umrechnen
                 : Math.max(1, Math.ceil(numQty)); // Bereits Pack-Menge, mindestens 1 Pack wenn > 0
-              if (!packs || packs <= 0) { await sleep(120); continue; }
+              if (!packs || packs <= 0) { await sleep(200); continue; }
               
               // Validiere Key und displayName - überspringe leere oder ungültige Produkte
-              if (!key || key.trim() === '') { await sleep(120); continue; }
+              if (!key || key.trim() === '') { await sleep(200); continue; }
               const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
-              if (!displayName || displayName.trim() === '') { await sleep(120); continue; }
+              if (!displayName || displayName.trim() === '') { await sleep(200); continue; }
               
               const d = getData(displayName) || {};
+              if (!d || Object.keys(d).length === 0) {
+                console.warn(`[Foxy Debug] ⚠ Keine Formular-Daten für "${displayName}" gefunden – verwende Fallback-Preis`);
+              }
               const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, packs));
               
               // Debug: Logge alle Produktdaten
@@ -6398,6 +6415,7 @@
                 displayName,
                 price,
                 packs,
+                hasDiscount: !!d.discount_price_amount,
                 meta: d
               });
               
@@ -6414,6 +6432,7 @@
               if (d.width) params.append('width', d.width);
               if (d.height) params.append('height', d.height);
               if (d.length) params.append('length', d.length);
+              if (d.discount_price_amount) params.append('discount_price_amount', d.discount_price_amount);
               if (d.coupon) params.append('coupon', d.coupon);
               
               const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
@@ -6432,16 +6451,17 @@
               document.body.appendChild(link);
               try {
                 link.click();
-                console.log(`[Foxy Debug] LINK GESENDET: ${displayName} – Menge ${packs}`);
+                console.log(`[Foxy Debug] ✓ LINK GESENDET: ${displayName} – Menge ${packs}`);
               } catch (e) {
-                console.error(`[Foxy Debug] Link-Klick Fehler für ${displayName}:`, e);
+                console.error(`[Foxy Debug] ✗ Link-Klick Fehler für ${displayName}:`, e);
               }
               try { link.remove(); } catch(_) {}
-              await sleep(250); // kurze Pause zwischen Links
+              await sleep(500); // Pause zwischen Links (500ms für bessere Kompatibilität mit langsamen PCs)
             }
             try { this.hideLoading(); } catch(_) {}
             
             // Zusammenfassung der gesendeten Mengen
+            console.log(`[Foxy Debug] ═══════════════════════════════════════════════════`);
             console.log(`[Foxy Debug] ZUSAMMENFASSUNG - Gesendete Produkte:`);
             for (const [key, qtyRaw] of entries) {
               const qty = Math.max(0, Math.floor(Number(qtyRaw)));
@@ -6451,9 +6471,12 @@
               const packs = isPallet ? Math.floor(qty / ve) : (isSingleModule ? qty : Math.ceil(qty / ve));
               if (packs > 0) {
                 const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
-                console.log(`[Foxy Debug] - ${displayName}: ${packs} Stück (Konfigurator: ${qty}, VE: ${ve})`);
+                const d = getData(displayName) || {};
+                const hasDiscount = !!d.discount_price_amount;
+                console.log(`[Foxy Debug]   ✓ ${displayName}: ${packs} Stück${hasDiscount ? ' (mit Mengenrabatt)' : ''}`);
               }
             }
+            console.log(`[Foxy Debug] ═══════════════════════════════════════════════════`);
             console.log(`[Foxy Debug] Bitte vergleiche diese Mengen mit dem Warenkorb!`);
             
             // Keine Weiterleitung gewünscht
