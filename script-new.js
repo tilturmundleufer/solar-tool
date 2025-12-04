@@ -6271,7 +6271,8 @@
       refreshFoxyFormMap() {
         const map = new Map();
         const data = new Map();
-        const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+        // Suche alle Foxy-Formulare unabhängig von der konkreten Domain
+        const forms = document.querySelectorAll('form[action*="/cart"]');
         forms.forEach((form) => {
           const getVal = (sel) => {
             const el = form.querySelector(sel);
@@ -6308,11 +6309,11 @@
   
         if (this.foxyFormsByName && this.foxyFormsByName.has(wanted)) return this.foxyFormsByName.get(wanted);
         try {
-          const sel = `form[action*=\"foxycart.com/cart\"] input[name=\"name\"][value=\"${CSS.escape(wanted)}\"]`;
+          const sel = `form[action*=\"/cart\"] input[name=\"name\"][value=\"${CSS.escape(wanted)}\"]`;
           const input = document.querySelector(sel);
           if (input) return input.closest('form');
         } catch(_) {}
-        const forms = document.querySelectorAll('form[action*="foxycart.com/cart"]');
+        const forms = document.querySelectorAll('form[action*="/cart"]');
         const nWanted = normalize(wanted);
         let best = null;
         forms.forEach((form) => {
@@ -6349,7 +6350,8 @@
           try {
             this._ensureFoxySilentTarget();
             const tempForm = document.createElement('form');
-            tempForm.action = 'https://unterkonstruktion.foxycart.com/cart';
+            // WICHTIG: Immer die gleiche Domain verwenden, die auch loader.js/Sidecart nutzen
+            tempForm.action = 'https://unterkonstruktion.de/cart';
             tempForm.method = 'POST';
             tempForm.target = 'foxy_silent';
             tempForm.style.position = 'absolute';
@@ -6538,7 +6540,8 @@
               if (d.discount_price_amount) params.append('discount_price_amount', d.discount_price_amount);
               if (d.coupon) params.append('coupon', d.coupon);
               
-              const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
+              // WICHTIG: Gleiche Cart-Domain wie im Sidecart/Checkout verwenden
+              const foxyUrl = `https://unterkonstruktion.de/cart?${params.toString()}`;
               console.log(`[Foxy Debug] GET-URL: ${foxyUrl}`);
               
               // WICHTIG: Logge die gesendete Menge für Vergleich
