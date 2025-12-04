@@ -6483,18 +6483,23 @@
             
             console.log(`[Foxy Debug] Starte Hinzufügen von ${entries.length} Produkten...`);
             for (const [key, qtyRaw] of entries) {
-              // qtyRaw sollte bereits die Pack-Menge sein (aus computeAllTotalsSnapshot),
-              // aber im Fallback-Fall (parts direkt) könnten es Stückzahlen sein.
-              // Prüfe: Wenn qtyRaw > VE, dann ist es wahrscheinlich eine Stückzahl und muss umgerechnet werden.
-              const ve = VE[key] || 1;
+              // WICHTIG: computeAllTotalsSnapshot() gibt bereits Pack-Mengen zurück (siehe Zeile 7537-7545)
+              // Daher sollte qtyRaw direkt als Pack-Menge verwendet werden, KEINE weitere Umrechnung!
               const numQty = Number(qtyRaw) || 0;
               if (numQty <= 0) { await sleep(200); continue; }
               
-              // Wenn qtyRaw größer als VE ist, dann ist es wahrscheinlich eine Stückzahl
-              // Ansonsten ist es bereits eine Pack-Menge (kann auch < 1 sein bei sehr kleinen Mengen)
-              const packs = numQty > ve 
-                ? Math.ceil(numQty / ve)  // Stückzahl → Pack-Menge umrechnen
-                : Math.max(1, Math.ceil(numQty)); // Bereits Pack-Menge, mindestens 1 Pack wenn > 0
+              // qtyRaw ist bereits die Pack-Menge aus computeAllTotalsSnapshot()
+              // Fallback: Falls parts direkt übergeben wurde (alte API), dann umrechnen
+              // Prüfe: Wenn qtyRaw deutlich größer als VE ist, dann könnte es eine Stückzahl sein
+              const ve = VE[key] || 1;
+              let packs;
+              if (numQty > ve * 10) {
+                // Sehr große Zahl → wahrscheinlich Stückzahl (Fallback-Fall)
+                packs = Math.ceil(numQty / ve);
+              } else {
+                // Normale Zahl → bereits Pack-Menge (aus computeAllTotalsSnapshot)
+                packs = Math.max(1, Math.ceil(numQty));
+              }
               if (!packs || packs <= 0) { await sleep(200); continue; }
               
               // Validiere Key und displayName - überspringe leere oder ungültige Produkte
