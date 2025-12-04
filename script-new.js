@@ -143,43 +143,141 @@
       BRCOpti: 1
     };
     
-    const PRICE_MAP = {
-      // VK pro VE (Fallbackpreise)
-      Solarmodul: 59.70,
-      UlicaSolarBlackJadeFlow: 67.90,
-      // Paletten-Fallbackpreise (Netto) – falls Collection Price nicht gefunden wird
-      SolarmodulPalette: 2012.40, // 36x Ulica 450 W – Palette
-      UlicaSolarBlackJadeFlowPalette: 2264.40, // 36x Ulica 500 W – Palette
-      Endklemmen: 19.80,
-      Schrauben: 11.00,
-      Dachhaken: 69.00,
-      Mittelklemmen: 19.80,
-      Endkappen: 7.00,
-      Schienenverbinder: 13.00,
-      Schiene_240_cm: 11.99,
-      Schiene_360_cm: 17.49,
-      MC4_Stecker: 39.50,
-      Solarkabel: 86.90,
-      Holzunterleger: 17.50,
-      Ringkabelschuhe: 21.40,
-      BlechBohrschrauben: 24.70,
-      Kabelbinder: 3.41,
-      Erdungsband: 8.70,
-      Tellerkopfschraube: 26.00,
-      HuaweiOpti: 39.68,
-      BRCOpti: 38.53
-    };
-  
-  // convertToNettoPrice() entfernt - Identity-Funktion ohne Mehrwert (inline ersetzt)
-  
-    // Kundentyp-System entfernt - vereinfachte Produktverwaltung
-  // PRODUCT_MAP entfernt - Foxy.io nutzt Produktnamen, nicht IDs
-  
-    // Liefert den wirksamen VE-Preis (Packpreis) - nur noch Shop-Preise ohne Mengenrabatte
-    function getPackPriceForQuantity(productKey, requiredPieces) {
-      const basePackPrice = getPriceFromCache(productKey) || 0;
-      // Immer Netto-Preise verwenden für Konfigurator-Anzeige
-    return Number.isFinite(basePackPrice) ? basePackPrice : 0;
+  const PRICE_MAP = {
+    // VK pro VE (Fallbackpreise)
+    Solarmodul: 59.70,
+    UlicaSolarBlackJadeFlow: 67.90,
+    // Paletten-Fallbackpreise (Netto) – falls Collection Price nicht gefunden wird
+    SolarmodulPalette: 2012.40, // 36x Ulica 450 W – Palette
+    UlicaSolarBlackJadeFlowPalette: 2264.40, // 36x Ulica 500 W – Palette
+    Endklemmen: 19.80,
+    Schrauben: 11.00,
+    Dachhaken: 69.00,
+    Mittelklemmen: 19.80,
+    Endkappen: 7.00,
+    Schienenverbinder: 13.00,
+    Schiene_240_cm: 11.99,
+    Schiene_360_cm: 17.49,
+    MC4_Stecker: 39.50,
+    Solarkabel: 86.90,
+    Holzunterleger: 17.50,
+    Ringkabelschuhe: 21.40,
+    BlechBohrschrauben: 24.70,
+    Kabelbinder: 3.41,
+    Erdungsband: 8.70,
+    Tellerkopfschraube: 26.00,
+    HuaweiOpti: 39.68,
+    BRCOpti: 38.53
+  };
+
+  // Mengenrabatt-Konfiguration (Staffelpreise)
+  // Format: { Produktkey: [{ minQuantity: X, pricePerVE: Y }, ...] }
+  // Wichtig: Schwellen aufsteigend sortiert! Der Preis gilt für ALLE Stücke ab der Schwelle.
+  const QUANTITY_DISCOUNT_CONFIG = {
+    // Schienen
+    Schiene_240_cm: [
+      { minQuantity: 40, pricePerVE: 11.59 },
+      { minQuantity: 80, pricePerVE: 11.25 }
+    ],
+    Schiene_360_cm: [
+      { minQuantity: 40, pricePerVE: 16.99 },
+      { minQuantity: 80, pricePerVE: 16.49 }
+    ],
+    // Dachhaken und Klemmen
+    Dachhaken: [
+      { minQuantity: 5, pricePerVE: 68.40 },
+      { minQuantity: 36, pricePerVE: 67.80 }
+    ],
+    Mittelklemmen: [
+      { minQuantity: 15, pricePerVE: 19.00 },
+      { minQuantity: 60, pricePerVE: 15.80 }
+    ],
+    Endklemmen: [
+      { minQuantity: 15, pricePerVE: 19.00 },
+      { minQuantity: 50, pricePerVE: 15.80 }
+    ],
+    Endkappen: [
+      { minQuantity: 6, pricePerVE: 6.50 },
+      { minQuantity: 20, pricePerVE: 6.00 }
+    ],
+    Schienenverbinder: [
+      { minQuantity: 10, pricePerVE: 11.90 },
+      { minQuantity: 100, pricePerVE: 9.90 }
+    ],
+    // Schrauben
+    Schrauben: [
+      { minQuantity: 20, pricePerVE: 9.50 },
+      { minQuantity: 100, pricePerVE: 9.00 }
+    ],
+    Tellerkopfschraube: [
+      { minQuantity: 10, pricePerVE: 25.00 },
+      { minQuantity: 50, pricePerVE: 24.00 }
+    ],
+    // Solarmodule
+    Solarmodul: [
+      { minQuantity: 36, pricePerVE: 55.90 },
+      { minQuantity: 360, pricePerVE: 54.90 }
+    ],
+    UlicaSolarBlackJadeFlow: [
+      { minQuantity: 36, pricePerVE: 62.90 },
+      { minQuantity: 360, pricePerVE: 61.90 }
+    ],
+    // Elektrik
+    MC4_Stecker: [
+      { minQuantity: 20, pricePerVE: 34.50 },
+      { minQuantity: 60, pricePerVE: 32.50 }
+    ],
+    Solarkabel: [
+      { minQuantity: 10, pricePerVE: 83.90 },
+      { minQuantity: 30, pricePerVE: 79.90 }
+    ],
+    // Erdungsband hat keinen Mengenrabatt (bleibt bei 8,70 €)
+    Ringkabelschuhe: [
+      { minQuantity: 5, pricePerVE: 17.90 },
+      { minQuantity: 20, pricePerVE: 17.50 }
+    ],
+    // Unterkonstruktion
+    Holzunterleger: [
+      { minQuantity: 10, pricePerVE: 14.50 },
+      { minQuantity: 40, pricePerVE: 14.00 }
+    ],
+    // Optimierer (nur erste Stufe - keine zweite Schwelle in der Tabelle)
+    HuaweiOpti: [
+      { minQuantity: 20, pricePerVE: 37.90 }
+    ],
+    BRCOpti: [
+      { minQuantity: 20, pricePerVE: 37.50 }
+    ]
+  };
+
+// convertToNettoPrice() entfernt - Identity-Funktion ohne Mehrwert (inline ersetzt)
+
+  // Kundentyp-System entfernt - vereinfachte Produktverwaltung
+// PRODUCT_MAP entfernt - Foxy.io nutzt Produktnamen, nicht IDs
+
+  // Liefert den wirksamen VE-Preis (Packpreis) mit Mengenrabatten
+  function getPackPriceForQuantity(productKey, requiredPieces) {
+    // Basispreis aus Cache oder PRICE_MAP
+    const basePackPrice = getPriceFromCache(productKey) || PRICE_MAP[productKey] || 0;
+    
+    // Prüfe ob Mengenrabatt für dieses Produkt existiert
+    const discountTiers = QUANTITY_DISCOUNT_CONFIG[productKey];
+    if (!discountTiers || discountTiers.length === 0) {
+      // Kein Mengenrabatt konfiguriert → normaler Preis
+      return Number.isFinite(basePackPrice) ? basePackPrice : 0;
+    }
+    
+    // Finde die höchste erfüllte Rabattstufe (absteigend durch die sortierten Schwellen)
+    let applicablePrice = basePackPrice;
+    for (let i = discountTiers.length - 1; i >= 0; i--) {
+      const tier = discountTiers[i];
+      if (requiredPieces >= tier.minQuantity) {
+        applicablePrice = tier.pricePerVE;
+        break;
+      }
+    }
+    
+    return Number.isFinite(applicablePrice) ? applicablePrice : 0;
   }
     
     const PRODUCT_NAME_MAP = {
