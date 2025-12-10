@@ -6350,8 +6350,7 @@
           try {
             this._ensureFoxySilentTarget();
             const tempForm = document.createElement('form');
-            // WICHTIG: Immer die gleiche Domain verwenden, die auch loader.js/Sidecart nutzen
-            tempForm.action = 'https://unterkonstruktion.de/cart';
+            tempForm.action = 'https://unterkonstruktion.foxycart.com/cart';
             tempForm.method = 'POST';
             tempForm.target = 'foxy_silent';
             tempForm.style.position = 'absolute';
@@ -6540,8 +6539,7 @@
               if (d.discount_price_amount) params.append('discount_price_amount', d.discount_price_amount);
               if (d.coupon) params.append('coupon', d.coupon);
               
-              // WICHTIG: Gleiche Cart-Domain wie im Sidecart/Checkout verwenden
-              const foxyUrl = `https://unterkonstruktion.de/cart?${params.toString()}`;
+              const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
               console.log(`[Foxy Debug] GET-URL: ${foxyUrl}`);
               
               // WICHTIG: Logge die gesendete Menge für Vergleich
