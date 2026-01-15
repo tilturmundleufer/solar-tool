@@ -6345,55 +6345,70 @@
         }
         
         const form = this.findFoxyFormByName ? this.findFoxyFormByName(displayName) : null;
-        if (!form) {
-          // Fallback: synthetisches Foxy-Form in verstecktem Iframe submitten
-          try {
-            this._ensureFoxySilentTarget();
-            const tempForm = document.createElement('form');
-            tempForm.action = 'https://unterkonstruktion.foxycart.com/cart';
-            tempForm.method = 'POST';
-            tempForm.target = 'foxy_silent';
-            tempForm.style.position = 'absolute';
-            tempForm.style.left = '-9999px';
-            tempForm.style.top = '-9999px';
-            // Pflichtfelder
-            const pricePerPack = getPackPriceForQuantity(productKey, VE[productKey] || 1);
-            tempForm.innerHTML = `
-              <input type="hidden" name="name" value="${displayName}">
-              <input type="hidden" name="price" value="${Number(pricePerPack).toFixed(2)}">
-              <input type="hidden" name="code" value="">
-              <input type="hidden" name="quantity" value="${Math.max(1, parseInt(quantity, 10) || 1)}">
-            `;
-            document.body.appendChild(tempForm);
-            tempForm.submit();
-            setTimeout(() => { try { tempForm.remove(); } catch(_) {} }, 2000);
-            return; // Fallback erfolgreich ausgelöst
-          } catch (e) {
-            console.warn(`[SolarGrid] Foxy-Fallback fehlgeschlagen für '${displayName}':`, e);
-            return;
-          }
-        }
-        try {
-          const qtyInput = form.querySelector('input[name="quantity"]');
-          if (qtyInput) qtyInput.value = Math.max(1, parseInt(quantity, 10) || 1);
-          const customerInput = form.querySelector('input[name="customer_type"]');
-          try {
-            const raw = localStorage.getItem('solarTool_customerType');
-            if (customerInput && raw) {
-              const parsed = JSON.parse(raw);
-              const type = parsed && parsed.type ? String(parsed.type) : '';
-              if (type) customerInput.value = type;
+        const run = async () => {
+          if (!form) {
+            try {
+              const qty = Math.max(1, parseInt(quantity, 10) || 1);
+              const pricePerPack = getPackPriceForQuantity(productKey, VE[productKey] || 1);
+              const payload = {
+                name: displayName,
+                price: Number(pricePerPack).toFixed(2),
+                quantity: String(qty)
+              };
+              // Optional: Zusatzfelder aus Foxy-Form-Daten
+              const d = this.foxyDataByName && this.foxyDataByName.get(displayName);
+              if (d) {
+                if (d.code) payload.code = d.code;
+                if (d.image) payload.image = d.image;
+                if (d.url) payload.url = d.url;
+                if (d.description) payload.description = d.description;
+                if (d.weight) payload.weight = d.weight;
+                if (d.width) payload.width = d.width;
+                if (d.height) payload.height = d.height;
+                if (d.length) payload.length = d.length;
+                if (d.discount_price_amount) payload.discount_price_amount = d.discount_price_amount;
+                if (d.coupon) payload.coupon = d.coupon;
+              }
+              try {
+                const raw = localStorage.getItem('solarTool_customerType');
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  const type = parsed && parsed.type ? String(parsed.type) : '';
+                  if (type) payload.customer_type = type;
+                }
+              } catch(_) {}
+
+              const ok = await this._submitFoxyItemWithRetry(payload, { maxRetries: 2, baseDelay: 300, timeoutMs: 3000 });
+              if (!ok) console.warn(`[SolarGrid] Foxy-Fallback fehlgeschlagen für '${displayName}'`);
+              return;
+            } catch (e) {
+              console.warn(`[SolarGrid] Foxy-Fallback fehlgeschlagen für '${displayName}':`, e);
+              return;
             }
-          } catch(_) {}
-          const submitBtn = form.querySelector('button[data-fc-add-to-cart]') || form.querySelector('button[type="submit"]');
-          if (typeof form.requestSubmit === 'function') {
-            form.requestSubmit(submitBtn || undefined);
-          } else {
-            (submitBtn && submitBtn.click()) || form.submit();
           }
-        } catch (e) {
-          console.warn('[SolarGrid] Foxy-Submit Fehler:', e);
-        }
+          try {
+            const qtyInput = form.querySelector('input[name="quantity"]');
+            if (qtyInput) qtyInput.value = Math.max(1, parseInt(quantity, 10) || 1);
+            const customerInput = form.querySelector('input[name="customer_type"]');
+            try {
+              const raw = localStorage.getItem('solarTool_customerType');
+              if (customerInput && raw) {
+                const parsed = JSON.parse(raw);
+                const type = parsed && parsed.type ? String(parsed.type) : '';
+                if (type) customerInput.value = type;
+              }
+            } catch(_) {}
+            const submitBtn = form.querySelector('button[data-fc-add-to-cart]') || form.querySelector('button[type="submit"]');
+            if (typeof form.requestSubmit === 'function') {
+              form.requestSubmit(submitBtn || undefined);
+            } else {
+              (submitBtn && submitBtn.click()) || form.submit();
+            }
+          } catch (e) {
+            console.warn('[SolarGrid] Foxy-Submit Fehler:', e);
+          }
+        };
+        this._queueFoxySubmit(run, 'foxy-add-single');
       }
   
       _ensureFoxySilentTarget() {
@@ -6415,6 +6430,117 @@
         } catch (_) {}
       }
   
+      _getFoxyCartAction() {
+        return 'https://unterkonstruktion.foxycart.com/cart';
+      }
+
+      _queueFoxySubmit(task, name = 'foxy-submit') {
+        if (!this.foxySubmitQueue) this.foxySubmitQueue = new SimpleCartQueue();
+        return this.foxySubmitQueue.execute(task, name);
+      }
+
+      _ensureFoxySilentForm() {
+        try {
+          if (this._foxySilentForm && document.body.contains(this._foxySilentForm)) {
+            return this._foxySilentForm;
+          }
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = this._getFoxyCartAction();
+          form.target = 'foxy_silent';
+          form.style.position = 'absolute';
+          form.style.left = '-9999px';
+          form.style.top = '-9999px';
+          form.setAttribute('aria-hidden', 'true');
+          form.setAttribute('tabindex', '-1');
+          document.body.appendChild(form);
+          this._foxySilentForm = form;
+          this._foxyFormInputs = new Map();
+          return form;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      _setFoxyFormFields(form, payload) {
+        if (!form || !payload) return;
+        if (!this._foxyFormInputs) this._foxyFormInputs = new Map();
+        // Remove stale fields
+        for (const [name, input] of Array.from(this._foxyFormInputs.entries())) {
+          if (!Object.prototype.hasOwnProperty.call(payload, name)) {
+            try { input.remove(); } catch(_) {}
+            this._foxyFormInputs.delete(name);
+          }
+        }
+        // Upsert fields
+        Object.entries(payload).forEach(([name, value]) => {
+          if (value == null || value === '') return;
+          let input = this._foxyFormInputs.get(name);
+          if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            form.appendChild(input);
+            this._foxyFormInputs.set(name, input);
+          }
+          input.value = String(value);
+        });
+      }
+
+      async _loadFoxyUrlInIframe(url, timeoutMs = 2500) {
+        try {
+          const iframe = document.getElementById('foxy_silent');
+          if (!iframe) return false;
+          const ok = this._waitForFoxyIframeAck(timeoutMs);
+          iframe.src = url;
+          return await ok;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      async _submitFoxyPayload(payload, timeoutMs = 2500) {
+        try {
+          this._ensureFoxySilentTarget();
+          const form = this._ensureFoxySilentForm();
+          if (!form) return false;
+          form.action = this._getFoxyCartAction();
+          this._setFoxyFormFields(form, payload);
+          const ok = this._waitForFoxyIframeAck(timeoutMs);
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+          return await ok;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      async _submitFoxyItemWithRetry(payload, opts = {}) {
+        const maxRetries = Number.isFinite(opts.maxRetries) ? opts.maxRetries : 2;
+        const baseDelay = Number.isFinite(opts.baseDelay) ? opts.baseDelay : 350;
+        const timeoutMs = Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : 2500;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          const ok = await this._submitFoxyPayload(payload, timeoutMs);
+          if (ok) return true;
+          const backoff = baseDelay * Math.pow(2, attempt);
+          await new Promise(r => setTimeout(r, backoff));
+        }
+        // Fallback: GET im iframe (kein Klick, verhindert Popup-Blocker)
+        try {
+          const params = new URLSearchParams();
+          Object.entries(payload || {}).forEach(([k, v]) => {
+            if (v != null && v !== '') params.append(k, String(v));
+          });
+          const url = `${this._getFoxyCartAction()}?${params.toString()}`;
+          return await this._loadFoxyUrlInIframe(url, timeoutMs);
+        } catch (_) {
+          return false;
+        }
+      }
+
       // Warte auf Navigations-/Load-Ack des versteckten iFrames nach einem POST
       async _waitForFoxyIframeAck(timeoutMs = 2500) {
         return new Promise(resolve => {
@@ -6458,134 +6584,109 @@
           .sort(([aKey],[bKey]) => aKey.localeCompare(bKey));
         if (!entries.length) return;
         
-        // Immer: Sequenzielle GET-Requests via versteckte Links (robust, keine iFrames)
+        // Robust: Sequenzielle POST-Submits via verstecktem Iframe + Ack/Retry
         {
-          // Stabil: Sequenzielle GET-Requests via versteckte Links, keine iframe-Probleme
-          try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
-          const sanitizePrice = (v) => {
-            const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
-            const num = parseFloat(n);
-            return Number.isFinite(num) ? num.toFixed(2) : '0.00';
-          };
-          const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-          (async () => {
-            // Link-basierte GET-Requests (keine iFrames)
+          return this._queueFoxySubmit(async () => {
+            try { this.showLoading('Warenkorb wird befüllt…'); } catch(_) {}
+            const sanitizePrice = (v) => {
+              const n = typeof v === 'string' ? v.replace(/[^0-9.,-]/g,'').replace(/,/g,'.') : String(v||'');
+              const num = parseFloat(n);
+              return Number.isFinite(num) ? num.toFixed(2) : '0.00';
+            };
             const getData = (displayName) => this.foxyDataByName && this.foxyDataByName.get(displayName);
-            
-            // Debug: Zeige verfügbare Formulare
-            if (this.foxyDataByName && this.foxyDataByName.size > 0) {
-              console.log(`[Foxy Debug] Verfügbare Produkte in Formular-Map (${this.foxyDataByName.size}):`);
-              this.foxyDataByName.forEach((data, name) => {
-                console.log(`  - ${name}${data.discount_price_amount ? ' (mit Mengenrabatt)' : ''}`);
-              });
-            } else {
-              console.warn('[Foxy Debug] WARNUNG: Keine Formulare in foxyDataByName gefunden!');
+            const getCustomerType = () => {
+              try {
+                const raw = localStorage.getItem('solarTool_customerType');
+                if (!raw) return '';
+                const parsed = JSON.parse(raw);
+                return parsed && parsed.type ? String(parsed.type) : '';
+              } catch(_) {
+                return '';
+              }
+            };
+            const customerType = getCustomerType();
+            let sentOk = 0;
+            let sentFail = 0;
+
+            if (DEBUG_MODE) {
+              if (this.foxyDataByName && this.foxyDataByName.size > 0) {
+                console.log(`[Foxy Debug] Verfügbare Produkte in Formular-Map (${this.foxyDataByName.size}):`);
+                this.foxyDataByName.forEach((data, name) => {
+                  console.log(`  - ${name}${data.discount_price_amount ? ' (mit Mengenrabatt)' : ''}`);
+                });
+              } else {
+                console.warn('[Foxy Debug] WARNUNG: Keine Formulare in foxyDataByName gefunden!');
+              }
+              console.log(`[Foxy Debug] Starte Hinzufügen von ${entries.length} Produkten...`);
             }
-            
-            console.log(`[Foxy Debug] Starte Hinzufügen von ${entries.length} Produkten...`);
+
             for (const [key, qtyRaw] of entries) {
-              // WICHTIG: computeAllTotalsSnapshot() gibt bereits Pack-Mengen zurück (siehe Zeile 7537-7545)
-              // Daher sollte qtyRaw direkt als Pack-Menge verwendet werden, KEINE weitere Umrechnung!
               const numQty = Number(qtyRaw) || 0;
-              if (numQty <= 0) { await sleep(200); continue; }
-              
-              // qtyRaw ist bereits die Pack-Menge aus computeAllTotalsSnapshot()
-              // Fallback: Falls parts direkt übergeben wurde (alte API), dann umrechnen
-              // Prüfe: Wenn qtyRaw deutlich größer als VE ist, dann könnte es eine Stückzahl sein
+              if (numQty <= 0) continue;
+
               const ve = VE[key] || 1;
               let packs;
               if (numQty > ve * 10) {
-                // Sehr große Zahl → wahrscheinlich Stückzahl (Fallback-Fall)
                 packs = Math.ceil(numQty / ve);
               } else {
-                // Normale Zahl → bereits Pack-Menge (aus computeAllTotalsSnapshot)
                 packs = Math.max(1, Math.ceil(numQty));
               }
-              if (!packs || packs <= 0) { await sleep(200); continue; }
-              
-              // Validiere Key und displayName - überspringe leere oder ungültige Produkte
-              if (!key || key.trim() === '') { await sleep(200); continue; }
+              if (!packs || packs <= 0) continue;
+
+              if (!key || key.trim() === '') continue;
               const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
-              if (!displayName || displayName.trim() === '') { await sleep(200); continue; }
-              
+              if (!displayName || displayName.trim() === '') continue;
+
               const d = getData(displayName) || {};
-              if (!d || Object.keys(d).length === 0) {
+              if (DEBUG_MODE && (!d || Object.keys(d).length === 0)) {
                 console.warn(`[Foxy Debug] ⚠ Keine Formular-Daten für "${displayName}" gefunden – verwende Fallback-Preis`);
               }
               const price = d.price ? sanitizePrice(d.price) : sanitizePrice(getPackPriceForQuantity(key, packs));
-              
-              // Debug: Logge alle Produktdaten
-              console.log(`[Foxy Debug] Link-Produkt ${key}:`, {
-                displayName,
+
+              const payload = {
+                name: displayName,
                 price,
-                packs,
-                hasDiscount: !!d.discount_price_amount,
-                meta: d
-              });
-              
-              // Baue URL mit Query-Parametern (wie im Link Example)
-              const params = new URLSearchParams();
-              params.append('name', displayName);
-              params.append('price', price);
-              params.append('quantity', String(packs));
-              if (d.code) params.append('code', d.code);
-              if (d.image) params.append('image', d.image);
-              if (d.url) params.append('url', d.url);
-              if (d.description) params.append('description', d.description);
-              if (d.weight) params.append('weight', d.weight);
-              if (d.width) params.append('width', d.width);
-              if (d.height) params.append('height', d.height);
-              if (d.length) params.append('length', d.length);
-              if (d.discount_price_amount) params.append('discount_price_amount', d.discount_price_amount);
-              if (d.coupon) params.append('coupon', d.coupon);
-              
-              const foxyUrl = `https://unterkonstruktion.foxycart.com/cart?${params.toString()}`;
-              console.log(`[Foxy Debug] GET-URL: ${foxyUrl}`);
-              
-              // WICHTIG: Logge die gesendete Menge für Vergleich
-              console.log(`[Foxy Debug] SENDEN: ${displayName} - Pack-Menge: ${packs}`);
-              
-              // Erstelle versteckten Link und klicke ihn (GET wie in der Doku)
-              const link = document.createElement('a');
-              link.href = foxyUrl;
-              link.style.position = 'absolute';
-              link.style.left = '-9999px';
-              link.style.top = '-9999px';
-              link.style.visibility = 'hidden';
-              document.body.appendChild(link);
-              try {
-                link.click();
-                console.log(`[Foxy Debug] ✓ LINK GESENDET: ${displayName} – Menge ${packs}`);
-              } catch (e) {
-                console.error(`[Foxy Debug] ✗ Link-Klick Fehler für ${displayName}:`, e);
+                quantity: String(packs)
+              };
+              if (d.code) payload.code = d.code;
+              if (d.image) payload.image = d.image;
+              if (d.url) payload.url = d.url;
+              if (d.description) payload.description = d.description;
+              if (d.weight) payload.weight = d.weight;
+              if (d.width) payload.width = d.width;
+              if (d.height) payload.height = d.height;
+              if (d.length) payload.length = d.length;
+              if (d.discount_price_amount) payload.discount_price_amount = d.discount_price_amount;
+              if (d.coupon) payload.coupon = d.coupon;
+              if (customerType) payload.customer_type = customerType;
+
+              if (DEBUG_MODE) {
+                console.log(`[Foxy Debug] POST-Produkt ${key}:`, {
+                  displayName,
+                  price,
+                  packs,
+                  hasDiscount: !!d.discount_price_amount
+                });
               }
-              try { link.remove(); } catch(_) {}
-              await sleep(500); // Pause zwischen Links (500ms für bessere Kompatibilität mit langsamen PCs)
+
+              const ok = await this._submitFoxyItemWithRetry(payload, { maxRetries: 2, baseDelay: 300, timeoutMs: 3000 });
+              if (ok) {
+                sentOk++;
+                if (DEBUG_MODE) console.log(`[Foxy Debug] ✓ GESENDET: ${displayName} – Menge ${packs}`);
+              } else {
+                sentFail++;
+                console.warn(`[Foxy Debug] ✗ Fehlgeschlagen: ${displayName} – Menge ${packs}`);
+              }
             }
+
             try { this.hideLoading(); } catch(_) {}
-            
-            // Zusammenfassung der gesendeten Mengen
-            console.log(`[Foxy Debug] ═══════════════════════════════════════════════════`);
-            console.log(`[Foxy Debug] ZUSAMMENFASSUNG - Gesendete Produkte:`);
-            for (const [key, qtyRaw] of entries) {
-              const qty = Math.max(0, Math.floor(Number(qtyRaw)));
-              const ve = VE[key] || 1;
-              const isPallet = (key === 'SolarmodulPalette' || key === 'UlicaSolarBlackJadeFlowPalette');
-              const isSingleModule = (key === 'Solarmodul' || key === 'UlicaSolarBlackJadeFlow');
-              const packs = isPallet ? Math.floor(qty / ve) : (isSingleModule ? qty : Math.ceil(qty / ve));
-              if (packs > 0) {
-                const displayName = PRODUCT_NAME_MAP[key] || key.replace(/_/g, ' ');
-                const d = getData(displayName) || {};
-                const hasDiscount = !!d.discount_price_amount;
-                console.log(`[Foxy Debug]   ✓ ${displayName}: ${packs} Stück${hasDiscount ? ' (mit Mengenrabatt)' : ''}`);
-              }
+
+            if (DEBUG_MODE) {
+              console.log(`[Foxy Debug] ═══════════════════════════════════════════════════`);
+              console.log(`[Foxy Debug] ZUSAMMENFASSUNG - Gesendete Produkte: ok=${sentOk}, fail=${sentFail}`);
+              console.log(`[Foxy Debug] Bitte vergleiche diese Mengen mit dem Warenkorb!`);
             }
-            console.log(`[Foxy Debug] ═══════════════════════════════════════════════════`);
-            console.log(`[Foxy Debug] Bitte vergleiche diese Mengen mit dem Warenkorb!`);
-            
-            // Keine Weiterleitung gewünscht
-          })();
-          return;
+          }, 'foxy-add-parts');
         }
       }
   
@@ -7299,6 +7400,19 @@
           // Cache References nullen
           this.configListEl = null;
           this.foxyFormsByName = null;
+          this.foxyDataByName = null;
+
+          // Foxy DOM/Queue cleanup
+          if (this._foxySilentForm) {
+            try { this._foxySilentForm.remove(); } catch(_) {}
+          }
+          const silentIframe = document.getElementById('foxy_silent');
+          if (silentIframe) {
+            try { silentIframe.remove(); } catch(_) {}
+          }
+          this._foxySilentForm = null;
+          this._foxyFormInputs = null;
+          this.foxySubmitQueue = null;
           
           // Array References nullen und Garbage Collection triggern
           this.cleanupArrays();
